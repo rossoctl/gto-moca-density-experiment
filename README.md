@@ -16,7 +16,7 @@ append-only `docs/reports/` for measured implementation results.
 ```
 docs/
 ├── README.md                  # the router + the lifecycle rules (read this first)
-├── <project>-overview.md      # executive overview — all essential info, kept current
+├── gto-moca-density-experiment-overview.md      # executive overview — all essential info, kept current
 ├── glossary.md
 ├── specs/                     # deep designs — revised in place, versioned
 │   ├── README.md              #   the registry: canonical ids + status
@@ -64,9 +64,9 @@ The two distinctions that carry the most weight:
 After creating your repo from this template:
 
 ```sh
-# 1. Replace the placeholders. <PROJECT> is the repo name; <TEAM> the owning GitHub team.
-grep -rl --exclude-dir=.git -e '<PROJECT>' -e '<TEAM>' . \
-  | xargs sed -i '' -e 's|<PROJECT>|myrepo|g' -e 's|<TEAM>|myrepo-maintainers|g'
+# 1. Replace the placeholders. gto-moca-density-experiment is the repo name; galmasi the owning GitHub team.
+grep -rl --exclude-dir=.git -e 'gto-moca-density-experiment' -e 'galmasi' . \
+  | xargs sed -i '' -e 's|gto-moca-density-experiment|myrepo|g' -e 's|galmasi|myrepo-maintainers|g'
 # (GNU sed: use `sed -i` without the '' argument)
 
 # 2. Rename the overview to match.
@@ -95,8 +95,8 @@ triggered; one that appears only on `main` is not, and requiring it will wedge e
 
 Then:
 
-- Fill in `docs/<project>-overview.md` — it is the front door.
-- Confirm `@rossoctl/<TEAM>` in `CODEOWNERS` exists and has write access, or GitHub ignores
+- Fill in `docs/gto-moca-density-experiment-overview.md` — it is the front door.
+- Confirm `@rossoctl/galmasi` in `CODEOWNERS` exists and has write access, or GitHub ignores
   the file silently.
 - Add your language's ignores to `.gitignore` and hooks to `.pre-commit-config.yaml` (both
   have a marked section at the end).

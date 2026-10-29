@@ -1,4 +1,4 @@
-# <PROJECT> documentation
+# gto-moca-density-experiment documentation
 
 This directory is the repo's documentation spine. Five kinds of document live here, each
 with a different lifecycle — the table below is the router, and
@@ -9,7 +9,7 @@ document goes.
 
 | If you want to…                                      | Read                                                 |
 | ---------------------------------------------------- | ---------------------------------------------------- |
-| Understand the whole system in one sitting           | `<PROJECT>-overview.md`                              |
+| Understand the whole system in one sitting           | `gto-moca-density-experiment-overview.md`                              |
 | Know **why** a decision was made                     | [`adrs/`](adrs/) — one decision per file, permanent  |
 | Get the **full design** of a subsystem               | [`specs/`](specs/) — deep dives, living              |
 | Know what a phase **actually built and measured**    | [`reports/`](reports/) — append-only, never rewritten |
@@ -29,7 +29,7 @@ results, including the parts that went wrong.
 
 | Artifact     | Answers                                           | Retention                                                      | Home                        |
 | ------------ | ------------------------------------------------- | -------------------------------------------------------------- | --------------------------- |
-| **Overview** | the whole picture, briefly                        | committed, **kept current**                                    | `docs/<PROJECT>-overview.md` |
+| **Overview** | the whole picture, briefly                        | committed, **kept current**                                    | `docs/gto-moca-density-experiment-overview.md` |
 | **Spec**     | _what & why_, in depth — alternatives, trade-offs | committed, **revised in place** with a version changelog       | [`specs/`](specs/)          |
 | **ADR**      | one significant decision + consequences           | committed, **permanent & immutable**                           | [`adrs/`](adrs/)            |
 | **Report**   | what a phase built, **measured**; deltas; findings | committed, **append-only — never rewritten**                   | [`reports/`](reports/)      |

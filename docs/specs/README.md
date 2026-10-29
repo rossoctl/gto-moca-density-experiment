@@ -1,4 +1,4 @@
-# <PROJECT> — Design specs
+# gto-moca-density-experiment — Design specs
 
 A spec is a **deep dive on one subsystem or one slice of work**: what we are building, why,
 what we considered and turned down, and what we are knowingly deferring. It is the document

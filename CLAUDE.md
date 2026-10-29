@@ -1,4 +1,4 @@
-# <PROJECT> — agent instructions
+# gto-moca-density-experiment — agent instructions
 
 <One paragraph: what this repo is, and the one thing an agent most needs to know before
 changing it.>
@@ -6,7 +6,7 @@ changing it.>
 ## Repository layout
 
 ```
-<PROJECT>/
+gto-moca-density-experiment/
 ├── docs/              # the documentation spine — see docs/README.md
 └── <your code>/
 ```
@@ -25,7 +25,7 @@ version:
 | ordered steps to build something            | `docs/plans/YYYY-MM-DD-<topic>.md`                | **LOCAL ONLY — never commit**   |
 | a walkthrough to perform for an audience    | `docs/demos/<name>-demo.md`                       | updated when commands change    |
 | an investigation, runbook or dead end       | `docs/notes/`                                     | dated, left as-is               |
-| the whole system, briefly                   | `docs/<project>-overview.md`                      | **kept current**                |
+| the whole system, briefly                   | `docs/gto-moca-density-experiment-overview.md`                      | **kept current**                |
 
 ### The rules that are easy to get wrong
 
