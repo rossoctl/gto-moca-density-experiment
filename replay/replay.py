@@ -454,10 +454,15 @@ class PodmanSandbox:
 
     def start(self):
         subprocess.run(["podman", "rm", "-f", self.name], capture_output=True)
-        subprocess.run(["podman", "run", "-d", "--name", self.name,
-                        "--user", "1000:1000", "-w", "/testbed",
-                        self.image, "sleep", "infinity"],
-                       check=True, capture_output=True)
+        p = subprocess.run(["podman", "run", "-d", "--name", self.name,
+                            "--user", "1000:1000", "-w", "/testbed",
+                            self.image, "sleep", "infinity"],
+                           capture_output=True, text=True)
+        if p.returncode != 0:
+            # stderr is the diagnosis (e.g. the ctr host's inotify-instance
+            # exhaustion surfaced only as a bare "exit status 126")
+            raise RuntimeError(f"podman run failed ({p.returncode}): "
+                               f"{p.stderr.strip()[-400:]}")
 
     def target(self):
         return PodmanTarget(self.name)
