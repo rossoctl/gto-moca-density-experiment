@@ -27,6 +27,14 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)          # -I strips it; our own module is trusted
 import replay
 
+REPO_ROOT = os.path.dirname(HERE)
+
+def _resolve(path):
+    """Manifests are host-independent: file paths are repo-relative
+    (absolute paths, from older manifests, pass through unchanged)."""
+    return path if os.path.isabs(path) else os.path.normpath(
+        os.path.join(REPO_ROOT, path))
+
 IMAGE = "icr.io/vopo/swebench-{instance}:latest"
 VM_DIR = os.path.join(HERE, "..", "images", "{instance}", "vm")
 
@@ -157,6 +165,8 @@ def main():
         sys.exit(f"unknown backend {backend!r} (want podman or vm)")
     m = json.load(open(manifest_path))
     units = sorted(m["units"], key=lambda u: u["start_s"])
+    for u in units:
+        u["files"] = {k: _resolve(v) for k, v in u["files"].items()}
     logdir = os.path.join(HERE, "logs",
                           "manifest-" + os.path.basename(manifest_path).rsplit(".", 1)[0]
                           + "-" + backend)

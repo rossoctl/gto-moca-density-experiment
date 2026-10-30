@@ -34,6 +34,7 @@ import argparse, json, math, os, random, sys
 
 DEFAULT_RUNS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "..", "runs", "container")
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BATCH = "am5-l30-a"
 INSTANCES = ["django__django-11133", "django__django-10914", "pydata__xarray-4094"]
 UNIT_SCHEMA = "autobench-moca/load-manifest/unit/1"
@@ -56,9 +57,11 @@ def discover_units(runs_dir, reps):
                 "rep": rep,
                 "service_s": t["turn_ms"] / 1000.0,
                 "files": {
-                    "trajectory": traj,
-                    "timeline": traj.replace(".trajectory.json", ".timeline.txt"),
-                    "patch": traj.replace(".trajectory.json", ".patch"),
+                    # repo-relative so a manifest is host-independent;
+                    # replay_manifest resolves against the repo root
+                    "trajectory": os.path.relpath(traj, REPO_ROOT),
+                    "timeline": os.path.relpath(traj.replace(".trajectory.json", ".timeline.txt"), REPO_ROOT),
+                    "patch": os.path.relpath(traj.replace(".trajectory.json", ".patch"), REPO_ROOT),
                 },
             })
     if not units:
