@@ -78,6 +78,12 @@ RUN printf '[includeIf "gitdir:/tmp/"]\n\tpath = /etc/autobench-git-identity\n' 
  && printf '[user]\n\tname = MOCA sandbox\n\temail = sandbox@moca.invalid\n' > /etc/autobench-git-identity \
  && printf '[safe]\n\tdirectory = /workspace\n' >> /etc/gitconfig
 
+# /etc/hosts CANNOT be fixed here: the image's copy is empty (container
+# runtimes inject it at run time) and buildah silently drops the path from
+# every layer, RUN and COPY alike -- the build succeeds and the file is absent.
+# build-snapshots.sh patches it into the extracted rootfs instead; see the
+# comment there for the failure this prevents (getaddrinfo('localhost')).
+
 # /workspace: the per-run workspace mount point (see header). Plain directory,
 # writable by uid 1000. HOME for uid 1000 (which owns the /testbed seed).
 RUN install -d -o 1000 -g 1000 -m 775 /workspace
