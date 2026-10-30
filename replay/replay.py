@@ -489,15 +489,29 @@ class VmSandbox:
     def target_spec(self):
         return f"vm:{self.sock}"
 
-def _moca_exec(sandbox_id, script, timeout):
+def _moca_exec(sandbox_id, script, timeout, retries=5):
     """Run a bash script on stdin in a moca sandbox via mocactl. Each exec
     boots a fresh Firecracker microVM over the persistent /workspace. Exit
     codes are the command's own; 124 = mocactl timeout, 125 = sandbox
-    failure. mocactl caps --timeout at 840s (token lifetime minus 60s)."""
+    failure. mocactl caps --timeout at 840s (token lifetime minus 60s).
+
+    "template busy; retry later" (exit 125) is the shared KVM host's
+    standby-VM pool for the template running dry under concurrency -- a
+    PRE-EXEC refusal (the command never started), so it is safe to retry
+    with backoff. Other 125s propagate unchanged."""
     t = min(int(timeout), 840)
-    return subprocess.run(
-        ["mocactl", "sbx", "run", "--sandbox", sandbox_id, "--timeout", str(t)],
-        input=script, capture_output=True, text=True, timeout=t + 120)
+    delays = [2, 5, 10, 20, 40]
+    for attempt in range(retries + 1):
+        p = subprocess.run(
+            ["mocactl", "sbx", "run", "--sandbox", sandbox_id,
+             "--timeout", str(t)],
+            input=script, capture_output=True, text=True, timeout=t + 120)
+        if p.returncode != 125 or attempt == retries:
+            return p
+        if "template busy" not in (p.stderr or ""):
+            return p
+        time.sleep(delays[min(attempt, len(delays) - 1)])
+    return p
 
 class MocaTarget:
     """A moca sandbox, driven with `mocactl sbx run`: podman-shaped (direct
