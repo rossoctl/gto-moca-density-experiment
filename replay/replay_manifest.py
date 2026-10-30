@@ -3,7 +3,7 @@
 start_s and run the timed replay of its trajectory in it.
 
 Usage: python3 -I replay_manifest.py <manifest.json> [--dry-run] [--keep]
-                       [--backend podman|vm]     (default podman)
+                       [--backend podman|vm|moca] (default podman)
 
 The same manifest runs unchanged on either backend. One thread per unit
 (the point is load, so admission is never delayed by running units; the
@@ -97,6 +97,8 @@ def sandbox_for(u, backend):
     name = f"load-{u['id']}"
     if backend == "podman":
         return replay.PodmanSandbox(name, IMAGE.format(instance=u["instance"]))
+    if backend == "moca":
+        return replay.MocaSandbox(name, u["instance"])
     vmdir = os.path.abspath(VM_DIR.format(instance=u["instance"]))
     if not os.path.exists(os.path.join(vmdir, f"{u['instance']}.qcow2")):
         raise StartError(f"no {vmdir}/{u['instance']}.qcow2 "
@@ -161,8 +163,8 @@ def main():
     backend = "podman"
     if "--backend" in sys.argv:
         backend = sys.argv[sys.argv.index("--backend") + 1]
-    if backend not in ("podman", "vm"):
-        sys.exit(f"unknown backend {backend!r} (want podman or vm)")
+    if backend not in ("podman", "vm", "moca"):
+        sys.exit(f"unknown backend {backend!r} (want {' or '.join(replay.SANDBOXES)})")
     m = json.load(open(manifest_path))
     units = sorted(m["units"], key=lambda u: u["start_s"])
     for u in units:
@@ -177,6 +179,11 @@ def main():
             print(f"{u['start_s']:9.1f}s  {u['id']}  {u['instance']:22} {u['rep']}"
                   f"  service {u['service_s']}s")
         print(f"backend {backend}")
+        for p in m["executor_hints"].get("plateaus", []):
+            inside = sum(1 for u in units
+                         if p["start_s"] <= u["start_s"] < p["end_s"])
+            print(f"plateau level {p['level']}: [{p['start_s']:.1f}s, "
+                  f"{p['end_s']:.1f}s), {inside} units inside")
         print(f"{len(units)} units, measure window "
               f"{m['executor_hints']['measure_window_s']}, "
               f"drain by {m['executor_hints']['drain_by_s']}s")

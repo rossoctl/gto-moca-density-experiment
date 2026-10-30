@@ -1,7 +1,7 @@
 #!/usr/bin/env python3 -I
 """Replay recorded trajectories against a sandbox backend.
 
-Usage: python3 -I replay_trajectory.py <runs_dir> [--backend podman|vm]
+Usage: python3 -I replay_trajectory.py <runs_dir> [--backend podman|vm|moca]
                        [--reps r1] [--timed] [--keep] [--dry-run]
 
 The single-run counterpart of replay_manifest.py -- same flags, same help
@@ -42,12 +42,12 @@ VM_DIR = os.path.join(HERE, "..", "images", "{instance}", "vm")
 USAGE = """\
 replay_trajectory.py -- replay recorded trajectories against a sandbox backend
 
-  replay_trajectory.py RUNS_DIR [--backend podman|vm] [--reps r1 r2 ...]
+  replay_trajectory.py RUNS_DIR [--backend podman|vm|moca] [--reps r1 r2 ...]
                       [--timed] [--keep] [--dry-run]
 
   RUNS_DIR    where the recorded runs live (trajectory.json / .patch /
               .timeline.txt files, named <batch>.<instance>.<rep>.*)
-  --backend   podman (default) or vm
+  --backend   podman (default), vm, or moca
   --reps      which reps to replay (default: r1)
   --timed     fire each step at its recorded time (timeline slides on
               overrun); default runs steps back-to-back, as fast as possible
@@ -67,6 +67,8 @@ def sandbox_for(backend, instance, name):
             print(f"SKIP {instance}: image {image} not found")
             return None
         return replay.PodmanSandbox(name, image)
+    if backend == "moca":
+        return replay.MocaSandbox(name, instance)   # templates live remotely
     vmdir = os.path.abspath(VM_DIR.format(instance=instance))
     if not os.path.exists(os.path.join(vmdir, f"{instance}.qcow2")):
         print(f"SKIP {instance}: no {vmdir}/{instance}.qcow2 "

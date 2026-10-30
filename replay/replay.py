@@ -103,6 +103,11 @@ class PodmanTarget:
     def __init__(self, container):
         self.container = container
 
+    def translate(self, text):
+        """Recorded steps reference /testbed absolutely; on this backend
+        that is the workdir, so no translation."""
+        return text
+
     def run(self, script, timeout=1800):
         return subprocess.run(
             ["podman", "exec", "-i", "-e", f"PATH={PATH}",
@@ -164,6 +169,11 @@ class VmTarget:
         self.sock_path = sock_path
         self.con = Console(sock_path)
         self._sync()
+
+    def translate(self, text):
+        """Recorded steps reference /testbed absolutely; on this backend
+        that is the workdir, so no translation."""
+        return text
 
     def _sync(self):
         for _ in range(3):
@@ -228,6 +238,8 @@ def make_target(spec):
         return PodmanTarget(spec[7:])
     if spec.startswith("vm:"):
         return VmTarget(spec[3:])
+    if spec.startswith("moca:"):
+        return MocaTarget(spec[5:])
     if spec.startswith("qemu:"):
         return EphemeralVm(spec[5:])   # context manager, not a target
     return PodmanTarget(spec)
@@ -477,7 +489,89 @@ class VmSandbox:
     def target_spec(self):
         return f"vm:{self.sock}"
 
-SANDBOXES = {"podman": PodmanSandbox, "vm": VmSandbox}
+def _moca_exec(sandbox_id, script, timeout):
+    """Run a bash script on stdin in a moca sandbox via mocactl. Each exec
+    boots a fresh Firecracker microVM over the persistent /workspace. Exit
+    codes are the command's own; 124 = mocactl timeout, 125 = sandbox
+    failure. mocactl caps --timeout at 840s (token lifetime minus 60s)."""
+    t = min(int(timeout), 840)
+    return subprocess.run(
+        ["mocactl", "sbx", "run", "--sandbox", sandbox_id, "--timeout", str(t)],
+        input=script, capture_output=True, text=True, timeout=t + 120)
+
+class MocaTarget:
+    """A moca sandbox, driven with `mocactl sbx run`: podman-shaped (direct
+    output capture, exit codes propagate), so no marker protocol. Steps run
+    as uid 1000 in /workspace/testbed (the read-only /testbed seed is copied
+    there by MocaSandbox.start)."""
+    # recorded trajectories reference /testbed absolutely; on moca the
+    # writable copy lives at /workspace/testbed, so translate paths
+    _TESTBED = re.compile(r"(?<![\w-])/testbed(?![\w-])")
+
+    def __init__(self, sandbox_id):
+        self.sandbox_id = sandbox_id
+
+    def translate(self, text):
+        return self._TESTBED.sub("/workspace/testbed", text)
+
+    def run(self, script, timeout=1800):
+        b64 = base64.b64encode(script.encode()).decode()
+        wrapper = (
+            f"echo {b64} | base64 -d > /tmp/.replay-step.sh\n"
+            f"exec /usr/bin/setpriv --reuid=1000 --regid=1000 --clear-groups "
+            f"/usr/bin/env PATH='{PATH}' "
+            f"/bin/bash -c 'cd /workspace/testbed && "
+            f"exec bash /tmp/.replay-step.sh'\n")
+        return _moca_exec(self.sandbox_id, wrapper, timeout)
+
+def moca_template(instance):
+    """SWE-bench instance id -> moca template id:
+    django__django-10914 -> sweb-django-10914, pydata__xarray-4094 ->
+    sweb-xarray-4094 (template ids allow no underscores)."""
+    return "sweb-" + instance.split("__", 1)[1]
+
+class MocaSandbox:
+    """A moca sandbox: created from a per-instance template, seeded (the
+    microVM tier's /testbed is a read-only rootfs snapshot, so the replay
+    works on a copy in the persistent /workspace), driven per exec, then
+    removed. Sandboxes are stateful ONLY in /workspace; every exec is a
+    fresh VM, like a container whose filesystem persists between commands."""
+    def __init__(self, name, instance):
+        self.name, self.instance = name, instance
+        self.sandbox_id = None
+
+    def start(self):
+        p = subprocess.run(
+            ["mocactl", "sbx", "create", "--template", moca_template(self.instance),
+             "--name", self.name.replace("_", "-"), "--json"],
+            capture_output=True, text=True)
+        if p.returncode != 0:
+            raise RuntimeError(f"mocactl sbx create failed: {p.stderr.strip()}")
+        self.sandbox_id = json.loads(p.stdout)["id"]
+        # seed: copy the read-only testbed into the writable workspace, and
+        # fail loudly if the step wrapper's prerequisites are missing
+        r = _moca_exec(self.sandbox_id,
+                       "cp -a /testbed /workspace/testbed && "
+                       "test -x /usr/bin/setpriv && test -x /usr/bin/env",
+                       timeout=300)
+        if r.returncode != 0:
+            self.stop()
+            raise RuntimeError(f"moca sandbox seed failed (rc={r.returncode}): "
+                               f"{(r.stderr or r.stdout).strip()[-300:]}")
+
+    def target(self):
+        return MocaTarget(self.sandbox_id)
+
+    def stop(self):
+        if self.sandbox_id:
+            subprocess.run(["mocactl", "sbx", "rm", self.sandbox_id, "--force"],
+                           capture_output=True)
+
+    @property
+    def target_spec(self):
+        return f"moca:{self.sandbox_id}"
+
+SANDBOXES = {"podman": PodmanSandbox, "vm": VmSandbox, "moca": MocaSandbox}
 
 # --- shared driver helpers ----------------------------------------------------
 
@@ -555,11 +649,12 @@ def run_replay(traj, target, times=None):
         start_off = (time.monotonic() - t0) * 1000
         if tool == "Bash":
             # the recorded command is the whole script, on stdin to keep quoting
-            p = target.run(step["command"])
+            p = target.run(target.translate(step["command"]))
             outcome, replay_err = f"exit={p.returncode}", p.returncode != 0
             detail = (p.stderr or p.stdout)[-400:].strip()
         elif tool in ("Read", "Edit"):
             spec = dict(step["input"], op=tool.lower())
+            spec["file_path"] = target.translate(spec["file_path"])
             p = exec_edit_tool(target, spec)
             outcome, replay_err = f"exit={p.returncode}", p.returncode != 0
             detail = (p.stderr or p.stdout).strip()[:400]
