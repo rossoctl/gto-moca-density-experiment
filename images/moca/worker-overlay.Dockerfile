@@ -3,16 +3,29 @@
 #
 # Layers the remote-worker binary and rg on top of the testbed, checks MOCA's
 # required tools (deploy/microvm/build-rootfs.sh's REQUIRED_TOOLS list) fail-closed
-# at build time, and lands the harness cwd (/workspace) inside the testbed.
+# at build time, and prepares /workspace as the per-run mount point.
 #
-# Deliberately NOT done here, unlike remote-worker/Dockerfile:
-#  - no /etc/gitconfig. The testbed sets `user.useConfigOnly true` so an agent
-#    commit without its own identity FAILS LOUDLY instead of silently committing
-#    under a system identity (testbed.Dockerfile step 3). A system [user] floor
-#    would defeat that on purpose.
-#  - no new /workspace directory. /testbed is the instrument; /workspace is a
-#    symlink to it so the harness cwd (KAGENTI_SANDBOX_CWD default /workspace)
-#    and the autobench tree are the same place.
+# Two deliberate differences from remote-worker/Dockerfile:
+#
+# Git identity: NOT an unconditional /etc/gitconfig. The testbed sets
+# `user.useConfigOnly true` so an agent commit without its own identity FAILS
+# LOUDLY instead of silently committing under a system identity
+# (testbed.Dockerfile step 3); a system [user] floor would defeat that on
+# purpose. But moca's build-snapshot.sh probes guest git identity with a
+# throwaway repo under /tmp and refuses to snapshot without one. Resolution: a
+# conditional include scoped to /tmp -- scratch repos get the default identity,
+# the probe passes, and /testbed plus its per-run /workspace copy stay
+# identity-free so replayed trajectories fail commits exactly as loudly as
+# they did in the container-tier runs.
+#
+# /workspace: NOT a symlink to /testbed (an earlier container-tier draft did
+# that). In the microVM tier the guest agent mounts the per-run ext4 workspace
+# image AT /workspace and runs every command from there (cmd/guest-agent:
+# workdir flag, default /workspace); build-snapshot.sh also mkdir -p's it as a
+# mount point, which a symlink breaks. The base rootfs -- including /testbed
+# -- is the SHARED snapshot layer, so the pristine testbed travels in the
+# rootfs as a SEED: the trajectory driver's first exec copies /testbed into
+# the per-run /workspace, and the agent edits that private copy.
 
 # Build with the moca/ directory as the context (bin/ holds the two binaries):
 #
@@ -57,9 +70,18 @@ RUN set -eux; \
            /opt/miniconda3/envs/testbed/share/*.a 2>/dev/null || true; \
     find /usr/lib /opt/miniconda3 -name '__pycache__' -type d -prune -exec rm -rf {} + 2>/dev/null || true
 
-# Harness cwd -> testbed, HOME for uid 1000 (which owns /testbed), keep WORKDIR
-# and USER pointed at the instrument the testbed.Dockerfile set up.
-RUN ln -s /testbed /workspace
+# safe.directory: the guest agent execs as root (HOME=/ on the read-only rootfs, so
+# neither --global nor a per-user exception is reachable), while the seeded testbed
+# tree is uid 1000 -- git refuses "dubious ownership" without this. Scoped to
+# /workspace only; /testbed in the shared rootfs stays untrusted on purpose.
+RUN printf '[includeIf "gitdir:/tmp/"]\n\tpath = /etc/autobench-git-identity\n' > /etc/gitconfig \
+ && printf '[user]\n\tname = MOCA sandbox\n\temail = sandbox@moca.invalid\n' > /etc/autobench-git-identity \
+ && printf '[safe]\n\tdirectory = /workspace\n' >> /etc/gitconfig
+
+# /workspace: the per-run workspace mount point (see header). Plain directory,
+# writable by uid 1000. HOME for uid 1000 (which owns the /testbed seed).
+RUN install -d -o 1000 -g 1000 -m 775 /workspace
+RUN install -d -o 1000 -g 1000 -m 700 /home/sandbox
 RUN install -d -o 1000 -g 1000 -m 700 /home/sandbox
 ENV HOME=/home/sandbox
 # The swebench harness runs everything under `conda activate testbed`; the image
