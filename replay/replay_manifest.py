@@ -4,6 +4,7 @@ start_s and run the timed replay of its trajectory in it.
 
 Usage: python3 -I replay_manifest.py <manifest.json> [--dry-run] [--keep]
                        [--backend podman|vm|moca] (default podman)
+                       [--max-live N]    cap concurrent live sandboxes
 
 The same manifest runs unchanged on either backend. One thread per unit
 (the point is load, so admission is never delayed by running units; the
@@ -105,17 +106,47 @@ def sandbox_for(u, backend):
                          f"(run images/to_qcow2.sh {u['instance']})")
     return replay.VmSandbox(name, vmdir)
 
-def run_unit(u, backend, logdir, keep, results, progress, sched_t0):
+class LiveGate:
+    """Caps concurrent live sandboxes (--max-live N), backend-agnostic: a
+    slot is held from sandbox start to sandbox stop. The static schedule
+    stays law for when units are released; the cap only prevents overshoot
+    (completions lag under load, and an uncapped schedule stacks
+    replacements on still-running sandboxes -- on the VM backend that
+    overshoot is what turned level 100 into a 245-VM OOM spiral)."""
+    def __init__(self, max_live):
+        self.max_live = max_live
+        self.cv = threading.Condition()
+        self.live = 0
+
+    def acquire(self):
+        if not self.max_live:
+            return
+        with self.cv:
+            while self.live >= self.max_live:
+                self.cv.wait()
+            self.live += 1
+
+    def release(self):
+        if not self.max_live:
+            return
+        with self.cv:
+            self.live -= 1
+            self.cv.notify()
+
+def run_unit(u, backend, logdir, keep, results, progress, sched_t0, gate):
     log = open(os.path.join(logdir, f"{u['id']}.log"), "w")
     def say(msg):
         log.write(msg + "\n"); log.flush()
     start = time.monotonic()
     sb = None
+    holds_slot = False
     status = "crashed"  # replaced below unless something raises first
     try:
         say(f"{u['id']} {u['instance']} {u['rep']} start_s={u['start_s']} "
             f"backend={backend}")
         progress.unit_launched()
+        gate.acquire()
+        holds_slot = True
         try:
             sb = sandbox_for(u, backend)
             sb.start()
@@ -154,6 +185,8 @@ def run_unit(u, backend, logdir, keep, results, progress, sched_t0):
                 say(f"sandbox stop failed: {e!r}")
         elif sb:
             say(f"sandbox kept alive: {sb.target_spec}")
+        if holds_slot:
+            gate.release()
         log.close()
 
 def main():
@@ -165,6 +198,10 @@ def main():
         backend = sys.argv[sys.argv.index("--backend") + 1]
     if backend not in ("podman", "vm", "moca"):
         sys.exit(f"unknown backend {backend!r} (want {' or '.join(replay.SANDBOXES)})")
+    max_live = None
+    if "--max-live" in sys.argv:
+        max_live = int(sys.argv[sys.argv.index("--max-live") + 1])
+    gate = LiveGate(max_live)
     m = json.load(open(manifest_path))
     units = sorted(m["units"], key=lambda u: u["start_s"])
     for u in units:
@@ -186,7 +223,8 @@ def main():
                   f"{p['end_s']:.1f}s), {inside} units inside")
         print(f"{len(units)} units, measure window "
               f"{m['executor_hints']['measure_window_s']}, "
-              f"drain by {m['executor_hints']['drain_by_s']}s")
+              f"drain by {m['executor_hints']['drain_by_s']}s"
+              + (f", max-live {max_live}" if max_live else ""))
         return
 
     t0 = time.monotonic()
@@ -201,7 +239,8 @@ def main():
         print(f"{progress.line(time.monotonic() - t0)} | "
               f"launching {u['id']} {u['instance']} {u['rep']}", flush=True)
         th = threading.Thread(target=run_unit,
-                              args=(u, backend, logdir, keep, results, progress, t0))
+                              args=(u, backend, logdir, keep, results, progress,
+                                    t0, gate))
         th.start(); threads.append(th)
     for th in threads:
         th.join()
