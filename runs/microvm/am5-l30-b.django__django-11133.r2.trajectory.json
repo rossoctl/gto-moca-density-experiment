@@ -1,0 +1,139 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "am5-l30-b",
+ "instance_id": "django__django-11133",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "sbx",
+ "model": "aws/claude-sonnet-5",
+ "turn_ms": 26451,
+ "resolved": true,
+ "usage": {
+  "input": 12,
+  "output": 902,
+  "cacheRead": 193650,
+  "cacheWrite": 2906,
+  "total": 197470
+ },
+ "totals": {
+  "model_calls": 6,
+  "tool_calls": 5,
+  "model_ms": 19478,
+  "tool_ms": 2146,
+  "sandbox_ms": 1754
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 485,
+   "dur_ms": 1355
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2386,
+   "dur_ms": 159,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ngrep -n \"memoryview\\|make_bytes\\|def content\" django/http/response.py | head -50\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 2469,
+     "dur_ms": 54,
+     "exit": 0,
+     "cpu_ms": 37.3
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 2545,
+   "dur_ms": 2232
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4777,
+   "dur_ms": 126,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nsed -n '215,240p' django/http/response.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 4830,
+     "dur_ms": 45,
+     "exit": 0,
+     "cpu_ms": 37.8
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 4903,
+   "dur_ms": 2796
+  },
+  {
+   "kind": "tool",
+   "at_ms": 9414,
+   "dur_ms": 168,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\nimport re\npath = \"django/http/response.py\"\nwith open(path) as f:\n    content = f.read()\n\nold = \"        if isinstance(value, bytes):\\n            return bytes(value)\\n        if isinstance(value, str):\\n\"\nnew = \"        if isinstance(value, (bytes, memoryview)):\\n            return bytes(value)\\n        if isinstance(value, str):\\n\"\nassert old in content\ncontent = content.replace(old, new)\nwith open(path, \"w\") as f:\n    f.write(content)\nPY\nsed -n '223,236p' django/http/response.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 9470,
+     "dur_ms": 92,
+     "exit": 0,
+     "cpu_ms": 88.9
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 9582,
+   "dur_ms": 9246
+  },
+  {
+   "kind": "tool",
+   "at_ms": 19915,
+   "dur_ms": 1081,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 -c \"\nfrom django.http import HttpResponse\nr = HttpResponse(memoryview(b'My Content'))\nprint(r.content)\nassert r.content == b'My Content'\nprint('OK')\n\"\npython3 tests/runtests.py httpwrappers responses 2>&1 | tail -30\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 19969,
+     "dur_ms": 1018,
+     "exit": 0,
+     "cpu_ms": 1108.7
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 20996,
+   "dur_ms": 2028
+  },
+  {
+   "kind": "tool",
+   "at_ms": 23877,
+   "dur_ms": 612,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 tests/runtests.py httpwrappers responses --parallel=1 2>&1 | tail -30\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 23931,
+     "dur_ms": 545,
+     "exit": 0,
+     "cpu_ms": 622.8
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 24489,
+   "dur_ms": 1821
+  }
+ ],
+ "removed": []
+}

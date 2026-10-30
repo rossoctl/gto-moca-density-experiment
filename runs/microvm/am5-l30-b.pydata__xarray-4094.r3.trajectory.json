@@ -1,0 +1,307 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "am5-l30-b",
+ "instance_id": "pydata__xarray-4094",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "sbx",
+ "model": "aws/claude-sonnet-5",
+ "turn_ms": 174961,
+ "resolved": true,
+ "usage": {
+  "input": 28,
+  "output": 8869,
+  "cacheRead": 512428,
+  "cacheWrite": 16733,
+  "total": 538058
+ },
+ "totals": {
+  "model_calls": 14,
+  "tool_calls": 13,
+  "model_ms": 109438,
+  "tool_ms": 29608,
+  "sandbox_ms": 25479
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 501,
+   "dur_ms": 1602
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2659,
+   "dur_ms": 159,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ngrep -n \"to_unstacked_dataset\" -A 40 /workspace/xarray/core/dataarray.py | head -80\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 2741,
+     "dur_ms": 45,
+     "exit": 0,
+     "cpu_ms": 36.8
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 2818,
+   "dur_ms": 4501
+  },
+  {
+   "kind": "tool",
+   "at_ms": 8007,
+   "dur_ms": 128,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ngrep -n \"to_stacked_array\" -A 80 /workspace/xarray/core/dataset.py | head -140\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 8060,
+     "dur_ms": 41,
+     "exit": 0,
+     "cpu_ms": 37.2
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 8135,
+   "dur_ms": 5118
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14833,
+   "dur_ms": 2718,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport numpy as np\nimport xarray as xr\n\narr = xr.DataArray(\n     np.arange(3),\n     coords=[(\"x\", [0, 1, 2])],\n )\ndata = xr.Dataset({\"a\": arr, \"b\": arr})\nstacked = data.to_stacked_array('y', sample_dims=['x'])\nprint(stacked)\nprint(stacked.indexes['y'])\ntry:\n    unstacked = stacked.to_unstacked_dataset('y')\n    print(unstacked)\nexcept Exception as e:\n    print(\"ERROR\", e)\nPYEOF\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 15720,
+     "dur_ms": 1823,
+     "exit": 0,
+     "cpu_ms": 2430.7
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 17551,
+   "dur_ms": 4764
+  },
+  {
+   "kind": "tool",
+   "at_ms": 26685,
+   "dur_ms": 1838,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport numpy as np\nimport xarray as xr\n\narr = xr.DataArray(\n     np.arange(3),\n     coords=[(\"x\", [0, 1, 2])],\n )\ndata = xr.Dataset({\"a\": arr, \"b\": arr})\nstacked = data.to_stacked_array('y', sample_dims=['x'])\n\ndim = 'y'\nidx = stacked.indexes[dim]\nlevel_number = idx._get_level_number(0)\nvariables = idx.levels[level_number]\nvariable_dim = idx.names[level_number]\nprint(\"variables\", variables, \"variable_dim\", variable_dim)\n\nsel = stacked.sel({variable_dim: 'a'})\nprint(sel)\nprint(sel.squeeze(drop=True))\nPYEOF\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 26792,
+     "dur_ms": 1723,
+     "exit": 0,
+     "cpu_ms": 2058.0
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 28523,
+   "dur_ms": 8044
+  },
+  {
+   "kind": "tool",
+   "at_ms": 38193,
+   "dur_ms": 2373,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport numpy as np\nimport xarray as xr\n\n# multi-level example from docstring\narr = xr.DataArray(\n    np.arange(6).reshape(2, 3),\n    coords=[(\"x\", [\"a\", \"b\"]), (\"y\", [0, 1, 2])],\n)\ndata = xr.Dataset({\"a\": arr, \"b\": arr.isel(y=0)})\nstacked = data.to_stacked_array(\"z\", [\"x\"])\nprint(stacked.indexes['z'])\nsel = stacked.sel({'variable': 'a'})\nprint(sel)\nprint(sel.squeeze(drop=True))\nPYEOF\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 38889,
+     "dur_ms": 1669,
+     "exit": 0,
+     "cpu_ms": 2255.0
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 40566,
+   "dur_ms": 13108
+  },
+  {
+   "kind": "tool",
+   "at_ms": 55300,
+   "dur_ms": 2549,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport numpy as np\nimport xarray as xr\n\narr = xr.DataArray(\n    np.arange(6).reshape(2, 3),\n    coords=[(\"x\", [\"a\", \"b\"]), (\"y\", [0, 1, 2])],\n)\ndata = xr.Dataset({\"a\": arr, \"b\": arr.isel(y=0)})\nstacked = data.to_stacked_array(\"z\", [\"x\"])\nunstacked = stacked.to_unstacked_dataset(\"z\")\nprint(unstacked)\nprint(data.identical(unstacked))\nPYEOF\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 56145,
+     "dur_ms": 1695,
+     "exit": 0,
+     "cpu_ms": 2023.6
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 57849,
+   "dur_ms": 13149
+  },
+  {
+   "kind": "tool",
+   "at_ms": 73052,
+   "dur_ms": 2703,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport numpy as np\nimport xarray as xr\n\narr = xr.DataArray(\n     np.arange(3),\n     coords=[(\"x\", [0, 1, 2])],\n )\ndata = xr.Dataset({\"a\": arr, \"b\": arr})\nstacked = data.to_stacked_array('y', sample_dims=['x'])\n\ndim = 'y'\nsel_a = stacked.sel({'variable': 'a'})\nprint(\"sel_a before squeeze:\\n\", sel_a)\nsq_a = sel_a.squeeze(drop=True)\nprint(\"sel_a after squeeze:\\n\", sq_a)\nprint(sq_a.coords)\nPYEOF\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 74006,
+     "dur_ms": 1742,
+     "exit": 0,
+     "cpu_ms": 2078.5
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 75755,
+   "dur_ms": 17173
+  },
+  {
+   "kind": "tool",
+   "at_ms": 96178,
+   "dur_ms": 1778,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport numpy as np\nimport xarray as xr\n\narr = xr.DataArray(\n    np.arange(6).reshape(2, 3),\n    coords=[(\"x\", [\"a\", \"b\"]), (\"y\", [0, 1, 2])],\n)\ndata = xr.Dataset({\"a\": arr, \"b\": arr.isel(y=0)})\nstacked = data.to_stacked_array(\"z\", [\"x\"])\nsel_a = stacked.sel({'variable': 'a'})\nprint(\"sel_a before squeeze:\\n\", sel_a)\nprint(sel_a.coords)\nsq = sel_a.squeeze(drop=True)\nprint(sq.coords)\nPYEOF\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 96238,
+     "dur_ms": 1709,
+     "exit": 0,
+     "cpu_ms": 2307.9
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 97956,
+   "dur_ms": 19157
+  },
+  {
+   "kind": "tool",
+   "at_ms": 123502,
+   "dur_ms": 1718,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport numpy as np\nimport xarray as xr\n\narr = xr.DataArray(\n     np.arange(3),\n     coords=[(\"x\", [0, 1, 2])],\n )\ndata = xr.Dataset({\"a\": arr, \"b\": arr})\nstacked = data.to_stacked_array('y', sample_dims=['x'])\n\nvariable_dim = 'variable'\ndim = 'y'\nfor k in ['a', 'b']:\n    sel = stacked.sel({variable_dim: k}).squeeze(drop=True)\n    print(k, sel.coords, sel.variable.dims)\n    if dim in sel.coords:\n        sel = sel.drop_vars(dim)\n    print(\"after drop\", sel)\nPYEOF\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 123557,
+     "dur_ms": 1654,
+     "exit": 0,
+     "cpu_ms": 2240.4
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 125220,
+   "dur_ms": 8271
+  },
+  {
+   "kind": "tool",
+   "at_ms": 133704,
+   "dur_ms": 164,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 -c \"\nimport re\nwith open('xarray/core/dataarray.py') as f:\n    content = f.read()\nprint(content[content.index('# pull variables out of datarray')-5:content.index('# unstacked dataset')+200])\n\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 133759,
+     "dur_ms": 88,
+     "exit": 0,
+     "cpu_ms": 82.3
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 133868,
+   "dur_ms": 3657
+  },
+  {
+   "kind": "tool",
+   "at_ms": 139320,
+   "dur_ms": 155,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport re\n\npath = \"xarray/core/dataarray.py\"\nwith open(path) as f:\n    content = f.read()\n\nold = \"\"\"        # pull variables out of datarray\n        data_dict = {}\n        for k in variables:\n            data_dict[k] = self.sel({variable_dim: k}).squeeze(drop=True)\n\"\"\"\n\nnew = \"\"\"        # pull variables out of datarray\n        data_dict = {}\n        for k in variables:\n            data_dict[k] = self.sel({variable_dim: k}, drop=True).squeeze(drop=True)\n\"\"\"\n\nassert old in content\ncontent = content.replace(old, new)\n\nwith open(path, \"w\") as f:\n    f.write(content)\nPYEOF\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 139377,
+     "dur_ms": 91,
+     "exit": 0,
+     "cpu_ms": 92.5
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 139475,
+   "dur_ms": 5668
+  },
+  {
+   "kind": "tool",
+   "at_ms": 155516,
+   "dur_ms": 1722,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport numpy as np\nimport xarray as xr\n\narr = xr.DataArray(\n     np.arange(3),\n     coords=[(\"x\", [0, 1, 2])],\n )\ndata = xr.Dataset({\"a\": arr, \"b\": arr})\nstacked = data.to_stacked_array('y', sample_dims=['x'])\nunstacked = stacked.to_unstacked_dataset('y')\nprint(unstacked)\nprint(data.identical(unstacked))\n\n# multi-level case still works\narr2 = xr.DataArray(\n    np.arange(6).reshape(2, 3),\n    coords=[(\"x\", [\"a\", \"b\"]), (\"y\", [0, 1, 2])],\n)\ndata2 = xr.Dataset({\"a\": arr2, \"b\": arr2.isel(y=0)})\nstacked2 = data2.to_stacked_array(\"z\", [\"x\"])\nunstacked2 = stacked2.to_unstacked_dataset(\"z\")\nprint(unstacked2)\nprint(data2.identical(unstacked2))\nPYEOF\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 155572,
+     "dur_ms": 1659,
+     "exit": 0,
+     "cpu_ms": 2246.7
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 157238,
+   "dur_ms": 1787
+  },
+  {
+   "kind": "tool",
+   "at_ms": 159785,
+   "dur_ms": 11603,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 -m pytest xarray/tests/test_dataarray.py -k \"stack\" -q\npython3 -m pytest xarray/tests/test_dataset.py -k \"stack\" -q\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 159841,
+     "dur_ms": 11540,
+     "exit": 0,
+     "cpu_ms": 12165.0
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 171388,
+   "dur_ms": 3439
+  }
+ ],
+ "removed": []
+}
