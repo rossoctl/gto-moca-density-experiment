@@ -247,6 +247,11 @@ def make_target(spec):
 # --- VM lifecycle ------------------------------------------------------------
 
 QEMU_APPEND = "root=/dev/vda rw console=ttyS0 init=/bin/bash"
+# Guest RAM for the VM backend. 1GiB: measured guest demand under test
+# load is ~390MB; 2GiB halved achievable density for no benefit. NOTE:
+# migration state files (state.bin) pin the RAM they were saved with --
+# change this and every image must be re-prepped (replay.py vm-snapshot).
+VM_MEM_MB = 1024
 # Full VM state (RAM + devices) saved by vm_snapshot next to the qcow2.
 # Not an internal qemu snapshot: -loadvm cannot see through a snapshot=on
 # overlay, so runs resume via incoming migration from this file instead --
@@ -282,7 +287,7 @@ def _launch(vm_dir, sock, overlay=True, incoming=None):
     if overlay:
         drive += ",snapshot=on"
     cmd = ["qemu-system-x86_64",
-           "-machine", "accel=kvm:tcg", "-m", "2048", "-smp", "2",
+           "-machine", "accel=kvm:tcg", "-m", str(VM_MEM_MB), "-smp", "2",
            "-kernel", kernel, "-initrd", initrd, "-append", QEMU_APPEND,
            "-drive", drive,
            "-display", "none", "-net", "none",
