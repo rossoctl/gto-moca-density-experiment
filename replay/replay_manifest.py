@@ -22,7 +22,7 @@ Concurrent VMs each hold their full -m allocation.
 Per-unit logs and a per-unit result line go to logs/manifest-<name>-<backend>/.
 Exit 0 iff every unit replayed with an identical patch.
 """
-import json, os, sys, threading, time
+import json, os, signal, sys, threading, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)          # -I strips it; our own module is trusted
@@ -112,11 +112,15 @@ class LiveGate:
     stays law for when units are released; the cap only prevents overshoot
     (completions lag under load, and an uncapped schedule stacks
     replacements on still-running sandboxes -- on the VM backend that
-    overshoot is what turned level 100 into a 245-VM OOM spiral)."""
+    overshoot is what turned level 100 into a 245-VM OOM spiral).
+    Also tracks the live sandbox objects so a signal can clean them all
+    up: a driver killed mid-run otherwise orphans every sandbox (twice
+    now: 39 VMs, then 567 containers)."""
     def __init__(self, max_live):
         self.max_live = max_live
         self.cv = threading.Condition()
         self.live = 0
+        self.sboxes = set()
 
     def acquire(self):
         if not self.max_live:
@@ -132,6 +136,24 @@ class LiveGate:
         with self.cv:
             self.live -= 1
             self.cv.notify()
+
+    def register(self, sb):
+        with self.cv:
+            self.sboxes.add(sb)
+
+    def unregister(self, sb):
+        with self.cv:
+            self.sboxes.discard(sb)
+
+    def stop_all(self):
+        with self.cv:
+            sbs = list(self.sboxes)
+            self.sboxes.clear()
+        for sb in sbs:
+            try:
+                sb.stop()
+            except Exception:
+                pass
 
 def run_unit(u, backend, logdir, keep, results, progress, sched_t0, gate):
     log = open(os.path.join(logdir, f"{u['id']}.log"), "w")
@@ -150,6 +172,7 @@ def run_unit(u, backend, logdir, keep, results, progress, sched_t0, gate):
         try:
             sb = sandbox_for(u, backend)
             sb.start()
+            gate.register(sb)
         except (Exception, SystemExit) as e:     # SystemExit: kvm preflight
             say(f"start failed: {e}")
             status = "start-fail"
@@ -187,6 +210,8 @@ def run_unit(u, backend, logdir, keep, results, progress, sched_t0, gate):
             say(f"sandbox kept alive: {sb.target_spec}")
         if holds_slot:
             gate.release()
+        if sb:
+            gate.unregister(sb)
         log.close()
 
 def main():
@@ -202,6 +227,14 @@ def main():
     if "--max-live" in sys.argv:
         max_live = int(sys.argv[sys.argv.index("--max-live") + 1])
     gate = LiveGate(max_live)
+
+    def cleanup(signum, frame):
+        print(f"\nsignal {signum}: stopping {len(gate.sboxes)} live "
+              f"sandboxes...", flush=True)
+        gate.stop_all()
+        sys.exit(143)
+    signal.signal(signal.SIGTERM, cleanup)
+    signal.signal(signal.SIGINT, cleanup)
     m = json.load(open(manifest_path))
     units = sorted(m["units"], key=lambda u: u["start_s"])
     for u in units:
