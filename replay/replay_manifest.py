@@ -231,8 +231,14 @@ def main():
     def cleanup(signum, frame):
         print(f"\nsignal {signum}: stopping {len(gate.sboxes)} live "
               f"sandboxes...", flush=True)
-        gate.stop_all()
-        sys.exit(143)
+        # TIME-BOUNDED and hard-exiting: a sandbox stop that never returns
+        # (a hung mocactl rm did exactly this, wedging the driver for
+        # hours past its timeout) must not own the process. Two minutes of
+        # best effort, then _exit: daemon threads die, nothing can hang us.
+        worker = threading.Thread(target=gate.stop_all, daemon=True)
+        worker.start()
+        worker.join(120)
+        os._exit(143)
     signal.signal(signal.SIGTERM, cleanup)
     signal.signal(signal.SIGINT, cleanup)
     m = json.load(open(manifest_path))
