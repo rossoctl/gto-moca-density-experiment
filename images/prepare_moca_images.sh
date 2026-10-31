@@ -36,6 +36,11 @@ MOCA_COMMIT=$(git -C "$MOCADIR" rev-parse HEAD 2>/dev/null || echo "unknown-$MOC
 RG_VERSION=15.2.0
 RG_SHA256_X86_64=33e15bcf1624b25cdd2a55813a47a2f95dbe126268203e76aa6a585d1e7b149c
 
+# gh pin: moca main's build-rootfs.sh requires the GitHub CLI in the rootfs
+# toolchain; the swebench bases don't ship it.
+GH_VERSION=2.63.2
+GH_SHA256_X86_64=912fdb1ca29cb005fb746fc5d2b787a289078923a29d0f9ec19a0b00272ded00
+
 # instance dir -> (template id, worker id). Template ids must match
 # ^[a-z0-9][a-z0-9-]{0,30}$ -- underscores are not allowed, hence the rename.
 # Keep in sync with moca/templates-swebench.json.
@@ -63,6 +68,18 @@ if [ -z "${SKIP_BINARY_BUILD:-}" ] || [ ! -x moca/bin/rg ]; then
   printf '%s  %s\n' "$RG_SHA256_X86_64" "$tmp/$tarball" | sha256sum -c -
   tar -xzf "$tmp/$tarball" -C "$tmp"
   install -m 755 "$tmp/ripgrep-${RG_VERSION}-x86_64-unknown-linux-musl/rg" moca/bin/rg
+fi
+
+if [ -z "${SKIP_BINARY_BUILD:-}" ] || [ ! -x moca/bin/gh ]; then
+  echo "=== fetching gh ${GH_VERSION} (pinned)"
+  tmp=$(mktemp -d)
+  trap 'rm -rf "$tmp"' EXIT
+  tarball="gh_${GH_VERSION}_linux_amd64.tar.gz"
+  curl -fsSL -o "$tmp/$tarball" \
+    "https://github.com/cli/cli/releases/download/v${GH_VERSION}/${tarball}"
+  printf '%s  %s\n' "$GH_SHA256_X86_64" "$tmp/$tarball" | sha256sum -c -
+  tar -xzf "$tmp/$tarball" -C "$tmp"
+  install -m 755 "$tmp/gh_${GH_VERSION}_linux_amd64/bin/gh" moca/bin/gh
 fi
 
 instances=("$@")

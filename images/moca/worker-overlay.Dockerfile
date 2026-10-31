@@ -47,6 +47,9 @@ USER root
 # -- see remote-worker/Dockerfile's rg stage for why it is pinned there).
 COPY bin/remote-worker /usr/local/bin/remote-worker
 COPY bin/rg /usr/local/bin/rg
+# gh (GitHub CLI, pinned static release): moca's build-rootfs.sh requires it
+# in the rootfs toolchain (advertised as a tool); the swebench bases lack it.
+COPY bin/gh /usr/local/bin/gh
 
 # swebench base images are Ubuntu; `file` is the one required tool they don't
 # ship. base64/ls/cat come with coreutils, bash/git/python3 with the eval image.
@@ -55,7 +58,7 @@ RUN set -eux; \
     apt-get install -y --no-install-recommends file; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*; \
-    for t in bash git rg python3 base64 file ls cat; do command -v "$t" >/dev/null || { \
+    for t in bash git rg gh python3 base64 file ls cat; do command -v "$t" >/dev/null || { \
       echo "FATAL: required tool $t missing -- MOCA would advertise it and fail the first call" >&2; exit 1; }; done
 
 # Slim for density: the sweb.eval images ship the conda package cache
