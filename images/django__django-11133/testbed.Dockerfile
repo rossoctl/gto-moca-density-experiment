@@ -17,4 +17,9 @@ RUN ( set -eu; head=$(git -C /testbed rev-parse HEAD); tree=$(git -C /testbed re
 # /testbed as root-owned (seen after a host power-cycle/resize); the system
 # gitconfig is honored for every uid, immune to the shift.
 RUN git config --system safe.directory /testbed
+# .git must be writable by uid 1000 no matter which host uid the rootless
+# userns presents the layers as (the shift also flips chown's target):
+# the tree is world-writable by sweb.eval convention; match it for .git,
+# or git stash/add/index-refresh fail for the replay uid.
+RUN chmod -R a+rwX /testbed/.git
 WORKDIR /testbed
