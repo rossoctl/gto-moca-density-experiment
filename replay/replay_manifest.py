@@ -149,11 +149,14 @@ class LiveGate:
         with self.cv:
             sbs = list(self.sboxes)
             self.sboxes.clear()
-        for sb in sbs:
-            try:
-                sb.stop()
-            except Exception:
-                pass
+        # parallel: a sequential stop of ~80 sandboxes at ~1.5s each blew the
+        # 120s signal budget, and the survivors became capacity-eating zombies
+        # that sabotaged the NEXT run's admission (578 at-capacity refusals)
+        threads = [threading.Thread(target=sb.stop, daemon=True) for sb in sbs]
+        for th in threads:
+            th.start()
+        for th in threads:
+            th.join(60)
 
 def run_unit(u, backend, logdir, keep, results, progress, sched_t0, gate):
     log = open(os.path.join(logdir, f"{u['id']}.log"), "w")
