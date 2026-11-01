@@ -1,0 +1,20 @@
+diff --git a/sympy/combinatorics/permutations.py b/sympy/combinatorics/permutations.py
+index 136ed5a..970adae 100755
+--- a/sympy/combinatorics/permutations.py
++++ b/sympy/combinatorics/permutations.py
+@@ -897,8 +897,13 @@ def __new__(cls, *args, **kwargs):
+         temp = flatten(args)
+         if has_dups(temp):
+             if is_cycle:
+-                raise ValueError('there were repeated elements; to resolve '
+-                'cycles use Cycle%s.' % ''.join([str(tuple(c)) for c in args]))
++                # it's ok to have repeated elements in different cycles
++                # but not in a single cycle
++                if any(has_dups(c) for c in args):
++                    raise ValueError(
++                        'there were repeated elements; to resolve '
++                        'cycles use Cycle%s.' % ''.join(
++                        [str(tuple(c)) for c in args]))
+             else:
+                 raise ValueError('there were repeated elements.')
+         temp = set(temp)

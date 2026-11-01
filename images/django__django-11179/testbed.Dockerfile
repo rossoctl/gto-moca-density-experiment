@@ -1,0 +1,15 @@
+# image-factory testbed for django__django-11179, emitted by factory/emit_oci.py (oci/1).
+# Generated: change factory/testbed.py, never this file.
+FROM docker.io/swebench/sweb.eval.x86_64.django_1776_django-11179@sha256:23e061f0071647d4c459b2c3aa84081011080f57a4580727c16997cf01e0d477
+LABEL io.rossoctl.image-factory.instance="django__django-11179"
+USER root
+SHELL ["/bin/bash", "-c"]
+# step 1: destroy the clone that reaches the fix, after proving the image
+# step 2: one baseline commit tracking exactly what the clone tracked
+# step 3: an agent commit must fail loudly, not empty the patch
+# step 4: hand the tree to the exec uid, numerically
+RUN ( set -eu; head=$(git -C /testbed rev-parse HEAD); tree=$(git -C /testbed rev-parse 'HEAD^{tree}'); git -C /testbed merge-base --is-ancestor 19fc6376ce67d01ca37a91ef2f55ef769f50513a HEAD || { echo "FATAL base_commit 19fc6376ce67 is not an ancestor of /testbed HEAD ($head) -- this is not this instance's image" >&2; echo '      FIX: re-run `scripts/swebench-fetch.py --instances <id> --force`. If the published image really moved, the new head is a NEW INSTRUMENT: every template built on the old one must be rebuilt, not mixed with it' >&2; exit 1; }; if [ "$head" != 5875fd52e8cff72e81cecb0eaa8940b4080221ff ] || [ "$tree" != 736b3021ad471715ef1c52ce23baee4fa1c4cb26 ]; then   echo "FATAL /testbed is at head=$head tree=$tree; instance.json recorded head=5875fd52e8cff72e81cecb0eaa8940b4080221ff tree=736b3021ad471715ef1c52ce23baee4fa1c4cb26" >&2;   echo '      FIX: re-run `scripts/swebench-fetch.py --instances <id> --force`. If the published image really moved, the new head is a NEW INSTRUMENT: every template built on the old one must be rebuilt, not mixed with it' >&2; exit 1; fi; git -C /testbed ls-files -z > /etc/autobench-tracked; test -s /etc/autobench-tracked || { echo 'FATAL the clone tracks no files' >&2; exit 1; }; { echo instance_id=django__django-11179; echo base_commit=19fc6376ce67d01ca37a91ef2f55ef769f50513a; echo image_digest=swebench/sweb.eval.x86_64.django_1776_django-11179@sha256:23e061f0071647d4c459b2c3aa84081011080f57a4580727c16997cf01e0d477; echo dataset=SWE-bench/SWE-bench_Lite; echo split=test; echo "testbed_head=$head"; echo "testbed_tree=$tree"; } > /etc/autobench-instance; chmod 0644 /etc/autobench-instance /etc/autobench-tracked; rm -rf /testbed/.git; test ! -e /testbed/.git || { echo 'FATAL /testbed/.git survived rm -rf' >&2; exit 1; } ) \
+    && ( set -eu; cd /testbed; git init -q .; printf '__pycache__/\n*.pyc\n.pytest_cache/\n*.egg-info/\nbuild/\ndist/\n.eggs/\n*.so\n*.o\n.venv/\nvenv/\nnode_modules/\n.mypy_cache/\n.tox/\n' >> .git/info/exclude; xargs -0 -a /etc/autobench-tracked -r git -c user.name=autobench -c user.email=autobench@invalid add -f --; git -c user.name=autobench -c user.email=autobench@invalid commit -q -m baseline; git rev-list --count HEAD ) \
+    && ( set -eu; git -C /testbed config user.useConfigOnly true ) \
+    && ( set -eu; chown -R 1000:1000 /testbed )
+WORKDIR /testbed

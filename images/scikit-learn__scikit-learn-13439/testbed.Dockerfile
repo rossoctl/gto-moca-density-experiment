@@ -1,0 +1,15 @@
+# image-factory testbed for scikit-learn__scikit-learn-13439, emitted by factory/emit_oci.py (oci/1).
+# Generated: change factory/testbed.py, never this file.
+FROM docker.io/swebench/sweb.eval.x86_64.scikit-learn_1776_scikit-learn-13439@sha256:0c61d64ae4c3b8a215ecc4f8efbde87dd6bb9d2583579a82b24ecc7780631775
+LABEL io.rossoctl.image-factory.instance="scikit-learn__scikit-learn-13439"
+USER root
+SHELL ["/bin/bash", "-c"]
+# step 1: destroy the clone that reaches the fix, after proving the image
+# step 2: one baseline commit tracking exactly what the clone tracked
+# step 3: an agent commit must fail loudly, not empty the patch
+# step 4: hand the tree to the exec uid, numerically
+RUN ( set -eu; head=$(git -C /testbed rev-parse HEAD); tree=$(git -C /testbed rev-parse 'HEAD^{tree}'); git -C /testbed merge-base --is-ancestor a62775e99f2a5ea3d51db7160fad783f6cd8a4c5 HEAD || { echo "FATAL base_commit a62775e99f2a is not an ancestor of /testbed HEAD ($head) -- this is not this instance's image" >&2; echo '      FIX: re-run `scripts/swebench-fetch.py --instances <id> --force`. If the published image really moved, the new head is a NEW INSTRUMENT: every template built on the old one must be rebuilt, not mixed with it' >&2; exit 1; }; if [ "$head" != d74b6a76ebf523d73ab5bda9b5c14b09f3cd6fab ] || [ "$tree" != 7ddb48a77d48840d74c02946aea1be4d805b3a66 ]; then   echo "FATAL /testbed is at head=$head tree=$tree; instance.json recorded head=d74b6a76ebf523d73ab5bda9b5c14b09f3cd6fab tree=7ddb48a77d48840d74c02946aea1be4d805b3a66" >&2;   echo '      FIX: re-run `scripts/swebench-fetch.py --instances <id> --force`. If the published image really moved, the new head is a NEW INSTRUMENT: every template built on the old one must be rebuilt, not mixed with it' >&2; exit 1; fi; git -C /testbed ls-files -z > /etc/autobench-tracked; test -s /etc/autobench-tracked || { echo 'FATAL the clone tracks no files' >&2; exit 1; }; { echo instance_id=scikit-learn__scikit-learn-13439; echo base_commit=a62775e99f2a5ea3d51db7160fad783f6cd8a4c5; echo image_digest=swebench/sweb.eval.x86_64.scikit-learn_1776_scikit-learn-13439@sha256:0c61d64ae4c3b8a215ecc4f8efbde87dd6bb9d2583579a82b24ecc7780631775; echo dataset=SWE-bench/SWE-bench_Lite; echo split=test; echo "testbed_head=$head"; echo "testbed_tree=$tree"; } > /etc/autobench-instance; chmod 0644 /etc/autobench-instance /etc/autobench-tracked; rm -rf /testbed/.git; test ! -e /testbed/.git || { echo 'FATAL /testbed/.git survived rm -rf' >&2; exit 1; } ) \
+    && ( set -eu; cd /testbed; git init -q .; printf '__pycache__/\n*.pyc\n.pytest_cache/\n*.egg-info/\nbuild/\ndist/\n.eggs/\n*.so\n*.o\n.venv/\nvenv/\nnode_modules/\n.mypy_cache/\n.tox/\n' >> .git/info/exclude; xargs -0 -a /etc/autobench-tracked -r git -c user.name=autobench -c user.email=autobench@invalid add -f --; git -c user.name=autobench -c user.email=autobench@invalid commit -q -m baseline; git rev-list --count HEAD ) \
+    && ( set -eu; git -C /testbed config user.useConfigOnly true ) \
+    && ( set -eu; chown -R 1000:1000 /testbed )
+WORKDIR /testbed

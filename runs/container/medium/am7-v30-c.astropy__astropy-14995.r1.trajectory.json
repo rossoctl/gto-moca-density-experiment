@@ -1,0 +1,231 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "am7-v30-c",
+ "instance_id": "astropy__astropy-14995",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "Moca Pi",
+ "hands": "container",
+ "model": "aws/claude-sonnet-5",
+ "turn_ms": 40076,
+ "resolved": true,
+ "usage": {
+  "input": 14,
+  "output": 1792,
+  "cacheRead": 51210,
+  "cacheWrite": 28382,
+  "total": 81398
+ },
+ "totals": {
+  "model_calls": 7,
+  "tool_calls": 6,
+  "model_ms": 22745,
+  "tool_ms": 17148,
+  "sandbox_ms": 17129
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 152,
+   "dur_ms": 3754,
+   "tokens_in": 2,
+   "tokens_out": 102,
+   "cache_read": 0,
+   "cache_write": 4643,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3909,
+   "dur_ms": 19,
+   "tool": "grep",
+   "is_error": false,
+   "input": {
+    "path": "/testbed/astropy/nddata",
+    "pattern": "_arithmetic_mask"
+   },
+   "sandbox": [
+    {
+     "at_ms": 3909,
+     "dur_ms": 17,
+     "exit": 0,
+     "cpu_ms": 11.1
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 3928,
+   "dur_ms": 2165,
+   "tokens_in": 2,
+   "tokens_out": 114,
+   "cache_read": 4643,
+   "cache_write": 277,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6093,
+   "dur_ms": 24,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "path": "/testbed/astropy/nddata/mixins/ndarithmetic.py",
+    "offset": 480,
+    "limit": 80
+   },
+   "sandbox": [
+    {
+     "at_ms": 6094,
+     "dur_ms": 3,
+     "exit": 0,
+     "cpu_ms": 1.9
+    },
+    {
+     "at_ms": 6099,
+     "dur_ms": 12,
+     "exit": 0,
+     "cpu_ms": 9.8
+    },
+    {
+     "at_ms": 6112,
+     "dur_ms": 3,
+     "exit": 0,
+     "cpu_ms": 2.0
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 6116,
+   "dur_ms": 6111,
+   "tokens_in": 2,
+   "tokens_out": 691,
+   "cache_read": 4920,
+   "cache_write": 1077,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 12228,
+   "dur_ms": 17,
+   "tool": "edit",
+   "is_error": false,
+   "input": {
+    "path": "/testbed/astropy/nddata/mixins/ndarithmetic.py",
+    "oldText": "        # If only one mask is present we need not bother about any type checks\n        if (\n            self.mask is None and operand is not None and operand.mask is None\n        ) or handle_mask is None:\n            return None\n        elif self.mask is None and operand is not None:\n            # Make a copy so there is no reference in the result.\n            return deepcopy(operand.mask)\n        elif operand is None:\n            return deepcopy(self.mask)\n        else:\n            # Now lets calculate the resulting mask (operation enforces copy)\n            return handle_mask(self.mask, operand.mask, **kwds)",
+    "newText": "        # If only one mask is present we need not bother about any type checks\n        if (\n            self.mask is None and operand is not None and operand.mask is None\n        ) or handle_mask is None:\n            return None\n        elif self.mask is None and operand is not None:\n            # Make a copy so there is no reference in the result.\n            return deepcopy(operand.mask)\n        elif operand is None:\n            return deepcopy(self.mask)\n        elif operand.mask is None:\n            return deepcopy(self.mask)\n        else:\n            # Now lets calculate the resulting mask (operation enforces copy)\n            return handle_mask(self.mask, operand.mask, **kwds)"
+   },
+   "sandbox": [
+    {
+     "at_ms": 12229,
+     "dur_ms": 3,
+     "exit": 0,
+     "cpu_ms": 1.6
+    },
+    {
+     "at_ms": 12233,
+     "dur_ms": 3,
+     "exit": 0,
+     "cpu_ms": 1.8
+    },
+    {
+     "at_ms": 12238,
+     "dur_ms": 4,
+     "exit": 0,
+     "cpu_ms": 2.8
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 12245,
+   "dur_ms": 3659,
+   "tokens_in": 2,
+   "tokens_out": 409,
+   "cache_read": 5997,
+   "cache_write": 565,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 15906,
+   "dur_ms": 1416,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && source /opt/miniconda3/bin/activate && conda activate testbed && python -c \"\nimport numpy as np\nfrom astropy.nddata import NDDataRef\n\narray = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]])\nmask = np.array([[0, 1, 64], [8, 0, 1], [2, 1, 0]])\n\nnref_nomask = NDDataRef(array)\nnref_mask = NDDataRef(array, mask=mask)\n\nprint(nref_nomask.multiply(1., handle_mask=np.bitwise_or).mask)\nprint(nref_nomask.multiply(nref_nomask, handle_mask=np.bitwise_or).mask)\nprint(nref_mask.multiply(1., handle_mask=np.bitwise_or).mask)\nprint(nref_mask.multiply(nref_mask, handle_mask=np.bitwise_or).mask)\nprint(nref_mask.multiply(nref_nomask, handle_mask=np.bitwise_or).mask)\n\"\n",
+   "sandbox": [
+    {
+     "at_ms": 15906,
+     "dur_ms": 1415,
+     "exit": 0,
+     "cpu_ms": 1565.3
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 17323,
+   "dur_ms": 2168,
+   "tokens_in": 2,
+   "tokens_out": 130,
+   "cache_read": 6562,
+   "cache_write": 520,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 19492,
+   "dur_ms": 2276,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && source /opt/miniconda3/bin/activate && conda activate testbed && pytest -rA astropy/nddata/mixins/tests/test_ndarithmetic.py -q",
+   "sandbox": [
+    {
+     "at_ms": 19493,
+     "dur_ms": 2274,
+     "exit": 0,
+     "cpu_ms": 2441.7
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 21768,
+   "dur_ms": 1866,
+   "tokens_in": 2,
+   "tokens_out": 130,
+   "cache_read": 7082,
+   "cache_write": 14924,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 23636,
+   "dur_ms": 13396,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && source /opt/miniconda3/bin/activate && conda activate testbed && pytest -q astropy/nddata/ 2>&1 | tail -20",
+   "sandbox": [
+    {
+     "at_ms": 23636,
+     "dur_ms": 13395,
+     "exit": 0,
+     "cpu_ms": 13459.5
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 37033,
+   "dur_ms": 3022,
+   "tokens_in": 2,
+   "tokens_out": 216,
+   "cache_read": 22006,
+   "cache_write": 6376,
+   "stop_reason": "stop"
+  }
+ ],
+ "removed": [],
+ "weight": "medium"
+}

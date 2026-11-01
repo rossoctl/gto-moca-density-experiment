@@ -27,7 +27,7 @@ cd "$(dirname "$0")/.."
 MOCADIR=${MOCADIR:-$HOME/repo/rossoctl/moca}
 REGISTRY=${REGISTRY:-icr.io/vopo}
 KERNEL=${KERNEL:-/srv/vmlinux-6.18.56}
-GUEST_RAM_MB=${GUEST_RAM_MB:-2048}
+GUEST_RAM_MB=${GUEST_RAM_MB:-1024}
 ROOTFS_ROOT=${ROOTFS_ROOT:-/srv/rootfs}
 SNAP_ROOT=${SNAP_ROOT:-/srv/snapshots}
 

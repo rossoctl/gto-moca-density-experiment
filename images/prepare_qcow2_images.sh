@@ -25,9 +25,11 @@
 # No network is configured inside the guest; talk to it over the serial console.
 # The guest runs init=/bin/bash on console=ttyS0.
 
-export IMAGELIST=${@:-django__django-10914  django__django-11133  pydata__xarray-4094}
-
 HERE="$(cd "$(dirname "$0")" && pwd)"
+cd "$HERE"
+
+# default: every instance dir holding a testbed.Dockerfile (args override)
+IMAGELIST=${@:-$(echo */testbed.Dockerfile | xargs -n1 dirname)}
 
 set -euo pipefail
 

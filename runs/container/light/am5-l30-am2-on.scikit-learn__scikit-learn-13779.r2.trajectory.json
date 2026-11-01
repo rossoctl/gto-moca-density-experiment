@@ -1,0 +1,168 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "am5-l30-am2-on",
+ "instance_id": "scikit-learn__scikit-learn-13779",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "Moca Pi",
+ "hands": "container",
+ "model": "aws/claude-sonnet-5",
+ "turn_ms": 28078,
+ "resolved": true,
+ "usage": {
+  "input": 10,
+  "output": 953,
+  "cacheRead": 19907,
+  "cacheWrite": 6603,
+  "total": 27473
+ },
+ "totals": {
+  "model_calls": 5,
+  "tool_calls": 4,
+  "model_ms": 23297,
+  "tool_ms": 4481,
+  "sandbox_ms": 4450
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 256,
+   "dur_ms": 9665,
+   "tokens_in": 2,
+   "tokens_out": 124,
+   "cache_read": 0,
+   "cache_write": 3793,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 9931,
+   "dur_ms": 23,
+   "tool": "grep",
+   "is_error": false,
+   "input": {
+    "path": "/testbed/sklearn/ensemble/voting.py",
+    "pattern": "sample_weight",
+    "context": 3
+   },
+   "sandbox": [
+    {
+     "at_ms": 9941,
+     "dur_ms": 9,
+     "exit": 0,
+     "cpu_ms": 6.0
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 9956,
+   "dur_ms": 3122,
+   "tokens_in": 2,
+   "tokens_out": 308,
+   "cache_read": 3793,
+   "cache_write": 1182,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 13081,
+   "dur_ms": 22,
+   "tool": "edit",
+   "is_error": false,
+   "input": {
+    "path": "/testbed/sklearn/ensemble/voting.py",
+    "edits": [
+     {
+      "oldText": "        if sample_weight is not None:\n            for name, step in self.estimators:\n                if not has_fit_parameter(step, 'sample_weight'):\n                    raise ValueError('Underlying estimator \\'%s\\' does not'\n                                     ' support sample weights.' % name)",
+      "newText": "        if sample_weight is not None:\n            for name, step in self.estimators:\n                if step is None:\n                    continue\n                if not has_fit_parameter(step, 'sample_weight'):\n                    raise ValueError('Underlying estimator \\'%s\\' does not'\n                                     ' support sample weights.' % name)"
+     }
+    ]
+   },
+   "sandbox": [
+    {
+     "at_ms": 13082,
+     "dur_ms": 3,
+     "exit": 0,
+     "cpu_ms": 1.9
+    },
+    {
+     "at_ms": 13088,
+     "dur_ms": 3,
+     "exit": 0,
+     "cpu_ms": 2.0
+    },
+    {
+     "at_ms": 13094,
+     "dur_ms": 4,
+     "exit": 0,
+     "cpu_ms": 2.5
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 13103,
+   "dur_ms": 6732,
+   "tokens_in": 2,
+   "tokens_out": 325,
+   "cache_read": 4975,
+   "cache_write": 348,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 19840,
+   "dur_ms": 1332,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat << 'EOF' > /tmp/repro.py\nimport numpy as np\nfrom sklearn.datasets import load_iris\nfrom sklearn.ensemble import VotingClassifier, RandomForestClassifier\nfrom sklearn.linear_model import LogisticRegression\n\nX, y = load_iris(return_X_y=True)\nvoter = VotingClassifier(\n    estimators=[('lr', LogisticRegression()),\n                ('rf', RandomForestClassifier(n_estimators=10))]\n)\nvoter.fit(X, y, sample_weight=np.ones(y.shape))\nvoter.set_params(lr=None)\nvoter.fit(X, y, sample_weight=np.ones(y.shape))\nprint(\"OK\")\nEOF\nsource /opt/miniconda3/bin/activate && conda activate testbed && python /tmp/repro.py",
+   "sandbox": [
+    {
+     "at_ms": 19840,
+     "dur_ms": 1329,
+     "exit": 0,
+     "cpu_ms": 1349.0
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 21172,
+   "dur_ms": 1965,
+   "tokens_in": 2,
+   "tokens_out": 127,
+   "cache_read": 5323,
+   "cache_write": 493,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 23140,
+   "dur_ms": 3104,
+   "tool": "bash",
+   "is_error": false,
+   "command": "source /opt/miniconda3/bin/activate && conda activate testbed && cd /testbed && pytest -rA sklearn/ensemble/tests/test_voting.py -q 2>&1 | tail -30",
+   "sandbox": [
+    {
+     "at_ms": 23140,
+     "dur_ms": 3102,
+     "exit": 0,
+     "cpu_ms": 3853.5
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 26244,
+   "dur_ms": 1813,
+   "tokens_in": 2,
+   "tokens_out": 69,
+   "cache_read": 5816,
+   "cache_write": 787,
+   "stop_reason": "stop"
+  }
+ ],
+ "removed": [],
+ "weight": "light"
+}

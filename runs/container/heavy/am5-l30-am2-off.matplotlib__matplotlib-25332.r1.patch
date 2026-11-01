@@ -1,0 +1,21 @@
+diff --git a/lib/matplotlib/cbook.py b/lib/matplotlib/cbook.py
+index c9699b2..d210baa 100755
+--- a/lib/matplotlib/cbook.py
++++ b/lib/matplotlib/cbook.py
+@@ -788,6 +788,16 @@ class Grouper:
+     def __init__(self, init=()):
+         self._mapping = {weakref.ref(x): [weakref.ref(x)] for x in init}
+ 
++    def __getstate__(self):
++        return {"groups": list(self)}
++
++    def __setstate__(self, state):
++        self._mapping = {}
++        for group in state["groups"]:
++            refs = [weakref.ref(x) for x in group]
++            for ref in refs:
++                self._mapping[ref] = refs
++
+     def __contains__(self, item):
+         return weakref.ref(item) in self._mapping
+ 

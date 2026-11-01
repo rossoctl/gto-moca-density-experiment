@@ -1,0 +1,194 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "am2-off-2",
+ "instance_id": "astropy__astropy-14995",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "Moca Pi",
+ "hands": "container",
+ "model": "aws/claude-sonnet-5",
+ "turn_ms": 55569,
+ "resolved": true,
+ "usage": {
+  "input": 46417,
+  "output": 2114,
+  "cacheRead": 0,
+  "cacheWrite": 0,
+  "total": 48531
+ },
+ "totals": {
+  "model_calls": 6,
+  "tool_calls": 5,
+  "model_ms": 38165,
+  "tool_ms": 17098,
+  "sandbox_ms": 17055
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 252,
+   "dur_ms": 8727,
+   "tokens_in": 4647,
+   "tokens_out": 141,
+   "cache_read": 0,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 8989,
+   "dur_ms": 28,
+   "tool": "grep",
+   "is_error": false,
+   "input": {
+    "path": "/testbed/astropy/nddata/mixins/ndarithmetic.py",
+    "pattern": "handle_mask",
+    "context": 5
+   },
+   "sandbox": [
+    {
+     "at_ms": 9003,
+     "dur_ms": 9,
+     "exit": 0,
+     "cpu_ms": 5.8
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 9020,
+   "dur_ms": 5491,
+   "tokens_in": 6521,
+   "tokens_out": 605,
+   "cache_read": 0,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14514,
+   "dur_ms": 28,
+   "tool": "edit",
+   "is_error": false,
+   "input": {
+    "path": "/testbed/astropy/nddata/mixins/ndarithmetic.py",
+    "edits": [
+     {
+      "oldText": "        # If only one mask is present we need not bother about any type checks\n        if (\n            self.mask is None and operand is not None and operand.mask is None\n        ) or handle_mask is None:\n            return None\n        elif self.mask is None and operand is not None:\n            # Make a copy so there is no reference in the result.\n            return deepcopy(operand.mask)\n        elif operand is None:\n            return deepcopy(self.mask)\n        else:\n            # Now lets calculate the resulting mask (operation enforces copy)\n            return handle_mask(self.mask, operand.mask, **kwds)",
+      "newText": "        # If only one mask is present we need not bother about any type checks\n        if operand is None:\n            return deepcopy(self.mask)\n        elif self.mask is None and operand.mask is None:\n            return None\n        elif self.mask is None:\n            # Make a copy so there is no reference in the result.\n            return deepcopy(operand.mask)\n        elif operand.mask is None:\n            return deepcopy(self.mask)\n        else:\n            # Now let's calculate the resulting mask (operation enforces copy)\n            # Handle also the special case that handle_mask is None\n            if handle_mask is None:\n                return None\n            return handle_mask(self.mask, operand.mask, **kwds)"
+     }
+    ]
+   },
+   "sandbox": [
+    {
+     "at_ms": 14516,
+     "dur_ms": 3,
+     "exit": 0,
+     "cpu_ms": 1.9
+    },
+    {
+     "at_ms": 14523,
+     "dur_ms": 4,
+     "exit": 0,
+     "cpu_ms": 2.8
+    },
+    {
+     "at_ms": 14532,
+     "dur_ms": 4,
+     "exit": 0,
+     "cpu_ms": 2.6
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 14543,
+   "dur_ms": 6888,
+   "tokens_in": 7114,
+   "tokens_out": 495,
+   "cache_read": 0,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 21436,
+   "dur_ms": 1408,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat << 'EOF' > /tmp/repro.py\nimport numpy as np\nfrom astropy.nddata import NDDataRef\n\narray = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]])\nmask = np.array([[0, 1, 64], [8, 0, 1], [2, 1, 0]])\n\nnref_nomask = NDDataRef(array)\nnref_mask = NDDataRef(array, mask=mask)\n\nprint(nref_nomask.multiply(1., handle_mask=np.bitwise_or).mask)\nprint(nref_nomask.multiply(nref_nomask, handle_mask=np.bitwise_or).mask)\nprint(nref_mask.multiply(1., handle_mask=np.bitwise_or).mask)\nprint(nref_mask.multiply(nref_mask, handle_mask=np.bitwise_or).mask)\nprint(nref_mask.multiply(nref_nomask, handle_mask=np.bitwise_or).mask)\nEOF\nsource /opt/miniconda3/bin/activate && conda activate testbed && python /tmp/repro.py",
+   "sandbox": [
+    {
+     "at_ms": 21436,
+     "dur_ms": 1406,
+     "exit": 0,
+     "cpu_ms": 1544.6
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 22845,
+   "dur_ms": 3356,
+   "tokens_in": 7643,
+   "tokens_out": 144,
+   "cache_read": 0,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 26205,
+   "dur_ms": 2068,
+   "tool": "bash",
+   "is_error": false,
+   "command": "source /opt/miniconda3/bin/activate && conda activate testbed && cd /testbed && pytest -rA astropy/nddata/mixins/tests/test_ndarithmetic.py -q 2>&1 | tail -30",
+   "sandbox": [
+    {
+     "at_ms": 26205,
+     "dur_ms": 2066,
+     "exit": 0,
+     "cpu_ms": 2203.4
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 28274,
+   "dur_ms": 7797,
+   "tokens_in": 9790,
+   "tokens_out": 134,
+   "cache_read": 0,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 36073,
+   "dur_ms": 13566,
+   "tool": "bash",
+   "is_error": false,
+   "command": "source /opt/miniconda3/bin/activate && conda activate testbed && cd /testbed && pytest -rA astropy/nddata/ -q 2>&1 | tail -15",
+   "sandbox": [
+    {
+     "at_ms": 36074,
+     "dur_ms": 13563,
+     "exit": 0,
+     "cpu_ms": 13617.2
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 49639,
+   "dur_ms": 5906,
+   "tokens_in": 10702,
+   "tokens_out": 595,
+   "cache_read": 0,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "removed": [],
+ "weight": "medium"
+}

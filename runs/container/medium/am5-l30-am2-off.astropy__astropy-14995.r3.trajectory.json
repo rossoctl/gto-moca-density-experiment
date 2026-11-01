@@ -1,0 +1,194 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "am5-l30-am2-off",
+ "instance_id": "astropy__astropy-14995",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Moca Pi",
+ "hands": "container",
+ "model": "aws/claude-sonnet-5",
+ "turn_ms": 53121,
+ "resolved": true,
+ "usage": {
+  "input": 45699,
+  "output": 1611,
+  "cacheRead": 0,
+  "cacheWrite": 0,
+  "total": 47310
+ },
+ "totals": {
+  "model_calls": 6,
+  "tool_calls": 5,
+  "model_ms": 35468,
+  "tool_ms": 17329,
+  "sandbox_ms": 17293
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 272,
+   "dur_ms": 1863,
+   "tokens_in": 4642,
+   "tokens_out": 144,
+   "cache_read": 0,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2146,
+   "dur_ms": 23,
+   "tool": "grep",
+   "is_error": false,
+   "input": {
+    "path": "/testbed/astropy/nddata/mixins/ndarithmetic.py",
+    "pattern": "handle_mask",
+    "context": 5
+   },
+   "sandbox": [
+    {
+     "at_ms": 2155,
+     "dur_ms": 10,
+     "exit": 0,
+     "cpu_ms": 6.1
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 2170,
+   "dur_ms": 5689,
+   "tokens_in": 6516,
+   "tokens_out": 549,
+   "cache_read": 0,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 7863,
+   "dur_ms": 26,
+   "tool": "edit",
+   "is_error": false,
+   "input": {
+    "path": "/testbed/astropy/nddata/mixins/ndarithmetic.py",
+    "edits": [
+     {
+      "oldText": "        elif self.mask is None and operand is not None:\n            # Make a copy so there is no reference in the result.\n            return deepcopy(operand.mask)\n        elif operand is None:\n            return deepcopy(self.mask)\n        else:\n            # Now lets calculate the resulting mask (operation enforces copy)\n            return handle_mask(self.mask, operand.mask, **kwds)",
+      "newText": "        elif self.mask is None and operand is not None:\n            # Make a copy so there is no reference in the result.\n            return deepcopy(operand.mask)\n        elif operand is None or operand.mask is None:\n            return deepcopy(self.mask)\n        else:\n            # Now lets calculate the resulting mask (operation enforces copy)\n            return handle_mask(self.mask, operand.mask, **kwds)"
+     }
+    ]
+   },
+   "sandbox": [
+    {
+     "at_ms": 7865,
+     "dur_ms": 3,
+     "exit": 0,
+     "cpu_ms": 1.8
+    },
+    {
+     "at_ms": 7871,
+     "dur_ms": 4,
+     "exit": 0,
+     "cpu_ms": 2.8
+    },
+    {
+     "at_ms": 7879,
+     "dur_ms": 4,
+     "exit": 0,
+     "cpu_ms": 3.0
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 7889,
+   "dur_ms": 5793,
+   "tokens_in": 6946,
+   "tokens_out": 410,
+   "cache_read": 0,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 13685,
+   "dur_ms": 1441,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && source /opt/miniconda3/bin/activate && conda activate testbed && python -c \"\nimport numpy as np\nfrom astropy.nddata import NDDataRef\n\narray = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]])\nmask = np.array([[0, 1, 64], [8, 0, 1], [2, 1, 0]])\n\nnref_nomask = NDDataRef(array)\nnref_mask = NDDataRef(array, mask=mask)\n\nprint(nref_nomask.multiply(1., handle_mask=np.bitwise_or).mask)\nprint(nref_nomask.multiply(nref_nomask, handle_mask=np.bitwise_or).mask)\nprint(nref_mask.multiply(1., handle_mask=np.bitwise_or).mask)\nprint(nref_mask.multiply(nref_mask, handle_mask=np.bitwise_or).mask)\nprint(nref_mask.multiply(nref_nomask, handle_mask=np.bitwise_or).mask)\n\"\n",
+   "sandbox": [
+    {
+     "at_ms": 13685,
+     "dur_ms": 1438,
+     "exit": 0,
+     "cpu_ms": 1542.4
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 15127,
+   "dur_ms": 7388,
+   "tokens_in": 7467,
+   "tokens_out": 139,
+   "cache_read": 0,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 22517,
+   "dur_ms": 2203,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && source /opt/miniconda3/bin/activate && conda activate testbed && pytest -rA astropy/nddata/mixins/tests/test_ndarithmetic.py -q 2>&1 | tail -30",
+   "sandbox": [
+    {
+     "at_ms": 22518,
+     "dur_ms": 2200,
+     "exit": 0,
+     "cpu_ms": 2242.8
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 24721,
+   "dur_ms": 2201,
+   "tokens_in": 9609,
+   "tokens_out": 132,
+   "cache_read": 0,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 26924,
+   "dur_ms": 13636,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && source /opt/miniconda3/bin/activate && conda activate testbed && pytest -rA astropy/nddata/ -q 2>&1 | tail -15",
+   "sandbox": [
+    {
+     "at_ms": 26924,
+     "dur_ms": 13634,
+     "exit": 0,
+     "cpu_ms": 13494.7
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 40561,
+   "dur_ms": 12534,
+   "tokens_in": 10519,
+   "tokens_out": 237,
+   "cache_read": 0,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "removed": [],
+ "weight": "medium"
+}

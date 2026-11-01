@@ -1,6 +1,9 @@
 #!/bin/bash
 
-export IMAGELIST=${@:-django__django-10914  django__django-11133  pydata__xarray-4094}
+cd "$(dirname "$0")"
+
+# default: every instance dir holding a testbed.Dockerfile (args override)
+IMAGELIST=${@:-$(echo */testbed.Dockerfile | xargs -n1 dirname)}
 
 for image in ${IMAGELIST}
 do

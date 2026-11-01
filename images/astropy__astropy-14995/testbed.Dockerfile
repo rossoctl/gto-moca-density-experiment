@@ -1,0 +1,15 @@
+# image-factory testbed for astropy__astropy-14995, emitted by factory/emit_oci.py (oci/1).
+# Generated: change factory/testbed.py, never this file.
+FROM docker.io/swebench/sweb.eval.x86_64.astropy_1776_astropy-14995@sha256:e1c746371f8f7132c29768bea9cc1380871c87f6e4404a2282d8d3c582786874
+LABEL io.rossoctl.image-factory.instance="astropy__astropy-14995"
+USER root
+SHELL ["/bin/bash", "-c"]
+# step 1: destroy the clone that reaches the fix, after proving the image
+# step 2: one baseline commit tracking exactly what the clone tracked
+# step 3: an agent commit must fail loudly, not empty the patch
+# step 4: hand the tree to the exec uid, numerically
+RUN ( set -eu; head=$(git -C /testbed rev-parse HEAD); tree=$(git -C /testbed rev-parse 'HEAD^{tree}'); git -C /testbed merge-base --is-ancestor b16c7d12ccbc7b2d20364b89fb44285bcbfede54 HEAD || { echo "FATAL base_commit b16c7d12ccbc is not an ancestor of /testbed HEAD ($head) -- this is not this instance's image" >&2; echo '      FIX: re-run `scripts/swebench-fetch.py --instances <id> --force`. If the published image really moved, the new head is a NEW INSTRUMENT: every template built on the old one must be rebuilt, not mixed with it' >&2; exit 1; }; if [ "$head" != 9afd2dd503b90f8b392bcb98f4e031dc16ee5f38 ] || [ "$tree" != fd8ea44ca50d4d9b416095eefdd5ca82f22d8709 ]; then   echo "FATAL /testbed is at head=$head tree=$tree; instance.json recorded head=9afd2dd503b90f8b392bcb98f4e031dc16ee5f38 tree=fd8ea44ca50d4d9b416095eefdd5ca82f22d8709" >&2;   echo '      FIX: re-run `scripts/swebench-fetch.py --instances <id> --force`. If the published image really moved, the new head is a NEW INSTRUMENT: every template built on the old one must be rebuilt, not mixed with it' >&2; exit 1; fi; git -C /testbed ls-files -z > /etc/autobench-tracked; test -s /etc/autobench-tracked || { echo 'FATAL the clone tracks no files' >&2; exit 1; }; { echo instance_id=astropy__astropy-14995; echo base_commit=b16c7d12ccbc7b2d20364b89fb44285bcbfede54; echo image_digest=swebench/sweb.eval.x86_64.astropy_1776_astropy-14995@sha256:e1c746371f8f7132c29768bea9cc1380871c87f6e4404a2282d8d3c582786874; echo dataset=SWE-bench/SWE-bench_Lite; echo split=test; echo "testbed_head=$head"; echo "testbed_tree=$tree"; } > /etc/autobench-instance; chmod 0644 /etc/autobench-instance /etc/autobench-tracked; rm -rf /testbed/.git; test ! -e /testbed/.git || { echo 'FATAL /testbed/.git survived rm -rf' >&2; exit 1; } ) \
+    && ( set -eu; cd /testbed; git init -q .; printf '__pycache__/\n*.pyc\n.pytest_cache/\n*.egg-info/\nbuild/\ndist/\n.eggs/\n*.so\n*.o\n.venv/\nvenv/\nnode_modules/\n.mypy_cache/\n.tox/\n' >> .git/info/exclude; xargs -0 -a /etc/autobench-tracked -r git -c user.name=autobench -c user.email=autobench@invalid add -f --; git -c user.name=autobench -c user.email=autobench@invalid commit -q -m baseline; git rev-list --count HEAD ) \
+    && ( set -eu; git -C /testbed config user.useConfigOnly true ) \
+    && ( set -eu; chown -R 1000:1000 /testbed )
+WORKDIR /testbed

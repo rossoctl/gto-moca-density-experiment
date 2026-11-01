@@ -1,0 +1,860 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "am7-v30-c",
+ "instance_id": "sphinx-doc__sphinx-10323",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Moca Pi",
+ "hands": "container",
+ "model": "aws/claude-sonnet-5",
+ "turn_ms": 177959,
+ "resolved": true,
+ "usage": {
+  "input": 62,
+  "output": 12303,
+  "cacheRead": 380724,
+  "cacheWrite": 22089,
+  "total": 415178
+ },
+ "totals": {
+  "model_calls": 31,
+  "tool_calls": 30,
+  "model_ms": 167216,
+  "tool_ms": 10522,
+  "sandbox_ms": 10473
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 145,
+   "dur_ms": 3319,
+   "tokens_in": 2,
+   "tokens_out": 150,
+   "cache_read": 0,
+   "cache_write": 4788,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3468,
+   "dur_ms": 12,
+   "tool": "grep",
+   "is_error": false,
+   "input": {
+    "path": "/testbed/sphinx/directives/code.py",
+    "pattern": "prepend|append|dedent",
+    "context": 3
+   },
+   "sandbox": [
+    {
+     "at_ms": 3468,
+     "dur_ms": 10,
+     "exit": 0,
+     "cpu_ms": 6.4
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 3480,
+   "dur_ms": 3996,
+   "tokens_in": 2,
+   "tokens_out": 140,
+   "cache_read": 4788,
+   "cache_write": 1499,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 7477,
+   "dur_ms": 21,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "path": "/testbed/sphinx/directives/code.py",
+    "offset": 205,
+    "limit": 40
+   },
+   "sandbox": [
+    {
+     "at_ms": 7478,
+     "dur_ms": 2,
+     "exit": 0,
+     "cpu_ms": 1.5
+    },
+    {
+     "at_ms": 7482,
+     "dur_ms": 11,
+     "exit": 0,
+     "cpu_ms": 9.1
+    },
+    {
+     "at_ms": 7494,
+     "dur_ms": 3,
+     "exit": 0,
+     "cpu_ms": 1.8
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 7498,
+   "dur_ms": 3591,
+   "tokens_in": 2,
+   "tokens_out": 332,
+   "cache_read": 6287,
+   "cache_write": 724,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 11090,
+   "dur_ms": 14,
+   "tool": "edit",
+   "is_error": false,
+   "input": {
+    "path": "/testbed/sphinx/directives/code.py",
+    "edits": [
+     {
+      "oldText": "            filters = [self.pyobject_filter,\n                       self.start_filter,\n                       self.end_filter,\n                       self.lines_filter,\n                       self.prepend_filter,\n                       self.append_filter,\n                       self.dedent_filter]",
+      "newText": "            filters = [self.pyobject_filter,\n                       self.start_filter,\n                       self.end_filter,\n                       self.lines_filter,\n                       self.dedent_filter,\n                       self.prepend_filter,\n                       self.append_filter]"
+     }
+    ]
+   },
+   "sandbox": [
+    {
+     "at_ms": 11090,
+     "dur_ms": 2,
+     "exit": 0,
+     "cpu_ms": 1.6
+    },
+    {
+     "at_ms": 11094,
+     "dur_ms": 3,
+     "exit": 0,
+     "cpu_ms": 2.0
+    },
+    {
+     "at_ms": 11098,
+     "dur_ms": 4,
+     "exit": 0,
+     "cpu_ms": 2.5
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 11104,
+   "dur_ms": 5534,
+   "tokens_in": 2,
+   "tokens_out": 627,
+   "cache_read": 7011,
+   "cache_write": 308,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 16639,
+   "dur_ms": 1105,
+   "tool": "bash",
+   "is_error": false,
+   "command": "mkdir -p /tmp/repro/src\ncat > /tmp/repro/src/pom.xml << 'EOF'\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<project>\n  <build>\n    <plugins>\n      <plugin>\n        <groupId>org.apache.maven.plugins</groupId>\n        <artifactId>maven-compiler-plugin</artifactId>\n        <version>3.8.0</version>\n        <configuration>\n          <source>1.8</source>\n          <target>1.8</target>\n          <debug>true</debug>\n          <encoding>UTF-8</encoding>\n        </configuration>\n      </plugin>\n      <plugin>\n        <groupId>com.github.ekryd.sortpom</groupId>\n        <artifactId>sortpom-maven-plugin</artifactId>\n        <version>2.15.0</version>\n        <configuration>\n          <verifyFailOn>strict</verifyFailOn>\n        </configuration>\n      </plugin>\n    </plugins>\n  </build>\n</project>\nEOF\ncat > /tmp/repro/src/conf.py << 'EOF'\nEOF\ncat > /tmp/repro/src/index.rst << 'EOF'\nhello world\n============\n\nCode examples:\n\n.. literalinclude:: pom.xml\n   :language: xml\n   :prepend:       </plugin>\n   :start-at: <groupId>com.github.ekryd.sortpom</groupId>\n   :end-at: </plugin>\nEOF\ncd /tmp/repro && source /opt/miniconda3/bin/activate && conda activate testbed && python -m sphinx -b text src out -W 2>&1 | tail -30\ncat out/index.txt\n",
+   "sandbox": [
+    {
+     "at_ms": 16639,
+     "dur_ms": 1104,
+     "exit": 0,
+     "cpu_ms": 881.6
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 17744,
+   "dur_ms": 2356,
+   "tokens_in": 2,
+   "tokens_out": 142,
+   "cache_read": 7319,
+   "cache_write": 924,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 20102,
+   "dur_ms": 278,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp/repro && source /opt/miniconda3/bin/activate && conda activate testbed && python -c \"import sphinx; print(sphinx.__file__)\"",
+   "sandbox": [
+    {
+     "at_ms": 20102,
+     "dur_ms": 276,
+     "exit": 0,
+     "cpu_ms": 237.3
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 20380,
+   "dur_ms": 2270,
+   "tokens_in": 2,
+   "tokens_out": 169,
+   "cache_read": 8243,
+   "cache_write": 123,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 22651,
+   "dur_ms": 663,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp/repro && rm -rf out .doctrees && source /opt/miniconda3/bin/activate && conda activate testbed && python -m sphinx -b text src out -W 2>&1 | tail -30\necho \"---\"\ncat out/index.txt",
+   "sandbox": [
+    {
+     "at_ms": 22652,
+     "dur_ms": 661,
+     "exit": 0,
+     "cpu_ms": 588.6
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 23314,
+   "dur_ms": 3168,
+   "tokens_in": 2,
+   "tokens_out": 217,
+   "cache_read": 8366,
+   "cache_write": 468,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 26483,
+   "dur_ms": 75,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && python3 -c \"\nfrom docutils.parsers.rst import directives\nprint(repr(directives.unchanged_required('       </plugin>')))\n\"\n",
+   "sandbox": [
+    {
+     "at_ms": 26483,
+     "dur_ms": 73,
+     "exit": 0,
+     "cpu_ms": 63.6
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 26558,
+   "dur_ms": 5158,
+   "tokens_in": 2,
+   "tokens_out": 307,
+   "cache_read": 8834,
+   "cache_write": 114,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 31718,
+   "dur_ms": 87,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && python3 -c \"\nfrom docutils.parsers.rst import directives, Directive\nfrom docutils.utils import new_document\nfrom docutils.frontend import OptionParser\nfrom docutils.parsers.rst import Parser\nimport docutils.utils\n\nsettings = OptionParser(components=(Parser,)).get_default_values()\ndocument = new_document('test', settings)\nparser = Parser()\nparser.parse('''.. literalinclude:: pom.xml\n   :prepend:       </plugin>\n''', document)\nprint(document.pformat())\n\"\n",
+   "sandbox": [
+    {
+     "at_ms": 31718,
+     "dur_ms": 86,
+     "exit": 0,
+     "cpu_ms": 76.8
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 31805,
+   "dur_ms": 3985,
+   "tokens_in": 2,
+   "tokens_out": 179,
+   "cache_read": 8948,
+   "cache_write": 472,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 35791,
+   "dur_ms": 94,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && grep -n \"unchanged_required\\b\" sphinx/util/docutils.py docutils/parsers/rst/directives/__init__.py 2>/dev/null\npython3 -c \"\nimport docutils.parsers.rst.directives as directives\nhelp(directives.unchanged_required)\n\"\n",
+   "sandbox": [
+    {
+     "at_ms": 35792,
+     "dur_ms": 92,
+     "exit": 0,
+     "cpu_ms": 79.6
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 35885,
+   "dur_ms": 3232,
+   "tokens_in": 2,
+   "tokens_out": 239,
+   "cache_read": 9420,
+   "cache_write": 238,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 39119,
+   "dur_ms": 74,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && python3 -c \"\nimport docutils.statemachine\nfrom docutils.parsers.rst import directives\nfrom docutils.statemachine import StringList\ntext = '''.. literalinclude:: pom.xml\n   :prepend:       </plugin>\n'''\nfrom docutils.parsers.rst import states\n\" \n",
+   "sandbox": [
+    {
+     "at_ms": 39119,
+     "dur_ms": 73,
+     "exit": 0,
+     "cpu_ms": 61.9
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 39193,
+   "dur_ms": 3069,
+   "tokens_in": 2,
+   "tokens_out": 227,
+   "cache_read": 9658,
+   "cache_write": 159,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 42263,
+   "dur_ms": 38,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 -c \"import docutils; print(docutils.__file__)\"\ngrep -n \"def parse_extension_options\\|def extract_options\\|lstrip\\|strip()\" /opt/miniconda3/envs/testbed/lib/python3.9/site-packages/docutils/parsers/rst/states.py | grep -i option",
+   "sandbox": [
+    {
+     "at_ms": 42263,
+     "dur_ms": 37,
+     "exit": 0,
+     "cpu_ms": 33.0
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 42301,
+   "dur_ms": 2258,
+   "tokens_in": 2,
+   "tokens_out": 134,
+   "cache_read": 9817,
+   "cache_write": 245,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 44560,
+   "dur_ms": 10,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sed -n '2200,2260p' /opt/miniconda3/envs/testbed/lib/python3.9/site-packages/docutils/parsers/rst/states.py",
+   "sandbox": [
+    {
+     "at_ms": 44561,
+     "dur_ms": 8,
+     "exit": 0,
+     "cpu_ms": 5.3
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 44570,
+   "dur_ms": 4022,
+   "tokens_in": 2,
+   "tokens_out": 311,
+   "cache_read": 10062,
+   "cache_write": 890,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 48593,
+   "dur_ms": 9,
+   "tool": "bash",
+   "is_error": false,
+   "command": "grep -n \"def field_marker\\|def field\\b\\|field_body\\|def parse_field_body\\|class Field\\b\" /opt/miniconda3/envs/testbed/lib/python3.9/site-packages/docutils/parsers/rst/states.py | head -30",
+   "sandbox": [
+    {
+     "at_ms": 48593,
+     "dur_ms": 9,
+     "exit": 0,
+     "cpu_ms": 8.1
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 48603,
+   "dur_ms": 6226,
+   "tokens_in": 2,
+   "tokens_out": 432,
+   "cache_read": 10952,
+   "cache_write": 362,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 54831,
+   "dur_ms": 89,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && python3 -c \"\nimport docutils.parsers.rst\nfrom docutils.frontend import OptionParser\nfrom docutils.utils import new_document\nfrom docutils.parsers.rst import Parser\n\nsettings = OptionParser(components=(Parser,)).get_default_values()\ndocument = new_document('test', settings)\nparser = Parser()\nrst = '''.. code-block:: xml\n   :prepend:       </plugin>\n\n   content\n'''\nparser.parse(rst, document)\nprint(document.pformat())\n\"\n",
+   "sandbox": [
+    {
+     "at_ms": 54831,
+     "dur_ms": 88,
+     "exit": 0,
+     "cpu_ms": 77.7
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 54920,
+   "dur_ms": 2682,
+   "tokens_in": 2,
+   "tokens_out": 181,
+   "cache_read": 11314,
+   "cache_write": 392,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 57604,
+   "dur_ms": 182,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && python3 -c \"\nfrom sphinx.directives.code import LiteralIncludeReader\n\" \ncd /testbed && grep -n \"class LiteralInclude\" -A 30 sphinx/directives/code.py | head -50",
+   "sandbox": [
+    {
+     "at_ms": 57604,
+     "dur_ms": 180,
+     "exit": 0,
+     "cpu_ms": 155.1
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 57786,
+   "dur_ms": 4900,
+   "tokens_in": 2,
+   "tokens_out": 150,
+   "cache_read": 11706,
+   "cache_write": 910,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 62688,
+   "dur_ms": 9,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sed -n '1440,1500p' /opt/miniconda3/envs/testbed/lib/python3.9/site-packages/docutils/parsers/rst/states.py",
+   "sandbox": [
+    {
+     "at_ms": 62688,
+     "dur_ms": 7,
+     "exit": 0,
+     "cpu_ms": 5.0
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 62697,
+   "dur_ms": 2260,
+   "tokens_in": 2,
+   "tokens_out": 145,
+   "cache_read": 12616,
+   "cache_write": 1087,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 64958,
+   "dur_ms": 12,
+   "tool": "bash",
+   "is_error": false,
+   "command": "grep -n \"def get_first_known_indented\" -A 40 /opt/miniconda3/envs/testbed/lib/python3.9/site-packages/docutils/statemachine.py",
+   "sandbox": [
+    {
+     "at_ms": 64959,
+     "dur_ms": 8,
+     "exit": 0,
+     "cpu_ms": 5.5
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 64970,
+   "dur_ms": 5981,
+   "tokens_in": 2,
+   "tokens_out": 532,
+   "cache_read": 13703,
+   "cache_write": 705,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 70953,
+   "dur_ms": 88,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && python3 -c \"\nfrom docutils.parsers.rst import directives, Directive\nfrom docutils.parsers.rst import roles\nfrom docutils.utils import new_document\nfrom docutils.frontend import OptionParser\nfrom docutils.parsers.rst import Parser\n\nclass MyDirective(Directive):\n    required_arguments = 1\n    option_spec = {'prepend': directives.unchanged_required}\n    has_content = False\n    def run(self):\n        print('OPTION VALUE:', repr(self.options.get('prepend')))\n        return []\n\ndirectives.register_directive('mydir', MyDirective)\n\nsettings = OptionParser(components=(Parser,)).get_default_values()\ndocument = new_document('test', settings)\nparser = Parser()\nrst = '''.. mydir:: foo\n   :prepend:       </plugin>\n'''\nparser.parse(rst, document)\n\"\n",
+   "sandbox": [
+    {
+     "at_ms": 70953,
+     "dur_ms": 87,
+     "exit": 0,
+     "cpu_ms": 77.6
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 71042,
+   "dur_ms": 13125,
+   "tokens_in": 2,
+   "tokens_out": 1036,
+   "cache_read": 14408,
+   "cache_write": 358,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 84168,
+   "dur_ms": 11,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && grep -n \"prepend\\|append.*literalinclude\\|literalinclude.*append\" CHANGES | head -30",
+   "sandbox": [
+    {
+     "at_ms": 84168,
+     "dur_ms": 10,
+     "exit": 0,
+     "cpu_ms": 8.9
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 84180,
+   "dur_ms": 14362,
+   "tokens_in": 2,
+   "tokens_out": 1251,
+   "cache_read": 14766,
+   "cache_write": 120,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 98544,
+   "dur_ms": 88,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && python3 -c \"\nfrom docutils.parsers.rst import directives, Directive\nfrom docutils.utils import new_document\nfrom docutils.frontend import OptionParser\nfrom docutils.parsers.rst import Parser\n\nclass MyDirective(Directive):\n    required_arguments = 1\n    option_spec = {'prepend': directives.unchanged_required}\n    has_content = False\n    def run(self):\n        print('OPTION VALUE:', repr(self.options.get('prepow') or self.options.get('prepend')))\n        return []\n\ndirectives.register_directive('mydir', MyDirective)\n\nsettings = OptionParser(components=(Parser,)).get_default_values()\ndocument = new_document('test', settings)\nparser = Parser()\nrst = '''.. mydir:: foo\n   :prepend: </plugin>\n'''\nparser.parse(rst, document)\n\"\n",
+   "sandbox": [
+    {
+     "at_ms": 98544,
+     "dur_ms": 87,
+     "exit": 0,
+     "cpu_ms": 77.4
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 98632,
+   "dur_ms": 6746,
+   "tokens_in": 2,
+   "tokens_out": 634,
+   "cache_read": 14886,
+   "cache_write": 353,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 105379,
+   "dur_ms": 91,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && python3 -c \"\nfrom docutils.parsers.rst import directives, Directive\nfrom docutils.utils import new_document\nfrom docutils.frontend import OptionParser\nfrom docutils.parsers.rst import Parser\n\nclass MyDirective(Directive):\n    required_arguments = 1\n    option_spec = {'prepend': directives.unchanged_required}\n    has_content = False\n    def run(self):\n        print('OPTION VALUE:', repr(self.options.get('prepend')))\n        return []\n\ndirectives.register_directive('mydir', MyDirective)\n\nsettings = OptionParser(components=(Parser,)).get_default_values()\ndocument = new_document('test', settings)\nparser = Parser()\nrst = '''.. mydir:: foo\n   :prepend: \\\\\\\\ </plugin>\n'''\nparser.parse(rst, document)\n\"\n",
+   "sandbox": [
+    {
+     "at_ms": 105379,
+     "dur_ms": 90,
+     "exit": 0,
+     "cpu_ms": 79.5
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 105470,
+   "dur_ms": 6230,
+   "tokens_in": 2,
+   "tokens_out": 438,
+   "cache_read": 15239,
+   "cache_write": 350,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 111701,
+   "dur_ms": 88,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && python3 -c \"\nfrom docutils.parsers.rst import directives, Directive\nfrom docutils.utils import new_document\nfrom docutils.frontend import OptionParser\nfrom docutils.parsers.rst import Parser\n\nclass MyDirective(Directive):\n    required_arguments = 1\n    option_spec = {'prepend': directives.unchanged_required}\n    has_content = False\n    def run(self):\n        print('OPTION VALUE:', repr(self.options.get('prepend')))\n        return []\n\ndirectives.register_directive('mydir', MyDirective)\n\nsettings = OptionParser(components=(Parser,)).get_default_values()\ndocument = new_document('test', settings)\nparser = Parser()\nrst = '''.. mydir:: foo\n   :prepend: a   b\n'''\nparser.parse(rst, document)\n\"\n",
+   "sandbox": [
+    {
+     "at_ms": 111701,
+     "dur_ms": 87,
+     "exit": 0,
+     "cpu_ms": 77.1
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 111789,
+   "dur_ms": 16090,
+   "tokens_in": 2,
+   "tokens_out": 1458,
+   "cache_read": 15589,
+   "cache_write": 339,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 127880,
+   "dur_ms": 87,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && python3 -c \"\nfrom docutils.parsers.rst import directives, Directive\nfrom docutils.utils import new_document\nfrom docutils.frontend import OptionParser\nfrom docutils.parsers.rst import Parser\n\nclass MyDirective(Directive):\n    required_arguments = 1\n    option_spec = {'prepend': directives.unchanged_required}\n    has_content = False\n    def run(self):\n        print('OPTION VALUE:', repr(self.options.get('prepend')))\n        return []\n\ndirectives.register_directive('mydir', MyDirective)\n\nsettings = OptionParser(components=(Parser,)).get_default_values()\ndocument = new_document('test', settings)\nparser = Parser()\nrst = '''.. mydir:: foo\n   :prepend:\n      a\n        b\n'''\nparser.parse(rst, document)\n\"\n",
+   "sandbox": [
+    {
+     "at_ms": 127880,
+     "dur_ms": 86,
+     "exit": 0,
+     "cpu_ms": 76.6
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 127967,
+   "dur_ms": 14703,
+   "tokens_in": 2,
+   "tokens_out": 1211,
+   "cache_read": 15928,
+   "cache_write": 344,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 142672,
+   "dur_ms": 672,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/repro/src/index.rst << 'EOF'\nhello world\n============\n\nCode examples:\n\n.. literalinclude:: pom.xml\n   :language: xml\n   :start-at: <groupId>com.github.ekryd.sortpom</groupId>\n   :end-at: </plugin>\n   :prepend:\n      ______</plugin>\n   :dedent: 6\nEOF\ncd /tmp/repro && rm -rf out .doctrees && source /opt/miniconda3/bin/activate && conda activate testbed && python -m sphinx -b text src out -W 2>&1 | tail -30\necho ---\ncat out/index.txt",
+   "sandbox": [
+    {
+     "at_ms": 142672,
+     "dur_ms": 671,
+     "exit": 0,
+     "cpu_ms": 594.2
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 143345,
+   "dur_ms": 9482,
+   "tokens_in": 2,
+   "tokens_out": 788,
+   "cache_read": 16272,
+   "cache_write": 562,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 152828,
+   "dur_ms": 10,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && grep -rn \"prepend\\|append\" tests/test_directive_code.py | head -50",
+   "sandbox": [
+    {
+     "at_ms": 152828,
+     "dur_ms": 9,
+     "exit": 0,
+     "cpu_ms": 8.6
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 152839,
+   "dur_ms": 2738,
+   "tokens_in": 2,
+   "tokens_out": 142,
+   "cache_read": 16834,
+   "cache_write": 153,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 155578,
+   "dur_ms": 8,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && sed -n '190,230p' tests/test_directive_code.py",
+   "sandbox": [
+    {
+     "at_ms": 155578,
+     "dur_ms": 7,
+     "exit": 0,
+     "cpu_ms": 4.7
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 155587,
+   "dur_ms": 3760,
+   "tokens_in": 2,
+   "tokens_out": 175,
+   "cache_read": 16987,
+   "cache_write": 784,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 159348,
+   "dur_ms": 3207,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && source /opt/miniconda3/bin/activate && conda activate testbed && tox --current-env -epy39 -v -- tests/test_directive_code.py 2>&1 | tail -60",
+   "sandbox": [
+    {
+     "at_ms": 159349,
+     "dur_ms": 3205,
+     "exit": 0,
+     "cpu_ms": 3038.2
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 162556,
+   "dur_ms": 3916,
+   "tokens_in": 2,
+   "tokens_out": 152,
+   "cache_read": 17771,
+   "cache_write": 2641,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 166473,
+   "dur_ms": 16,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && git diff",
+   "sandbox": [
+    {
+     "at_ms": 166474,
+     "dur_ms": 15,
+     "exit": 0,
+     "cpu_ms": 16.6
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 166490,
+   "dur_ms": 3983,
+   "tokens_in": 2,
+   "tokens_out": 184,
+   "cache_read": 20412,
+   "cache_write": 401,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 170474,
+   "dur_ms": 3371,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && source /opt/miniconda3/bin/activate && conda activate testbed && tox --current-env -epy39 -v -- tests/test_directive_code.py tests/test_build_text.py 2>&1 | tail -20",
+   "sandbox": [
+    {
+     "at_ms": 170474,
+     "dur_ms": 3370,
+     "exit": 0,
+     "cpu_ms": 3282.3
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 173846,
+   "dur_ms": 1507,
+   "tokens_in": 2,
+   "tokens_out": 65,
+   "cache_read": 20813,
+   "cache_write": 962,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 175355,
+   "dur_ms": 13,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && git diff",
+   "sandbox": [
+    {
+     "at_ms": 175355,
+     "dur_ms": 12,
+     "exit": 0,
+     "cpu_ms": 15.7
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 175369,
+   "dur_ms": 2567,
+   "tokens_in": 2,
+   "tokens_out": 155,
+   "cache_read": 21775,
+   "cache_write": 314,
+   "stop_reason": "stop"
+  }
+ ],
+ "removed": [],
+ "weight": "light"
+}

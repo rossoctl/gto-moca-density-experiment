@@ -1,0 +1,303 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "am5-l30-am2-on",
+ "instance_id": "django__django-11179",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "Moca Pi",
+ "hands": "container",
+ "model": "aws/claude-sonnet-5",
+ "turn_ms": 52998,
+ "resolved": true,
+ "usage": {
+  "input": 20,
+  "output": 1650,
+  "cacheRead": 91886,
+  "cacheWrite": 24934,
+  "total": 118490
+ },
+ "totals": {
+  "model_calls": 10,
+  "tool_calls": 9,
+  "model_ms": 48241,
+  "tool_ms": 4430,
+  "sandbox_ms": 4384
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 266,
+   "dur_ms": 1551,
+   "tokens_in": 2,
+   "tokens_out": 88,
+   "cache_read": 0,
+   "cache_write": 3800,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1828,
+   "dur_ms": 33,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sed -n '1,320p' /testbed/django/db/models/deletion.py",
+   "sandbox": [
+    {
+     "at_ms": 1836,
+     "dur_ms": 20,
+     "exit": 0,
+     "cpu_ms": 7.9
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 1863,
+   "dur_ms": 1694,
+   "tokens_in": 2,
+   "tokens_out": 71,
+   "cache_read": 3800,
+   "cache_write": 4400,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3559,
+   "dur_ms": 10,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sed -n '320,345p' /testbed/django/db/models/deletion.py",
+   "sandbox": [
+    {
+     "at_ms": 3559,
+     "dur_ms": 8,
+     "exit": 0,
+     "cpu_ms": 5.3
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 3570,
+   "dur_ms": 3363,
+   "tokens_in": 2,
+   "tokens_out": 322,
+   "cache_read": 8200,
+   "cache_write": 222,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6936,
+   "dur_ms": 23,
+   "tool": "edit",
+   "is_error": false,
+   "input": {
+    "path": "/testbed/django/db/models/deletion.py",
+    "edits": [
+     {
+      "oldText": "            if self.can_fast_delete(instance):\n                with transaction.mark_for_rollback_on_error():\n                    count = sql.DeleteQuery(model).delete_batch([instance.pk], self.using)\n                return count, {model._meta.label: count}",
+      "newText": "            if self.can_fast_delete(instance):\n                with transaction.mark_for_rollback_on_error():\n                    count = sql.DeleteQuery(model).delete_batch([instance.pk], self.using)\n                setattr(instance, model._meta.pk.attname, None)\n                return count, {model._meta.label: count}"
+     }
+    ]
+   },
+   "sandbox": [
+    {
+     "at_ms": 6937,
+     "dur_ms": 3,
+     "exit": 0,
+     "cpu_ms": 1.7
+    },
+    {
+     "at_ms": 6943,
+     "dur_ms": 3,
+     "exit": 0,
+     "cpu_ms": 2.2
+    },
+    {
+     "at_ms": 6951,
+     "dur_ms": 4,
+     "exit": 0,
+     "cpu_ms": 2.8
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 6960,
+   "dur_ms": 3751,
+   "tokens_in": 2,
+   "tokens_out": 355,
+   "cache_read": 8422,
+   "cache_write": 360,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 10713,
+   "dur_ms": 12,
+   "tool": "write",
+   "is_error": false,
+   "input": {
+    "path": "/tmp/repro_test.py",
+    "content": "import django\nfrom django.conf import settings\n\nsettings.configure(\n    DEBUG=True,\n    DATABASES={'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}},\n    INSTALLED_APPS=['django.contrib.contenttypes', 'django.contrib.auth', '__main__'],\n)\ndjango.setup()\n\nfrom django.db import models, connection\n\nclass Simple(models.Model):\n    class Meta:\n        app_label = '__main__'\n\nwith connection.schema_editor() as se:\n    se.create_model(Simple)\n\nobj = Simple.objects.create()\npk = obj.pk\nobj.delete()\nprint(\"pk after delete:\", obj.pk)\nassert obj.pk is None, \"PK was not cleared!\"\nprint(\"OK\")\n"
+   },
+   "sandbox": [
+    {
+     "at_ms": 10714,
+     "dur_ms": 4,
+     "exit": 0,
+     "cpu_ms": 2.5
+    },
+    {
+     "at_ms": 10720,
+     "dur_ms": 4,
+     "exit": 0,
+     "cpu_ms": 2.9
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 10726,
+   "dur_ms": 1650,
+   "tokens_in": 2,
+   "tokens_out": 89,
+   "cache_read": 8782,
+   "cache_write": 385,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 12378,
+   "dur_ms": 878,
+   "tool": "bash",
+   "is_error": false,
+   "command": "source /opt/miniconda3/bin/activate && conda activate testbed && cd /testbed && python /tmp/repro_test.py",
+   "sandbox": [
+    {
+     "at_ms": 12379,
+     "dur_ms": 876,
+     "exit": 0,
+     "cpu_ms": 706.2
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 13256,
+   "dur_ms": 1940,
+   "tokens_in": 2,
+   "tokens_out": 121,
+   "cache_read": 9167,
+   "cache_write": 105,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 15200,
+   "dur_ms": 256,
+   "tool": "bash",
+   "is_error": false,
+   "command": "source /opt/miniconda3/bin/activate && conda activate testbed && cd /testbed && git diff",
+   "sandbox": [
+    {
+     "at_ms": 15201,
+     "dur_ms": 253,
+     "exit": 0,
+     "cpu_ms": 247.3
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 15457,
+   "dur_ms": 6953,
+   "tokens_in": 2,
+   "tokens_out": 99,
+   "cache_read": 9272,
+   "cache_write": 365,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 22413,
+   "dur_ms": 977,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && git stash && source /opt/miniconda3/bin/activate && conda activate testbed && python /tmp/repro_test.py; git stash pop",
+   "sandbox": [
+    {
+     "at_ms": 22414,
+     "dur_ms": 975,
+     "exit": 0,
+     "cpu_ms": 791.9
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 23391,
+   "dur_ms": 2821,
+   "tokens_in": 2,
+   "tokens_out": 205,
+   "cache_read": 9637,
+   "cache_write": 352,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 26213,
+   "dur_ms": 2223,
+   "tool": "bash",
+   "is_error": false,
+   "command": "source /opt/miniconda3/bin/activate && conda activate testbed && cd /testbed && export LANG=en_US.UTF-8 && export LANGUAGE=en_US:en && export LC_ALL=en_US.UTF-8 && ./tests/runtests.py --verbosity 2 --settings=test_sqlite --parallel 1 delete delete_regress model_fields many_to_one_null",
+   "sandbox": [
+    {
+     "at_ms": 26214,
+     "dur_ms": 2220,
+     "exit": 0,
+     "cpu_ms": 2116.0
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 28437,
+   "dur_ms": 18590,
+   "tokens_in": 2,
+   "tokens_out": 73,
+   "cache_read": 9989,
+   "cache_write": 14628,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 47030,
+   "dur_ms": 18,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /testbed && git diff",
+   "sandbox": [
+    {
+     "at_ms": 47030,
+     "dur_ms": 14,
+     "exit": 0,
+     "cpu_ms": 48.4
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 47050,
+   "dur_ms": 5928,
+   "tokens_in": 2,
+   "tokens_out": 227,
+   "cache_read": 24617,
+   "cache_write": 317,
+   "stop_reason": "stop"
+  }
+ ],
+ "removed": [],
+ "weight": "light"
+}

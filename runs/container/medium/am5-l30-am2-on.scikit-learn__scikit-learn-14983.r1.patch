@@ -1,0 +1,28 @@
+diff --git a/sklearn/model_selection/_split.py b/sklearn/model_selection/_split.py
+index c49a3ce..ade8ef4 100755
+--- a/sklearn/model_selection/_split.py
++++ b/sklearn/model_selection/_split.py
+@@ -1103,6 +1103,13 @@ class _RepeatedSplits(metaclass=ABCMeta):
+         self.random_state = random_state
+         self.cvargs = cvargs
+ 
++    def __getattr__(self, item):
++        if item == 'cvargs':
++            raise AttributeError(item)
++        if item in self.cvargs:
++            return self.cvargs[item]
++        raise AttributeError(item)
++
+     def split(self, X, y=None, groups=None):
+         """Generates indices to split data into training and test set.
+ 
+@@ -1163,6 +1170,9 @@ class _RepeatedSplits(metaclass=ABCMeta):
+                      **self.cvargs)
+         return cv.get_n_splits(X, y, groups) * self.n_repeats
+ 
++    def __repr__(self):
++        return _build_repr(self)
++
+ 
+ class RepeatedKFold(_RepeatedSplits):
+     """Repeated K-Fold cross validator.
