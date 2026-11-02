@@ -14,7 +14,10 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 MOCADIR=${MOCADIR:-$HOME/repo/rossoctl/moca}
-OUT=${OUT:-"$(dirname "$0")/../replay/fc-guest-client"}
+# absolute before anything below cd's around (the build runs inside the
+# moca checkout, so a relative OUT would resolve against the wrong tree)
+OUT=${OUT:-"$(cd "$(dirname "$0")/.." && pwd)/replay/fc-guest-client"}
+mkdir -p "$(dirname "$OUT")"
 
 fail() { echo "prepare_fc_backend.sh: $*" >&2; exit 1; }
 
