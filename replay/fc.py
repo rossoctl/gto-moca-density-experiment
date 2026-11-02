@@ -61,6 +61,13 @@ FC_GUEST_CLIENT = os.environ.get(
 FC_UID = int(os.environ.get("FC_UID", "1000"))
 FC_GID = int(os.environ.get("FC_GID", "1000"))
 FC_MAX_VMS = int(os.environ.get("FC_MAX_VMS", "36"))
+# Lifecycle: "perexec" (default) mirrors the moca backend exactly -- a fresh
+# VM restored from the golden snapshot for every step, killed after -- which
+# isolates moca's management-stack cost.  "warm" keeps each sandbox's VM
+# resident across steps (no on/off stutter: the guest page cache stays warm,
+# the cold-rootfs cost vanishes), which is the firecracker analogue of the
+# VM backend's long-lived QEMU processes.  Both rows belong in the report.
+FC_VM_MODE = os.environ.get("FC_VM_MODE", "perexec")
 FC_VSOCK_PORT = 1024
 WORKSPACE_IMAGE_BYTES = 2 * 1024 * 1024 * 1024   # matches the moca launcher
 
@@ -247,8 +254,16 @@ class FcTarget:
             f"/bin/bash -c 'cd /workspace/testbed && "
             f"exec bash /tmp/.replay-step.sh'\n")
         t = min(int(timeout), 840)
-        with self.sandbox.vm() as vm:
+        if FC_VM_MODE == "warm":
+            # the sandbox's resident VM: restored once, kept alive across
+            # steps (warm page cache, no on/off per step), killed at stop().
+            # Execs on one VM are naturally serialized -- the replay drivers
+            # run one thread per sandbox.
+            vm = self.sandbox.resident_vm()
             rc, out, err = vm.exec(wrapper, t)
+        else:
+            with self.sandbox.vm() as vm:
+                rc, out, err = vm.exec(wrapper, t)
         return subprocess.CompletedProcess([], rc, out, err)
 
 
@@ -263,7 +278,7 @@ class FcSandbox:
         self.workspace_dir = os.path.join(FC_BASE, "workspaces",
                                           self.name.replace("_", "-"))
         self.workspace_img = os.path.join(self.workspace_dir, "workspace.img")
-        self._sem = None   # module-wide, set at start()
+        self._resident = None   # FC_VM_MODE=warm's long-lived VM
 
     def _preflight(self):
         if os.geteuid() != 0:
@@ -280,7 +295,6 @@ class FcSandbox:
 
     def start(self):
         self._preflight()
-        global _VM_SEMAPHORE
         os.makedirs(self.workspace_dir, exist_ok=True)
         if not os.path.exists(self.workspace_img):
             with open(self.workspace_img, "wb") as f:
@@ -311,10 +325,32 @@ class FcSandbox:
                 _release_vm_slot()
         return _LeasedVM(vm)
 
+    def resident_vm(self):
+        """The sandbox's long-lived VM (FC_VM_MODE=warm): restored on first
+        use, held for the sandbox's life.  Holds its concurrency slot for
+        that whole life -- warm mode trades the per-exec restore for
+        resident memory, which is the thing being measured."""
+        if self._resident is None:
+            _acquire_vm_slot()
+            vm = FcVM(self.snapshot_dir, self.workspace_img)
+            try:
+                vm.start()
+            except Exception:
+                _release_vm_slot()
+                raise
+            self._resident = vm
+        return self._resident
+
     def target(self):
         return FcTarget(self)
 
     def stop(self):
+        if self._resident is not None:
+            try:
+                self._resident.stop()
+            finally:
+                _release_vm_slot()
+                self._resident = None
         shutil.rmtree(self.workspace_dir, ignore_errors=True)
 
     @property

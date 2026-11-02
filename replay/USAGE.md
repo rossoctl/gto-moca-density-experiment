@@ -153,3 +153,22 @@ these VMs). Coexistence with a live moca stack on the same host is safe
 structurally (no shared paths or ports; `/dev/kvm` shared), but the two
 stacks' memory budgets are additive — under load, run one at a time or
 split the caps deliberately.
+
+### Lifecycle modes (`FC_VM_MODE`)
+
+The fc backend supports both microVM lifecycles, so one implementation gives
+the report two rows:
+
+- `FC_VM_MODE=perexec` (default) — a fresh VM restored from the golden
+  snapshot for every step, killed after: moca's exact lifecycle minus the
+  moca stack (relay, control plane, workers, tokens). Cold page cache every
+  step; this mode prices moca's management machinery.
+- `FC_VM_MODE=warm` — one VM per sandbox, restored once and kept resident
+  across steps: no on/off per step, the guest page cache stays warm and the
+  cold-rootfs cost vanishes. The firecracker analogue of the VM backend's
+  long-lived QEMU processes. Resident VMs hold their FC_MAX_VMS slot for the
+  sandbox's whole life — the memory-for-latency trade is the measurement.
+
+```sh
+sudo -E env FC_VM_MODE=warm python3 replay_manifest.py manifests/smoke.json --backend fc
+```
