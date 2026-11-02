@@ -187,3 +187,22 @@ Consequences:
 - What remains fixable: the **warm CPU penalty** (+58–82 % user time) — cause still unattributed (1-vCPU config vs host deficit; note moca-sbx-fc runs the same single-threaded loop ~15 % slower natively than the supposedly identical ctr/vm hosts, unexplained). A fresh host, moca-sbx-fc2, is being provisioned to isolate that.
 
 Not verified: whether a newer firecracker or Cloud Hypervisor backend preserves file page cache across restore (the `launcher_chv.go` path exists in the tree and was not tested); whether the guest kernel version matters.
+
+---
+
+## Appendix — 2026-11-02 (final): VM vs moca at load50 — stretch, memory, CPU, failures
+
+Four moca runs and three VM runs of the same manifest; memory and CPU sampled at 5 s (CPU from run 3 only on both hosts; VM memory from its run 2 — the run-3 sampler died pre-launch, 19 samples, discarded).
+
+| | VM backend (moca-sbx-vm) | moca (moca-sbx-fc) |
+| - | ------------------------ | ------------------ |
+| stretch median (runs) | +4.3 / +5.0 / +5.0 % | +52.4 / +54.3 / +54.9 / +53.5 % |
+| stretch p90 / max | ~+20 % / +23 % | ~+80 % / +136 % |
+| CPU mean / median / peak (of 32 cores) | **6.7 % / 6.3 % / 24.3 %** | **19.6 % / 17.7 % / 51.4 %** |
+| host memory peak / median | 9.1 GB / 4.6 GB | 7.9 GB / 6.2 GB |
+| peak concurrent VMs | 20 QEMU (long-lived) | 105 firecracker procs (in-flight + 24-VM standby pool) |
+| failures | **0** (all runs) | **5, the same units every run** |
+
+The failures: u0020/25/42/52/53, all `django__django-10914` r2/r3, each one step — `LANG=en_US.UTF-8 runtests test_utils staticfiles_tests`, recorded exit 0 → replay exit 1, patches identical. Deterministic under the deterministic schedule, **passes in isolation** — a load-sensitive test step (the container backend hit the same class at pressure100). Patches identical in all cases; no state corruption.
+
+Reading: for the same delivered work, moca burns ~3× the host CPU (≈6.3 vs ≈2.1 cores mean) — the per-exec VM restore/teardown machinery across ~1,300 steps plus standby-pool churn — while holding a similar memory peak but a higher floor. Its units stretch 10× more than the VM backend's, for reasons already attributed (cold rootfs per exec, standing cost per the previous appendix; warm CPU penalty). The VM backend's model — ~20 long-lived VMs, exec into them — is cheaper on every axis at this pressure; moca's wager is density and isolation at higher pressure, where the VM backend collapsed (+168 % median at pressure80) and moca refused cleanly instead.
