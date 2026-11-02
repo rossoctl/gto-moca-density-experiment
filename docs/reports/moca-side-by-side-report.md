@@ -5,7 +5,7 @@ Date: 2026-11-02
 Spec: none yet — the load-generator spec is still to be written; this report is the first measured input to it.
 Covers: the moca leg of the three-backend side-by-side (smoke, load50, pressure80), the per-exec cost decomposition that motivated the `sbxrun` driver, and the attribution of moca's timing stretch.
 
-> **What this report says in one sentence.** Driving moca sandboxes through `mocactl` made every exec cost ~730 ms of client machinery; replacing the exec hot path with `tools/sbxrun` (direct sandbox/v1 gRPC, tokens minted through mocactl) drops that to ~90 ms — and with a fair driver, moca's load50 makespan stretch (+52 % median) is attributed not to the sandbox machinery but to the stateless-exec model's cold page cache (a recorded 1.85 s test step costs 4.3 s in a fresh VM, every time), while at pressure80 the baselines invert: containers stretch +40 % and VMs +168 % where moca holds [PENDING].
+> **What this report says in one sentence.** Moca's per-sandbox physical memory cost is roughly an order of magnitude below the VM backend's at the same pressure (~2.7 GB total for ~50 concurrent sandboxes plus a 24-VM standby pool, vs ~7.4 GB for ~20 long-lived QEMU VMs), because every VM restored from a golden snapshot shares that snapshot's physical pages — **snapshot page-sharing is the density argument for microVMs** — while the prices paid for it are a fixed ~90 ms/exec of machinery (after replacing mocactl's ~730 ms/exec client overhead with `tools/sbxrun`), a standing cold-rootfs cost per exec (a recorded 1.85 s test step costs 4.3 s in a fresh VM, every time; not fixable by snapshot prep, measured), ~3× the host CPU of the VM backend at load50, and clean refusal rather than silent collapse at pressure80 (containers +40 %, VMs +168 % stretch where moca refused at configured capacity).
 
 **Append-only.** This document is not rewritten when a later phase changes the answer — write
 a new report or append a dated section. See
@@ -222,3 +222,26 @@ Three memory numbers were sampled; they measure different things:
 **The honest apples-to-apples is the host-used delta** (peak minus pre-run baseline): VM backend ≈ 7.4 GB for ~20 live VMs (~370 MB/VM, no sharing); moca ≈ 2.7 GB for ~50 concurrent sandboxes plus a 24-VM standby pool (~tens of MB per sandbox effective) — because paused standbys fault lazily and the golden memfile's pages are **deduplicated across every VM sharing the snapshot**. At load50, moca's physical memory efficiency per sandbox is roughly an order of magnitude better than the VM backend's; that sharing is the density argument for snapshot-restored microVMs, visible only when memory is measured as a delta rather than as process RSS.
 
 VM-RSS headline, for the record: VM backend **7.7 GB peak aggregate (20 × QEMU)**; moca **2.4 GB peak aggregate firecracker RSS (not comparable, per above)**.
+
+## The density argument (consolidated, 2026-11-02)
+
+The comparison this experiment exists to price. At load50, measuring memory as the **host-used delta** (peak minus pre-run baseline — the only metric that survives the RSS asymmetry documented in the note above):
+
+| | VM backend | moca |
+| - | ---------- | ---- |
+| concurrent sandboxes at peak | ~20 live QEMU VMs | ~50 sandboxes + 24-VM standby pool |
+| physical memory delta | ~7.4 GB | ~2.7 GB |
+| **effective per sandbox** | **~370 MB, no sharing** | **tens of MB** |
+
+**The mechanism is page sharing, and it is structural, not incidental.** Every firecracker VM restored from a template's golden snapshot maps the *same* memfile — one set of physical pages per template, no matter how many VMs run from it. QEMU, by design, gives every guest its own anonymous memory: 20 VMs hold 20 private copies of the same kernel, the same Python runtime, the same Django tree. Moca's 50+ concurrent sandboxes share one copy of each of those, per template — the private bytes per sandbox are only what that sandbox's workload actually touches, and paused standby VMs fault in lazily, contributing almost nothing until used. The committed-memory budget (39.8 GiB ⇒ ~36 concurrent 1-GiB VMs on this host) is a *reservation* for the worst case where sharing collapses; physical use at load50 peaked at ~2.7 GB against that.
+
+**What the sharing buys, and what it costs** (all measured in this report):
+
+| the density case | the price |
+| ---------------- | --------- |
+| ~10× less physical memory per sandbox at load50 | ~90 ms of machinery per exec (after the `sbxrun` driver fix; mocactl's client overhead was ~730 ms/exec before) |
+| clean refusal at capacity limits instead of silent collapse (pressure80: VMs stretched +168 %, moca refused at 150-sandbox and 39.8-GiB configured ceilings with precise, attributable errors) | standing cold-rootfs cost per exec: +1.3 s/step (django) to +6 s/step (xarray), not fixable by snapshot prep (firecracker restore discards guest file page cache — tmpfs survives, file pages do not) |
+| isolation: a fresh kernel per exec, no cross-tenant filesystem leakage | ~3× the host CPU of the VM backend at load50 (19.6 % vs 6.7 % mean of 32 cores: per-exec restore/teardown across ~1,300 steps plus standby churn) |
+| | warm-exec CPU penalty: +58–82 % user time on test steps vs containers (stack-level — reproduces on a clean host, moca-sbx-fc2; not the 1-vCPU count alone, unattributed) |
+
+**What is NOT yet measured — the actual next step.** Everything above is load50, one pressure point, makespan-centric. The density argument needs resources-per-unit *at plateau*, swept across pressure levels: that is the ratchet manifests' purpose (plateaus of stable concurrency with measure-now marks). The memory ceiling where sharing stops saving you — the point at which distinct workspaces' touched pages dominate the shared base — is the number that decides how far the ~10× advantage extends, and nothing in this report measures it yet. The pressure80 result (refusal at 150 sandboxes / 39.8 GiB committed) bounds it from above on this host and configuration.
