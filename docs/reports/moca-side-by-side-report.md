@@ -137,3 +137,28 @@ Reading: at 80-way pressure the three backends separate into *silent degradation
 Three driver bugs were found by the two failed attempts before this one (both fixed, see `git log`): `sbxrun`'s RPC deadline was hardcoded below the command timeout (long seeds died as `Deadline exceeded`); `mocactl sbx token --json` does not carry the exec route (it comes from `sbx env`); and `_moca_exec` retried only the "template busy" refusal, not the documented `memory-budget:` / `queue full` / `max-runs:` pre-exec refusals.
 
 Caveats specific to this appendix: the 37 killed units have no terminal state and are excluded from stretch statistics; the 60 completions' +1240 % median is measured on a survivor-biased subset (only units that got under the caps early); load50's leaked sandboxes (cleaned up before this run) were the collateral of the login-revocation incident in §4.3, and operational rule "list live sandboxes before a moca manifest run" comes from it.
+
+---
+
+## Appendix — 2026-11-02: the cold-cache experiment (what §2.3's "cold page cache" actually is)
+
+§2.4 hypothesized the cold cost was Python imports. Measured directly (one exec per scenario = one fresh VM, benchmark repeated within each exec), on **both** sweb-django-10914 (`runtests.py file_uploads file_storage`, container baseline 1.85 s) and sweb-xarray-4094 (`pytest -k stack`, container baseline 5.29 s):
+
+| scenario | django first run | xarray first run | warm reference |
+| -------- | ---------------- | ---------------- | -------------- |
+| no warmup (cold) | 4.30 s (sys 1.33) | 14.41 s (sys 3.03) | 2.97 s / 8.36 s |
+| cat all `.py`/`.pyc` under miniconda+testbed | 4.14 s | 11.71 s | " |
+| `import django` / `import xarray,pandas,numpy` | 4.19 s | 10.58 s | " |
+| guest `drop_caches` after a warm run | 3.29 s | 10.49 s | " |
+| **cat the entire rootfs** | **3.08 s** | **9.12 s** | " |
+
+Findings, in order of consequence:
+
+1. **The cold set is the whole rootfs, not the Python trees.** Warming only `.py`/`.pyc` (or running the imports) recovers little on django and only partially on xarray (where the `.so` libraries numpy/pandas load are large); reading *every file* recovers essentially everything, on both templates. The fix candidate of §2.4 survives but in its dumbest form: **template prep can be a whole-rootfs read pass** (~13–19 s, template-agnostic, no knowledge of the workload) — or simply running one representative test command before snapshotting. Warmth lives in guest RAM, which the firecracker snapshot captures.
+2. **`drop_caches` restores only ~25 % of the cold cost** — most of the penalty is not re-readable guest pages but the read/fault path itself (virtiofs serves guest reads through the host). Consistent with S2-vs-S5: what matters is that the bytes have been *read once* in that VM.
+3. **A second, separate penalty survives full warmth**: django 2.97 s vs 1.63 s container (+82 %), xarray 8.36 s vs 5.29 s (+58 %) — dominated by **user**-time (django: 1.31 s vs 0.74 s), i.e. pure CPU, not IO. Prime suspect is the 1-vCPU firecracker configuration (or its CPU model); that is a worker-config A/B, not a cache problem, and it bounds what warm snapshots alone can recover.
+4. Minor artifact: xarray's import emits a matplotlib temp-dir warning every exec (unwritable `/.config`) — a small recurring stateless cost, fixable by pointing `MPLCONFIGDIR` at the persistent workspace.
+
+So the load50 stretch (+52 % median) decomposes into: cold-rootfs cache (recoverable by warm snapshots, worth ~1.3 s/step on django, ~6 s/step on xarray) **plus** a warm CPU penalty (~+58–82 % on test steps, config question) — and the arithmetic of §2.3 attributed too much to the former.
+
+Not verified: whether a warm snapshot actually transfers this warmth (the read pass was per-VM, the snapshot mechanism untested); the cause of the user-time penalty (1 vCPU vs CPU model not distinguished); container baselines are recorded timings, not re-measured today.
