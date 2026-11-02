@@ -280,14 +280,26 @@ class FcVM:
 # --- the replay Sandbox/Target pair --------------------------------------------
 
 class FcTarget:
-    """A pure-firecracker sandbox's exec target: podman-shaped like the moca
-    backend's MocaTarget (same /testbed -> /workspace/testbed translation and
-    the same base64/setpriv wrapper), so trajectories replay identically."""
+    """A pure-firecracker exec target: podman-shaped like the moca backend's
+    MocaTarget (same /testbed -> /workspace/testbed translation and the same
+    base64/setpriv wrapper), so trajectories replay identically.
+
+    Self-sufficient by construction (template + workspace dir): the step
+    engine runs each unit as a CHILD process (replay_steps shells out to
+    `python3 -I replay.py <traj> <spec>`), so the child rebuilds the target
+    from the spec alone.  In warm mode the child's target holds its own
+    resident VM for the unit's lifetime and closes it on exit; targets used
+    driver-side (git-diff, pristine check) default to per-exec VMs so the
+    driver never holds residents."""
 
     _TESTBED = re.compile(r"(?<![\w-])/testbed(?![\w-])")
 
-    def __init__(self, sandbox):
-        self.sandbox = sandbox
+    def __init__(self, template, workspace_dir, mode=None):
+        self.snapshot_dir = os.path.join(FC_SNAPSHOTS, template)
+        self.workspace_dir = workspace_dir
+        self.workspace_img = os.path.join(workspace_dir, "workspace.img")
+        self.mode = mode or FC_VM_MODE
+        self._vm = None
 
     def translate(self, text):
         return self._TESTBED.sub("/workspace/testbed", text)
@@ -301,31 +313,48 @@ class FcTarget:
             f"/bin/bash -c 'cd /workspace/testbed && "
             f"exec bash /tmp/.replay-step.sh'\n")
         t = min(int(timeout), 840)
-        if FC_VM_MODE == "warm":
-            # the sandbox's resident VM: restored once, kept alive across
-            # steps (warm page cache, no on/off per step), killed at stop().
-            # Execs on one VM are naturally serialized -- the replay drivers
-            # run one thread per sandbox.
-            vm = self.sandbox.resident_vm()
-            rc, out, err = vm.exec(wrapper, t)
+        if self.mode == "warm":
+            # resident VM: restored once, kept alive across steps (warm page
+            # cache, no on/off per step).  Execs on one VM are naturally
+            # serialized -- one child process per unit, one thread per unit.
+            if self._vm is None:
+                self._vm = leased_vm(self.snapshot_dir, self.workspace_img).vm
+            rc, out, err = self._vm.exec(wrapper, t)
         else:
-            with self.sandbox.vm() as vm:
+            with leased_vm(self.snapshot_dir, self.workspace_img) as vm:
                 rc, out, err = vm.exec(wrapper, t)
         return subprocess.CompletedProcess([], rc, out, err)
+
+    def close(self):
+        """Kill the resident VM (warm mode). The step engine's child calls
+        this on exit; without it every unit would leak a firecracker."""
+        if self._vm is not None:
+            try:
+                self._vm.stop()
+            finally:
+                _release_vm_slot()
+                self._vm = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
 
 
 class FcSandbox:
     """A pure-firecracker sandbox: a persistent /workspace ext4 image seeded
-    from the template's read-only /testbed, driven per exec by a fresh VM
-    restored from the golden snapshot, then killed. Root required (jailer)."""
+    from the template's read-only /testbed.  Per exec, a fresh VM restored
+    from the golden snapshot (perexec) or the unit's resident VM (warm, held
+    by the step child). Root required (jailer)."""
 
     def __init__(self, name, instance):
         self.name, self.instance = name, instance
-        self.snapshot_dir = os.path.join(FC_SNAPSHOTS, fc_template(instance))
+        self.template = fc_template(instance)
+        self.snapshot_dir = os.path.join(FC_SNAPSHOTS, self.template)
         self.workspace_dir = os.path.join(FC_BASE, "workspaces",
                                           self.name.replace("_", "-"))
         self.workspace_img = os.path.join(self.workspace_dir, "workspace.img")
-        self._resident = None   # FC_VM_MODE=warm's long-lived VM
 
     def _preflight(self):
         if os.geteuid() != 0:
@@ -348,9 +377,11 @@ class FcSandbox:
                 f.truncate(WORKSPACE_IMAGE_BYTES)
             subprocess.run(["mkfs.ext4", "-q", "-F", self.workspace_img],
                            check=True)
-        # seed: same as the moca backend — copy the read-only testbed into
-        # the writable workspace, verify the wrapper's prerequisites
-        with self.vm() as vm:
+        # seed: same as the moca backend -- copy the read-only testbed into
+        # the writable workspace, verify the wrapper's prerequisites.  A
+        # one-shot VM (synced on stop) is enough: the workspace carries the
+        # state, not the VM.
+        with leased_vm(self.snapshot_dir, self.workspace_img) as vm:
             rc, out, err = vm.exec(
                 "cp -a /testbed /workspace/testbed && "
                 "test -x /usr/bin/setpriv && test -x /usr/bin/env", 300)
@@ -359,50 +390,18 @@ class FcSandbox:
             raise FcError(f"fc sandbox seed failed (rc={rc}): "
                           f"{(err or out).strip()[-300:]}")
 
-    def vm(self):
-        """A fresh VM on this sandbox's workspace, under the concurrency cap."""
-        _acquire_vm_slot()
-        vm = FcVM(self.snapshot_dir, self.workspace_img)
-        started = False
-        try:
-            vm.start()
-            started = True
-        finally:
-            if not started:
-                _release_vm_slot()
-        return _LeasedVM(vm)
-
-    def resident_vm(self):
-        """The sandbox's long-lived VM (FC_VM_MODE=warm): restored on first
-        use, held for the sandbox's life.  Holds its concurrency slot for
-        that whole life -- warm mode trades the per-exec restore for
-        resident memory, which is the thing being measured."""
-        if self._resident is None:
-            _acquire_vm_slot()
-            vm = FcVM(self.snapshot_dir, self.workspace_img)
-            try:
-                vm.start()
-            except Exception:
-                _release_vm_slot()
-                raise
-            self._resident = vm
-        return self._resident
-
     def target(self):
-        return FcTarget(self)
+        # driver-side target (git-diff, pristine check): per-exec VMs, so
+        # the driver never holds resident firecrackers
+        return FcTarget(self.template, self.workspace_dir, mode="perexec")
 
     def stop(self):
-        if self._resident is not None:
-            try:
-                self._resident.stop()
-            finally:
-                _release_vm_slot()
-                self._resident = None
         shutil.rmtree(self.workspace_dir, ignore_errors=True)
 
     @property
     def target_spec(self):
-        return f"fc:{self.workspace_dir}"
+        # self-sufficient for the step child: template + workspace dir
+        return f"fc:{self.template}:{self.workspace_dir}"
 
 
 class _LeasedVM:
@@ -418,6 +417,18 @@ class _LeasedVM:
             self.vm.stop()
         finally:
             _release_vm_slot()
+
+
+def leased_vm(snapshot_dir, workspace_img):
+    """A fresh VM on the given workspace, under the concurrency cap."""
+    _acquire_vm_slot()
+    vm = FcVM(snapshot_dir, workspace_img)
+    try:
+        vm.start()
+    except Exception:
+        _release_vm_slot()
+        raise
+    return _LeasedVM(vm)
 
 
 # module-wide VM concurrency cap (moca's worker budget cannot see these VMs)
@@ -438,3 +449,22 @@ def _acquire_vm_slot():
 
 def _release_vm_slot():
     _semaphore().release()
+
+
+# --- target lookup for replay.make_target ---------------------------------------
+
+_SANDBOXES = {}
+
+
+def register_sandbox(sandbox):
+    """FcSandbox.start() registers itself so replay.make_target's `fc:` case
+    can find the sandbox that owns a workspace dir (the target itself is
+    stateless; the VM and workspace carry the state)."""
+    _SANDBOXES[os.path.abspath(sandbox.workspace_dir)] = sandbox
+
+
+def sandbox_for_dir(workspace_dir):
+    key = os.path.abspath(workspace_dir)
+    if key not in _SANDBOXES:
+        raise FcError(f"no live fc sandbox owns {workspace_dir}")
+    return _SANDBOXES[key]

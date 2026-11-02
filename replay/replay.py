@@ -240,6 +240,12 @@ def make_target(spec):
         return VmTarget(spec[3:])
     if spec.startswith("moca:"):
         return MocaTarget(spec[5:])
+    if spec.startswith("fc:"):
+        # the pure-firecracker backend (fc.py): podman-shaped like MocaTarget.
+        # The spec is self-sufficient (fc:<template>:<workspace-dir>) because
+        # the step engine runs as a child process that rebuilds the target.
+        template, _, ws_dir = spec[3:].partition(":")
+        return _fc_backend.FcTarget(template, ws_dir)
     if spec.startswith("qemu:"):
         return EphemeralVm(spec[5:])   # context manager, not a target
     return PodmanTarget(spec)
@@ -628,6 +634,7 @@ try:
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import fc as _fc_backend
     SANDBOXES["fc"] = _fc_backend.FcSandbox
+
 except Exception:            # missing binary, no root, no snapshots: silent
     pass
 
@@ -775,7 +782,13 @@ def _maybe_ephemeral(target_spec):
         with target as t:                   # boot, run, shut down
             yield t
     else:
-        yield target
+        try:
+            yield target
+        finally:
+            # an fc warm target holds a resident firecracker; without this
+            # every unit would leak one VM per child process
+            if hasattr(target, "close"):
+                target.close()
 
 USAGE = """\
 replay.py -- replay recorded trajectories against containers or VMs
