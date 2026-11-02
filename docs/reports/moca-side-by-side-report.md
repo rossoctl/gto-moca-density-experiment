@@ -271,3 +271,19 @@ Reading:
 - **Page sharing survives warm residency**: ~253 MB per resident VM against QEMU's ~370 MB, with the memfile's shared pages deduplicated per template even while all VMs run.
 
 Caveats: single run; fc CPU/memory sampled from t=0 but the VM-backend row's memory comes from its run 2 (run 3's sampler died pre-launch); the fc row ran on the reprovisioned host while the VM/container rows predate it (the reprovision removed a ~15 % native CPU deficit — so fc's row is, if anything, flattered relative to the older VM row by a faster host).
+
+## Appendix — 2026-11-02 (parity): container rerun, and the VM backend at `-smp 1`
+
+Same-session reruns to close two gaps in the table: the container row now has sampler data (its CPU/memory cells were empty), and the VM backend runs at one vCPU (`VM_SMP=1`, images re-snapshotted — migration state pins CPU count) for parity with the firecracker backends.
+
+| load50, same session | containers | VM smp=2 | **VM smp=1** | fc warm | moca |
+| -------------------- | ---------- | -------- | ------------ | ------- | ---- |
+| stretch median | **−0.0 %** | +5.0 % | **+6.1 %** | +18.8 % | +52–55 % |
+| stretch p90 / max | +0.7 / +1.3 % | ~+21 / +23 % | **+19.7 / +22.7 %** | +30 / +40 % | ~+80 / +136 % |
+| CPU mean (of 32 cores) | 8.7 % | 6.7 % | **6.9 %** | 10.5 % | 19.6 % |
+| memory delta | ~0.9 GB | ~7.4 GB | **~7.0 GB** (18 QEMU, 7.1 GB RSS) | ~4.3 GB | ~2.7 GB |
+| units ok | 54/54 | 54/54 | **54/54** | 49/54 | 49/54 |
+
+The finding: **vCPU count is not the firecracker penalty.** QEMU at one vCPU pays ~1 point over smp=2 (+6.1 % vs +5.0 % median) — while fc warm sits at +18.8 %. At equal vCPU count the ~13-point gap between QEMU and firecracker-warm remains, so it is firecracker-specific or image-specific: the leading suspects are the golden snapshot's guest kernel (6.8.0-31-generic) versus the VM backend's (6.8.0-147-generic), or firecracker's vCPU implementation itself. Distinguishing those needs a kernel-matched pair, not more load runs.
+
+Cross-host caveat stands: containers/VM run on their own (pre-reprovision) machines, fc/moca on the fresh moca-sbx-fc. The container rerun's −0.0 % on its own host argues the host difference is not load-bearing for the ordering, but a same-host VM-vs-fc pair would close it properly.
