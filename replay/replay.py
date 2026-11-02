@@ -529,6 +529,12 @@ def _moca_exec(sandbox_id, script, timeout, retries=5):
                 "--timeout", str(t)]
     else:
         argv = [driver, "--sandbox", sandbox_id, "--timeout", str(t)]
+    # The worker's PRE-EXEC refusals (nothing ran; safe to retry with
+    # backoff): the standby pool running dry ("template busy", "queue
+    # full"), the committed-memory budget ("memory-budget:"), and the
+    # per-worker run cap ("max-runs:"). sbxrun surfaces them as ExecError
+    # text, exit 125; mocactl as its own wording.
+    retryable = ("template busy", "queue full", "memory-budget", "max-runs")
     delays = [2, 5, 10, 20, 40]
     for attempt in range(retries + 1):
         p = subprocess.run(
@@ -536,7 +542,7 @@ def _moca_exec(sandbox_id, script, timeout, retries=5):
             input=script, capture_output=True, text=True, timeout=t + 120)
         if p.returncode != 125 or attempt == retries:
             return p
-        if "template busy" not in (p.stderr or ""):
+        if not any(k in (p.stderr or "") for k in retryable):
             return p
         time.sleep(delays[min(attempt, len(delays) - 1)])
     return p
