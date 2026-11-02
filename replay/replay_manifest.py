@@ -100,6 +100,8 @@ def sandbox_for(u, backend):
         return replay.PodmanSandbox(name, IMAGE.format(instance=u["instance"]))
     if backend == "moca":
         return replay.MocaSandbox(name, u["instance"])
+    if backend == "fc":
+        return replay.SANDBOXES["fc"](name, u["instance"])
     vmdir = os.path.abspath(VM_DIR.format(instance=u["instance"]))
     if not os.path.exists(os.path.join(vmdir, f"{u['instance']}.qcow2")):
         raise StartError(f"no {vmdir}/{u['instance']}.qcow2 "
