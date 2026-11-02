@@ -39,7 +39,7 @@ failed-call removal) and no per-command exit codes, so "exit code matches the
 recording" here means: every Bash exits 0, every Read finds its range, every
 Edit applies exactly once.
 """
-import base64, contextlib, glob, json, os, re, select, signal, socket, subprocess, sys, time
+import base64, contextlib, glob, json, os, re, select, shutil, signal, socket, subprocess, sys, time
 
 # the image activates the testbed conda env only in root's .bashrc; the agent
 # ran as uid 1000 with this on its PATH, so the replay sets it explicitly.
@@ -499,22 +499,40 @@ class VmSandbox:
     def target_spec(self):
         return f"vm:{self.sock}"
 
+def _moca_exec_cmd():
+    """The exec driver: `sbxrun` (tools/sbxrun — a drop-in for `mocactl sbx
+    run` speaking the sandbox/v1 exec protocol directly; ~90ms per exec
+    instead of mocactl's ~730ms, which is a fresh Node process, token mint
+    and TLS handshake per exec), falling back to mocactl when absent."""
+    d = os.path.expanduser("~/sbx-local/sbxrun")
+    if os.access(d, os.X_OK):
+        return d
+    p = shutil.which("sbxrun")
+    if p:
+        return p
+    return "mocactl"  # legacy path: "sbx", "run" args are appended by callers
+
 def _moca_exec(sandbox_id, script, timeout, retries=5):
-    """Run a bash script on stdin in a moca sandbox via mocactl. Each exec
-    boots a fresh Firecracker microVM over the persistent /workspace. Exit
-    codes are the command's own; 124 = mocactl timeout, 125 = sandbox
-    failure. mocactl caps --timeout at 840s (token lifetime minus 60s).
+    """Run a bash script on stdin in a moca sandbox. Each exec boots a fresh
+    Firecracker microVM over the persistent /workspace. Exit codes are the
+    command's own; 124 = timeout, 125 = sandbox failure. --timeout is capped
+    at 840s (token lifetime minus 60s).
 
     "template busy; retry later" (exit 125) is the shared KVM host's
     standby-VM pool for the template running dry under concurrency -- a
     PRE-EXEC refusal (the command never started), so it is safe to retry
     with backoff. Other 125s propagate unchanged."""
     t = min(int(timeout), 840)
+    driver = _moca_exec_cmd()
+    if driver == "mocactl":
+        argv = ["mocactl", "sbx", "run", "--sandbox", sandbox_id,
+                "--timeout", str(t)]
+    else:
+        argv = [driver, "--sandbox", sandbox_id, "--timeout", str(t)]
     delays = [2, 5, 10, 20, 40]
     for attempt in range(retries + 1):
         p = subprocess.run(
-            ["mocactl", "sbx", "run", "--sandbox", sandbox_id,
-             "--timeout", str(t)],
+            argv,
             input=script, capture_output=True, text=True, timeout=t + 120)
         if p.returncode != 125 or attempt == retries:
             return p
