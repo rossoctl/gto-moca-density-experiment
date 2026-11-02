@@ -152,6 +152,17 @@ class FcVM:
         }""")
         self._wait_file(os.path.join(self.jail, "run", "v.sock"),
                         vsock_wait_s, "vsock socket")
+        # the guest does NOT mount /workspace itself: the production
+        # launcher's Resume runs this exact command over vsock right after
+        # restore (launcher_firecracker.go).  Without it /workspace is a
+        # placeholder dir on the read-only rootfs and every write fails
+        # with EROFS -- the first hardware run's seed failure.
+        rc, out, err = self.exec(
+            "mountpoint -q /workspace || "
+            "mount -o rw,noatime /dev/vdb /workspace", 30)
+        if rc != 0:
+            raise FcError(f"mount /workspace failed rc={rc}: "
+                          f"{(err or out).strip()[-300:]}")
 
     def exec(self, command, timeout_s):
         """Run a command in the guest via the agent. Returns (rc, stdout,
