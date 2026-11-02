@@ -206,3 +206,19 @@ Four moca runs and three VM runs of the same manifest; memory and CPU sampled at
 The failures: u0020/25/42/52/53, all `django__django-10914` r2/r3, each one step — `LANG=en_US.UTF-8 runtests test_utils staticfiles_tests`, recorded exit 0 → replay exit 1, patches identical. Deterministic under the deterministic schedule, **passes in isolation** — a load-sensitive test step (the container backend hit the same class at pressure100). Patches identical in all cases; no state corruption.
 
 Reading: for the same delivered work, moca burns ~3× the host CPU (≈6.3 vs ≈2.1 cores mean) — the per-exec VM restore/teardown machinery across ~1,300 steps plus standby-pool churn — while holding a similar memory peak but a higher floor. Its units stretch 10× more than the VM backend's, for reasons already attributed (cold rootfs per exec, standing cost per the previous appendix; warm CPU penalty). The VM backend's model — ~20 long-lived VMs, exec into them — is cheaper on every axis at this pressure; moca's wager is density and isolation at higher pressure, where the VM backend collapsed (+168 % median at pressure80) and moca refused cleanly instead.
+
+## Appendix note — 2026-11-02: memory metrics, and why VM RSS is the right headline
+
+Three memory numbers were sampled; they measure different things:
+
+| metric | what it measures | VM backend (load50 peak) | moca (load50 peak) |
+| ------ | ---------------- | ------------------------ | ------------------ |
+| host `used` (`free -m`) | everything physical on the host: VM processes **plus infrastructure** (relay, control plane, workers, samplers) | 9.1 GB | 7.9 GB (of which ~5.2 GB is the standing moca stack — sandbox delta ≈ **2.7 GB**) |
+| aggregate VM RSS (`ps` sum) | memory attributable to VM processes | **7.7 GB** across 20 QEMU ≈ 385 MB/VM | **2.4 GB** across 105 firecracker procs — see caveat |
+| committed (moca budget only) | the worker's fair-share reservation, not usage | — | ≤ 39.8 GB budget; ~1 GB per live VM reserved, far above physical use |
+
+**Why the RSS numbers are not symmetric between backends.** QEMU allocates each guest's RAM **anonymously per process**: RSS ≈ guest memory actually touched, and the aggregate is a fair proxy for "memory held by sandboxes." Firecracker restores guest RAM from the **golden memfile — the same physical pages mapped by every VM restored from that snapshot**: `ps` RSS counts shared pages once *per process* (overcounting) while lazy faulting keeps untouched pages out entirely (undercounting), and per-exec workspace page cache sits outside process RSS entirely. Firecracker's RSS is therefore neither floor nor ceiling — it is not comparable to QEMU RSS.
+
+**The honest apples-to-apples is the host-used delta** (peak minus pre-run baseline): VM backend ≈ 7.4 GB for ~20 live VMs (~370 MB/VM, no sharing); moca ≈ 2.7 GB for ~50 concurrent sandboxes plus a 24-VM standby pool (~tens of MB per sandbox effective) — because paused standbys fault lazily and the golden memfile's pages are **deduplicated across every VM sharing the snapshot**. At load50, moca's physical memory efficiency per sandbox is roughly an order of magnitude better than the VM backend's; that sharing is the density argument for snapshot-restored microVMs, visible only when memory is measured as a delta rather than as process RSS.
+
+VM-RSS headline, for the record: VM backend **7.7 GB peak aggregate (20 × QEMU)**; moca **2.4 GB peak aggregate firecracker RSS (not comparable, per above)**.
