@@ -331,18 +331,36 @@ func getSandboxToken(cp, sandboxID string, force bool) (*sbxToken, error) {
 	if err != nil {
 		return nil, fmt.Errorf("no sandbox login (mocactl sbx login first): %w", err)
 	}
-	// refresh the user token when it is about to expire
+	// refresh the user token when it is about to expire. The refresh may
+	// rotate the refresh token; the response is merged onto the existing
+	// auth file field by field, so a response that omits the refresh token
+	// (or any other field) can never DROP it — losing it locks the login
+	// out until `mocactl sbx login` again.
 	if time.Now().Unix()+60 > jwtExp(a.API) {
-		var fresh authFile
+		var fresh map[string]any
 		if err := cpPost(cp, "/v1/auth/token", "", map[string]string{
 			"grant_type":    "refresh_token",
 			"refresh_token": a.RefreshToken,
-		}, &fresh); err == nil && fresh.API != "" {
-			if fresh.ControlPlaneUrl == "" {
-				fresh.ControlPlaneUrl = a.ControlPlaneUrl
+		}, &fresh); err == nil {
+			if newAPI, _ := fresh["apiToken"].(string); newAPI != "" {
+				merged := map[string]any{}
+				if raw, e := os.ReadFile(authPath()); e == nil {
+					json.Unmarshal(raw, &merged) // best effort: start from what is there
+				}
+				for k, v := range fresh {
+					merged[k] = v
+				}
+				if _, ok := merged["controlPlaneUrl"]; !ok {
+					merged["controlPlaneUrl"] = cp
+				}
+				if b, e := json.Marshal(merged); e == nil {
+					os.WriteFile(authPath(), b, 0600)
+				}
+				a.API = newAPI
+				if rt, ok := fresh["refreshToken"].(string); ok && rt != "" {
+					a.RefreshToken = rt
+				}
 			}
-			writeAuth(&fresh)
-			a = &fresh
 		}
 		// a failed refresh is not fatal: the mint below reports the real error
 	}
