@@ -14,6 +14,10 @@ was true when someone ran it. Both are committed, and they are kept separate on 
 
 <!-- One row per report. "Status: Partial" is normal and useful — see below. -->
 
+| Report                                           | Covers                | Spec                                              | Status  |
+| ------------------------------------------------ | --------------------- | ------------------------------------------------- | ------- |
+| [moca-side-by-side-report.md](moca-side-by-side-report.md) | moca backend vs container/VM baselines: per-exec cost, smoke/load50/pressure80 manifests, stretch attribution | none yet | Partial |
+
 ## The one rule: a report is never rewritten
 
 A spec is **revised in place**; a report is **append-only.** When a later phase changes the
