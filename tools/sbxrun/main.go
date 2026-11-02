@@ -47,6 +47,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -261,11 +262,13 @@ func getSandboxToken(sandboxID string, force bool) (*sbxToken, error) {
 	if !force && cache != "" {
 		if b, err := os.ReadFile(cache); err == nil {
 			var t sbxToken
-			if json.Unmarshal(b, &t) == nil && time.Now().Unix()+120 < t.ExpiresAt {
+			if json.Unmarshal(b, &t) == nil && t.Token != "" && t.ExecEndpoint != "" &&
+				time.Now().Unix()+120 < t.ExpiresAt {
 				return &t, nil
 			}
 		}
 	}
+	// the token itself: `mocactl sbx token --json` gives {token, expiresAt}
 	var t sbxToken
 	out, err := runMocactl("token", "--json", sandboxID)
 	if err != nil {
@@ -273,6 +276,25 @@ func getSandboxToken(sandboxID string, force bool) (*sbxToken, error) {
 	}
 	if err := json.Unmarshal(out, &t); err != nil || t.Token == "" {
 		return nil, fmt.Errorf("mocactl sbx token --json: unparsable output: %.200s", out)
+	}
+	// the route: `mocactl sbx env` gives SBX_ADDR, SBX_SANDBOX_ID (wrk),
+	// SBX_WORKSPACE_KEY (wsk) and SBX_CA_FILE (the exec CA, written to disk)
+	envOut, err := runMocactl("env", sandboxID)
+	if err != nil {
+		return nil, err
+	}
+	vars := map[string]string{}
+	for _, m := range regexp.MustCompile(`export ([A-Z_]+)='([^']*)'`).FindAllStringSubmatch(string(envOut), -1) {
+		vars[m[1]] = m[2]
+	}
+	t.ExecEndpoint = vars["SBX_ADDR"]
+	t.Wrk = vars["SBX_SANDBOX_ID"]
+	t.Wsk = vars["SBX_WORKSPACE_KEY"]
+	if pem, err := os.ReadFile(vars["SBX_CA_FILE"]); err == nil {
+		t.ExecCa = string(pem)
+	}
+	if t.ExecEndpoint == "" || t.Wrk == "" || t.Wsk == "" {
+		return nil, fmt.Errorf("mocactl sbx env: missing route (SBX_ADDR/SBX_SANDBOX_ID/SBX_WORKSPACE_KEY): %.200s", envOut)
 	}
 	if cache != "" {
 		os.MkdirAll(filepath.Dir(cache), 0700)
@@ -328,9 +350,14 @@ func oneExec(client *http.Client, addr, token, sandboxID, wsk, cmd string, stdin
 	req.Header.Set("content-type", "application/grpc")
 	req.Header.Set("te", "trailers")
 	req.Header.Set("authorization", "Bearer "+token)
-	req.Header.Set("grpc-timeout", "120S")
+	// the RPC deadline must EXCEED the command's timeout_s, or the relay
+	// cancels a legitimately-running command (a 300 s seed step died at
+	// 120 s as "grpc status 4: Deadline exceeded"). Backstop: +90 s, like
+	// mocactl's. 0 (server default) gets a plain 90 s backstop.
+	rpcTimeout := time.Duration(timeoutS)*time.Second + 90*time.Second
+	req.Header.Set("grpc-timeout", fmt.Sprintf("%dS", int(rpcTimeout.Seconds())))
 
-	ctx, cancel := context.WithTimeout(context.Background(), 150*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), rpcTimeout+30*time.Second)
 	defer cancel()
 	req = req.WithContext(ctx)
 
