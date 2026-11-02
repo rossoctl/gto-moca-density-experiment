@@ -110,3 +110,30 @@ cd replay && MOCACTL_SBX_URL=http://<cp>:8080 python3 replay_manifest.py \
 ```
 
 Per-unit stretch: `grep -h 'done in' logs/manifest-<name>-<backend>/*.log`, stretch = done/expected − 1.
+
+---
+
+## Appendix — 2026-11-02: pressure80 on moca (the PENDING cells)
+
+The run completed enough to fill §2.2's PENDING row. Outcome: **moca does not complete pressure80; it hits two administrative capacity ceilings and fails 92 % of units**, where the same manifest bytes stretched containers +40 % and VMs +168 % but completed.
+
+| pressure80 (767 units) | units ok | median | p90 | max |
+| ---------------------- | -------- | ------ | --- | --- |
+| containers | 767/767 | +39.8 % | +187.6 % | +367.3 % |
+| VMs | 767/767 | +167.9 % | +698.4 % | +1279.3 % |
+| **moca** | **60 completed, 0 passed cleanly out of 767** | **+1239.9 %** (of the 60 that ran) | +1730.3 % | +2233.7 % |
+
+Unit outcomes on moca:
+
+| count | outcome |
+| ----- | ------- |
+| 481 | create refused — control plane at capacity (`SH_SANDBOX_MAX_TOTAL`/`MAX_PER_SUBJECT` = 150 live sandboxes) |
+| 189 | seed refused — worker committed-memory budget (`MaxCommittedBytes` 39.8 GiB ⇒ ~36 concurrent 1-GiB sweb VMs); retry backoff (5 tries, 77 s) could not outlast the saturation |
+| 60 | completed the replay; median stretch **+1240 %** — serialized behind the memory budget, each unit queuing for VM slots |
+| 37 | killed mid-run in the drain tail (operator decision: "not worth waiting"; the last xarray units were still queued) |
+
+Reading: at 80-way pressure the three backends separate into *silent degradation* (containers), *loud degradation* (VMs, 13× stretch at p90) and *refusal* (moca). The moca behavior is configured, not fundamental: 80 × 1.1 GiB = 88 GiB of concurrent VMs cannot fit this 62-GiB host regardless of config, but the 150-sandbox and 39.8-GiB budget numbers are policy choices, and the retry-then-fail (rather than retry-forever) behavior is the driver's. What this run does establish: the ceilings are enforced cleanly (pre-exec refusals, no leaked state once cleanup runs), the refusal texts are precise enough to attribute every failure, and the units that did run stretched ~13× — the memory budget serializes rather than sheds load.
+
+Three driver bugs were found by the two failed attempts before this one (both fixed, see `git log`): `sbxrun`'s RPC deadline was hardcoded below the command timeout (long seeds died as `Deadline exceeded`); `mocactl sbx token --json` does not carry the exec route (it comes from `sbx env`); and `_moca_exec` retried only the "template busy" refusal, not the documented `memory-budget:` / `queue full` / `max-runs:` pre-exec refusals.
+
+Caveats specific to this appendix: the 37 killed units have no terminal state and are excluded from stretch statistics; the 60 completions' +1240 % median is measured on a survivor-biased subset (only units that got under the caps early); load50's leaked sandboxes (cleaned up before this run) were the collateral of the login-revocation incident in §4.3, and operational rule "list live sandboxes before a moca manifest run" comes from it.
