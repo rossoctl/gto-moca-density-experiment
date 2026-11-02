@@ -245,3 +245,29 @@ The comparison this experiment exists to price. At load50, measuring memory as t
 | | warm-exec CPU penalty: +58–82 % user time on test steps vs containers (stack-level — reproduces on a clean host, moca-sbx-fc2; not the 1-vCPU count alone, unattributed) |
 
 **What is NOT yet measured — the actual next step.** Everything above is load50, one pressure point, makespan-centric. The density argument needs resources-per-unit *at plateau*, swept across pressure levels: that is the ratchet manifests' purpose (plateaus of stable concurrency with measure-now marks). The memory ceiling where sharing stops saving you — the point at which distinct workspaces' touched pages dominate the shared base — is the number that decides how far the ~10× advantage extends, and nothing in this report measures it yet. The pressure80 result (refusal at 150 sandboxes / 39.8 GiB committed) bounds it from above on this host and configuration.
+
+---
+
+## Appendix — 2026-11-02 (fc): the pure-firecracker backend, warm mode, at load50
+
+`--backend fc` with `FC_VM_MODE=warm`: raw firecracker on moca's golden snapshots (same artifacts, hash-identical), the moca stack removed, one resident microVM per unit. Built and accepted on hardware this session (eight iterations; every fix is a discovered restore contract — jailer v1.17 jail layout, Content-Length HTTP framing, the vsock workspace mount, sync-before-kill, self-sufficient target spec across the step child's process boundary). Run on the reprovisioned moca-sbx-fc with the moca stack stopped (clean accounting: nothing behind the caller's back). Same manifest bytes.
+
+| load50 | containers | VM backend | **fc warm** | moca |
+| ------ | ---------- | ---------- | ----------- | ---- |
+| stretch median | −0.6 % | +4.3–5.0 % | **+18.8 %** | +52–55 % |
+| stretch p90 / max | +0.5 / +1.0 % | ~+20 / +23 % | **+30.0 / +40.0 %** | ~+80 / +136 % |
+| CPU mean / peak (of 32 cores) | — | 6.7 % / 24 % | **10.5 % / 35 %** | 19.6 % / 51 % |
+| memory delta (peak − baseline) | — | ~7.4 GB (20 QEMU) | **~4.3 GB (17 resident)** | ~2.7 GB |
+| effective per-VM memory | — | ~370 MB, unshared | **~253 MB** (memfile pages shared per template) | tens of MB (fresh-VM model) |
+| units ok | 54/54 | 54/54 | **49/54** | 49/54 |
+| manifest wall time | — | 1074 s | **1117 s** | 1236 s |
+
+The failures are the SAME five units as every moca run (u0020/25/42/52/53, django-10914 r2/r3, the load-sensitive `LANG=en_US.UTF-8 runtests` step, passes in isolation). Their failing on both firecracker-based backends — which share the golden snapshot's guest kernel and image — while the QEMU backend (its own kernel, qcow2 image) passes all 54, locates that fragility in the template image under load, not in any management stack.
+
+Reading:
+
+- **fc warm sits strictly between the VM backend and moca on every axis** — stretch, CPU, and memory all order as VM < fc warm < moca (memory ordering reversed: moca < fc warm < VM). It is not between containers and VMs: the VM backend still wins stretch (+5 % vs +18.8 %), and the gap is the known firecracker warm CPU penalty (1-vCPU firecracker vs QEMU `-smp 2`).
+- **The moca model's total cost at load50 is ~+34 points of stretch** (moca +52–55 % vs fc warm +18.8 %), of which the cold-rootfs term is the bulk: fc warm removed exactly that by staying resident, with the same snapshots and the same firecracker. What moca buys for that price is the on/off statelessness — fresh kernel per exec, cross-tenant workspace isolation, standby pooling — plus the stack (its remaining CPU cost shows as 19.6 % vs 10.5 % mean).
+- **Page sharing survives warm residency**: ~253 MB per resident VM against QEMU's ~370 MB, with the memfile's shared pages deduplicated per template even while all VMs run.
+
+Caveats: single run; fc CPU/memory sampled from t=0 but the VM-backend row's memory comes from its run 2 (run 3's sampler died pre-launch); the fc row ran on the reprovisioned host while the VM/container rows predate it (the reprovision removed a ~15 % native CPU deficit — so fc's row is, if anything, flattered relative to the older VM row by a faster host).
