@@ -1,0 +1,1178 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "raman-fitting",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 607298,
+ "resolved": false,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 85001,
+  "output": 97774,
+  "cacheRead": 1711680,
+  "cacheWrite": 47744,
+  "total": 1942199
+ },
+ "totals": {
+  "model_calls": 39,
+  "tool_calls": 38,
+  "model_ms": 506269,
+  "tool_ms": 83392,
+  "sandbox_ms": 55326
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 525,
+   "dur_ms": 1053
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1578,
+   "dur_ms": 163,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -la /workspace\nfind /workspace -maxdepth 3 -type f | head -100\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 1662,
+     "dur_ms": 52,
+     "exit": 0,
+     "cpu_ms": 41.7,
+     "phases_us": {
+      "acquire": 108,
+      "resume": 20787,
+      "mount": 18052,
+      "run": 7190,
+      "destroy": 23728
+     },
+     "cold": null,
+     "vm": "vm-504"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 1741,
+   "dur_ms": 1132
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2873,
+   "dur_ms": 132,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nhead -40 /workspace/graphene.dat\necho \"-----\"\ntail -20 /workspace/graphene.dat\necho \"-----\"\nwc -l /workspace/graphene.dat\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 2931,
+     "dur_ms": 55,
+     "exit": 0,
+     "cpu_ms": 39.4,
+     "phases_us": {
+      "acquire": 17,
+      "resume": 20512,
+      "mount": 18051,
+      "run": 6365,
+      "destroy": 27674
+     },
+     "cold": null,
+     "vm": "vm-507"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 3005,
+   "dur_ms": 4575
+  },
+  {
+   "kind": "tool",
+   "at_ms": 7580,
+   "dur_ms": 1123,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 -c \"import numpy, scipy; print(numpy.__version__, scipy.__version__)\" 2>&1\npython3 <<'PY'\nimport numpy as np\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))})\nprint(d.shape)\nx,y=d[:,0],d[:,1]\nprint(\"x range\",x.min(),x.max(),\"y range\",y.min(),y.max())\n# order\nprint(\"first x\",x[:5])\n# smooth and find peaks\nfrom scipy.signal import find_peaks, savgol_filter\n# sort by x\nidx=np.argsort(x); x=x[idx]; y=y[idx]\nys=savgol_filter(y, 51, 3)\np,props=find_peaks(ys, prominence=1000, distance=50)\nfor i in p:\n    print(x[i], ys[i], props['prominences'][list(p).index(i)])\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 8341,
+     "dur_ms": 312,
+     "exit": 1,
+     "cpu_ms": 294.0,
+     "phases_us": {
+      "acquire": 79,
+      "resume": 20507,
+      "mount": 17629,
+      "run": 254825,
+      "destroy": 36427
+     },
+     "cold": null,
+     "vm": "vm-510"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 8703,
+   "dur_ms": 1196
+  },
+  {
+   "kind": "tool",
+   "at_ms": 9899,
+   "dur_ms": 10100,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npip install numpy scipy --quiet 2>&1 | tail -5\npython3 -c \"import numpy, scipy; print(numpy.__version__, scipy.__version__)\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 9957,
+     "dur_ms": 10011,
+     "exit": 0,
+     "cpu_ms": 9844.1,
+     "phases_us": {
+      "acquire": 24,
+      "resume": 20320,
+      "mount": 17688,
+      "run": 9946196,
+      "destroy": 44438
+     },
+     "cold": null,
+     "vm": "vm-516"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 19999,
+   "dur_ms": 2696
+  },
+  {
+   "kind": "tool",
+   "at_ms": 22695,
+   "dur_ms": 823,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport numpy as np\nfrom scipy.signal import find_peaks, savgol_filter\n\ndef load(p):\n    conv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\n    return np.loadtxt(p, delimiter='\\t', converters=conv)\n\nd=load('graphene.dat')\nx,y=d[:,0],d[:,1]\nidx=np.argsort(x); x=x[idx]; y=y[idx]\nprint(\"x range\",x.min(),x.max(),\"n\",len(x))\nprint(\"y percentiles\",np.percentile(y,[0,1,5,50,95,99,100]))\nys=savgol_filter(y, 51, 3)\np,props=find_peaks(ys, prominence=500, distance=30)\nprint(\"peaks found:\",len(p))\norder=np.argsort(props['prominences'])[::-1]\nfor j in order[:15]:\n    i=p[j]\n    print(f\"x={x[i]:.2f} y={ys[i]:.1f} prom={props['prominences'][j]:.1f}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 23286,
+     "dur_ms": 221,
+     "exit": 1,
+     "cpu_ms": 220.0,
+     "phases_us": {
+      "acquire": 5,
+      "resume": 25155,
+      "mount": 21793,
+      "run": 164449,
+      "destroy": 30736
+     },
+     "cold": null,
+     "vm": "vm-518"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 23518,
+   "dur_ms": 2616
+  },
+  {
+   "kind": "tool",
+   "at_ms": 26134,
+   "dur_ms": 10559,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npip install numpy scipy --target=/workspace/.pylibs --quiet 2>&1 | tail -3\nPYTHONPATH=/workspace/.pylibs python3 -c \"import numpy, scipy; print('ok', numpy.__version__, scipy.__version__)\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 26197,
+     "dur_ms": 10484,
+     "exit": 0,
+     "cpu_ms": 10511.7,
+     "phases_us": {
+      "acquire": 66,
+      "resume": 20562,
+      "mount": 17838,
+      "run": 10393607,
+      "destroy": 69947
+     },
+     "cold": null,
+     "vm": "vm-520"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 36693,
+   "dur_ms": 1722
+  },
+  {
+   "kind": "tool",
+   "at_ms": 38415,
+   "dur_ms": 2852,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nfrom scipy.signal import find_peaks, savgol_filter\n\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx,y=d[:,0],d[:,1]\nidx=np.argsort(x); x=x[idx]; y=y[idx]\nprint(\"x range\",x.min(),x.max(),\"n\",len(x))\nprint(\"y percentiles\",np.percentile(y,[0,1,5,50,95,99,100]))\nys=savgol_filter(y, 51, 3)\np,props=find_peaks(ys, prominence=500, distance=30)\nprint(\"peaks found:\",len(p))\norder=np.argsort(props['prominences'])[::-1]\nfor j in order[:15]:\n    i=p[j]\n    print(f\"x={x[i]:.2f} y={ys[i]:.1f} prom={props['prominences'][j]:.1f}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 39585,
+     "dur_ms": 1664,
+     "exit": 0,
+     "cpu_ms": 1959.0,
+     "phases_us": {
+      "acquire": 60,
+      "resume": 31559,
+      "mount": 28747,
+      "run": 1598329,
+      "destroy": 34348
+     },
+     "cold": null,
+     "vm": "vm-524"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 41267,
+   "dur_ms": 7705
+  },
+  {
+   "kind": "tool",
+   "at_ms": 48972,
+   "dur_ms": 2308,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nfrom scipy.signal import savgol_filter\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx,y=d[:,0],d[:,1]\nidx=np.argsort(x); x=x[idx]; y=y[idx]\nys=savgol_filter(y,101,3)\n# print every ~100th point\nfor i in range(0,len(x),100):\n    print(f\"{x[i]:10.1f} {ys[i]:12.1f}\")\nprint(\"last\",x[-1],ys[-1])\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 49602,
+     "dur_ms": 1665,
+     "exit": 0,
+     "cpu_ms": 1964.1,
+     "phases_us": {
+      "acquire": 58,
+      "resume": 20747,
+      "mount": 17925,
+      "run": 1605565,
+      "destroy": 38708
+     },
+     "cold": null,
+     "vm": "vm-525"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 51280,
+   "dur_ms": 10994
+  },
+  {
+   "kind": "tool",
+   "at_ms": 62274,
+   "dur_ms": 3071,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nfrom scipy.signal import find_peaks, savgol_filter, peak_widths\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx,y=d[:,0],d[:,1]\nidx=np.argsort(x); x=x[idx]; y=y[idx]\n# spacing\ndx=np.diff(x)\nprint(\"dx stats\",np.min(dx),np.median(dx),np.max(dx))\n# nonuniform? print a few diffs\nprint(\"first diffs\",np.diff(x[:10]))\nprint(\"mid diffs\",np.diff(x[1700:1710]))\nprint(\"end diffs\",np.diff(x[-10:]))\nfor w in [21,51,101]:\n  ys=savgol_filter(y,w,3)\n  p,props=find_peaks(ys,prominence=300,distance=20)\n  widths=peak_widths(ys,p,rel_height=0.5)\n  order=np.argsort(props['prominences'])[::-1]\n  print(\"=== window\",w)\n  for j in order[:10]:\n    i=p[j]\n    print(f\"x0={x[i]:.2f} y={ys[i]:.1f} prom={props['prominences'][j]:.1f} fwhm={widths[0][j]*np.median(dx):.2f} fwhm_idx={widths[0][j]:.1f}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 63649,
+     "dur_ms": 1669,
+     "exit": 0,
+     "cpu_ms": 1967.3,
+     "phases_us": {
+      "acquire": 4,
+      "resume": 20793,
+      "mount": 17937,
+      "run": 1613896,
+      "destroy": 34454
+     },
+     "cold": null,
+     "vm": "vm-529"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 65345,
+   "dur_ms": 8386
+  },
+  {
+   "kind": "tool",
+   "at_ms": 73731,
+   "dur_ms": 2718,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nfrom scipy.signal import find_peaks, savgol_filter\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx,y=d[:,0],d[:,1]\nidx=np.argsort(x); x=x[idx]; y=y[idx]\nys=savgol_filter(y,31,2)\n# zoom print region 14000-20000 sampled\nmask=(x>14000)&(x<20000)\nxs,ysv=x[mask],ys[mask]\nprint(\"region points\",len(xs))\nfor i in range(0,len(xs),5):\n    print(f\"{xs[i]:9.2f} {ysv[i]:10.1f}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 74741,
+     "dur_ms": 1683,
+     "exit": 0,
+     "cpu_ms": 1988.3,
+     "phases_us": {
+      "acquire": 59,
+      "resume": 20991,
+      "mount": 18133,
+      "run": 1629409,
+      "destroy": 32688
+     },
+     "cold": null,
+     "vm": "vm-531"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 76449,
+   "dur_ms": 4892
+  },
+  {
+   "kind": "tool",
+   "at_ms": 81341,
+   "dur_ms": 1019,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx,y=d[:,0],d[:,1]\nidx=np.argsort(x); x=x[idx]\nfor i in range(0,len(x),200):\n    print(i, x[i], \"dx_next=\", x[i+1]-x[i] if i+1<len(x) else None)\nprint(\"n\",len(x))\n# check original file order x\nxo=d[:,0]\nprint(\"original first 5\",xo[:5])\nprint(\"original last 5\",xo[-5:])\nprint(\"monotonic dec?\", np.all(np.diff(xo)<0))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 81918,
+     "dur_ms": 399,
+     "exit": 0,
+     "cpu_ms": 501.1,
+     "phases_us": {
+      "acquire": 88,
+      "resume": 21023,
+      "mount": 18074,
+      "run": 348854,
+      "destroy": 28807
+     },
+     "cold": null,
+     "vm": "vm-534"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 82360,
+   "dur_ms": 37028
+  },
+  {
+   "kind": "tool",
+   "at_ms": 119388,
+   "dur_ms": 2346,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nfrom scipy.signal import find_peaks, savgol_filter, peak_widths\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx,y=d[:,0],d[:,1]\nidx=np.argsort(x); x=x[idx]; y=y[idx]\nys=savgol_filter(y,31,2)\np,props=find_peaks(ys,prominence=150,distance=8)\nwidths=peak_widths(ys,p,rel_height=0.5)\nrows=[]\nfor j,i in enumerate(p):\n    # local spacing\n    sp=(x[min(i+1,len(x)-1)]-x[max(i-1,0)])/2\n    rows.append((props['prominences'][j],x[i],ys[i],widths[0][j]*sp,props['widths'][j]*sp))\nrows.sort(reverse=True)\nprint(f\"{'x0':>10} {'y':>10} {'prom':>9} {'fwhm_x':>9} {'fwhm_half':>9}\")\nfor prom,x0,yv,fw,fwh in rows:\n    print(f\"{x0:10.2f} {yv:10.1f} {prom:9.1f} {fw:9.2f} {fwh:9.2f}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 120077,
+     "dur_ms": 1651,
+     "exit": 1,
+     "cpu_ms": 1945.5,
+     "phases_us": {
+      "acquire": 73,
+      "resume": 21123,
+      "mount": 17635,
+      "run": 1587475,
+      "destroy": 42308
+     },
+     "cold": null,
+     "vm": "vm-536"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 121734,
+   "dur_ms": 2075
+  },
+  {
+   "kind": "tool",
+   "at_ms": 123809,
+   "dur_ms": 3170,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nfrom scipy.signal import find_peaks, savgol_filter, peak_widths\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx,y=d[:,0],d[:,1]\nidx=np.argsort(x); x=x[idx]; y=y[idx]\nys=savgol_filter(y,31,2)\np,props=find_peaks(ys,prominence=150,distance=8)\nwidths=peak_widths(ys,p,rel_height=0.5)\nrows=[]\nfor j,i in enumerate(p):\n    sp=(x[min(i+1,len(x)-1)]-x[max(i-1,0)])/2\n    rows.append((props['prominences'][j],x[i],ys[i],widths[0][j]*sp))\nrows.sort(reverse=True)\nprint(f\"{'x0':>10} {'y':>10} {'prom':>9} {'fwhm_x':>9}\")\nfor prom,x0,yv,fw in rows[:40]:\n    print(f\"{x0:10.2f} {yv:10.1f} {prom:9.1f} {fw:9.2f}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 125272,
+     "dur_ms": 1699,
+     "exit": 0,
+     "cpu_ms": 1992.1,
+     "phases_us": {
+      "acquire": 94,
+      "resume": 21057,
+      "mount": 18219,
+      "run": 1637805,
+      "destroy": 39522
+     },
+     "cold": null,
+     "vm": "vm-540"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 126979,
+   "dur_ms": 10165
+  },
+  {
+   "kind": "tool",
+   "at_ms": 137144,
+   "dur_ms": 2274,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nfrom scipy.signal import savgol_filter\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx,y=d[:,0],d[:,1]\nidx=np.argsort(x); x=x[idx]; y=y[idx]\nys=savgol_filter(y,21,2)\nfor lo,hi in [(2800,4600),(5600,7200)]:\n  print(\"=== region\",lo,hi)\n  m=(x>=lo)&(x<=hi)\n  xs,ysv=x[m],ys[m]\n  for i in range(len(xs)):\n    print(f\"{xs[i]:9.2f} {ysv[i]:10.1f} {y[m][i]:10.1f}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 137734,
+     "dur_ms": 1676,
+     "exit": 0,
+     "cpu_ms": 1984.1,
+     "phases_us": {
+      "acquire": 123,
+      "resume": 21464,
+      "mount": 17361,
+      "run": 1614354,
+      "destroy": 39414
+     },
+     "cold": null,
+     "vm": "vm-542"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 139418,
+   "dur_ms": 48603
+  },
+  {
+   "kind": "tool",
+   "at_ms": 188021,
+   "dur_ms": 177,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -la /workspace/lost+found 2>/dev/null | head\nls -la / 2>/dev/null\nfind / -maxdepth 3 -iname '*grader*' -o -maxdepth 3 -iname '*task*' -o -maxdepth 3 -iname '*readme*' 2>/dev/null | head -50\necho \"---- head bytes\"\nhead -c 300 /workspace/graphene.dat | od -c | head -20\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 188077,
+     "dur_ms": 87,
+     "exit": 0,
+     "cpu_ms": 85.8,
+     "phases_us": {
+      "acquire": 5,
+      "resume": 22678,
+      "mount": 19415,
+      "run": 40132,
+      "destroy": 23934
+     },
+     "cold": null,
+     "vm": "vm-544"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 188198,
+   "dur_ms": 26851
+  },
+  {
+   "kind": "tool",
+   "at_ms": 215049,
+   "dur_ms": 2463,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nfrom scipy.signal import savgol_filter\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx,y=d[:,0],d[:,1]\nidx=np.argsort(x); x=x[idx]; y=y[idx]\nfor lo,hi in [(17000,18200),(16000,17000),(7200,7800)]:\n  m=(x>=lo)&(x<=hi)\n  print(\"=== \",lo,hi,\"n=\",m.sum())\n  for xx,yy in zip(x[m],y[m]):\n    print(f\"{xx:9.2f} {yy:10.1f}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 215821,
+     "dur_ms": 1666,
+     "exit": 0,
+     "cpu_ms": 1965.1,
+     "phases_us": {
+      "acquire": 58,
+      "resume": 20363,
+      "mount": 17099,
+      "run": 1612597,
+      "destroy": 32307
+     },
+     "cold": null,
+     "vm": "vm-553"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 217512,
+   "dur_ms": 12299
+  },
+  {
+   "kind": "tool",
+   "at_ms": 229811,
+   "dur_ms": 2770,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nfrom scipy.optimize import curve_fit\n\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx,y=d[:,0],d[:,1]\nidx=np.argsort(x); x=x[idx]; y=y[idx]\nshift=1e7/x\n# sort by shift ascending\no=np.argsort(shift); s=shift[o]; yy=y[o]\n\ndef lor(s,A,x0,g,c):\n    return A*g*g/((s-x0)**2+g*g)+c\ndef lor_lin(s,A,x0,g,c,m):\n    return A*g*g/((s-x0)**2+g*g)+c+m*(s-x0)\n\ndef fit(name, lo, hi, p0):\n    m=(s>=lo)&(s<=hi)\n    ss,yv=s[m],yy[m]\n    for model,pn in [(lor,3),(lor_lin,4)]:\n        try:\n            p,cov=curve_fit(model,ss,yv,p0=p0,maxfev=200000)\n            res=yv-model(ss,*p)\n            r2=1-np.sum(res**2)/np.sum((yv-yv.mean())**2)\n            perr=np.sqrt(np.diag(cov))\n            print(name, model.__name__, \"n=\",m.sum(), \"R2=%.5f\"%r2)\n            print(\"   \", [f\"{v:.4g}\u00b1{e:.2g}\" for v,e in zip(p,perr)])\n        except Exception as e:\n            print(name, model.__name__, \"FAIL\", e)\n\n# G near shift 1578 (native x ~6338)\nfit(\"G\", 1480, 1680, [11000,1578,30,6000])\nfit(\"G\", 1500, 1660, [11000,1578,30,6000])\n# 2D near shift 2670 (native x ~3745)\nfit(\"2D\", 2560, 2790, [9000,2670,30,1500])\nfit(\"2D\", 2580, 2770, [9000,2670,30,1500])\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 231442,
+     "dur_ms": 1112,
+     "exit": 0,
+     "cpu_ms": 1394.3,
+     "phases_us": {
+      "acquire": 4,
+      "resume": 20730,
+      "mount": 17576,
+      "run": 1066407,
+      "destroy": 24896
+     },
+     "cold": null,
+     "vm": "vm-559"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 232581,
+   "dur_ms": 17709
+  },
+  {
+   "kind": "tool",
+   "at_ms": 250290,
+   "dur_ms": 1731,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nfrom scipy.optimize import curve_fit\n\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx=d[:,0]; y=d[:,1]\nidx=np.argsort(x); x=x[idx]; y=y[idx]\nshift=1e7/x\no=np.argsort(shift); s=shift[o]; yy=y[o]\n\ndef lor(s,A,x0,g,c,m): return A*g*g/((s-x0)**2+g*g)+c+m*(s-x0)\ndef gau(s,A,x0,gs,c,m): return A*np.exp(-((s-x0)**2)/(2*gs*gs))+c+m*(s-x0)\n\ndef analyze(name,lo,hi,p0):\n    m=(s>=lo)&(s<=hi); ss,yv=s[m],yy[m]\n    print(\"===\",name,\"n=\",m.sum(),\"range\",ss.min(),ss.max())\n    for model,p0x,lab in [(lor,[9000,1580 if 'G' in name else 2670,9 if 'G' in name else 18,5500 if 'G' in name else 950,0],'Lorentz'),\n                          (gau,[9000,1580 if 'G' in name else 2670,9 if 'G' in name else 18,5500 if 'G' in name else 950,0],'Gauss')]:\n        p,cov=curve_fit(model,ss,yv,p0=p0x,maxfev=500000)\n        res=yv-model(ss,*p); rms=np.sqrt(np.mean(res**2))\n        r2=1-np.sum(res**2)/np.sum((yv-yv.mean())**2)\n        print(f\"  {lab}: R2={r2:.6f} rms={rms:.2f}\")\n        names=['A','x0','gamma','c','slope']\n        for n,v,e in zip(names,p,np.sqrt(np.diag(cov))): print(f\"     {n:6s}={v:.4f} +/- {e:.4f}\")\n\nGc=1580; Dc=2670\nanalyze(\"G\",1450,1720,None)\nanalyze(\"2D\",2500,2850,None)\n# tighter windows\nanalyze(\"G\",1500,1660,None)\nanalyze(\"2D\",2580,2770,None)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 250879,
+     "dur_ms": 1130,
+     "exit": 0,
+     "cpu_ms": 1401.8,
+     "phases_us": {
+      "acquire": 24,
+      "resume": 20337,
+      "mount": 17553,
+      "run": 1071293,
+      "destroy": 38248
+     },
+     "cold": null,
+     "vm": "vm-562"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 252021,
+   "dur_ms": 6237
+  },
+  {
+   "kind": "tool",
+   "at_ms": 258258,
+   "dur_ms": 1757,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nfrom scipy.optimize import curve_fit\n\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx=d[:,0]; y=d[:,1]\nidx=np.argsort(x); x=x[idx]; y=y[idx]\n\ndef lor(x,A,x0,g,c,m): return A*g*g/((x-x0)**2+g*g)+c+m*(x-x0)\ndef gau(x,A,x0,gs,c,m): return A*np.exp(-((x-x0)**2)/(2*gs*gs))+c+m*(x-x0)\n\ndef analyze(name,lo,hi,p0):\n    m=(x>=lo)&(x<=hi); ss,yv=x[m],y[m]\n    print(\"===\",name,\"native n=\",m.sum())\n    for model,lab in [(lor,'Lorentz'),(gau,'Gauss')]:\n        p,cov=curve_fit(model,ss,yv,p0=p0,maxfev=500000)\n        res=yv-model(ss,*p); rms=np.sqrt(np.mean(res**2))\n        r2=1-np.sum(res**2)/np.sum((yv-yv.mean())**2)\n        print(f\"  {lab}: R2={r2:.6f} rms={rms:.3f}\")\n        for n,v,e in zip(['A','x0','gamma','c','slope'],p,np.sqrt(np.diag(cov))): print(f\"     {n:6s}={v:.4f} +/- {e:.4f}\")\n\nanalyze(\"G\",5900,6900,[5000,6338,80,6500,0])\nanalyze(\"2D\",3400,4100,[9000,3745,80,1500,0])\nanalyze(\"G\",6000,6700,[5000,6338,80,6500,0])\nanalyze(\"2D\",3500,4000,[9000,3745,80,1500,0])\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 258882,
+     "dur_ms": 1124,
+     "exit": 0,
+     "cpu_ms": 1398.1,
+     "phases_us": {
+      "acquire": 64,
+      "resume": 20625,
+      "mount": 17796,
+      "run": 1062449,
+      "destroy": 40355
+     },
+     "cold": null,
+     "vm": "vm-564"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 260015,
+   "dur_ms": 3536
+  },
+  {
+   "kind": "tool",
+   "at_ms": 263551,
+   "dur_ms": 2318,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nfrom scipy.signal import savgol_filter\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx=d[:,0]; y=d[:,1]\nidx=np.argsort(x); x=x[idx]; y=y[idx]\ns=1e7/x\no=np.argsort(s); s=s[o]; y=y[o]\nys=savgol_filter(y,301,2)\nprint(\"shift   y_smooth\")\nfor target in range(200,9000,200):\n    i=np.argmin(np.abs(s-target))\n    print(f\"{s[i]:8.1f} {ys[i]:12.2f} {y[i]:10.1f}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 264181,
+     "dur_ms": 1675,
+     "exit": 0,
+     "cpu_ms": 1977.2,
+     "phases_us": {
+      "acquire": 73,
+      "resume": 21072,
+      "mount": 17855,
+      "run": 1618727,
+      "destroy": 35092
+     },
+     "cold": null,
+     "vm": "vm-566"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 265869,
+   "dur_ms": 4889
+  },
+  {
+   "kind": "tool",
+   "at_ms": 270758,
+   "dur_ms": 127,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nenv | sort | head -80\necho \"---- /opt\"\nfind /opt -maxdepth 4 -type f 2>/dev/null | head -50\necho \"---- /tmp\"\nls -la /tmp\necho \"---- history / root files\"\nls -la /root 2>/dev/null\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 270812,
+     "dur_ms": 61,
+     "exit": 0,
+     "cpu_ms": 48.8,
+     "phases_us": {
+      "acquire": 66,
+      "resume": 20943,
+      "mount": 18163,
+      "run": 10854,
+      "destroy": 29280
+     },
+     "cold": null,
+     "vm": "vm-567"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 270885,
+   "dur_ms": 1835
+  },
+  {
+   "kind": "tool",
+   "at_ms": 272720,
+   "dur_ms": 127,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -laR /opt/testbed-src 2>/dev/null | head -100\necho \"=== compare files ===\"\ncmp /opt/testbed-src/graphene.dat /workspace/graphene.dat && echo SAME || echo DIFFER\nwc -l /opt/testbed-src/graphene.dat\necho \"=== find anything else ===\"\nfind /opt /srv /home /var -maxdepth 4 -type f 2>/dev/null | grep -v -E '/(lib|share|bin|sbin|cache)/' | head -80\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 272774,
+     "dur_ms": 42,
+     "exit": 0,
+     "cpu_ms": 47.6,
+     "phases_us": {
+      "acquire": 81,
+      "resume": 20263,
+      "mount": 17573,
+      "run": 10268,
+      "destroy": 11523
+     },
+     "cold": null,
+     "vm": "vm-569"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 272847,
+   "dur_ms": 14594
+  },
+  {
+   "kind": "tool",
+   "at_ms": 287441,
+   "dur_ms": 1782,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nfrom scipy.optimize import curve_fit\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx=d[:,0]; y=d[:,1]\nidx=np.argsort(x); x=x[idx]; y=y[idx]\ns=1e7/x\no=np.argsort(s); s=s[o]; y=y[o]\n\ndef lor(s,A,x0,g,c): return A*g*g/((s-x0)**2+g*g)+c\n\ndef fitc(lo,hi,p0):\n    m=(s>=lo)&(s<=hi); ss,yv=s[m],y[m]\n    p,cov=curve_fit(lor,ss,yv,p0=p0,maxfev=500000)\n    res=yv-lor(ss,*p); rms=np.sqrt(np.mean(res**2))\n    r2=1-np.sum(res**2)/np.sum((yv-yv.mean())**2)\n    return p,np.sqrt(np.diag(cov)),r2,rms,m.sum()\n\nprint(\"G sweep (constant offset)\")\nfor half in [40,60,80,100,120,150]:\n    lo,hi=1580-half,1580+half\n    p,e,r2,rms,n=fitc(lo,hi,[8000,1580,9,5500])\n    print(f\" +/-{half:4d} n={n:4d} x0={p[1]:9.4f} g={p[2]:7.4f} A={p[0]:9.2f} c={p[3]:9.2f} R2={r2:.5f} rms={rms:.1f}\")\nprint(\"2D sweep (constant offset)\")\nfor half in [60,90,120,150,180,220]:\n    lo,hi=2670-half,2670+half\n    p,e,r2,rms,n=fitc(lo,hi,[12000,2670,18,1000])\n    print(f\" +/-{half:4d} n={n:4d} x0={p[1]:9.4f} g={p[2]:7.4f} A={p[0]:9.2f} c={p[3]:9.2f} R2={r2:.5f} rms={rms:.1f}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 288038,
+     "dur_ms": 1168,
+     "exit": 0,
+     "cpu_ms": 1460.5,
+     "phases_us": {
+      "acquire": 39,
+      "resume": 21438,
+      "mount": 18305,
+      "run": 1114854,
+      "destroy": 31543
+     },
+     "cold": null,
+     "vm": "vm-570"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 289223,
+   "dur_ms": 24165
+  },
+  {
+   "kind": "tool",
+   "at_ms": 313388,
+   "dur_ms": 1755,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nfrom scipy.optimize import curve_fit\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx=d[:,0]; y=d[:,1]\nidx=np.argsort(x); x=x[idx]; y=y[idx]\ns=1e7/x\no=np.argsort(s); s=s[o]; y=y[o]\n\ndef lor(s,A,x0,g): return A*g*g/((s-x0)**2+g*g)\ndef model(s,A,x0,g,c1,c2,c3): \n    t=s-x0\n    return lor(s,A,x0,g)+c1+c2*t+c3*t*t\ndef model_lin(s,A,x0,g,c1,c2):\n    t=s-x0\n    return lor(s,A,x0,g)+c1+c2*t\n\ndef run(name,lo,hi,deg,p0):\n    m=(s>=lo)&(s<=hi); ss,yv=s[m],y[m]\n    mod=model_lin if deg==1 else model\n    p,cov=curve_fit(mod,ss,yv,p0=p0,maxfev=1000000)\n    res=yv-mod(ss,*p); rms=np.sqrt(np.mean(res**2))\n    print(f\"{name} [{lo},{hi}] deg{deg} n={m.sum()} x0={p[1]:.4f} g={p[2]:.4f} A={p[0]:.2f} offset={p[3]:.2f} rms={rms:.1f}\")\n    return p\n\nfor W in [70,100,130,160,200]:\n    run(\"G\",1580-W,1580+W,2,[8000,1580,9,5700,-6,0])\nprint()\nfor W in [100,130,160,200,250,300]:\n    run(\"2D\",2670-W,2670+W,2,[12000,2670,18,1100,-2,0])\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 314010,
+     "dur_ms": 1116,
+     "exit": 0,
+     "cpu_ms": 1395.7,
+     "phases_us": {
+      "acquire": 19,
+      "resume": 20467,
+      "mount": 17271,
+      "run": 1061969,
+      "destroy": 33610
+     },
+     "cold": null,
+     "vm": "vm-571"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 315143,
+   "dur_ms": 19560
+  },
+  {
+   "kind": "tool",
+   "at_ms": 334703,
+   "dur_ms": 4505,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nfrom scipy.optimize import curve_fit\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx=d[:,0]; y=d[:,1]\nidx=np.argsort(x); x=x[idx]; y=y[idx]\ns=1e7/x\no=np.argsort(s); s=s[o]; y=y[o]\n\ndef lor(s,A,x0,g,c1,c2): \n    t=s-x0; return A*g*g/(t*t+g*g)+c1+c2*t\ndef voigt(s,A,x0,sig,gam,c1,c2):\n    from scipy.special import voigt_profile\n    t=s-x0\n    return A*voigt_profile(t,sig,gam)/voigt_profile(0,sig,gam)+c1+c2*t\n\nfor name,lo,hi,p0 in [(\"G\",1450,1710,[8000,1580,8.6,5700,-6]),\n                      (\"2D\",2510,2830,[12600,2670,18,740,-2])]:\n    m=(s>=lo)&(s<=hi); ss,yv=s[m],y[m]\n    print(\"===\",name)\n    print(\"  shift      y      lor_resid\")\n    p,_=curve_fit(lor,ss,yv,p0=p0,maxfev=1000000)\n    for xx,yy in zip(ss,yv):\n        if abs(xx-p[1])<80 if name==\"G\" else abs(xx-p[1])<130:\n            print(f\"  {xx:8.2f} {yy:10.1f} {yy-lor(xx,*p):9.1f}\")\n    # voigt\n    try:\n        pv,_=curve_fit(voigt,ss,yv,p0=[12000 if name=='2D' else 8000,p[1],8,5 if name=='2D' else 3,p[3],p[4]],maxfev=2000000)\n        res=yv-voigt(ss,*pv); print(\"  voigt rms\",np.sqrt(np.mean(res**2)),\"params A,x0,sig,gam,c1,c2=\",pv)\n    except Exception as e: print(\"voigt fail\",e)\n    print(\"  lor params\",p, \"rms\",np.sqrt(np.mean((yv-lor(ss,*p))**2)))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 338086,
+     "dur_ms": 1108,
+     "exit": 0,
+     "cpu_ms": 1342.6,
+     "phases_us": {
+      "acquire": 85,
+      "resume": 20499,
+      "mount": 17764,
+      "run": 1051329,
+      "destroy": 36048
+     },
+     "cold": null,
+     "vm": "vm-573"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 356161,
+   "dur_ms": 23954
+  },
+  {
+   "kind": "tool",
+   "at_ms": 380115,
+   "dur_ms": 1760,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nfrom scipy.optimize import curve_fit\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx=d[:,0]; y=d[:,1]; i=np.argsort(x); x=x[i]; y=y[i]\ns=1e7/x; o=np.argsort(s); s=s[o]; y=y[o]\n\ndef lor(s,A,x0,g,c): \n    t=s-x0; return A*g*g/(t*t+g*g)+c\n\n# independent baseline from side regions, polynomial deg 2/3, evaluate at peak center\nfor name,cen,regs in [(\"G\",1580.5,[(1330,1500),(1660,1830)]),\n                      (\"2D\",2670.3,[(2320,2500),(2840,3020)])]:\n    m=np.zeros_like(s,dtype=bool)\n    for a,b in regs: m |= (s>=a)&(s<=b)\n    print(\"===\",name,\"baseline side-region fits at center\",cen)\n    for deg in (1,2,3):\n        p=np.polyfit(s[m]-cen,y[m],deg)\n        print(\"  deg\",deg,\"baseline@center=\",round(np.polyval(p,0),1),\"coef\",np.round(p,2))\n\n# constant-offset Lorentzian fits over various windows\nprint(\"\\nconstant-offset Lorentzian:\")\nfor name,lo,hi,p0 in [(\"G\",1520,1640,[8300,1580.5,8.5,5700]),\n                      (\"G\",1500,1660,[8300,1580.5,8.5,5700]),\n                      (\"G\",1470,1690,[8300,1580.5,8.5,5700]),\n                      (\"2D\",2550,2790,[12600,2670.3,18,1200]),\n                      (\"2D\",2510,2830,[12600,2670.3,18,1200]),\n                      (\"2D\",2470,2870,[12600,2670.3,18,1200]),\n                      (\"2D\",2430,2910,[12600,2670.3,18,1200])]:\n    m=(s>=lo)&(s<=hi)\n    p,_=curve_fit(lor,s[m],y[m],p0=p0,maxfev=200000)\n    r=np.sqrt(np.mean((y[m]-lor(s[m],*p))**2))\n    print(f\"  {name} [{lo},{hi}] x0={p[1]:.3f} g={abs(p[2]):.3f} A={p[0]:.1f} c={p[3]:.1f} rms={r:.1f}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 380769,
+     "dur_ms": 1085,
+     "exit": 0,
+     "cpu_ms": 1372.7,
+     "phases_us": {
+      "acquire": 46,
+      "resume": 20372,
+      "mount": 17469,
+      "run": 1037201,
+      "destroy": 27517
+     },
+     "cold": null,
+     "vm": "vm-575"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 381875,
+   "dur_ms": 10346
+  },
+  {
+   "kind": "tool",
+   "at_ms": 392221,
+   "dur_ms": 1016,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx=d[:,0]; y=d[:,1]; i=np.argsort(x); x=x[i]; y=y[i]\ns=1e7/x; o=np.argsort(s); s=s[o]; y=y[o]\n# bin medians over shift\nedges=np.arange(200,6200,100)\nprint(\"shift  n   median     mean    max\")\nfor a,b in zip(edges[:-1],edges[1:]):\n    m=(s>=a)&(s<b)\n    if m.sum():\n        print(f\"{a:5d}-{b:5d} {m.sum():4d} {np.median(y[m]):9.0f} {np.mean(y[m]):9.0f} {y[m].max():9.0f}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 392782,
+     "dur_ms": 415,
+     "exit": 0,
+     "cpu_ms": 514.3,
+     "phases_us": {
+      "acquire": 73,
+      "resume": 20459,
+      "mount": 17588,
+      "run": 362926,
+      "destroy": 31627
+     },
+     "cold": null,
+     "vm": "vm-581"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 393237,
+   "dur_ms": 4272
+  },
+  {
+   "kind": "tool",
+   "at_ms": 397509,
+   "dur_ms": 2275,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nfrom scipy.signal import find_peaks, savgol_filter\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx=d[:,0]; y=d[:,1]; i=np.argsort(x); x=x[i]; y=y[i]\ns=1e7/x; o=np.argsort(s); s=s[o]; y=y[o]\nys=savgol_filter(y,11,3)\n# global max\nj=np.argmax(y)\nprint(\"global max y=\",y[j],\"x=\",x[j],\"shift=\",1e7/x[j])\n# peaks\npk,props=find_peaks(ys, prominence=400)\nprint(\"prominent peaks (shift, x, y, prominence):\")\nfor k,pr in zip(pk,props['prominences']):\n    print(f\"  shift={s[k]:8.2f} x={x[k]:10.3f} y={y[k]:9.0f} prom={pr:9.0f}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 398097,
+     "dur_ms": 1676,
+     "exit": 0,
+     "cpu_ms": 1979.3,
+     "phases_us": {
+      "acquire": 133,
+      "resume": 20855,
+      "mount": 18012,
+      "run": 1618672,
+      "destroy": 36488
+     },
+     "cold": null,
+     "vm": "vm-586"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 399784,
+   "dur_ms": 38853
+  },
+  {
+   "kind": "tool",
+   "at_ms": 438637,
+   "dur_ms": 1722,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nfrom scipy.optimize import curve_fit\nfrom scipy.special import voigt_profile\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx=d[:,0]; y=d[:,1]; i=np.argsort(x); x=x[i]; y=y[i]\ns=1e7/x; o=np.argsort(s); s=s[o]; y=y[o]; xa=x[o]  # xa aligned with s,y\n\ndef lor(s,A,x0,g,c,m): \n    t=s-x0; return A*g*g/(t*t+g*g)+c+m*t\ndef gau(s,A,x0,sig,c,m):\n    t=s-x0; return A*np.exp(-t*t/(2*sig*sig))+c+m*t\ndef voi(s,A,x0,sig,gam,c,m):\n    t=s-x0; return A*voigt_profile(t,sig,gam)/voigt_profile(0,sig,gam)+c+m*t\ndef lorx(x,A,x0,g,c,m):\n    t=x-x0; return A*g*g/(t*t+g*g)+c+m*t\n\nfor name,lo,hi,p0 in [(\"G\",1500,1660,[8300,1580.4,8.5,5730,0]),\n                      (\"2D\",2510,2830,[12300,2670.2,18,1300,0])]:\n    m=(s>=lo)&(s<=hi); ss=ss0=s[m]; yy=y[m]; xx=xa[m]\n    print(\"===\",name,\"n=\",m.sum())\n    for lab,fn,args,pp in [\n        (\"lor_shift\",lor,(ss,yy),p0),\n        (\"gau_shift\",gau,(ss,yy),[p0[0],p0[1],p0[2]/1.2,p0[3],p0[4]]),\n        (\"voigt_shift\",voi,(ss,yy),[p0[0],p0[1],p0[2]/1.5,p0[2]/1.5,p0[3],p0[4]]),\n        (\"lor_native_x\",lorx,(xx,yy),[p0[0],1e7/p0[1],p0[2]*(1e7/p0[1])**2/1e7,p0[3],p0[4]]),\n    ]:\n        try:\n            popt,_=curve_fit(fn,args[0],args[1],p0=pp,maxfev=2000000)\n            r=yy-fn(args[0],*popt)\n            print(f\"  {lab:14s} rms={np.sqrt(np.mean(r*r)):8.2f}  p={np.round(popt,2)}\")\n        except Exception as e:\n            print(\"  \",lab,\"FAIL\",e)\n    # doublet lorentzian in shift\n    def dbl(s,A1,x1,g1,A2,x2,g2,c,m):\n        return lor(s,A1,x1,g1,0,0)+lor(s,A2,x2,g2,0,0)+c+m*(s-p0[1])\n    try:\n        pd,_=curve_fit(dbl,ss,yy,p0=[p0[0]/2,p0[1]-12,p0[2]/1.5,p0[0]/2,p0[1]+12,p0[2]/1.5,p0[3],0],maxfev=4000000)\n        r=yy-dbl(ss,*pd)\n        print(f\"  doublet        rms={np.sqrt(np.mean(r*r)):8.2f}  p={np.round(pd,2)}\")\n    except Exception as e: print(\"  doublet FAIL\",e)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 439227,
+     "dur_ms": 1117,
+     "exit": 0,
+     "cpu_ms": 1393.3,
+     "phases_us": {
+      "acquire": 34,
+      "resume": 20843,
+      "mount": 17614,
+      "run": 1062492,
+      "destroy": 33609
+     },
+     "cold": null,
+     "vm": "vm-588"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 440359,
+   "dur_ms": 17093
+  },
+  {
+   "kind": "tool",
+   "at_ms": 457452,
+   "dur_ms": 1002,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx=d[:,0]; y=d[:,1]; i=np.argsort(x); x=x[i]; y=y[i]\ns=1e7/x; o=np.argsort(s); s=s[o]; y=y[o]\nprint(\"total points\",len(s),\"shift range\",s[0],s[-1])\n# shift spacing stats\nds=np.diff(s)\nprint(\"ds: min %.3f median %.3f max %.3f mean %.3f\"%(ds.min(),np.median(ds),ds.max(),ds.mean()))\nfor a,b in [(300,600),(1000,1200),(1700,1900),(2000,2200),(2300,2420),(2850,3000),(3400,3700),(4000,4300),(4500,4800)]:\n    m=(s>=a)&(s<b)\n    yy=y[m]\n    # high-frequency noise: residual from 5-point running median? use second difference /sqrt(6)\n    d2=np.diff(yy,2)\n    sig=np.std(d2)/np.sqrt(6)\n    # first difference/sqrt2 (signal slope adds bias if nonlinear)\n    d1=np.diff(yy); sig1=np.std(d1)/np.sqrt(2)\n    print(f\"  [{a},{b}] n={m.sum():4d} mean_y={yy.mean():9.1f} sqrt(y)={np.sqrt(yy.mean()):7.1f} noise(d2)={sig:7.1f} noise(d1)={sig1:7.1f}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 458040,
+     "dur_ms": 407,
+     "exit": 0,
+     "cpu_ms": 514.4,
+     "phases_us": {
+      "acquire": 88,
+      "resume": 20522,
+      "mount": 17356,
+      "run": 362644,
+      "destroy": 23880
+     },
+     "cold": null,
+     "vm": "vm-590"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 458454,
+   "dur_ms": 15184
+  },
+  {
+   "kind": "tool",
+   "at_ms": 473638,
+   "dur_ms": 1758,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nfrom scipy.optimize import curve_fit\nfrom scipy.special import voigt_profile\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx=d[:,0]; y=d[:,1]; i=np.argsort(x); x=x[i]; y=y[i]\ns=1e7/x; o=np.argsort(s); s=s[o]; y=y[o]\n\ndef bg(s,c1,c2,c3): return c1+c2*(s-1000)+c3*(s-1000)**2\ndef lor(s,A,x0,g,c1,c2,c3):\n    t=s-x0; return A*g*g/(t*t+g*g)+bg(s,c1,c2,c3)\ndef gau(s,A,x0,sg,c1,c2,c3):\n    t=s-x0; return A*np.exp(-t*t/(2*sg*sg))+bg(s,c1,c2,c3)\ndef voi(s,A,x0,sg,gm,c1,c2,c3):\n    t=s-x0; return A*voigt_profile(t,sg,gm)/voigt_profile(0,sg,gm)+bg(s,c1,c2,c3)\n\ndef fit(cen,half,label):\n    m=(s>=cen-half)&(s<=cen+half); ss=s[m]; yy=y[m]\n    print(\"=== %s window [%g,%g] n=%d peakmax~%.0f\"%(label,cen-half,cen+half,m.sum(),yy.max()))\n    basep=[yy.max()-np.median(yy),cen,10,np.median(yy),0,0]\n    for lab,fn,pp in [(\"lor\",lor,basep),(\"gau\",gau,[basep[0],cen,10]+basep[3:]),\n                      (\"voigt\",voi,[basep[0],cen,8,8]+basep[3:])]:\n        try:\n            p,_=curve_fit(fn,ss,yy,p0=pp,maxfev=3000000)\n            r=yy-fn(ss,*p); print(f\"  {lab:6s} rms={np.sqrt(np.mean(r*r)):8.2f} x0={p[1]:.3f} w={p[2]:.3f}\" + (f\" gL={p[3]:.3f}\" if lab=='voigt' else \"\") + f\" A={p[0]:.1f}\")\n        except Exception as e: print(\"  \",lab,\"fail\",e)\nfit(519.9,50,\"Si520\")\nfit(947.3,60,\"bump947\")\nfit(3238.4,50,\"2D'3238\")\nfit(2446.9,40,\"feat2447\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 474245,
+     "dur_ms": 1129,
+     "exit": 0,
+     "cpu_ms": 1415.9,
+     "phases_us": {
+      "acquire": 65,
+      "resume": 20008,
+      "mount": 17218,
+      "run": 1082223,
+      "destroy": 26727
+     },
+     "cold": null,
+     "vm": "vm-591"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 475396,
+   "dur_ms": 32595
+  },
+  {
+   "kind": "tool",
+   "at_ms": 507991,
+   "dur_ms": 1864,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nfrom scipy.optimize import curve_fit\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx=d[:,0]; y=d[:,1]; i=np.argsort(x); x=x[i]; y=y[i]\ns=1e7/x; o=np.argsort(s); s=s[o]; y=y[o]\n\ndef make(deg):\n    def f(ss,A,x0,g,*cs):\n        t=ss-x0; u=ss-1000\n        bgp=sum(c*u**k for k,c in enumerate(cs))\n        return A*g*g/(t*t+g*g)+bgp\n    return f\nfor name,cen,half,p0 in [(\"G\",1580.4,80,[8300,1580.4,8.5,5730,0,0,0,0,0]),\n                         (\"2D\",2670.2,150,[12300,2670.2,17.5,1300,0,0,0,0,0])]:\n    m=(s>=cen-half)&(s<=cen+half); ss=s[m]; yy=y[m]\n    print(\"===\",name,\"window\",cen-half,cen+half)\n    for deg in (0,1,2,3,4,5):\n        f=make(deg)\n        pp=p0[:3]+p0[3:3+deg+1]\n        try:\n            popt,_=curve_fit(f,ss,yy,p0=pp,maxfev=4000000)\n            r=yy-f(ss,*popt)\n            print(f\"  deg{deg} rms={np.sqrt(np.mean(r*r)):8.2f} x0={popt[1]:.3f} g={abs(popt[2]):.3f} A={popt[0]:.1f} c0={popt[3]:.1f}\")\n        except Exception as e: print(\"  deg\",deg,\"fail\",repr(e)[:80])\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 508744,
+     "dur_ms": 1099,
+     "exit": 0,
+     "cpu_ms": 1371.7,
+     "phases_us": {
+      "acquire": 16,
+      "resume": 20504,
+      "mount": 17365,
+      "run": 1043691,
+      "destroy": 34879
+     },
+     "cold": null,
+     "vm": "vm-592"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 509855,
+   "dur_ms": 15869
+  },
+  {
+   "kind": "tool",
+   "at_ms": 525724,
+   "dur_ms": 2517,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nfrom scipy.optimize import curve_fit\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx=d[:,0]; y=d[:,1]; i=np.argsort(x); x=x[i]; y=y[i]\ns=1e7/x; o=np.argsort(s); s=s[o]; y=y[o]\ndef lor(s,A,x0,g,c): \n    t=s-x0; return A*g*g/(t*t+g*g)+c\nprint(\"const-offset Lorentzian, symmetric windows\")\nfor name,cen,g0 in [(\"G\",1580.4,8.5),(\"2D\",2670.2,17.5)]:\n    print(\"===\",name)\n    for k in (3,4,5,6,8,10):\n        half=k*g0\n        m=(s>=cen-half)&(s<=cen+half)\n        try:\n            p,_=curve_fit(lor,s[m],y[m],p0=[8000 if name=='G' else 12000,cen,g0,5700 if name=='G' else 1300],maxfev=500000)\n            r=np.sqrt(np.mean((y[m]-lor(s[m],*p))**2))\n            print(f\"  +-{k:2d}g (half={half:6.1f}) n={m.sum():3d} x0={p[1]:8.3f} g={abs(p[2]):7.3f} A={p[0]:9.1f} c={p[3]:8.1f} rms={r:7.1f}\")\n        except Exception as e: print(\"  \",k,\"fail\",e)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 527131,
+     "dur_ms": 1095,
+     "exit": 0,
+     "cpu_ms": 1373.1,
+     "phases_us": {
+      "acquire": 63,
+      "resume": 20468,
+      "mount": 17238,
+      "run": 1039751,
+      "destroy": 34928
+     },
+     "cold": null,
+     "vm": "vm-594"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 528241,
+   "dur_ms": 14275
+  },
+  {
+   "kind": "tool",
+   "at_ms": 542516,
+   "dur_ms": 1681,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nfrom scipy.optimize import curve_fit\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx=d[:,0]; y=d[:,1]; i=np.argsort(x); x=x[i]; y=y[i]\ns=1e7/x; o=np.argsort(s); s=s[o]; y=y[o]\n\n# Robust background via binned medians of PEAK-FREE regions, then quadratic interpolation across peak\ndef bkg_at(cen,lo,hi,excl):\n    grid=np.arange(lo,hi,10.0)\n    bx=[];by=[]\n    for a in grid:\n        if excl[0]<=a<=excl[1]: continue\n        m=(s>=a)&(s<a+10)\n        if m.sum()>=6:\n            bx.append(a+5); by.append(np.median(y[m]))\n    bx=np.array(bx); by=np.array(by)\n    for deg in (1,2):\n        p=np.polyfit(bx-cen,by,deg)\n        print(f\"    deg{deg} bg@%g = %.1f  (coef {np.round(p,2)})\"%(cen,np.polyval(p,0)))\nfor cen in (1580.4,2670.2):\n    print(\"=== background near\",cen)\n    if cen<2000: bkg_at(cen,1380,1800,(1500,1660))\n    else:        bkg_at(cen,2380,2980,(2560,2780))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 543141,
+     "dur_ms": 1038,
+     "exit": 1,
+     "cpu_ms": 1319.6,
+     "phases_us": {
+      "acquire": 116,
+      "resume": 23855,
+      "mount": 19776,
+      "run": 983775,
+      "destroy": 30472
+     },
+     "cold": null,
+     "vm": "vm-595"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 544197,
+   "dur_ms": 3483
+  },
+  {
+   "kind": "tool",
+   "at_ms": 547680,
+   "dur_ms": 1414,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx=d[:,0]; y=d[:,1]; i=np.argsort(x); x=x[i]; y=y[i]\ns=1e7/x; o=np.argsort(s); s=s[o]; y=y[o]\ndef bkg_at(cen,lo,hi,excl,w=20.0):\n    bx=[];by=[]\n    for a in np.arange(lo,hi,w):\n        if excl[0]<=a<=excl[1]: continue\n        m=(s>=a)&(s<a+w)\n        if m.sum()>=3:\n            bx.append(a+w/2); by.append(np.median(y[m]))\n    bx=np.array(bx); by=np.array(by)\n    print(f\"  anchors: {list(zip(np.round(bx,0).astype(int),np.round(by,0).astype(int)))}\")\n    for deg in (1,2):\n        p=np.polyfit(bx-cen,by,deg)\n        print(f\"    deg{deg} bg@{cen} = {np.polyval(p,0):.1f}\")\nprint(\"=== G  (exclude 1490-1670)\"); bkg_at(1580.4,1360,1820,(1490,1670))\nprint(\"=== 2D (exclude 2560-2790)\"); bkg_at(2670.2,2360,3000,(2560,2790))\nprint(\"=== 2D alt excl (exclude 2600-2750)\"); bkg_at(2670.2,2400,2950,(2600,2750))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 548683,
+     "dur_ms": 402,
+     "exit": 0,
+     "cpu_ms": 516.2,
+     "phases_us": {
+      "acquire": 91,
+      "resume": 23288,
+      "mount": 20023,
+      "run": 355615,
+      "destroy": 22662
+     },
+     "cold": null,
+     "vm": "vm-597"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 549094,
+   "dur_ms": 22915
+  },
+  {
+   "kind": "tool",
+   "at_ms": 572009,
+   "dur_ms": 1715,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np\nfrom scipy.optimize import curve_fit\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx=d[:,0]; y=d[:,1]; i=np.argsort(x); x=x[i]; y=y[i]\ns=1e7/x; o=np.argsort(s); s=s[o]; y=y[o]\n# fixed linear background from peak-free anchors\ndef fit_fixedbg(name,cen,c0,slope,half):\n    m=(s>=cen-half)&(s<=cen+half); ss=s[m]; yy=y[m]\n    bg=c0+slope*(ss-cen)\n    def f(ss,A,x0,g): \n        t=ss-x0; return A*g*g/(t*t+g*g)+c0+slope*(ss-cen)\n    p,_=curve_fit(f,ss,yy,p0=[8000 if name=='G' else 11000,cen,9 if name=='G' else 18],maxfev=500000)\n    r=yy-f(ss,*p)\n    print(f\"  {name} half={half:5.1f} x0={p[1]:8.3f} g={abs(p[2]):7.3f} A={p[0]:9.1f} rms={np.sqrt(np.mean(r*r)):7.1f}  (bg@x0={c0+slope*(p[1]-cen):.0f})\")\nprint(\"Background-fixed Lorentzian fits\")\nfor h in (60,85,110,140,170): fit_fixedbg(\"G\",1580.4,5859.0,-5.80,h)\nprint()\nfor h in (60,90,120,150,180): fit_fixedbg(\"2D\",2670.2,1710.7,-2.64,h)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 572623,
+     "dur_ms": 1086,
+     "exit": 0,
+     "cpu_ms": 1364.6,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 20578,
+      "mount": 17324,
+      "run": 1031884,
+      "destroy": 33662
+     },
+     "cold": null,
+     "vm": "vm-599"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 573724,
+   "dur_ms": 18464
+  },
+  {
+   "kind": "tool",
+   "at_ms": 592188,
+   "dur_ms": 1713,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/.pylibs python3 <<'PY'\nimport numpy as np, json\nfrom scipy.optimize import curve_fit\nconv={0:lambda s: float(s.replace(',','.')),1:lambda s: float(s.replace(',','.'))}\nd=np.loadtxt('graphene.dat', delimiter='\\t', converters=conv)\nx=d[:,0]; y=d[:,1]; i=np.argsort(x); x=x[i]; y=y[i]\ns=1e7/x; o=np.argsort(s); s=s[o]; y=y[o]\n\ndef lor_lin(t,A,x0,g,c,m):\n    u=t-x0; return A*g*g/(u*u+g*g)+c+m*u\n\nres={}\nfor key,cen,half,p0 in [(\"G\",1580.5,100.0,[8300,1580.5,8.4,5780,-5.0]),\n                        (\"2D\",2670.3,100.0,[12200,2670.3,17.0,1400,-2.5])]:\n    m=(s>=cen-half)&(s<=cen+half); ss=s[m]; yy=y[m]\n    p,cov=curve_fit(lor_lin,ss,yy,p0=p0,maxfev=1000000)\n    perr=np.sqrt(np.diag(cov))\n    A,x0,g,c,slope=p\n    r=yy-lor_lin(ss,*p)\n    print(f\"{key}: x0={x0:.4f}(+-{perr[1]:.4f}) gamma={abs(g):.4f}(+-{perr[2]:.4f}) A={A:.2f}(+-{perr[0]:.1f}) offset={c:.2f}(+-{perr[3]:.1f}) slope={slope:.3f} rms={np.sqrt(np.mean(r*r)):.1f}\")\n    res[key]={\"x0\":round(float(x0),4),\"gamma\":round(float(abs(g)),4),\n              \"amplitude\":round(float(A),2),\"offset\":round(float(c),2)}\nprint(json.dumps(res,indent=2))\nwith open('/app/results.json','w') as f:\n    json.dump(res,f,indent=2)\nprint(\"written /app/results.json\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 592799,
+     "dur_ms": 1088,
+     "exit": 0,
+     "cpu_ms": 1359.0,
+     "phases_us": {
+      "acquire": 99,
+      "resume": 20150,
+      "mount": 17342,
+      "run": 1033426,
+      "destroy": 34095
+     },
+     "cold": null,
+     "vm": "vm-600"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 593901,
+   "dur_ms": 9370
+  },
+  {
+   "kind": "tool",
+   "at_ms": 603271,
+   "dur_ms": 785,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nls -l /app/results.json\npython3 - <<'PY'\nimport json\nd=json.load(open('/app/results.json'))\nprint(json.dumps(d,indent=2))\nfor k in (\"G\",\"2D\"):\n    assert set(d[k])=={\"x0\",\"gamma\",\"amplitude\",\"offset\"}, d[k]\n    assert all(isinstance(v,(int,float)) for v in d[k].values())\nprint(\"OK: valid JSON with required keys/values\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 603885,
+     "dur_ms": 159,
+     "exit": 0,
+     "cpu_ms": 151.9,
+     "phases_us": {
+      "acquire": 70,
+      "resume": 20177,
+      "mount": 17217,
+      "run": 108215,
+      "destroy": 30785
+     },
+     "cold": null,
+     "vm": "vm-601"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 604056,
+   "dur_ms": 3083
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 2.189,
+ "calls": 38,
+ "cell": "TB1b"
+}

@@ -1,0 +1,147 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "feal-differential-cryptanalysis",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 75536,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 124,
+  "output": 9985,
+  "cacheRead": 42880,
+  "cacheWrite": 2176,
+  "total": 55165
+ },
+ "totals": {
+  "model_calls": 6,
+  "tool_calls": 6,
+  "model_ms": 56481,
+  "tool_ms": 17794,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1143,
+   "dur_ms": 679,
+   "tokens_in": 27,
+   "tokens_out": 81,
+   "cache_read": 1472,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1827,
+   "dur_ms": 6,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "path": "/app/feal.py"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1827,
+   "dur_ms": 8,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1838,
+   "dur_ms": 19758,
+   "tokens_in": 15,
+   "tokens_out": 3358,
+   "cache_read": 1664,
+   "cache_write": 768,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 21596,
+   "dur_ms": 9602,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport feal, collections, random\n# test differentials of F for fixed input diffs\nfor d in [0x80800000,0x80000000,0x00008080,0x02000000,0x00000080,0x80800080,0x80000080,0x00008000,0x80808080,0x01000000]:\n    c=collections.Counter()\n    for _ in range(200000):\n        x=random.getrandbits(32)\n        c[feal.f_function(x)^feal.f_function(x^d)]+=1\n    print(hex(d), len(c), c.most_common(5))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 31202,
+   "dur_ms": 16825,
+   "tokens_in": 16,
+   "tokens_out": 3182,
+   "cache_read": 5760,
+   "cache_write": 448,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 48027,
+   "dur_ms": 1460,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport random, feal, time\n\ndef f(x): return feal.f_function(x)\n\ndef test():\n    feal.create_random_keys()\n    k=feal.key[:]\n    # build one pair\n    p=random.getrandbits(64)\n    dp=((0x82800000)<<32)|0x02000000\n    q=p^dp\n    c=feal.encrypt(p); c2=feal.encrypt(q)\n    h=c>>32; l=c&0xffffffff\n    h2=c2>>32; l2=c2&0xffffffff\n    r3=h^l; r3p=h2^l2\n    dc=h^h2\n    target=0x82800000\n    sols=[]\n    t=time.time()\n    for x in range(65536):\n        cand=(x*1234567)&0xffffffff\n        if dc ^ f(r3^cand) ^ f(r3p^cand) == target:\n            sols.append((x,cand))\n    print('time',time.time()-t,'sols',[(x,hex(c)) for x,c in sols])\n    print('true k5',hex(k[5]), 'seed', k[5]*pow(1234567,-1,1<<32)%(1<<32) if False else '')\n    return sols\n\nfor i in range(5):\n    test()\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 49491,
+   "dur_ms": 13694,
+   "tokens_in": 37,
+   "tokens_out": 2643,
+   "cache_read": 9344,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 63186,
+   "dur_ms": 1,
+   "tool": "write",
+   "is_error": false,
+   "input": {
+    "path": "/app/attack.py",
+    "content": "#!/usr/bin/env python3\n\n\"\"\"Chosen-plaintext key recovery for the FEAL-like cipher in feal.py.\n\nWe recover the last round key, key[5].\n\nThe plaintext difference\n\n    (dL, dR) = (0x82800000, 0x02000000)\n\ngives the following deterministic differences through the first two rounds:\n\n    dL0 = 0x82800000\n    dR0 = dL0 ^ dR = 0x80800000\n\n    F(x) ^ F(x ^ 0x80800000) = 0x02000000        (for every x)\n\n    dR1 = dL0 ^ 0x02000000 = 0x80800000\n    dR2 = dR0 ^ 0x02000000 = 0x82800000\n\nAfter the third round the ciphertext exposes R3 = high(c) ^ low(c).\nFor a candidate k5, the fourth round gives R2 = high(c) ^ F(R3 ^ k5),\nso the known difference dR2 gives a test for k5 using only one ciphertext pair.\n\nEach real round key is (seed * 1234567) mod 2^32 for a 16-bit seed, so there\nare only 65536 candidates to test.\n\"\"\"\n\nimport random\n\nfrom feal import f_function\n\n_DELTA_L = 0x82800000\n_DELTA_R = 0x02000000\n_DELTA_R2 = 0x82800000\n_MASK32 = 0xFFFFFFFF\n\n\ndef _halves(c):\n    return (c >> 32) & _MASK32, c & _MASK32\n\n\ndef _survives(candidate, c1, c2):\n    h1, l1 = _halves(c1)\n    h2, l2 = _halves(c2)\n\n    # R3 is directly available from the ciphertext.\n    r3_1 = h1 ^ l1\n    r3_2 = h2 ^ l2\n\n    # Output high halves are R4 = R2 ^ F(R3 ^ k5).\n    # Therefore dR2 = dR4 ^ F(R3 ^ k5) ^ F(R3' ^ k5).\n    d_r2 = (h1 ^ h2) ^ f_function(r3_1 ^ candidate) ^ f_function(r3_2 ^ candidate)\n    return d_r2 == _DELTA_R2\n\n\ndef attack(encrypt_fn):\n    \"\"\"Return the uint32 value of the cipher's key[5].\"\"\"\n    # Candidate round keys, restricted to the 16-bit seed key schedule.\n    candidates = [(seed * 1234567) & _MASK32 for seed in range(0x10000)]\n\n    # A single pair almost always leaves one candidate; extra independent\n    # pairs cheaply remove the rare false positive.\n    for _ in range(20):\n        p = random.getrandbits(64)\n        q = p ^ ((_DELTA_L << 32) | _DELTA_R)\n\n        c1 = encrypt_fn(p)\n        c2 = encrypt_fn(q)\n\n        candidates = [k for k in candidates if _survives(k, c1, c2)]\n\n        if len(candidates) <= 1:\n            break\n\n    return candidates[0]\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 63190,
+   "dur_ms": 1312,
+   "tokens_in": 16,
+   "tokens_out": 174,
+   "cache_read": 12224,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 64503,
+   "dur_ms": 6717,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport random, time\nimport feal\nfrom attack import attack\n\nfor i in range(20):\n    feal.create_random_keys()\n    expected = feal.key[5]\n    t=time.time()\n    got=attack(feal.encrypt)\n    dt=time.time()-t\n    ok = got==expected\n    print(i, ok, hex(got), hex(expected), f'{dt:.3f}s')\n    if not ok: break\nPY",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 71223,
+   "dur_ms": 4213,
+   "tokens_in": 13,
+   "tokens_out": 547,
+   "cache_read": 12416,
+   "cache_write": 512,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.323,
+ "calls": 6,
+ "cell": "TB1e"
+}

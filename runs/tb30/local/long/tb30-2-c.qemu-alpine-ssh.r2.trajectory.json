@@ -1,0 +1,408 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "qemu-alpine-ssh",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 187784,
+ "resolved": false,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 21090,
+  "output": 11232,
+  "cacheRead": 447680,
+  "cacheWrite": 0,
+  "total": 480002
+ },
+ "totals": {
+  "model_calls": 21,
+  "tool_calls": 20,
+  "model_ms": 92834,
+  "tool_ms": 93977,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 103,
+   "dur_ms": 3688,
+   "tokens_in": 2,
+   "tokens_out": 77,
+   "cache_read": 7104,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3791,
+   "dur_ms": 130,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app && which qemu-system-x86_64 qemu-img sshpass expect 2>/dev/null; uname -a; cat /etc/os-release | head -5"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3969,
+   "dur_ms": 1217,
+   "tokens_in": 289,
+   "tokens_out": 108,
+   "cache_read": 7168,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5186,
+   "dur_ms": 88,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat /app/opencode.json; ls -la /dev/kvm; qemu-img info /app/alpine-disk.qcow2; qemu-system-x86_64 --version | head -1; ls /usr/share/qemu 2>/dev/null | head; ip addr show 2>/dev/null | head -30"
+  },
+  {
+   "kind": "model",
+   "at_ms": 5290,
+   "dur_ms": 8040,
+   "tokens_in": 310,
+   "tokens_out": 100,
+   "cache_read": 7552,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 13330,
+   "dur_ms": 23,
+   "tool": "bash",
+   "is_error": false,
+   "command": "which tmux screen socat python3 ssh sshpass xorriso 7z bsdtar; ls /dev/loop* 2>/dev/null; id; timeout 8 curl -sI http://dl-cdn.alpinelinux.org/alpine/ 2>&1 | head -5"
+  },
+  {
+   "kind": "model",
+   "at_ms": 13450,
+   "dur_ms": 1474,
+   "tokens_in": 111,
+   "tokens_out": 118,
+   "cache_read": 8896,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14924,
+   "dur_ms": 54,
+   "tool": "bash",
+   "is_error": false,
+   "command": "which mount isoinfo xorriso genisoimage busybox wget nc; ls /dev | head -30; python3 -c \"import pycdlib; print('pycdlib')\" 2>&1 | head -1; timeout 8 wget -qO- http://dl-cdn.alpinelinux.org/alpine/ 2>&1 | head -3"
+  },
+  {
+   "kind": "model",
+   "at_ms": 14992,
+   "dur_ms": 1879,
+   "tokens_in": 97,
+   "tokens_out": 81,
+   "cache_read": 9152,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 16871,
+   "dur_ms": 36,
+   "tool": "bash",
+   "is_error": false,
+   "command": "mkdir -p /tmp/iso && mount -o loop,ro /app/alpine.iso /tmp/iso 2>&1 && ls -la /tmp/iso && ls /tmp/iso/boot"
+  },
+  {
+   "kind": "model",
+   "at_ms": 16931,
+   "dur_ms": 2726,
+   "tokens_in": 40,
+   "tokens_out": 112,
+   "cache_read": 9344,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 19657,
+   "dur_ms": 38,
+   "tool": "bash",
+   "is_error": false,
+   "command": "timeout 10 wget -S -O /dev/null http://dl-cdn.alpinelinux.org/alpine/v3.19/main/x86_64/APKINDEX.tar.gz 2>&1 | tail -20; echo \"exit:$?\"; getent hosts dl-cdn.alpinelinux.org; pip3 --version 2>&1"
+  },
+  {
+   "kind": "model",
+   "at_ms": 19710,
+   "dur_ms": 9957,
+   "tokens_in": 185,
+   "tokens_out": 808,
+   "cache_read": 9600,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 29667,
+   "dur_ms": 33,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/isols.py <<'PY'\nimport struct, sys\n\nf=open('/app/alpine.iso','rb')\nSIZE=2048\n# find primary volume descriptor\npvd=None\nfor i in range(16,32):\n    f.seek(i*SIZE)\n    d=f.read(SIZE)\n    if d[1:6]==b'CD001':\n        if d[0]==1: pvd=d; break\nif not pvd: raise SystemExit('no pvd')\nroot=pvd[156:190]\ndef rec_len(r): return r[0]\ndef read_dir(rec):\n    extent=struct.unpack('<I',rec[2:6])[0]\n    length=struct.unpack('<I',rec[10:14])[0]\n    data=b''\n    f.seek(extent*SIZE)\n    data=f.read(length)\n    out=[]\n    i=0\n    while i<len(data):\n        l=data[i]\n        if l==0:\n            i=(i//SIZE+1)*SIZE\n            continue\n        r=data[i:i+l]\n        namelen=r[32]\n        name=r[33:33+namelen]\n        try: name=name.decode('ascii')\n        except: name=repr(name)\n        out.append((name, r, r[25]&2))\n        i+=l\n    return out\ndef walk(rec, path=''):\n    for name,r,isdir in read_dir(rec):\n        if name in ('\\x00','\\x01') or name.endswith('\\x00') or name.endswith('\\x01'): continue\n        n=name.split(';')[0]\n        p=path+'/'+n\n        yield p, r, isdir\n        if isdir and n not in ('.','..'):\n            # find . record child to recurse\n            pass\n# need recursive using extent directly\ndef walk2(extent,length,path=''):\n    f.seek(extent*SIZE); data=f.read(length)\n    i=0\n    while i<len(data):\n        l=data[i]\n        if l==0:\n            i=(i//SIZE+1)*SIZE\n            if i>=len(data): break\n            continue\n        r=data[i:i+l]\n        namelen=r[32]; name=r[33:33+namelen]\n        try: name=name.decode('ascii')\n        except: name='?'\n        if name not in ('\\x00','\\x01'):\n            n=name.split(';')[0]\n            ex=struct.unpack('<I',r[2:6])[0]; ln=struct.unpack('<I',r[10:14])[0]\n            isdir=bool(r[25]&2)\n            p=path+'/'+n\n            yield p,ex,ln,isdir\n            if isdir:\n                yield from walk2(ex,ln,p)\n        i+=l\nroot_ex=struct.unpack('<I',root[2:6])[0]; root_ln=struct.unpack('<I',root[10:14])[0]\nitems=list(walk2(root_ex,root_ln))\nfor p,ex,ln,isdir in items:\n    if p.startswith('/boot') or 'vmlinuz' in p.lower() or 'initram' in p.lower() or p.startswith('/apks'):\n        print(('D' if isdir else 'F'), ln, p)\nPY\npython3 /tmp/isols.py | head -100"
+  },
+  {
+   "kind": "model",
+   "at_ms": 29799,
+   "dur_ms": 1777,
+   "tokens_in": 89,
+   "tokens_out": 112,
+   "cache_read": 11200,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 31576,
+   "dur_ms": 25,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nexec(open('/tmp/isols.py').read().split(\"for p,ex,ln,isdir in items:\")[0])\nfor p,ex,ln,isdir in items:\n    if p.count('/')<=1:\n        print(('D' if isdir else 'F'), ln, p)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 31641,
+   "dur_ms": 1177,
+   "tokens_in": 96,
+   "tokens_out": 112,
+   "cache_read": 11456,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 32818,
+   "dur_ms": 29,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nexec(open('/tmp/isols.py').read().split(\"for p,ex,ln,isdir in items:\")[0])\nfor p,ex,ln,isdir in items:\n    if p.startswith('/APKS'):\n        print(('D' if isdir else 'F'), ln, p)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 32877,
+   "dur_ms": 2989,
+   "tokens_in": 13968,
+   "tokens_out": 120,
+   "cache_read": 11648,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 35866,
+   "dur_ms": 26,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nexec(open('/tmp/isols.py').read().split(\"for p,ex,ln,isdir in items:\")[0])\nfor p,ex,ln,isdir in items:\n    if p.startswith('/BOOT') or p.startswith('/EFI'):\n        print(('D' if isdir else 'F'), ln, p)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 35932,
+   "dur_ms": 3021,
+   "tokens_in": 407,
+   "tokens_out": 186,
+   "cache_read": 25856,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 38953,
+   "dur_ms": 25,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nexec(open('/tmp/isols.py').read().split(\"for p,ex,ln,isdir in items:\")[0])\ndef extract(path):\n    for p,ex,ln,isdir in items:\n        if p==path:\n            f.seek(ex*2048); return f.read(ln)\nfor path in ['/BOOT/SYSLINUX/SYSLINUX.CFG','/BOOT/GRUB/GRUB.CFG','/.ALPINE_RELEASE','/BOOT/CONFIG_LTS.']:\n    print('===',path)\n    print(extract(path).decode('latin1')[:3000])\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 39015,
+   "dur_ms": 15311,
+   "tokens_in": 1518,
+   "tokens_out": 554,
+   "cache_read": 26432,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 54326,
+   "dur_ms": 84,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/extract.py <<'PY'\nimport struct, os\nSIZE=2048\nf=open('/app/alpine.iso','rb')\npvd=None\nfor i in range(16,32):\n    f.seek(i*SIZE); d=f.read(SIZE)\n    if d[1:6]==b'CD001' and d[0]==1:\n        pvd=d; break\nroot=pvd[156:190]\ndef walk2(extent,length,path=''):\n    f.seek(extent*SIZE); data=f.read(length); i=0\n    while i<len(data):\n        l=data[i]\n        if l==0:\n            i=(i//SIZE+1)*SIZE\n            if i>=len(data): break\n            continue\n        r=data[i:i+l]; namelen=r[32]; name=r[33:33+namelen].decode('ascii','replace')\n        if name not in ('\\x00','\\x01'):\n            n=name.split(';')[0]\n            ex=struct.unpack('<I',r[2:6])[0]; ln=struct.unpack('<I',r[10:14])[0]\n            isdir=bool(r[25]&2); p=path+'/'+n\n            yield p,ex,ln,isdir\n            if isdir: yield from walk2(ex,ln,p)\n        i+=l\nre=struct.unpack('<I',root[2:6])[0]; rl=struct.unpack('<I',root[10:14])[0]\nitems={p:(ex,ln) for p,ex,ln,d in walk2(re,rl)}\nos.makedirs('/tmp/alpineboot',exist_ok=True)\nfor src,dst in [('/BOOT/VMLINUZ_LTS.','/tmp/alpineboot/vmlinuz-lts'),('/BOOT/INITRAMFS_LTS.','/tmp/alpineboot/initramfs-lts')]:\n    ex,ln=items[src]; f.seek(ex*SIZE)\n    with open(dst,'wb') as o:\n        rem=ln\n        while rem:\n            b=f.read(min(rem,1048576)); o.write(b); rem-=len(b)\n    print(dst,os.path.getsize(dst))\nPY\npython3 /tmp/extract.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 54499,
+   "dur_ms": 2847,
+   "tokens_in": 52,
+   "tokens_out": 319,
+   "cache_read": 29824,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 57346,
+   "dur_ms": 2063,
+   "tool": "bash",
+   "is_error": false,
+   "command": "rm -f /tmp/alpine-serial.sock /tmp/alpine.pid /tmp/alpine.log\nqemu-system-x86_64 \\\n  -name alpine \\\n  -m 1024 -smp 2 \\\n  -kernel /tmp/alpineboot/vmlinuz-lts \\\n  -initrd /tmp/alpineboot/initramfs-lts \\\n  -append \"modules=loop,squashfs,sd-mod,usb-storage console=ttyS0,115200 alpine_repo=file:///media/cdrom/apks\" \\\n  -cdrom /app/alpine.iso \\\n  -drive file=/app/alpine-disk.qcow2,if=virtio,format=qcow2 \\\n  -netdev user,id=n1,hostfwd=tcp::2222-:22 \\\n  -device virtio-net-pci,netdev=n1 \\\n  -display none \\\n  -serial unix:/tmp/alpine-serial.sock,server=nowait \\\n  -daemonize -pidfile /tmp/alpine.pid\nsleep 2\ncat /tmp/alpine.pid; ls -l /tmp/alpine-serial.sock; ps -p $(cat /tmp/alpine.pid) -o pid,stat,etime,cmd --no-headers"
+  },
+  {
+   "kind": "model",
+   "at_ms": 59426,
+   "dur_ms": 2014,
+   "tokens_in": 171,
+   "tokens_out": 308,
+   "cache_read": 30272,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 61440,
+   "dur_ms": 2088,
+   "tool": "bash",
+   "is_error": false,
+   "command": "rm -f /tmp/alpine-serial.sock /tmp/alpine.pid\nqemu-system-x86_64 \\\n  -name alpine \\\n  -m 1024 -smp 2 \\\n  -kernel /tmp/alpineboot/vmlinuz-lts \\\n  -initrd /tmp/alpineboot/initramfs-lts \\\n  -append \"modules=loop,squashfs,sd-mod,usb-storage console=ttyS0,115200 alpine_repo=file:///media/cdrom/apks\" \\\n  -cdrom /app/alpine.iso \\\n  -drive file=/app/alpine-disk.qcow2,if=virtio,format=qcow2 \\\n  -netdev user,id=n1,hostfwd=tcp::2222-:22 \\\n  -device virtio-net-pci,netdev=n1 \\\n  -display none \\\n  -serial unix:/tmp/alpine-serial.sock,server=on,wait=off \\\n  -daemonize -pidfile /tmp/alpine.pid\nsleep 2\ncat /tmp/alpine.pid; ls -l /tmp/alpine-serial.sock; kill -0 $(cat /tmp/alpine.pid) && echo RUNNING"
+  },
+  {
+   "kind": "model",
+   "at_ms": 63545,
+   "dur_ms": 8792,
+   "tokens_in": 93,
+   "tokens_out": 620,
+   "cache_read": 30720,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 72337,
+   "dur_ms": 48136,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/vmconsole.py <<'PY'\nimport socket,time,sys,os\nsock=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)\nsock.connect('/tmp/alpine-serial.sock')\nsock.setblocking(False)\nbuf=b''\ndef read_until(patterns,timeout=600,log=None):\n    global buf\n    if isinstance(patterns,bytes): patterns=[patterns]\n    end=time.time()+timeout\n    while time.time()<end:\n        try:\n            d=sock.recv(65536)\n            if not d:\n                time.sleep(0.1); continue\n            buf+=d\n            if log:\n                with open(log,'ab') as f: f.write(d)\n            for p in patterns:\n                if p in buf:\n                    return p\n        except BlockingIOError:\n            time.sleep(0.1)\n        except Exception as e:\n            raise\n    raise TimeoutError('timeout, buf tail: %r' % buf[-500:])\ndef send(x):\n    if isinstance(x,str): x=x.encode()\n    sock.sendall(x)\ndef run(cmd,timeout=600,marker=None):\n    global buf\n    if marker is None: marker='__CMD_DONE_%d__'%int(time.time()*1000)\n    full='%s; echo %s:$?\\n'%(cmd,marker)\n    print('>>>',cmd,flush=True)\n    send(full)\n    read_until(marker.encode()+b':',timeout)\n    # read remaining line + prompt\n    time.sleep(0.3)\n    try:\n        while True:\n            d=sock.recv(65536)\n            if not d: break\n            buf+=d\n    except BlockingIOError: pass\n    text=buf.decode('utf-8','replace')\n    print(text[-3000:],flush=True)\n    buf=b''\n    return text\nif __name__=='__main__':\n    log='/tmp/console.log'\n    open(log,'wb').close()\n    print('waiting for login...',flush=True)\n    read_until(b'login:',300,log)\n    print('got login prompt',flush=True)\n    send('root\\n')\n    read_until(b'# ',120,log)\n    print('logged in',flush=True)\n    run('cat /etc/alpine-release; cat /etc/apk/repositories; ls /media; ls /media/cdrom 2>/dev/null | head')\n    run('ip addr; ip route')\nPY\npython3 /tmp/vmconsole.py",
+   "timeout": 600000
+  },
+  {
+   "kind": "model",
+   "at_ms": 120493,
+   "dur_ms": 2916,
+   "tokens_in": 855,
+   "tokens_out": 293,
+   "cache_read": 32000,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 123409,
+   "dur_ms": 30089,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/setupssh.py <<'PY'\nexec(open('/tmp/vmconsole.py').read().split(\"if __name__=='__main__':\")[0])\nlog='/tmp/console.log'\nread_until(b'# ',30,log)\nrun('ip link set eth0 up && udhcpc -i eth0 -q -n -t 5',120)\nrun(\"echo 'root:password123' | chpasswd\",60)\nrun('apk add --no-cache openssh openssh-server',300)\nrun('ssh-keygen -A',120)\nrun(\"sed -i 's/^#*PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config; grep -i permitrootlogin /etc/ssh/sshd_config\",60)\nrun('rc-update add sshd default; rc-service sshd restart',120)\nrun('rc-service sshd status',60)\nrun('netstat -lntp 2>/dev/null || ss -lntp',60)\nPY\npython3 /tmp/setupssh.py",
+   "timeout": 900000
+  },
+  {
+   "kind": "model",
+   "at_ms": 153513,
+   "dur_ms": 1803,
+   "tokens_in": 120,
+   "tokens_out": 129,
+   "cache_read": 33152,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 155316,
+   "dur_ms": 4753,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\np='/tmp/setupssh.py'\ns=open(p).read()\ns=s.replace(\"read_until(b'# ',30,log)\",\"send('\\\\n'); read_until(b'# ',30,log)\")\nopen(p,'w').write(s)\nPY\npython3 /tmp/setupssh.py",
+   "timeout": 900000
+  },
+  {
+   "kind": "model",
+   "at_ms": 160084,
+   "dur_ms": 13036,
+   "tokens_in": 1363,
+   "tokens_out": 658,
+   "cache_read": 33408,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 173120,
+   "dur_ms": 5753,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\np='/tmp/vmconsole.py'\ns=open(p).read()\nold='''def run(cmd,timeout=600,marker=None):\n    global buf\n    if marker is None: marker='__CMD_DONE_%d__'%int(time.time()*1000)\n    full='%s; echo %s:$?\\\\n'%(cmd,marker)\n    print('>>>',cmd,flush=True)\n    send(full)\n    read_until(marker.encode()+b':',timeout)'''\nnew='''def run(cmd,timeout=600,marker=None):\n    global buf\n    if marker is None: marker='__CMD_DONE_%d__'%int(time.time()*1000)\n    full=\"%s; r=$?; M=__CMD_DONE_; echo ${M}%d__:$r\\\\n\"%(cmd,int(time.time()*1000))\n    print('>>>',cmd,flush=True)\n    send(full)\n    read_until(('__CMD_DONE_%d__:'%int(full.split('${M}')[1].split('__')[0])).encode(),timeout)'''\n# Actually simpler build marker id separately\nnew='''def run(cmd,timeout=600,marker=None):\n    global buf\n    mid=int(time.time()*1000)\n    marker='__CMD_DONE_%d__'%mid\n    full=\"%s; r=$?; M=__CMD_DONE_; echo ${M}%d__:$r\\\\n\"%(cmd,mid)\n    print('>>>',cmd,flush=True)\n    send(full)\n    read_until((marker+':').encode(),timeout)'''\ns=s.replace(old,new)\nopen(p,'w').write(s)\nprint(new in open(p).read())\nPY\ncat > /tmp/check.py <<'PY'\nexec(open('/tmp/vmconsole.py').read().split(\"if __name__=='__main__':\")[0])\nlog='/tmp/console.log'\nsend('\\n'); time.sleep(1)\n# drain\ntime.sleep(2)\ntry:\n    while True:\n        d=sock.recv(65536)\n        if not d: break\n        buf+=d\nexcept BlockingIOError: pass\nbuf=b''\nrun('rc-service sshd status',60)\nrun('grep -iE \"^(PermitRootLogin|PasswordAuthentication)\" /etc/ssh/sshd_config',30)\nrun('ls -l /etc/ssh/ssh_host_*',30)\nrun('ss -lntp 2>/dev/null || netstat -lntp',30)\nrun('ip addr show eth0',30)\nPY\npython3 /tmp/check.py",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 178893,
+   "dur_ms": 2409,
+   "tokens_in": 986,
+   "tokens_out": 263,
+   "cache_read": 36480,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 181302,
+   "dur_ms": 463,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/sshtest.exp <<'EXP'\n#!/usr/bin/expect -f\nset timeout 20\nspawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 root@localhost\nexpect {\n    \"password:\" { send \"password123\\r\" }\n    \"Permission denied\" { puts \"DENIED\"; exit 1 }\n    timeout { puts \"TIMEOUT_PROMPT\"; exit 2 }\n}\nexpect {\n    \"# \" { send \"id; echo SSH_OK\\r\" }\n    \"Permission denied\" { puts \"DENIED2\"; exit 1 }\n    timeout { puts \"TIMEOUT_SHELL\"; exit 3 }\n}\nexpect {\n    \"SSH_OK\" { puts \"\\nSUCCESS\" ; send \"exit\\r\"; expect eof; exit 0 }\n    timeout { puts \"TIMEOUT_CMD\"; exit 4 }\n}\nEXP\nexpect -f /tmp/sshtest.exp",
+   "timeout": 60000
+  },
+  {
+   "kind": "model",
+   "at_ms": 181792,
+   "dur_ms": 4981,
+   "tokens_in": 285,
+   "tokens_out": 111,
+   "cache_read": 37760,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 186773,
+   "dur_ms": 41,
+   "tool": "bash",
+   "is_error": false,
+   "command": "pid=$(cat /tmp/alpine.pid); [ -d /proc/$pid ] && echo \"qemu pid $pid running\"; grep -a -o 'qemu-system-x86_64' /proc/$pid/cmdline | head -1; timeout 5 nc -z localhost 2222 && echo \"port 2222 open\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 186853,
+   "dur_ms": 780,
+   "tokens_in": 53,
+   "tokens_out": 61,
+   "cache_read": 38656,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "long",
+ "weight_s_per_command": 39.048,
+ "calls": 20,
+ "cell": "TB1c"
+}

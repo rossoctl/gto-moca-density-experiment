@@ -1,0 +1,118 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "openssl-selfsigned-cert",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 11950,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 180,
+  "output": 1687,
+  "cacheRead": 12672,
+  "cacheWrite": 704,
+  "total": 15243
+ },
+ "totals": {
+  "model_calls": 5,
+  "tool_calls": 4,
+  "model_ms": 10144,
+  "tool_ms": 620,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1110,
+   "dur_ms": 627,
+   "tokens_in": 28,
+   "tokens_out": 66,
+   "cache_read": 1792,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1740,
+   "dur_ms": 23,
+   "tool": "bash",
+   "is_error": false,
+   "command": "openssl version && python3 --version && ls -la /app"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1763,
+   "dur_ms": 1260,
+   "tokens_in": 62,
+   "tokens_out": 218,
+   "cache_read": 1856,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3023,
+   "dur_ms": 363,
+   "tool": "bash",
+   "is_error": false,
+   "command": "mkdir -p /app/ssl\nopenssl genrsa -out /app/ssl/server.key 2048\nchmod 600 /app/ssl/server.key\nopenssl req -new -x509 -key /app/ssl/server.key -out /app/ssl/server.crt -days 365 -subj \"/O=DevOps Team/CN=dev-internal.company.local\"\ncat /app/ssl/server.key /app/ssl/server.crt > /app/ssl/server.pem\nchmod 600 /app/ssl/server.pem\nopenssl x509 -in /app/ssl/server.crt -noout -subject -dates -fingerprint -sha256 | tee /app/ssl/verification.txt\nls -la /app/ssl"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3386,
+   "dur_ms": 5352,
+   "tokens_in": 36,
+   "tokens_out": 874,
+   "cache_read": 2176,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 8739,
+   "dur_ms": 1,
+   "tool": "write",
+   "is_error": false,
+   "input": {
+    "path": "/app/check_cert.py",
+    "content": "#!/usr/bin/env python3\n\"\"\"Verify the self-signed development certificate in /app/ssl.\"\"\"\n\nimport os\nimport ssl\nimport sys\nfrom datetime import datetime\n\nCERT_PATH = \"/app/ssl/server.crt\"\nKEY_PATH = \"/app/ssl/server.key\"\n\n\ndef main():\n    if not os.path.isfile(CERT_PATH):\n        print(f\"ERROR: Certificate not found: {CERT_PATH}\")\n        return 1\n\n    try:\n        # Loading the chain confirms the certificate is valid PEM and that the\n        # private key exists and matches the certificate.\n        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)\n        context.load_cert_chain(certfile=CERT_PATH, keyfile=KEY_PATH)\n    except (ssl.SSLError, OSError) as exc:\n        print(f\"ERROR: Failed to load certificate: {exc}\")\n        return 1\n\n    # Decode the certificate to inspect its subject and validity dates.\n    try:\n        details = ssl._ssl._test_decode_cert(CERT_PATH)\n    except (ssl.SSLError, OSError) as exc:\n        print(f\"ERROR: Failed to parse certificate: {exc}\")\n        return 1\n\n    subject = details.get(\"subject\", ())\n    common_name = None\n    for rdn in subject:\n        for key, value in rdn:\n            if key == \"commonName\":\n                common_name = value\n                break\n        if common_name:\n            break\n\n    not_after = details.get(\"notAfter\", \"\")\n    try:\n        expiration = datetime.strptime(not_after, \"%b %d %H:%M:%S %Y %Z\")\n        expiration_str = expiration.strftime(\"%Y-%m-%d\")\n    except ValueError:\n        expiration_str = not_after\n\n    print(f\"Certificate: {CERT_PATH}\")\n    print(f\"Subject: {', '.join(f'{k}={v}' for rdn in subject for k, v in rdn)}\")\n    print(f\"Common Name: {common_name}\")\n    print(f\"Expiration Date: {expiration_str}\")\n\n    if not common_name:\n        print(\"ERROR: Certificate has no Common Name\")\n        return 1\n\n    print(\"Certificate verification successful\")\n    return 0\n\n\nif __name__ == \"__main__\":\n    sys.exit(main())\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 8747,
+   "dur_ms": 1127,
+   "tokens_in": 40,
+   "tokens_out": 175,
+   "cache_read": 3328,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 9874,
+   "dur_ms": 233,
+   "tool": "bash",
+   "is_error": false,
+   "command": "chmod +x /app/check_cert.py\npython3 /app/check_cert.py\necho \"--- exit: $? ---\"\nopenssl verify -CAfile /app/ssl/server.crt /app/ssl/server.crt\nopenssl rsa -in /app/ssl/server.key -check -noout\nopenssl x509 -in /app/ssl/server.crt -noout -subject -issuer -dates -fingerprint -sha256\ncat /app/ssl/verification.txt\nstat -c '%a %n' /app/ssl/server.key /app/ssl/server.pem /app/ssl/server.crt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 10107,
+   "dur_ms": 1778,
+   "tokens_in": 14,
+   "tokens_out": 354,
+   "cache_read": 3520,
+   "cache_write": 384,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.232,
+ "calls": 4,
+ "cell": "TB1e"
+}

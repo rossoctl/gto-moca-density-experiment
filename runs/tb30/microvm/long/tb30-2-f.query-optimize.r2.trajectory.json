@@ -1,0 +1,290 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-f",
+ "instance_id": "query-optimize",
+ "rep": 2,
+ "attempt": 2,
+ "agent": "stock Pi",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 286957,
+ "resolved": false,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 195,
+  "output": 3739,
+  "cacheRead": 28224,
+  "cacheWrite": 1792,
+  "total": 33950
+ },
+ "totals": {
+  "model_calls": 8,
+  "tool_calls": 7,
+  "model_ms": 19607,
+  "tool_ms": 266179,
+  "sandbox_ms": 265712
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1083,
+   "dur_ms": 560,
+   "tokens_in": 0,
+   "tokens_out": 90,
+   "cache_read": 1152,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1647,
+   "dur_ms": 118,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncat /app/my-sql-query.sql\necho '---'\nls -la /app\necho '---'\nsqlite3 /app/oewn.sqlite '.tables'\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 1696,
+     "dur_ms": 52,
+     "exit": 0,
+     "cpu_ms": 52.9,
+     "phases_us": {
+      "acquire": 95,
+      "resume": 21528,
+      "mount": 18867,
+      "run": 12339,
+      "destroy": 18302
+     },
+     "cold": null,
+     "vm": "vm-189"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 1768,
+   "dur_ms": 962,
+   "tokens_in": 5,
+   "tokens_out": 199,
+   "cache_read": 1280,
+   "cache_write": 512,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2731,
+   "dur_ms": 134,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nsqlite3 /app/oewn.sqlite '.schema words'\necho '---SENSES---'\nsqlite3 /app/oewn.sqlite '.schema senses'\necho '---SYNSETS---'\nsqlite3 /app/oewn.sqlite '.schema synsets'\necho '---INDEXES---'\nsqlite3 /app/oewn.sqlite \"SELECT name, tbl_name, sql FROM sqlite_master WHERE type='index';\"\necho '---COUNTS---'\nsqlite3 /app/oewn.sqlite \"SELECT 'words',count(*) FROM words UNION ALL SELECT 'senses',count(*) FROM senses UNION ALL SELECT 'synsets',count(*) FROM synsets;\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 2740,
+     "dur_ms": 91,
+     "exit": 0,
+     "cpu_ms": 103.7,
+     "phases_us": {
+      "acquire": 62,
+      "resume": 21845,
+      "mount": 19394,
+      "run": 47038,
+      "destroy": 22033
+     },
+     "cold": null,
+     "vm": "vm-190"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 2867,
+   "dur_ms": 6226,
+   "tokens_in": 43,
+   "tokens_out": 1298,
+   "cache_read": 1984,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 9093,
+   "dur_ms": 516,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nsqlite3 /app/oewn.sqlite \"SELECT sqlite_version();\"\necho '---synset dupes---'\nsqlite3 /app/oewn.sqlite \"SELECT count(*) FROM (SELECT synsetid FROM synsets GROUP BY synsetid HAVING count(*)>1);\"\necho '---senses word-synset dupes---'\nsqlite3 /app/oewn.sqlite \"SELECT count(*), max(c) FROM (SELECT wordid,synsetid,count(*) c FROM senses GROUP BY wordid,synsetid);\"\necho '---senses senseid dupes---'\nsqlite3 /app/oewn.sqlite \"SELECT count(*) FROM (SELECT senseid FROM senses GROUP BY senseid HAVING count(*)>1);\"\necho '---words dupes---'\nsqlite3 /app/oewn.sqlite \"SELECT count(*) FROM (SELECT wordid FROM words GROUP BY wordid HAVING count(*)>1);\"\necho '---nulls---'\nsqlite3 /app/oewn.sqlite \"SELECT sum(wordid IS NULL), sum(synsetid IS NULL), sum(domainid IS NULL), sum(posid IS NULL) FROM senses s JOIN synsets syn USING(synsetid);\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 9142,
+     "dur_ms": 457,
+     "exit": 0,
+     "cpu_ms": 470.9,
+     "phases_us": {
+      "acquire": 73,
+      "resume": 21850,
+      "mount": 19146,
+      "run": 402765,
+      "destroy": 32579
+     },
+     "cold": null,
+     "vm": "vm-191"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 9612,
+   "dur_ms": 2966,
+   "tokens_in": 2,
+   "tokens_out": 734,
+   "cache_read": 3456,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 12579,
+   "dur_ms": 110,
+   "tool": "bash",
+   "is_error": true,
+   "command": "sbx put /app/sol.sql <<'EOF'\nWITH per_synset AS (\n  SELECT s.wordid,\n         s.synsetid,\n         COUNT(*) AS cnt,\n         syn.domainid,\n         syn.posid\n  FROM senses s\n  JOIN synsets syn ON syn.synsetid = s.synsetid\n  GROUP BY s.wordid, s.synsetid, syn.domainid, syn.posid\n),\nranked AS (\n  SELECT wordid,\n         synsetid,\n         cnt,\n         ROW_NUMBER() OVER (\n           PARTITION BY wordid\n           ORDER BY cnt DESC, synsetid ASC\n         ) AS rn\n  FROM per_synset\n),\nword_agg AS (\n  SELECT wordid,\n         COUNT(*) AS total_synsets,\n         SUM(cnt) AS total_senses,\n         COUNT(DISTINCT domainid) AS distinct_domains,\n         COUNT(DISTINCT posid) AS distinct_posids\n  FROM per_synset\n  GROUP BY wordid\n)\nSELECT w.wordid AS word_id,\n       w.word AS word,\n       wa.total_synsets,\n       wa.total_senses,\n       wa.distinct_domains,\n       wa.distinct_posids,\n       r.synsetid AS top_synsetid,\n       r.cnt AS top_synset_sense_count\nFROM word_agg wa\nJOIN words w ON w.wordid = wa.wordid\nJOIN ranked r ON r.wordid = wa.wordid AND r.rn = 1\nWHERE wa.total_synsets >= 2\n  AND wa.distinct_domains >= 2\n  AND wa.total_senses >= 2\nORDER BY wa.total_senses DESC,\n         wa.total_synsets DESC,\n         wa.distinct_domains DESC,\n         w.wordid ASC\nLIMIT 500;\nEOF\ncd /app\necho '--- candidate time ---'\n/usr/bin/time -f '%e sec' sqlite3 oewn.sqlite < sol.sql > /tmp/cand.txt\nwc -l /tmp/cand.txt\nmd5sum /tmp/cand.txt\necho '--- original time ---'\n/usr/bin/time -f '%e sec' sqlite3 oewn.sqlite < my-sql-query.sql > /tmp/orig.txt\nwc -l /tmp/orig.txt\nmd5sum /tmp/orig.txt\ndiff /tmp/orig.txt /tmp/cand.txt | head -50\nEOF",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 12628,
+     "dur_ms": 48,
+     "exit": 0,
+     "cpu_ms": 46.1,
+     "phases_us": {
+      "acquire": 54,
+      "resume": 21771,
+      "mount": 19208,
+      "run": 8263,
+      "destroy": 18099
+     },
+     "cold": null,
+     "vm": "vm-192"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 12690,
+   "dur_ms": 1527,
+   "tokens_in": 55,
+   "tokens_out": 252,
+   "cache_read": 4288,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14218,
+   "dur_ms": 116,
+   "tool": "bash",
+   "is_error": true,
+   "command": "sbx run <<'EOS'\npwd\nls -la /app /workspace | head -30\nls -la /app/sol.sql /workspace/sol.sql 2>&1\nwhich time\nEOS",
+   "sandbox": [
+    {
+     "at_ms": 14266,
+     "dur_ms": 44,
+     "exit": 1,
+     "cpu_ms": 41.8,
+     "phases_us": {
+      "acquire": 56,
+      "resume": 21830,
+      "mount": 19099,
+      "run": 7202,
+      "destroy": 15305
+     },
+     "cold": null,
+     "vm": "vm-193"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 14336,
+   "dur_ms": 1054,
+   "tokens_in": 42,
+   "tokens_out": 216,
+   "cache_read": 4672,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 15390,
+   "dur_ms": 265043,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOS'\ncd /app\necho '--- candidate time ---'\ntime sqlite3 oewn.sqlite < sol.sql > /tmp/cand.txt\nwc -l /tmp/cand.txt\nmd5sum /tmp/cand.txt\necho '--- original time ---'\ntime sqlite3 oewn.sqlite < my-sql-query.sql > /tmp/orig.txt\nwc -l /tmp/orig.txt\nmd5sum /tmp/orig.txt\necho '--- diff ---'\ndiff /tmp/orig.txt /tmp/cand.txt | head -50\nEOS",
+   "timeout": 600,
+   "sandbox": [
+    {
+     "at_ms": 15439,
+     "dur_ms": 264952,
+     "exit": 0,
+     "cpu_ms": 264989.0,
+     "phases_us": {
+      "acquire": 52,
+      "resume": 21275,
+      "mount": 18441,
+      "run": 264891105,
+      "destroy": 39370
+     },
+     "cold": null,
+     "vm": "vm-194"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 280433,
+   "dur_ms": 5280,
+   "tokens_in": 21,
+   "tokens_out": 888,
+   "cache_read": 5184,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 285714,
+   "dur_ms": 142,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOS'\ncat /app/sol.sql\necho '---'\ngrep -n -- '--' /app/sol.sql || true\nEOS",
+   "sandbox": [
+    {
+     "at_ms": 285766,
+     "dur_ms": 68,
+     "exit": 0,
+     "cpu_ms": 41.6,
+     "phases_us": {
+      "acquire": 19793,
+      "resume": 23857,
+      "mount": 21589,
+      "run": 6462,
+      "destroy": 17947
+     },
+     "cold": "parked",
+     "vm": "vm-196"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 285858,
+   "dur_ms": 1032,
+   "tokens_in": 27,
+   "tokens_out": 62,
+   "cache_read": 6208,
+   "cache_write": 384,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "long",
+ "weight_s_per_command": 42.177,
+ "calls": 7,
+ "cell": "TB1f"
+}

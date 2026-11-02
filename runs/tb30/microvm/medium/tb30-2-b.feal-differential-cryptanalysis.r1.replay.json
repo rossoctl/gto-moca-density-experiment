@@ -1,0 +1,382 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "feal-differential-cryptanalysis",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 261830,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 457,
+  "output": 38553,
+  "cacheRead": 486592,
+  "cacheWrite": 5504,
+  "total": 531106
+ },
+ "totals": {
+  "model_calls": 13,
+  "tool_calls": 9,
+  "model_ms": 212922,
+  "tool_ms": 47088,
+  "sandbox_ms": 46282
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 503,
+   "dur_ms": 1061
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1564,
+   "dur_ms": 157,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /workspace\ncat /workspace/feal.py",
+   "sandbox": [
+    {
+     "at_ms": 1643,
+     "dur_ms": 49,
+     "exit": 0,
+     "cpu_ms": 38.0,
+     "phases_us": {
+      "acquire": 100,
+      "resume": 19937,
+      "mount": 17435,
+      "run": 5500,
+      "destroy": 23386
+     },
+     "cold": null,
+     "vm": "vm-10"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1721,
+   "dur_ms": 83016
+  },
+  {
+   "kind": "tool",
+   "at_ms": 84737,
+   "dur_ms": 2999,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\ncat > /tmp/test_diff.py <<'PY'\nimport random, sys\nsys.path.insert(0,'/workspace')\nimport feal\n\nf = feal.f_function\n\n# verify deterministic f differentials\nfor d in [0x8080, 0x80800000, 0x80808080]:\n    vals=set()\n    for _ in range(200000):\n        x=random.getrandbits(32)\n        vals.add(f(x)^f(x^d))\n        if len(vals)>1: break\n    print(hex(d), [hex(v) for v in list(vals)[:5]], len(vals))\n\n# full cipher differential test\nrandom.seed(1234)\nfor trial in range(3):\n    feal.create_random_keys()\n    DL=0x02000000\n    DR=0x82800000\n    dP=(DL<<32)|DR\n    npass=0\n    good=[]\n    for i in range(5):\n        P=random.getrandbits(64)\n        Pp=P^dP\n        C=feal.encrypt(P); Cp=feal.encrypt(Pp)\n        CL=feal.getleft(C); CR=feal.getright(C)\n        CLp=feal.getleft(Cp); CRp=feal.getright(Cp)\n        B=CL^CR; Bp=CLp^CRp\n        if (B^Bp)==0x02000000: npass+=1\n        good.append((B,Bp,CL,CLp))\n    print(\"trial\",trial,\"dR4 match\",npass,\"/5\", \"keys\",[hex(k) for k in feal.key])\n    # test candidate filter for true key5\n    truek=feal.key[5]\n    for (B,Bp,CL,CLp) in good:\n        rhs=(CL^CLp)^0x80800000\n        lhs=f(B^truek)^f(Bp^truek)\n        print(\"  filter true:\",hex(lhs),hex(rhs),lhs==rhs)\nPY\npython3 /tmp/test_diff.py",
+   "sandbox": [
+    {
+     "at_ms": 84805,
+     "dur_ms": 2902,
+     "exit": 0,
+     "cpu_ms": 2912.6,
+     "phases_us": {
+      "acquire": 63,
+      "resume": 20475,
+      "mount": 17541,
+      "run": 2863977,
+      "destroy": 17669
+     },
+     "cold": null,
+     "vm": "vm-11"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 87736,
+   "dur_ms": 11940
+  },
+  {
+   "kind": "model",
+   "at_ms": 100511,
+   "dur_ms": 5560
+  },
+  {
+   "kind": "tool",
+   "at_ms": 106071,
+   "dur_ms": 1394,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\ncat > /tmp/proto.py <<'INNER'\nimport random, time, sys\nsys.path.insert(0,'/workspace')\nimport feal\nf=feal.f_function\n\nCAND=[(x*1234567)&0xFFFFFFFF for x in range(65536)]\nprint(\"unique candidates\",len(set(CAND)))\n\nrandom.seed(999)\nfeal.create_random_keys()\ntruek=feal.key[5]\nDL=0x02000000; DR=0x82800000; dP=(DL<<32)|DR\npairs=[]\nfor i in range(6):\n    P=random.getrandbits(64)\n    C=feal.encrypt(P); Cp=feal.encrypt(P^dP)\n    CL=feal.getleft(C);CR=feal.getright(C)\n    CLp=feal.getleft(Cp);CRp=feal.getright(Cp)\n    B=CL^CR; Bp=CLp^CRp\n    target=(CL^CLp)^0x80800000\n    pairs.append((B,Bp,target))\n\nfor n in [1,2,3,4]:\n    t0=time.time()\n    cands=CAND[:]\n    counts=[]\n    for (B,Bp,target) in pairs[:n]:\n        cands=[K for K in cands if (f(B^K)^f(Bp^K))==target]\n        counts.append(len(cands))\n    print(\"npairs\",n,\"counts\",counts,\"time\",round(time.time()-t0,3),\"contains true\",truek in cands,\"cands\",[hex(c) for c in cands[:10]])\nINNER\npython3 /tmp/proto.py",
+   "sandbox": [
+    {
+     "at_ms": 106126,
+     "dur_ms": 1316,
+     "exit": 0,
+     "cpu_ms": 1313.6,
+     "phases_us": {
+      "acquire": 78,
+      "resume": 20096,
+      "mount": 17667,
+      "run": 1276490,
+      "destroy": 19472
+     },
+     "cold": null,
+     "vm": "vm-24"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 107465,
+   "dur_ms": 25617
+  },
+  {
+   "kind": "tool",
+   "at_ms": 133082,
+   "dur_ms": 232,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put attack.py <<'OUTER'\n#!/usr/bin/env python3\n\"\"\"Chosen-plaintext differential attack against the FEAL-like cipher in feal.py.\n\nThe attack recovers the 32-bit value of key[5] (the fourth/last round key).\n\nKey observation: the F function of this cipher has a deterministic differential\n\n    f(x) ^ f(x ^ 0x80800000) == 0x02000000   for every x.\n\nBecause the Feistel round is  (L, R) -> (R, L ^ f(R ^ K)), a plaintext\ndifference can be chosen so that the differential passes through the first\nthree rounds with probability one.  With\n\n    delta_L1 = 0x02000000,  delta_R1 = 0x80800000\n\n(entering round 1, after the whitening/pre-mixing, whose key material cancels\nin a difference) the differences after three rounds are exactly\n\n    delta_L4 = 0x80800000,  delta_R4 = 0x02000000.\n\nFor a ciphertext C = (C_L, C_R) let B = C_L ^ C_R (= R4).  Since\nC_L = L4 ^ f(B ^ key[5]), the true last-round key must satisfy\n\n    f(B ^ k) ^ f(B' ^ k) == (C_L ^ C_L') ^ 0x80800000\n\nfor every right plaintext pair.  Each of the six round keys is derived from a\n16-bit seed (key[i] = seed * 1234567 mod 2**32), so only 65536 candidate\nvalues of key[5] have to be tested; a handful of pairs isolates the right one.\n\"\"\"\n\nimport random\n\nMASK32 = 0xFFFFFFFF\nKEY_MULT = 1234567\n\n# Plaintext difference used for every chosen-plaintext pair.\nD_L1 = 0x02000000                 # difference entering round 1, left\nD_R1 = 0x80800000                 # difference entering round 1, right\nD_PLAINTEXT = (D_L1 << 32) | (D_R1 ^ D_L1)   # high/low halves of the plaintext\nD_L4 = 0x80800000                 # difference entering round 4, left (from characteristic)\nD_R4 = 0x02000000                 # difference entering round 4, right (from characteristic)\n\n\ndef f_function(value):\n    \"\"\"Bit-exact copy of the cipher's F function.\"\"\"\n    x0 = value & 0xFF\n    x1 = (value >> 8) & 0xFF\n    x2 = (value >> 16) & 0xFF\n    x3 = (value >> 24) & 0xFF\n\n    def g(a, b, carry):\n        t = (a + b + carry) & 0xFF\n        return ((t << 2) | (t >> 6)) & 0xFF\n\n    y2 = g(x3 ^ x2, x1 ^ x0, 1)\n    y3 = g(x3, y2, 0)\n    y1 = g(x1 ^ x0, y2, 0)\n    y0 = g(x0, y1, 1)\n    return y0 | (y1 << 8) | (y2 << 16) | (y3 << 24)\n\n\ndef _candidate_keys():\n    \"\"\"All values key[5] can take, given a 16-bit seed.\"\"\"\n    return [(seed * KEY_MULT) & MASK32 for seed in range(1 << 16)]\n\n\ndef attack(encrypt_fn):\n    \"\"\"Recover key[5] using chosen plaintexts; returns a uint32 int.\"\"\"\n    candidates = _candidate_keys()\n    rng = random.Random()\n\n    for _ in range(16):\n        if len(candidates) == 1:\n            break\n\n        plain = rng.getrandbits(64)\n        cipher = encrypt_fn(plain)\n        cipher_d = encrypt_fn(plain ^ D_PLAINTEXT)\n\n        cl = (cipher >> 32) & MASK32\n        cr = cipher & MASK32\n        cl_d = (cipher_d >> 32) & MASK32\n        cr_d = cipher_d & MASK32\n\n        b = cl ^ cr\n        b_d = cl_d ^ cr_d\n\n        # The probability-one characteristic guarantees this; skip a pair if\n        # the encryption function does not behave as expected.\n        if (b ^ b_d) != D_R4:\n            continue\n\n        target = (cl ^ cl_d) ^ D_L4\n        candidates = [\n            k for k in candidates\n            if (f_function(b ^ k) ^ f_function(b_d ^ k)) == target\n        ]\n\n    if not candidates:\n        return None\n    return candidates[0]\nOUTER\necho \"--- verify file ---\"\nsbx run <<'OUTER'\ncd /workspace\npython3 -c \"import attack; print('import ok')\"\nwc -l attack.py\nOUTER",
+   "sandbox": [
+    {
+     "at_ms": 133101,
+     "dur_ms": 59,
+     "exit": 0,
+     "cpu_ms": 39.4,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 19972,
+      "mount": 17418,
+      "run": 7411,
+      "destroy": 31190
+     },
+     "cold": null,
+     "vm": "vm-25"
+    },
+    {
+     "at_ms": 133205,
+     "dur_ms": 76,
+     "exit": 0,
+     "cpu_ms": 82.5,
+     "phases_us": {
+      "acquire": 16,
+      "resume": 19825,
+      "mount": 17074,
+      "run": 38444,
+      "destroy": 18008
+     },
+     "cold": null,
+     "vm": "vm-6"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 133314,
+   "dur_ms": 2783
+  },
+  {
+   "kind": "tool",
+   "at_ms": 136097,
+   "dur_ms": 6184,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\ncat > /tmp/trial.py <<'INNER'\nimport random, time, sys\nsys.path.insert(0,'/workspace')\nimport feal, attack\n\nrandom.seed(2024)\nfails=0\nmaxt=0\nfor t in range(30):\n    feal.create_random_keys()\n    true=feal.key[5]\n    t0=time.time()\n    got=attack.attack(feal.encrypt)\n    dt=time.time()-t0\n    maxt=max(maxt,dt)\n    ok=(got==true)\n    if not ok:\n        fails+=1\n        print(\"FAIL\",t,hex(true),None if got is None else hex(got),round(dt,3))\nprint(\"trials=30 fails=\",fails,\"max_time=\",round(maxt,3))\nINNER\npython3 /tmp/trial.py",
+   "sandbox": [
+    {
+     "at_ms": 136152,
+     "dur_ms": 6107,
+     "exit": 0,
+     "cpu_ms": 6099.2,
+     "phases_us": {
+      "acquire": 77,
+      "resume": 20536,
+      "mount": 18142,
+      "run": 6058865,
+      "destroy": 27440
+     },
+     "cold": null,
+     "vm": "vm-28"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 142281,
+   "dur_ms": 11823
+  },
+  {
+   "kind": "model",
+   "at_ms": 154303,
+   "dur_ms": 2272
+  },
+  {
+   "kind": "model",
+   "at_ms": 156742,
+   "dur_ms": 2372
+  },
+  {
+   "kind": "tool",
+   "at_ms": 159114,
+   "dur_ms": 15436,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\ncat > /tmp/trial2.py <<'INNER'\nimport random, time, sys\nsys.path.insert(0,'/workspace')\nimport feal, attack\n\ndef cand2():\n    m=[(s*1234567)&0xffffffff for s in range(1<<16)]\n    seen=set(m); out=m[:]\n    for v in range(1<<16):\n        if v not in seen:\n            out.append(v)\n    return out\nattack._candidate_keys=cand2\n\nrandom.seed(777)\nfails=0; maxt=0\nfor t in range(30):\n    feal.create_random_keys()\n    true=feal.key[5]\n    t0=time.time(); got=attack.attack(feal.encrypt); dt=time.time()-t0\n    maxt=max(maxt,dt)\n    if got!=true: fails+=1; print(\"FAIL\",t,hex(true),None if got is None else hex(got))\nprint(\"augmented trials=30 fails=\",fails,\"max_time\",round(maxt,3))\n\nfails2=0; maxt2=0\nfor t in range(10):\n    feal.key[:] = [random.randint(0,0xFFFF) for _ in range(6)]\n    true=feal.key[5]\n    t0=time.time(); got=attack.attack(feal.encrypt); dt=time.time()-t0\n    maxt2=max(maxt2,dt)\n    if got!=true: fails2+=1; print(\"RAW FAIL\",t,hex(true),None if got is None else hex(got))\nprint(\"raw-seed scenario fails=\",fails2,\"max_time\",round(maxt2,3))\nINNER\npython3 /tmp/trial2.py",
+   "sandbox": [
+    {
+     "at_ms": 159170,
+     "dur_ms": 15366,
+     "exit": 0,
+     "cpu_ms": 15378.0,
+     "phases_us": {
+      "acquire": 63,
+      "resume": 19792,
+      "mount": 17545,
+      "run": 15318337,
+      "destroy": 27946
+     },
+     "cold": null,
+     "vm": "vm-31"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 174550,
+   "dur_ms": 37519
+  },
+  {
+   "kind": "tool",
+   "at_ms": 212069,
+   "dur_ms": 191,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'INNER'\nM=1234567\nS=[(s*M)&0xFFFFFFFF for s in range(1<<16)]\nSset=set(S)\nV=[0x8080,0x80800000,0x80808080]\nprint(\"S size\",len(Sset))\nfor c in V:\n    hits=[k for k in S if (k^c) in Sset]\n    print(\"c\",hex(c),\"num keys with alias in S\",len(hits))\n    if hits[:10]: print(\"  examples\",[hex(k) for k in hits[:10]])\nk540=(540*M)&0xFFFFFFFF\nprint(\"540 key\",hex(k540),[(hex(c),hex(k540^c),(k540^c) in Sset) for c in V])\n# seed of k540\n# inverse\ninv=pow(M,-1,1<<32)\nprint(\"seed of 540M =\",(k540*inv)&0xFFFFFFFF)\nINNER",
+   "sandbox": [
+    {
+     "at_ms": 212123,
+     "dur_ms": 112,
+     "exit": 0,
+     "cpu_ms": 107.7,
+     "phases_us": {
+      "acquire": 443,
+      "resume": 19903,
+      "mount": 17152,
+      "run": 72726,
+      "destroy": 18547
+     },
+     "cold": null,
+     "vm": "vm-32"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 212260,
+   "dur_ms": 7402
+  },
+  {
+   "kind": "tool",
+   "at_ms": 219662,
+   "dur_ms": 12122,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\ncat > /tmp/final_test.py <<'INNER'\nimport random, time, sys\nsys.path.insert(0,'/workspace')\nimport feal, attack\n\n# 1) many randomized full-key trials\nrandom.seed(424242)\nfails=0; maxt=0.0; maxpairs=0\nfor t in range(60):\n    feal.create_random_keys()\n    true=feal.key[5]\n    t0=time.time(); got=attack.attack(feal.encrypt); dt=time.time()-t0\n    maxt=max(maxt,dt)\n    if got!=true or not (0<=got<=0xFFFFFFFF):\n        fails+=1; print(\"FAIL\",t,hex(true),None if got is None else hex(got))\nprint(f\"random trials=60 fails={fails} max_time={maxt:.3f}s\")\n\n# 2) the commented-out fixed key from feal.py\nfeal.create_random_keys()\nfeal.key[5]=(540*1234567)&0xFFFFFFFF\ntrue=feal.key[5]\nt0=time.time(); got=attack.attack(feal.encrypt); dt=time.time()-t0\nprint(\"fixed 540 key:\",hex(true),\"got:\",hex(got),\"ok:\",got==true,\"time:\",round(dt,3))\n\n# 3) sanity: type\nprint(\"return type:\",type(got).__name__)\nINNER\npython3 /tmp/final_test.py",
+   "sandbox": [
+    {
+     "at_ms": 219717,
+     "dur_ms": 12051,
+     "exit": 0,
+     "cpu_ms": 12046.0,
+     "phases_us": {
+      "acquire": 80,
+      "resume": 19988,
+      "mount": 17515,
+      "run": 12004233,
+      "destroy": 26904
+     },
+     "cold": null,
+     "vm": "vm-33"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 231784,
+   "dur_ms": 18288
+  },
+  {
+   "kind": "tool",
+   "at_ms": 250072,
+   "dur_ms": 8373,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put attack.py <<'OUTER'\n#!/usr/bin/env python3\n\"\"\"Chosen-plaintext differential attack against the FEAL-like cipher in feal.py.\n\nGoal: recover the 32-bit value of key[5] (the last round key).\n\nThe F function of this cipher has a deterministic differential\n\n    f(x) ^ f(x ^ 0x80800000) == 0x02000000    for every x,\n\nwhich follows from byte 3 of the input changing by 0x80 (adding 0x80 to a byte\nis the same as XORing 0x80) and moving through the G functions.\n\nA Feistel round is (L, R) -> (R, L ^ f(R ^ K)), so differences propagate\nindependently of the keys.  Choosing plaintexts that differ by\n\n    dL1 = 0x02000000,  dR1 = 0x80800000\n\nentering round 1 (the whitening keys cancel in a difference) makes the\ncharacteristic pass through three rounds with probability one and arrive at\nround 4 with\n\n    dL4 = 0x80800000,  dR4 = 0x02000000.\n\nWrite a ciphertext as C = (C_L, C_R) and let B = C_L ^ C_R.  Since the round-4\noutput gives C_L = L4 ^ f(B ^ key[5]), any right plaintext pair must satisfy\n\n    f(B ^ k) ^ f(B' ^ k) == (C_L ^ C_L') ^ 0x80800000\n\nfor the true key k.\n\nEvery round key is derived from a 16-bit seed as k = (seed * 1234567) mod 2^32,\nso only 65536 candidate values of key[5] exist and a few pairs isolate it.\n(The cipher's F function is symmetric under XORing its input with 0x8080,\n0x80800000 or 0x80808080; those aliases are not seed-derived, so restricting\nthe search to seed-derived keys removes that ambiguity.)\n\"\"\"\n\nimport random\n\nMASK32 = 0xFFFFFFFF\nKEY_MULT = 1234567\n\n# Differences entering round 1 (after whitening / pre-mixing) and round 4.\nD_L1 = 0x02000000\nD_R1 = 0x80800000\nD_L4 = 0x80800000          # result of the probability-one characteristic\nD_R4 = 0x02000000\n\n# Plaintext difference: dL_plain = dL1, dR_plain = dR1 ^ dL1.\nD_PLAINTEXT = (D_L1 << 32) | (D_R1 ^ D_L1)\n\n\ndef f_function(value):\n    \"\"\"Bit-exact copy of the cipher's F function.\"\"\"\n    x0 = value & 0xFF\n    x1 = (value >> 8) & 0xFF\n    x2 = (value >> 16) & 0xFF\n    x3 = (value >> 24) & 0xFF\n\n    def g(a, b, carry):\n        t = (a + b + carry) & 0xFF\n        return ((t << 2) | (t >> 6)) & 0xFF\n\n    y2 = g(x3 ^ x2, x1 ^ x0, 1)\n    y3 = g(x3, y2, 0)\n    y1 = g(x1 ^ x0, y2, 0)\n    y0 = g(x0, y1, 1)\n    return y0 | (y1 << 8) | (y2 << 16) | (y3 << 24)\n\n\ndef _candidate_keys():\n    \"\"\"All values key[5] can take, given a 16-bit seed.\"\"\"\n    return [(seed * KEY_MULT) & MASK32 for seed in range(1 << 16)]\n\n\ndef attack(encrypt_fn):\n    \"\"\"Recover key[5] using chosen plaintexts; returns a uint32 int.\"\"\"\n    candidates = _candidate_keys()\n    rng = random.Random()\n\n    for _ in range(32):\n        if len(candidates) == 1:\n            break\n\n        plain = rng.getrandbits(64)\n        cipher = encrypt_fn(plain)\n        cipher_d = encrypt_fn(plain ^ D_PLAINTEXT)\n\n        cl = (cipher >> 32) & MASK32\n        cr = cipher & MASK32\n        cl_d = (cipher_d >> 32) & MASK32\n        cr_d = cipher_d & MASK32\n\n        b = cl ^ cr\n        b_d = cl_d ^ cr_d\n\n        # The probability-one characteristic guarantees this; skip a pair if\n        # the supplied function does not follow the expected cipher.\n        if (b ^ b_d) != D_R4:\n            continue\n\n        target = (cl ^ cl_d) ^ D_L4\n        filtered = [\n            k for k in candidates\n            if (f_function(b ^ k) ^ f_function(b_d ^ k)) == target\n        ]\n        if filtered:\n            candidates = filtered\n\n    return candidates[0]\nOUTER\necho \"--- final validation ---\"\nsbx run <<'OUTER'\ncd /workspace\ncat > /tmp/check.py <<'INNER'\nimport random, time, sys\nsys.path.insert(0,'/workspace')\nimport feal, attack\nrandom.seed(31337)\nmaxt=0.0\nfor t in range(40):\n    feal.create_random_keys()\n    true=feal.key[5]\n    t0=time.time(); got=attack.attack(feal.encrypt); dt=time.time()-t0\n    maxt=max(maxt,dt)\n    assert got==true, (t,hex(true),hex(got))\n    assert isinstance(got,int) and 0<=got<=0xFFFFFFFF\nprint(\"40/40 correct; max time %.3fs\" % maxt)\nfeal.create_random_keys(); feal.key[5]=(540*1234567)&0xFFFFFFFF\nassert attack.attack(feal.encrypt)==feal.key[5]\nprint(\"fixed key 0x%08x correct\" % feal.key[5])\nINNER\npython3 /tmp/check.py\nOUTER",
+   "sandbox": [
+    {
+     "at_ms": 250130,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 40.0,
+     "phases_us": {
+      "acquire": 60,
+      "resume": 20591,
+      "mount": 17923,
+      "run": 7266,
+      "destroy": 27444
+     },
+     "cold": null,
+     "vm": "vm-34"
+    },
+    {
+     "at_ms": 250231,
+     "dur_ms": 8188,
+     "exit": 0,
+     "cpu_ms": 8202.6,
+     "phases_us": {
+      "acquire": 4,
+      "resume": 19519,
+      "mount": 16961,
+      "run": 8150389,
+      "destroy": 18346
+     },
+     "cold": null,
+     "vm": "vm-27"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 258445,
+   "dur_ms": 3269
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.323,
+ "calls": 12,
+ "cell": "TB1b",
+ "removed": [
+  {
+   "at_ms": 99676,
+   "dur_ms": 835,
+   "tool": "Bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 154104,
+   "dur_ms": 199,
+   "tool": "Bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 156575,
+   "dur_ms": 167,
+   "tool": "Bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  }
+ ]
+}

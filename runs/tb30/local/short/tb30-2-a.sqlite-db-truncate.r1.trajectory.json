@@ -1,0 +1,137 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "sqlite-db-truncate",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 76644,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 200,
+  "output": 12430,
+  "cacheRead": 188672,
+  "cacheWrite": 7104,
+  "total": 208406
+ },
+ "totals": {
+  "model_calls": 8,
+  "tool_calls": 8,
+  "model_ms": 75458,
+  "tool_ms": 569,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 556,
+   "dur_ms": 1304
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1546,
+   "dur_ms": 54,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "ls -la /app/ && file /app/trunc.db && stat /app/trunc.db"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1860,
+   "dur_ms": 23,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "xxd -l 256 /app/trunc.db"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1883,
+   "dur_ms": 1579
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3462,
+   "dur_ms": 58,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nd=open('/app/trunc.db','rb').read()\nprint(len(d))\nprint(d[:100])\nprint(d[:16].hex())\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 3520,
+   "dur_ms": 8011
+  },
+  {
+   "kind": "tool",
+   "at_ms": 11531,
+   "dur_ms": 60,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nd=open('/app/trunc.db','rb').read()\nfor i in range(0,len(d),16):\n    chunk=d[i:i+16]\n    print('%04x  %-47s  %s'%(i,chunk.hex(' '),''.join(chr(c) if 32<=c<127 else '.' for c in chunk)))\n\" | sed -n '1,30p'\necho '----- tail -----'\npython3 -c \"\nd=open('/app/trunc.db','rb').read()\nfor i in range(3800,4096,16):\n    chunk=d[i:i+16]\n    print('%04x  %-47s  %s'%(i,chunk.hex(' '),''.join(chr(c) if 32<=c<127 else '.' for c in chunk)))\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 11591,
+   "dur_ms": 21773
+  },
+  {
+   "kind": "tool",
+   "at_ms": 33364,
+   "dur_ms": 62,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/parse.py <<'EOF'\nimport struct\n\nd = open('/app/trunc.db','rb').read()\n\ndef varint(b, off):\n    v = 0\n    for i in range(9):\n        c = b[off+i]\n        if i == 8:\n            v = (v << 8) | c\n            return v, off+9\n        v = (v << 7) | (c & 0x7f)\n        if not (c & 0x80):\n            return v, off+i+1\n    return v, off+9\n\npage = d\nassert page[0] == 0x0d, page[0]\nfreeblock = int.from_bytes(page[1:3],'big')\nncells = int.from_bytes(page[3:5],'big')\ncellstart = int.from_bytes(page[5:7],'big')\nfrag = page[7]\nprint('leaf table page: freeblock=%d ncells=%d cellstart=%d frag=%d' % (freeblock,ncells,cellstart,frag))\nptrs = [int.from_bytes(page[8+2*i:10+2*i],'big') for i in range(ncells)]\nprint('ptrs:', [hex(p) for p in ptrs])\nprint()\n\ndef serial_len(t):\n    if t == 0: return 0, 'null'\n    if t in (1,2,3,4,5,6): return [1,2,3,4,6,8][t-1], 'int'\n    if t == 7: return 8, 'float'\n    if t == 8: return 0, 'int0'\n    if t == 9: return 0, 'int1'\n    if t == 10 or t == 11: return 0, 'reserved'\n    if t >= 12:\n        n = (t-12)//2\n        return n, ('blob' if t%2==0 else 'text')\n    return 0,'?'\n\ndef decode_val(b, off, t):\n    if t == 0: return None, off\n    if t == 8: return 0, off\n    if t == 9: return 1, off\n    if 1 <= t <= 6:\n        n=[1,2,3,4,6,8][t-1]\n        return int.from_bytes(b[off:off+n],'big',signed=True), off+n\n    if t == 7:\n        return struct.unpack('>d', b[off:off+8])[0], off+8\n    n=(t-12)//2\n    raw=b[off:off+n]\n    if t%2==0: return raw, off+n\n    return raw.decode('utf-8','replace'), off+n\n\nrows=[]\nfor p in ptrs:\n    plen, o = varint(page, p)\n    rowid, o2 = varint(page, o)\n    pay = page[o2:o2+plen]\n    hlen, ho = varint(pay, 0)\n    types=[]\n    while ho < hlen:\n        t, ho = varint(pay, ho)\n        types.append(t)\n    vo = hlen\n    vals=[]\n    for t in types:\n        v, vo = decode_val(pay, vo, t)\n        vals.append((t,v))\n    rows.append((rowid, vals, pay))\n    print('ptr=0x%04x rowid=%d plen=%d types=%s vals=%s' % (p,rowid,plen,types,[v for t,v in vals]))\n    print('   payload:', pay.hex(' '))\nprint()\nprint('rows found:', len(rows))\nEOF\npython3 /tmp/parse.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 33426,
+   "dur_ms": 19664
+  },
+  {
+   "kind": "tool",
+   "at_ms": 53090,
+   "dur_ms": 214,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nd=open('/app/trunc.db','rb').read()\n# find all non-zero runs\nruns=[]; i=0\nwhile i<len(d):\n    if d[i]!=0:\n        j=i\n        while j<len(d) and d[j]!=0: j+=1\n        runs.append((i,j))\n        i=j\n    else: i+=1\nprint('nonzero runs:')\nfor a,b in runs:\n    print(' 0x%04x-0x%04x (%d bytes): %r'%(a,b,b-a,d[a:b][:80]))\nprint('total nonzero bytes:', sum(b-a for a,b in runs))\nprint('any SQLite magic:', d.find(b'SQLite format 3'))\nprint('any testword occurrences:', )\nimport re\nfor m in re.finditer(b'testword', d): print('  at', hex(m.start()), d[m.start():m.start()+12])\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 53304,
+   "dur_ms": 13309
+  },
+  {
+   "kind": "tool",
+   "at_ms": 66613,
+   "dur_ms": 57,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/recover.py <<'EOF'\nimport struct, json\n\nd = open('/app/trunc.db','rb').read()\n\ndef varint(b, off):\n    v = 0\n    for i in range(9):\n        c = b[off+i]\n        if i == 8:\n            return (v << 8) | c, off+9\n        v = (v << 7) | (c & 0x7f)\n        if not (c & 0x80):\n            return v, off+i+1\n    return v, off+9\n\npage = d\nassert page[0] == 0x0d\nncells = int.from_bytes(page[3:5],'big')\ncellstart = int.from_bytes(page[5:7],'big')\nassert cellstart <= len(page)\nptrs = [int.from_bytes(page[8+2*i:10+2*i],'big') for i in range(ncells)]\n\ndef serial_len_type(t):\n    if t == 0: return 0, None\n    if 1 <= t <= 6: return [1,2,3,4,6,8][t-1], 'int'\n    if t == 7: return 8, 'float'\n    if t == 8: return 0, 'const0'\n    if t == 9: return 0, 'const1'\n    if t >= 12: return (t-12)//2, ('blob' if t%2==0 else 'text')\n\ndef decode(b, off, t):\n    if t == 0: return None, off\n    if t == 8: return 0, off\n    if t == 9: return 1, off\n    if 1 <= t <= 6:\n        n=[1,2,3,4,6,8][t-1]\n        return int.from_bytes(b[off:off+n],'big',signed=True), off+n\n    if t == 7:\n        return struct.unpack('>d', b[off:off+8])[0], off+8\n    n=(t-12)//2\n    raw=b[off:off+n]\n    return (raw.decode('utf-8') if t%2 else raw), off+n\n\nrows=[]\nfor p in ptrs:\n    plen, o = varint(page, p)\n    rowid, o2 = varint(page, o)\n    pay = page[o2:o2+plen]\n    assert len(pay) == plen, (p, plen, len(pay))\n    hlen, ho = varint(pay, 0)\n    types=[]\n    while ho < hlen:\n        t, ho = varint(pay, ho)\n        types.append(t)\n    vo = hlen\n    vals=[]\n    for t in types:\n        v, vo = decode(pay, vo, t)\n        vals.append(v)\n    assert vo == plen, (p, vo, plen)\n    rows.append((rowid, vals))\n\n# schema: (id INTEGER PRIMARY KEY, word TEXT, value NUMERIC) -> id stored NULL, rowid is id\nout=[]\nfor rowid, vals in sorted(rows):\n    # find the text column and the numeric column\n    word = next(v for v in vals if isinstance(v,str))\n    value = next(v for v in vals if isinstance(v,(int,float)) and not isinstance(v,bool))\n    out.append({\"word\": word, \"value\": value})\n\nwith open('/app/recover.json','w') as f:\n    json.dump(out, f, indent=2)\n    f.write('\\n')\nprint(json.dumps(out, indent=2))\nprint(\"rows:\", len(out))\nEOF\npython3 /tmp/recover.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 66670,
+   "dur_ms": 4118
+  },
+  {
+   "kind": "tool",
+   "at_ms": 70788,
+   "dur_ms": 41,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"import json;x=json.load(open('/app/recover.json'));print('valid JSON,',len(x),'rows');print(x[:2],'...',x[-2:])\" && ls -l /app/recover.json"
+  },
+  {
+   "kind": "model",
+   "at_ms": 70829,
+   "dur_ms": 5700
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.107,
+ "calls": 8,
+ "cell": "TB1a"
+}

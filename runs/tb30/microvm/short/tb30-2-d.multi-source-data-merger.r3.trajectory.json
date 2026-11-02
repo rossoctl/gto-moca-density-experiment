@@ -1,0 +1,268 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-d",
+ "instance_id": "multi-source-data-merger",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 53670,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 2245,
+  "output": 8732,
+  "cacheRead": 71232,
+  "cacheWrite": 0,
+  "total": 82209
+ },
+ "totals": {
+  "model_calls": 7,
+  "tool_calls": 6,
+  "model_ms": 48895,
+  "tool_ms": 4385,
+  "sandbox_ms": 3756
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 101,
+   "dur_ms": 3571,
+   "tokens_in": 39,
+   "tokens_out": 99,
+   "cache_read": 6016,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3672,
+   "dur_ms": 254,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -la /data/source_a /data/source_b /data/source_c 2>&1\necho \"---\"\nls -la /workspace 2>&1\necho \"---app---\"\nls -la /app 2>&1\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 3785,
+     "dur_ms": 53,
+     "exit": 0,
+     "cpu_ms": 41.9,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 22341,
+      "mount": 20247,
+      "run": 8172,
+      "destroy": 22663
+     },
+     "cold": null,
+     "vm": "vm-83"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 3968,
+   "dur_ms": 1046,
+   "tokens_in": 345,
+   "tokens_out": 172,
+   "cache_read": 6144,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5014,
+   "dur_ms": 1241,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\necho \"=== source_a JSON ===\"\ncat /data/source_a/users.json\necho\necho \"=== source_b CSV ===\"\ncat /data/source_b/users.csv\necho\necho \"=== source_c parquet ===\"\npython3 -c \"\nimport pandas as pd\ndf = pd.read_parquet('/data/source_c/users.parquet')\nprint(df.to_string())\nprint('---dtypes---')\nprint(df.dtypes)\n\"\necho \"=== python libs ===\"\npython3 -c \"import pandas, pyarrow; print(pandas.__version__, pyarrow.__version__)\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 5067,
+     "dur_ms": 1177,
+     "exit": 0,
+     "cpu_ms": 1428.3,
+     "phases_us": {
+      "acquire": 100,
+      "resume": 22683,
+      "mount": 20512,
+      "run": 1115578,
+      "destroy": 38838
+     },
+     "cold": null,
+     "vm": "vm-88"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 6272,
+   "dur_ms": 5137,
+   "tokens_in": 294,
+   "tokens_out": 145,
+   "cache_read": 6656,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 11409,
+   "dur_ms": 176,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nfind /data /app /workspace -maxdepth 3 -type f 2>/dev/null | head -100\necho \"--- root dirs ---\"\nls -la /\necho \"--- maybe tests ---\"\nfind / -maxdepth 3 -iname '*test*' 2>/dev/null | grep -v -E '^/(usr|proc|sys|lib|lib64|etc|var|opt|sbin|bin)' | head -50\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 11464,
+     "dur_ms": 92,
+     "exit": 0,
+     "cpu_ms": 86.4,
+     "phases_us": {
+      "acquire": 94,
+      "resume": 25029,
+      "mount": 22354,
+      "run": 39199,
+      "destroy": 27893
+     },
+     "cold": null,
+     "vm": "vm-91"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 11599,
+   "dur_ms": 23799,
+   "tokens_in": 627,
+   "tokens_out": 1614,
+   "cache_read": 7936,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 35398,
+   "dur_ms": 1370,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put /workspace/merge_users.py <<'PYEOF'\n#!/usr/bin/env python3\n\"\"\"Merge user data from JSON, CSV, and Parquet sources.\"\"\"\n\nimport json\nfrom datetime import date, datetime\nfrom pathlib import Path\n\nimport pandas as pd\n\nSOURCE_FILES = {\n    \"source_a\": \"/data/source_a/users.json\",\n    \"source_b\": \"/data/source_b/users.csv\",\n    \"source_c\": \"/data/source_c/users.parquet\",\n}\n\n# Priority order: source_a > source_b > source_c\nPRIORITY = [\"source_a\", \"source_b\", \"source_c\"]\n\nFIELD_ALIASES = {\n    \"user_id\": [\"user_id\", \"id\", \"userId\"],\n    \"name\": [\"full_name\", \"name\", \"userName\"],\n    \"email\": [\"email\", \"email_address\"],\n    \"created_date\": [\"registration_date\", \"created_at\", \"joined\"],\n    \"status\": [\"status\", \"is_active\", \"active\"],\n}\n\nOUTPUT_COLUMNS = [\"user_id\", \"name\", \"email\", \"created_date\", \"status\"]\nCONFLICT_FIELDS = [\"name\", \"email\", \"created_date\", \"status\"]\n\n\ndef is_missing(value):\n    if value is None:\n        return True\n    try:\n        result = pd.isna(value)\n    except (TypeError, ValueError):\n        return False\n    return bool(result) if isinstance(result, (bool, type(pd.NA))) else False\n\n\ndef read_json(path):\n    with open(path, encoding=\"utf-8\") as handle:\n        data = json.load(handle)\n    if isinstance(data, dict):\n        for key in (\"users\", \"data\", \"records\", \"items\"):\n            if key in data and isinstance(data[key], list):\n                return pd.DataFrame(data[key])\n        return pd.DataFrame([data])\n    return pd.DataFrame(data)\n\n\ndef read_source(path):\n    path = str(path)\n    if path.lower().endswith(\".json\"):\n        return read_json(path)\n    if path.lower().endswith(\".csv\"):\n        return pd.read_csv(path)\n    if path.lower().endswith(\".parquet\"):\n        return pd.read_parquet(path)\n    raise ValueError(f\"Unsupported file type: {path}\")\n\n\ndef normalize_status(value):\n    if is_missing(value):\n        return None\n    if isinstance(value, bool):\n        return \"active\" if value else \"inactive\"\n    text = str(value).strip()\n    lowered = text.lower()\n    if lowered in {\"true\", \"1\", \"yes\", \"y\", \"active\", \"enabled\"}:\n        return \"active\"\n    if lowered in {\"false\", \"0\", \"no\", \"n\", \"inactive\", \"disabled\"}:\n        return \"inactive\"\n    return text\n\n\ndef normalize_date(value):\n    if is_missing(value):\n        return None\n    if isinstance(value, pd.Timestamp):\n        return value.strftime(\"%Y-%m-%d\")\n    if isinstance(value, (datetime, date)):\n        return value.strftime(\"%Y-%m-%d\")\n    text = str(value).strip()\n    if not text:\n        return None\n    try:\n        parsed = pd.to_datetime(text, errors=\"raise\")\n    except (ValueError, TypeError):\n        return text\n    return parsed.strftime(\"%Y-%m-%d\")\n\n\ndef normalize_text(value):\n    if is_missing(value):\n        return None\n    text = str(value).strip()\n    return text or None\n\n\ndef normalize_user_id(value):\n    if is_missing(value):\n        return None\n    if isinstance(value, bool):\n        raise ValueError(f\"Invalid user_id: {value!r}\")\n    try:\n        return int(value)\n    except (TypeError, ValueError):\n        return int(float(str(value).strip()))\n\n\ndef get_field(row, aliases):\n    for alias in aliases:\n        if alias in row and not is_missing(row[alias]):\n            return row[alias]\n    return None\n\n\ndef normalize_records(source_name, frame):\n    records = []\n    for _, row in frame.iterrows():\n        record = {}\n        for field, aliases in FIELD_ALIASES.items():\n            value = get_field(row, aliases)\n            if field == \"user_id\":\n                record[field] = normalize_user_id(value)\n            elif field == \"created_date\":\n                record[field] = normalize_date(value)\n            elif field == \"status\":\n                record[field] = normalize_status(value)\n            else:\n                record[field] = normalize_text(value)\n        if record[\"user_id\"] is not None:\n            record[\"_source\"] = source_name\n            records.append(record)\n    return records\n\n\ndef main():\n    all_records = []\n    for source_name in PRIORITY:\n        frame = read_source(SOURCE_FILES[source_name])\n        all_records.extend(normalize_records(source_name, frame))\n\n    by_user = {}\n    for record in all_records:\n        by_user.setdefault(record[\"user_id\"], {})[record[\"_source\"]] = record\n\n    merged_rows = []\n    conflicts = []\n    for user_id in sorted(by_user):\n        source_records = by_user[user_id]\n        merged = {\"user_id\": user_id}\n        for field in CONFLICT_FIELDS:\n            values = {}\n            for source_name in PRIORITY:\n                if source_name not in source_records:\n                    continue\n                value = source_records[source_name].get(field)\n                if value is not None:\n                    values[source_name] = value\n\n            selected = None\n            for source_name in PRIORITY:\n                if source_name in values:\n                    selected = values[source_name]\n                    break\n            merged[field] = selected\n\n            if len(set(values.values())) > 1:\n                conflicts.append(\n                    {\n                        \"user_id\": user_id,\n                        \"field\": field,\n                        \"values\": values,\n                        \"selected\": selected,\n                    }\n                )\n        merged_rows.append(merged)\n\n    merged_frame = pd.DataFrame(merged_rows, columns=OUTPUT_COLUMNS)\n    merged_frame[\"user_id\"] = merged_frame[\"user_id\"].astype(\"int64\")\n    for column in [\"name\", \"email\", \"created_date\", \"status\"]:\n        merged_frame[column] = merged_frame[column].astype(\"object\")\n\n    output_dir = Path(\"/app\")\n    output_dir.mkdir(parents=True, exist_ok=True)\n    merged_frame.to_parquet(output_dir / \"merged_users.parquet\", index=False)\n\n    conflict_report = {\n        \"total_conflicts\": len(conflicts),\n        \"conflicts\": conflicts,\n    }\n    with open(output_dir / \"conflicts.json\", \"w\", encoding=\"utf-8\") as handle:\n        json.dump(conflict_report, handle, indent=2, ensure_ascii=False)\n        handle.write(\"\\n\")\n\n    print(f\"Wrote {len(merged_frame)} users and {len(conflicts)} conflicts.\")\n\n\nif __name__ == \"__main__\":\n    main()\nPYEOF\nsbx run <<'EOF'\npython3 /workspace/merge_users.py\necho \"=== merged ===\"\npython3 -c \"\nimport pandas as pd\ndf = pd.read_parquet('/app/merged_users.parquet')\nprint(df.to_string())\nprint(df.dtypes)\n\"\necho \"=== conflicts ===\"\ncat /app/conflicts.json\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 35453,
+     "dur_ms": 60,
+     "exit": 0,
+     "cpu_ms": 44.4,
+     "phases_us": {
+      "acquire": 123,
+      "resume": 22819,
+      "mount": 20059,
+      "run": 7456,
+      "destroy": 29394
+     },
+     "cold": null,
+     "vm": "vm-93"
+    },
+    {
+     "at_ms": 35559,
+     "dur_ms": 1165,
+     "exit": 0,
+     "cpu_ms": 1413.9,
+     "phases_us": {
+      "acquire": 9,
+      "resume": 22779,
+      "mount": 19938,
+      "run": 1096092,
+      "destroy": 46171
+     },
+     "cold": null,
+     "vm": "vm-80"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 36788,
+   "dur_ms": 9722,
+   "tokens_in": 433,
+   "tokens_out": 115,
+   "cache_read": 13184,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 46510,
+   "dur_ms": 136,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nfind /opt /tmp /root -maxdepth 4 -type f 2>/dev/null | head -100\necho \"--- env ---\"\nenv | sort | grep -iv -E 'proxy|path|home|pwd|hostname|term|lang|user|shell|shlvl' | head -50\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 46566,
+     "dur_ms": 64,
+     "exit": 0,
+     "cpu_ms": 53.1,
+     "phases_us": {
+      "acquire": 134,
+      "resume": 25075,
+      "mount": 21857,
+      "run": 10261,
+      "destroy": 28114
+     },
+     "cold": null,
+     "vm": "vm-99"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 46674,
+   "dur_ms": 2374,
+   "tokens_in": 127,
+   "tokens_out": 460,
+   "cache_read": 15360,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 49048,
+   "dur_ms": 1208,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\nfrom pathlib import Path\npath = Path('/workspace/merge_users.py')\ntext = path.read_text()\nold = '''def is_missing(value):\n    if value is None:\n        return True\n    try:\n        result = pd.isna(value)\n    except (TypeError, ValueError):\n        return False\n    return bool(result) if isinstance(result, (bool, type(pd.NA))) else False\n'''\nnew = '''def is_missing(value):\n    if value is None:\n        return True\n    try:\n        result = pd.isna(value)\n    except (TypeError, ValueError):\n        return False\n    try:\n        return bool(result)\n    except (TypeError, ValueError):\n        return False\n'''\nassert old in text\npath.write_text(text.replace(old, new))\nPY\npython3 /workspace/merge_users.py\npython3 - <<'PY'\nimport json\nimport pandas as pd\ndf = pd.read_parquet('/app/merged_users.parquet')\nassert list(df.columns) == ['user_id', 'name', 'email', 'created_date', 'status']\nassert len(df) == 4\nassert set(df['user_id']) == {101, 102, 103, 104}\nassert str(df['user_id'].dtype) == 'int64'\nassert df.loc[df.user_id == 101, 'email'].iloc[0] == 'john@a.com'\nassert df.loc[df.user_id == 101, 'created_date'].iloc[0] == '2024-01-15'\nreport = json.load(open('/app/conflicts.json'))\nassert report['total_conflicts'] == len(report['conflicts']) == 3\nfor c in report['conflicts']:\n    assert c['selected'] == c['values']['source_a']\nprint('Validation passed')\nprint(df.to_string(index=False))\nprint(json.dumps(report, indent=2))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 49104,
+     "dur_ms": 1145,
+     "exit": 0,
+     "cpu_ms": 1400.2,
+     "phases_us": {
+      "acquire": 76,
+      "resume": 24810,
+      "mount": 22046,
+      "run": 1080302,
+      "destroy": 39678
+     },
+     "cold": null,
+     "vm": "vm-103"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 50272,
+   "dur_ms": 3246,
+   "tokens_in": 380,
+   "tokens_out": 92,
+   "cache_read": 15936,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.537,
+ "calls": 6,
+ "cell": "TB1d"
+}

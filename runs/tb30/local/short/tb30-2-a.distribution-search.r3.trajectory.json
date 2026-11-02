@@ -1,0 +1,168 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "distribution-search",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 86529,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 407,
+  "output": 9953,
+  "cacheRead": 254528,
+  "cacheWrite": 1344,
+  "total": 266232
+ },
+ "totals": {
+  "model_calls": 10,
+  "tool_calls": 9,
+  "model_ms": 66467,
+  "tool_ms": 19422,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 542,
+   "dur_ms": 42713
+  },
+  {
+   "kind": "tool",
+   "at_ms": 43255,
+   "dur_ms": 948,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'PY'\nimport numpy as np\nfrom scipy.optimize import root\nN=150000\nk=7\nlnN=np.log(N)\n\ndef metrics(r,s):\n    q=1-r\n    p=np.empty(N)\n    p[:6]=s\n    p[6]=q-6*s\n    p[7:]=r/(N-k)\n    # normalize? Should sum 1 by construction\n    klf=np.sum(p*np.log(N*p))\n    klb=np.mean(-np.log(N*p))\n    return klf,klb,p\n\ndef F(x):\n    r,s=x\n    klf,klb,_=metrics(r,s)\n    return [klf-10.0, klb-10.0]\n\nx0=[4.544e-5,0.1266]\nsol=root(F,x0,method='hybr',options={'xtol':1e-14})\nprint(sol.success,sol.message)\nprint(sol.x)\nklf,klb,p=metrics(*sol.x)\nprint(klf,klb,p.sum(),p.min(),p.max())\nprint(np.count_nonzero(p),p[:7])\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 44203,
+   "dur_ms": 9302
+  },
+  {
+   "kind": "tool",
+   "at_ms": 53505,
+   "dur_ms": 17,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/find_distribution.py",
+    "content": "\"\"\"Construct a distribution whose forward and backward KL divergences from\nthe uniform distribution are both 10.0.\n\nWith U_i = 1/N, the two quantities are\n\n    KL(P || U) = sum_i P_i log(N * P_i)\n    KL(U || P) = (1/N) sum_i -log(N * P_i)\n\nThe construction uses:\n  * 7 large-probability tokens (six equal, one slightly larger), and\n  * N - 7 equal, very small tail probabilities.\n\nThe large tokens produce the required forward KL (entropy log(N) - 10),\nwhile the tiny tail makes the average log-probability, and hence the\nbackward KL, equal to 10 as well.\n\"\"\"\n\nimport numpy as np\nfrom scipy.optimize import root\n\nN = 150_000\nK_LARGE = 7\nTARGET_KL = 10.0\n\n\ndef build_distribution(tail_mass: float, small_large_prob: float) -> np.ndarray:\n    \"\"\"Build the distribution for the two scalar parameters.\"\"\"\n    remaining_large_mass = (1.0 - tail_mass) - 6.0 * small_large_prob\n    tail_prob = tail_mass / (N - K_LARGE)\n\n    p = np.empty(N, dtype=np.float64)\n    p[:6] = small_large_prob\n    p[6] = remaining_large_mass\n    p[K_LARGE:] = tail_prob\n    return p\n\n\ndef kl_divergences(p: np.ndarray) -> tuple[float, float]:\n    \"\"\"Return (KL(P || U), KL(U || P)) for uniform U.\"\"\"\n    log_np = np.log(N * p)\n    forward = float(np.dot(p, log_np))\n    backward = float(-np.mean(log_np))\n    return forward, backward\n\n\ndef objective(x: np.ndarray) -> np.ndarray:\n    tail_mass, small_large_prob = x\n    p = build_distribution(tail_mass, small_large_prob)\n    forward, backward = kl_divergences(p)\n    return np.array([forward - TARGET_KL, backward - TARGET_KL])\n\n\ndef main() -> None:\n    # Initial guess: tail mass ~ exp(-10), with the large mass spread over 7.\n    initial = np.array([np.exp(-TARGET_KL), (1.0 / 7.0) * 0.896])\n    solution = root(objective, initial, method=\"hybr\", options={\"xtol\": 1e-14})\n\n    if not solution.success:\n        raise RuntimeError(f\"Root finding failed: {solution.message}\")\n\n    tail_mass, small_large_prob = solution.x\n    p = build_distribution(tail_mass, small_large_prob)\n\n    # Basic validity checks.\n    if np.any(p <= 0.0):\n        raise RuntimeError(\"Distribution contains non-positive probabilities.\")\n    if not np.isclose(p.sum(), 1.0, atol=1e-12):\n        raise RuntimeError(f\"Probabilities sum to {p.sum()}, not 1.\")\n\n    forward, backward = kl_divergences(p)\n    if abs(forward - TARGET_KL) > 1e-3 or abs(backward - TARGET_KL) > 1e-3:\n        raise RuntimeError(\n            f\"KL targets not met: forward={forward}, backward={backward}\"\n        )\n\n    np.save(\"/app/dist.npy\", p)\n\n    print(f\"forward KL(P||U) = {forward:.12f}\")\n    print(f\"backward KL(U||P) = {backward:.12f}\")\n    print(f\"sum = {p.sum():.12f}, min = {p.min():.6e}, max = {p.max():.12f}\")\n    print(\"Saved /app/dist.npy\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 53522,
+   "dur_ms": 828
+  },
+  {
+   "kind": "tool",
+   "at_ms": 54350,
+   "dur_ms": 2649,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "python find_distribution.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 56999,
+   "dur_ms": 2846
+  },
+  {
+   "kind": "tool",
+   "at_ms": 59845,
+   "dur_ms": 5950,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'PY'\nimport numpy as np\nfrom scipy.optimize import root\nN=150000\ndef build(r,s):\n p=np.empty(N); q=1-r\n p[:6]=s;p[6]=q-6*s;p[7:]=r/(N-7);return p\ndef F(x):\n r,s=x;p=build(r,s);lnp=np.log(N*p)\n return [p@lnp-10,-np.mean(lnp)-10]\nfor x0 in ([np.exp(-10),0.1266],[np.exp(-10),0.1280],[4.5355e-5,0.1279]):\n sol=root(F,x0,method='hybr',options={'xtol':1e-14})\n print(x0, sol.success,sol.x,sol.message)\n if sol.success:\n  p=build(*sol.x);lnp=np.log(N*p);print(p@lnp,-np.mean(lnp))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 65795,
+   "dur_ms": 2744
+  },
+  {
+   "kind": "tool",
+   "at_ms": 68539,
+   "dur_ms": 6855,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'PY'\nimport numpy as np\nfrom scipy.optimize import least_squares\nN=150000\ndef build(r,s):\n p=np.empty(N); q=1-r\n p[:6]=s;p[6]=q-6*s;p[7:]=r/(N-7);return p\ndef F(x):\n r,s=x;p=build(r,s);lnp=np.log(N*p)\n return np.array([p@lnp-10,-np.mean(lnp)-10])\nfor x0 in ([np.exp(-10),0.1266],[np.exp(-10),0.128],[1e-4,.13]):\n sol=least_squares(F,x0,xtol=1e-15,ftol=1e-15,gtol=1e-15,max_nfev=10000)\n print(sol.success, sol.x, F(sol.x), sol.message)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 75394,
+   "dur_ms": 1232
+  },
+  {
+   "kind": "tool",
+   "at_ms": 76626,
+   "dur_ms": 15,
+   "tool": "Edit",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/find_distribution.py",
+    "old_string": "from scipy.optimize import root",
+    "new_string": "from scipy.optimize import least_squares",
+    "replace_all": false
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 76641,
+   "dur_ms": 1506
+  },
+  {
+   "kind": "tool",
+   "at_ms": 78147,
+   "dur_ms": 14,
+   "tool": "Edit",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/find_distribution.py",
+    "old_string": "    initial = np.array([np.exp(-TARGET_KL), (1.0 / 7.0) * 0.896])\n    solution = root(objective, initial, method=\"hybr\", options={\"xtol\": 1e-14})\n\n    if not solution.success:\n        raise RuntimeError(f\"Root finding failed: {solution.message}\")",
+    "new_string": "    initial = np.array([np.exp(-TARGET_KL), 0.1266])\n    solution = least_squares(\n        objective,\n        initial,\n        xtol=1e-15,\n        ftol=1e-15,\n        gtol=1e-15,\n        max_nfev=10_000,\n    )\n\n    if not solution.success:\n        raise RuntimeError(f\"Root finding failed: {solution.message}\")",
+    "replace_all": false
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 78161,
+   "dur_ms": 915
+  },
+  {
+   "kind": "tool",
+   "at_ms": 79076,
+   "dur_ms": 2318,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python find_distribution.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 81394,
+   "dur_ms": 1553
+  },
+  {
+   "kind": "tool",
+   "at_ms": 82947,
+   "dur_ms": 656,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'PY'\nimport numpy as np\nfrom scipy.special import rel_entr\n\np = np.load('/app/dist.npy')\nN = p.size\nu = np.full(N, 1.0 / N)\nfwd = rel_entr(p, u).sum()\nbwd = rel_entr(u, p).sum()\nprint('shape:', p.shape, 'dtype:', p.dtype)\nprint('sum:', p.sum())\nprint('finite/positive:', np.isfinite(p).all(), (p > 0).all())\nprint('forward:', fwd)\nprint('backward:', bwd)\nprint('within tolerance:', abs(fwd - 10.0) <= 0.001, abs(bwd - 10.0) <= 0.001)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 83603,
+   "dur_ms": 2828
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.527,
+ "calls": 9,
+ "cell": "TB1a"
+}

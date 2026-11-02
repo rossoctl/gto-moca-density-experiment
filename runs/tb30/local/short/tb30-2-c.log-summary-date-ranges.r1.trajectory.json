@@ -1,0 +1,97 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "log-summary-date-ranges",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 10952,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 1452,
+  "output": 735,
+  "cacheRead": 31296,
+  "cacheWrite": 0,
+  "total": 33483
+ },
+ "totals": {
+  "model_calls": 4,
+  "tool_calls": 3,
+  "model_ms": 6539,
+  "tool_ms": 1928,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 105,
+   "dur_ms": 3380,
+   "tokens_in": 429,
+   "tokens_out": 61,
+   "cache_read": 6976,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3485,
+   "dur_ms": 138,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls /app/logs | head -50; echo \"---\"; ls /app/logs | wc -l"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3721,
+   "dur_ms": 704,
+   "tokens_in": 518,
+   "tokens_out": 91,
+   "cache_read": 7424,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4425,
+   "dur_ms": 20,
+   "tool": "bash",
+   "is_error": false,
+   "command": "head -5 /app/logs/2025-08-12_api.log; echo \"---\"; head -3 /app/logs/2025-07-03_db.log; echo \"---files last---\"; ls /app/logs | tail -12"
+  },
+  {
+   "kind": "model",
+   "at_ms": 4460,
+   "dur_ms": 2455,
+   "tokens_in": 347,
+   "tokens_out": 436,
+   "cache_read": 8000,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6915,
+   "dur_ms": 1770,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport os, re\nfrom datetime import date, timedelta\nfrom collections import defaultdict\n\nref = date(2025,8,12)\nranges = {\n 'today': (ref, ref),\n 'last_7_days': (ref - timedelta(days=6), ref),\n 'last_30_days': (ref - timedelta(days=29), ref),\n 'month_to_date': (date(2025,8,1), ref),\n 'total': None,\n}\nsev_re = re.compile(r'\\[(ERROR|WARNING|INFO)\\]')\ncounts = {p: defaultdict(int) for p in ranges}\nfor fn in os.listdir('/app/logs'):\n    m = re.match(r'(\\d{4}-\\d{2}-\\d{2})_.*\\.log$', fn)\n    if not m: continue\n    d = date.fromisoformat(m.group(1))\n    file_counts = defaultdict(int)\n    with open(os.path.join('/app/logs',fn)) as f:\n        for line in f:\n            sm = sev_re.search(line)\n            if sm: file_counts[sm.group(1)] += 1\n    for p, rng in ranges.items():\n        if rng is None or rng[0] <= d <= rng[1]:\n            for s in ('ERROR','WARNING','INFO'):\n                counts[p][s] += file_counts[s]\nwith open('/app/summary.csv','w') as out:\n    out.write('period,severity,count\\n')\n    for p in ('today','last_7_days','last_30_days','month_to_date','total'):\n        for s in ('ERROR','WARNING','INFO'):\n            out.write(f'{p},{s},{counts[p][s]}\\n')\nprint(open('/app/summary.csv').read())\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 10354,
+   "dur_ms": 0,
+   "tokens_in": 158,
+   "tokens_out": 19,
+   "cache_read": 8896,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.192,
+ "calls": 3,
+ "cell": "TB1c"
+}

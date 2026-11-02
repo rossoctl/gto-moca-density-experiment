@@ -1,0 +1,271 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-d",
+ "instance_id": "large-scale-text-editing",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 96403,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 2268,
+  "output": 4633,
+  "cacheRead": 62592,
+  "cacheWrite": 0,
+  "total": 69493
+ },
+ "totals": {
+  "model_calls": 7,
+  "tool_calls": 6,
+  "model_ms": 35767,
+  "tool_ms": 60328,
+  "sandbox_ms": 59752
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 100,
+   "dur_ms": 3758,
+   "tokens_in": 39,
+   "tokens_out": 105,
+   "cache_read": 5888,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3858,
+   "dur_ms": 302,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -la /app\necho \"---INPUT HEAD---\"\nhead -5 /app/input.csv\necho \"---EXPECTED HEAD---\"\nhead -5 /app/expected.csv\necho \"---WC---\"\nwc -l /app/input.csv /app/expected.csv\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 3957,
+     "dur_ms": 149,
+     "exit": 0,
+     "cpu_ms": 159.6,
+     "phases_us": {
+      "acquire": 79,
+      "resume": 21382,
+      "mount": 18863,
+      "run": 98451,
+      "destroy": 29357
+     },
+     "cold": null,
+     "vm": "vm-247"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 4195,
+   "dur_ms": 1917,
+   "tokens_in": 259,
+   "tokens_out": 202,
+   "cache_read": 6016,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6112,
+   "dur_ms": 774,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\necho \"---INPUT samples---\"\nsed -n '1,5p;100000,100005p;500000,500005p;999996,1000000p' /app/input.csv | cat -A\necho \"---EXPECTED samples---\"\nsed -n '1,5p;100000,100005p;500000,500005p;999996,1000000p' /app/expected.csv | cat -A\necho \"---field counts input---\"\nawk -F, '{print NF}' /app/input.csv | sort | uniq -c\necho \"---field counts expected---\"\nawk -F';' '{print NF}' /app/expected.csv | sort | uniq -c\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 6165,
+     "dur_ms": 704,
+     "exit": 0,
+     "cpu_ms": 937.1,
+     "phases_us": {
+      "acquire": 75,
+      "resume": 21016,
+      "mount": 18579,
+      "run": 652269,
+      "destroy": 30610
+     },
+     "cold": null,
+     "vm": "vm-251"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 6902,
+   "dur_ms": 17183,
+   "tokens_in": 823,
+   "tokens_out": 292,
+   "cache_read": 6528,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 24085,
+   "dur_ms": 179,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /app\nvim --version | head -1\nmkdir -p /tmp/t\nhead -20 input.csv > /tmp/t/in.csv\ncp /tmp/t/in.csv /tmp/t/orig.csv\ncat > /tmp/t/test.vim <<'VIMEOF'\ncall setreg('a', \":s/ //g\\r\")\ncall setreg('b', \"gUU\")\ncall setreg('c', \":s/\\\\([^,]*\\\\),\\\\([^,]*\\\\),\\\\(.*\\\\)/\\\\3;\\\\2;\\\\1;OK/\\r\")\n:%normal! @a\n:%normal! @b\n:%normal! @c\n:wq\nVIMEOF\nvim -Nu NONE -n -Es /tmp/t/in.csv -S /tmp/t/test.vim\necho \"exit=$?\"\necho \"---result---\"\ncat -A /tmp/t/in.csv\necho \"---expected first 20---\"\nhead -20 expected.csv | cat -A\necho \"---diff---\"\nhead -20 expected.csv > /tmp/t/exp20.csv\ndiff /tmp/t/in.csv /tmp/t/exp20.csv && echo MATCH\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 24138,
+     "dur_ms": 75,
+     "exit": 0,
+     "cpu_ms": 64.5,
+     "phases_us": {
+      "acquire": 19,
+      "resume": 21412,
+      "mount": 18909,
+      "run": 24041,
+      "destroy": 29560
+     },
+     "cold": null,
+     "vm": "vm-253"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 24281,
+   "dur_ms": 2970,
+   "tokens_in": 671,
+   "tokens_out": 248,
+   "cache_read": 9728,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 27251,
+   "dur_ms": 380,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /app\nprintf 'input tail bytes: '; tail -c 20 input.csv | xxd | tail -2\nprintf 'expected tail bytes: '; tail -c 20 expected.csv | xxd | tail -2\necho \"--- unusual chars check ---\"\ngrep -nP '[^\\x20-\\x7e]' input.csv | head -5 || echo none\nawk -F, '{if (NF!=3) print NR}' input.csv | head -5 || true\necho \"--- full run ---\"\ncp input.csv /tmp/t/full.csv\n/usr/bin/time -f 'elapsed=%e' vim -Nu NONE -n -Es /tmp/t/full.csv -S /tmp/t/test.vim\necho \"exit=$?\"\ncmp /tmp/t/full.csv expected.csv && echo FULL_MATCH || echo MISMATCH\nEOF",
+   "timeout": 300000,
+   "sandbox": [
+    {
+     "at_ms": 27303,
+     "dur_ms": 306,
+     "exit": 0,
+     "cpu_ms": 343.7,
+     "phases_us": {
+      "acquire": 80,
+      "resume": 21230,
+      "mount": 18813,
+      "run": 261540,
+      "destroy": 23235
+     },
+     "cold": null,
+     "vm": "vm-256"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 27644,
+   "dur_ms": 3134,
+   "tokens_in": 217,
+   "tokens_out": 234,
+   "cache_read": 10752,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 30778,
+   "dur_ms": 29321,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncat > _test.vim <<'VIMEOF'\ncall setreg('a', \":s/ //g\\r\")\ncall setreg('b', \"gUU\")\ncall setreg('c', \":s/\\\\([^,]*\\\\),\\\\([^,]*\\\\),\\\\(.*\\\\)/\\\\3;\\\\2;\\\\1;OK/\\r\")\n:%normal! @a\n:%normal! @b\n:%normal! @c\n:wq\nVIMEOF\ncp input.csv _test_full.csv\ntime vim -Nu NONE -n -Es _test_full.csv -S _test.vim\necho \"exit=$?\"\ncmp _test_full.csv expected.csv && echo FULL_MATCH || echo MISMATCH\nrm -f _test_full.csv _test.vim\nEOF",
+   "timeout": 600000,
+   "sandbox": [
+    {
+     "at_ms": 30830,
+     "dur_ms": 29257,
+     "exit": 0,
+     "cpu_ms": 29385.4,
+     "phases_us": {
+      "acquire": 61,
+      "resume": 21387,
+      "mount": 18895,
+      "run": 29174813,
+      "destroy": 60996
+     },
+     "cold": null,
+     "vm": "vm-257"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 60115,
+   "dur_ms": 5807,
+   "tokens_in": 96,
+   "tokens_out": 267,
+   "cache_read": 11328,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 65922,
+   "dur_ms": 29372,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put apply_macros.vim <<'EOF'\ncall setreg('a', \":s/ //g\\r\")\ncall setreg('b', \"gUU\")\ncall setreg('c', \":s/\\\\([^,]*\\\\),\\\\([^,]*\\\\),\\\\(.*\\\\)/\\\\3;\\\\2;\\\\1;OK/\\r\")\n:%normal! @a\n:%normal! @b\n:%normal! @c\n:wq\nEOF\nsbx run <<'EOF'\ncd /workspace\necho \"--- file ---\"\ncat apply_macros.vim\necho \"--- verify on copy ---\"\ncp input.csv _verify.csv\nvim -Nu NONE -n -Es _verify.csv -S apply_macros.vim\necho \"vim_exit=$?\"\ncmp _verify.csv expected.csv && echo VERIFY_MATCH || echo VERIFY_MISMATCH\nrm -f _verify.csv\necho \"--- original input header ---\"\nhead -2 input.csv\nEOF",
+   "timeout": 300000,
+   "sandbox": [
+    {
+     "at_ms": 65973,
+     "dur_ms": 60,
+     "exit": 0,
+     "cpu_ms": 47.4,
+     "phases_us": {
+      "acquire": 81,
+      "resume": 21610,
+      "mount": 19055,
+      "run": 7848,
+      "destroy": 30641
+     },
+     "cold": null,
+     "vm": "vm-262"
+    },
+    {
+     "at_ms": 66079,
+     "dur_ms": 29201,
+     "exit": 0,
+     "cpu_ms": 29279.6,
+     "phases_us": {
+      "acquire": 17,
+      "resume": 21090,
+      "mount": 17898,
+      "run": 29111693,
+      "destroy": 67615
+     },
+     "cold": null,
+     "vm": "vm-244"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 95311,
+   "dur_ms": 998,
+   "tokens_in": 163,
+   "tokens_out": 98,
+   "cache_read": 12352,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "long",
+ "weight_s_per_command": 17.611,
+ "calls": 6,
+ "cell": "TB1d"
+}

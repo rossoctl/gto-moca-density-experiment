@@ -1,0 +1,321 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "qemu-alpine-ssh",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 578062,
+ "resolved": false,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 11829,
+  "output": 12140,
+  "cacheRead": 239616,
+  "cacheWrite": 0,
+  "total": 263585
+ },
+ "totals": {
+  "model_calls": 16,
+  "tool_calls": 15,
+  "model_ms": 74410,
+  "tool_ms": 502896,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 104,
+   "dur_ms": 3636,
+   "tokens_in": 130,
+   "tokens_out": 67,
+   "cache_read": 6976,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3740,
+   "dur_ms": 118,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app && which qemu-system-x86_64 qemu-img sshpass expect 2>/dev/null; uname -a"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3934,
+   "dur_ms": 906,
+   "tokens_in": 416,
+   "tokens_out": 86,
+   "cache_read": 6976,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4840,
+   "dur_ms": 32,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat /app/opencode.json; qemu-img info /app/alpine-disk.qcow2; ls -la /dev/kvm 2>/dev/null || echo \"no kvm\"; ip link show | head -20"
+  },
+  {
+   "kind": "model",
+   "at_ms": 4921,
+   "dur_ms": 8796,
+   "tokens_in": 185,
+   "tokens_out": 76,
+   "cache_read": 7488,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 13717,
+   "dur_ms": 23,
+   "tool": "bash",
+   "is_error": false,
+   "command": "file /app/alpine.iso; command -v xorriso isoinfo 7z python3 socat nc; ls /usr/share/qemu 2>/dev/null | head"
+  },
+  {
+   "kind": "model",
+   "at_ms": 13875,
+   "dur_ms": 7903,
+   "tokens_in": 150,
+   "tokens_out": 193,
+   "cache_read": 9152,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 21778,
+   "dur_ms": 75107,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && timeout 75 qemu-system-x86_64 -m 1024 -smp 2 -accel tcg,thread=multi -nographic -boot d -cdrom /app/alpine.iso -hda /app/alpine-disk.qcow2 -netdev user,id=net0,hostfwd=tcp:127.0.0.1:2222-:22 -device virtio-net-pci,netdev=net0 -no-reboot </dev/null > /tmp/boot_test.log 2>&1; echo \"exit=$?\"; wc -c /tmp/boot_test.log",
+   "timeout": 90000
+  },
+  {
+   "kind": "model",
+   "at_ms": 96904,
+   "dur_ms": 538,
+   "tokens_in": 30,
+   "tokens_out": 46,
+   "cache_read": 10688,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 97442,
+   "dur_ms": 22,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat -v /tmp/boot_test.log"
+  },
+  {
+   "kind": "model",
+   "at_ms": 97488,
+   "dur_ms": 3506,
+   "tokens_in": 263,
+   "tokens_out": 92,
+   "cache_read": 10752,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 100994,
+   "dur_ms": 50,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport socket\ntry:\n    s=socket.create_connection((\"dl-cdn.alpinelinux.org\",443),5); print(\"net ok\"); s.close()\nexcept Exception as e: print(\"net fail\",e)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 101074,
+   "dur_ms": 2611,
+   "tokens_in": 84,
+   "tokens_out": 409,
+   "cache_read": 11648,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 103685,
+   "dur_ms": 150040,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/inspect.exp <<'EOF'\n#!/usr/bin/expect -f\nset timeout 180\nlog_file -a /tmp/inspect.log\nspawn qemu-system-x86_64 -m 1024 -smp 2 -accel tcg,thread=multi -nographic -boot d -cdrom /app/alpine.iso -hda /app/alpine-disk.qcow2 -netdev user,id=net0,hostfwd=tcp:127.0.0.1:2222-:22 -device virtio-net-pci,netdev=net0 -no-reboot\nexpect {\n  -re {login: ?$} {}\n  timeout { puts \"TIMEOUT waiting login\"; exit 1 }\n}\nsend \"root\\r\"\nexpect {\n  -re {# ?$} {}\n  timeout { puts \"TIMEOUT waiting shell\"; exit 1 }\n}\nsend \"echo INSPECT_START\\r\"\nexpect \"INSPECT_START\"\nexpect -re {# ?$}\nsend \"which sshd; ls -l /usr/sbin/sshd; apk info -e openssh-server; apk info -e openssh; apk info | grep -i ssh; ls /etc/init.d; echo INSPECT_END\\r\"\nexpect \"INSPECT_END\"\nexpect -re {# ?$}\nsend \"poweroff\\r\"\nexpect eof\nEOF\nchmod +x /tmp/inspect.exp\ntimeout 150 expect /tmp/inspect.exp > /tmp/inspect.out 2>&1; echo \"exit=$?\"; cat -v /tmp/inspect.out",
+   "timeout": 160000
+  },
+  {
+   "kind": "model",
+   "at_ms": 253750,
+   "dur_ms": 3070,
+   "tokens_in": 515,
+   "tokens_out": 465,
+   "cache_read": 12288,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 256820,
+   "dur_ms": 69197,
+   "tool": "bash",
+   "is_error": false,
+   "command": "pkill -9 qemu-system-x86_64 2>/dev/null; sleep 1; pgrep -a qemu || echo none\ncat > /tmp/inspect.exp <<'EOF'\n#!/usr/bin/expect -f\nset timeout 240\nlog_file -a /tmp/inspect.log\nspawn qemu-system-x86_64 -m 1024 -smp 2 -accel tcg,thread=multi -nographic -boot d -cdrom /app/alpine.iso -hda /app/alpine-disk.qcow2 -netdev user,id=net0,hostfwd=tcp:127.0.0.1:2222-:22 -device virtio-net-pci,netdev=net0 -no-reboot\nexpect {\n  -re {login: ?$} {}\n  timeout { puts \"TIMEOUT waiting login\"; exit 1 }\n}\nsend \"root\\r\"\nexpect {\n  -re {# } {}\n  timeout { puts \"TIMEOUT waiting shell\"; exit 1 }\n}\nsend \"echo INSPECT_START\\r\"\nexpect \"INSPECT_START\"\nsend \"echo '---which---'; which sshd; ls -l /usr/sbin/sshd; echo '---apk---'; apk info -e openssh-server; apk info -e openssh; apk info | grep -i ssh; echo '---initd---'; ls /etc/init.d; echo INSPECT_END\\r\"\nexpect \"INSPECT_END\"\nsend \"\\r\"\nexpect -re {# }\nsend \"poweroff\\r\"\nexpect eof\nEOF\nchmod +x /tmp/inspect.exp\nrm -f /tmp/inspect.log\ntimeout 220 expect /tmp/inspect.exp > /tmp/inspect.out 2>&1; echo \"exit=$?\"; cat -v /tmp/inspect.out | tail -80",
+   "timeout": 230000
+  },
+  {
+   "kind": "model",
+   "at_ms": 326037,
+   "dur_ms": 5119,
+   "tokens_in": 1409,
+   "tokens_out": 123,
+   "cache_read": 13440,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 331156,
+   "dur_ms": 519,
+   "tool": "bash",
+   "is_error": false,
+   "command": "find / -xdev \\( -iname '*openssh*' -o -iname '*dropbear*' -o -iname '*.apk' \\) 2>/dev/null | head -50; ls -la /var/cache 2>/dev/null; command -v sshd ssh gcc cc make musl-gcc; ls /usr/sbin/sshd 2>/dev/null"
+  },
+  {
+   "kind": "model",
+   "at_ms": 331690,
+   "dur_ms": 3252,
+   "tokens_in": 312,
+   "tokens_out": 430,
+   "cache_read": 15808,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 334942,
+   "dur_ms": 71019,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/inspect2.exp <<'EOF'\n#!/usr/bin/expect -f\nset timeout 240\nspawn qemu-system-x86_64 -m 1024 -smp 2 -accel tcg,thread=multi -nographic -boot d -cdrom /app/alpine.iso -hda /app/alpine-disk.qcow2 -netdev user,id=net0,hostfwd=tcp:127.0.0.1:2222-:22 -device virtio-net-pci,netdev=net0 -no-reboot\nexpect {\n  -re {login: ?$} {}\n  timeout { puts \"TIMEOUT login\"; exit 1 }\n}\nsend \"root\\r\"\nexpect -re {# }\nsend \"echo START\\r\"\nexpect \"START\"\nsend \"echo '---iso---'; ls -la /media/cdrom 2>/dev/null; ls -la /media/cdrom/apks 2>/dev/null | head -50; echo '---findapk---'; find / -xdev -name '*.apk' 2>/dev/null | head -100; echo '---findssh---'; find / -xdev -iname '*ssh*' 2>/dev/null | head -100; echo '---repos---'; cat /etc/apk/repositories; echo END\\r\"\nexpect \"END\"\nsend \"\\r\"\nexpect -re {# }\nsend \"poweroff\\r\"\nexpect eof\nEOF\nchmod +x /tmp/inspect2.exp\ntimeout 220 expect /tmp/inspect2.exp > /tmp/inspect2.out 2>&1; echo \"exit=$?\"; cat -v /tmp/inspect2.out | tail -120",
+   "timeout": 230000
+  },
+  {
+   "kind": "model",
+   "at_ms": 405981,
+   "dur_ms": 3777,
+   "tokens_in": 1155,
+   "tokens_out": 358,
+   "cache_read": 16768,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 409758,
+   "dur_ms": 71049,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/inspect3.exp <<'EOF'\n#!/usr/bin/expect -f\nset timeout 240\nspawn qemu-system-x86_64 -m 1024 -smp 2 -accel tcg,thread=multi -nographic -boot d -cdrom /app/alpine.iso -hda /app/alpine-disk.qcow2 -netdev user,id=net0,hostfwd=tcp:127.0.0.1:2222-:22 -device virtio-net-pci,netdev=net0 -no-reboot\nexpect {\n  -re {login: ?$} {}\n  timeout { puts \"TIMEOUT login\"; exit 1 }\n}\nsend \"root\\r\"\nexpect -re {# }\nsend \"echo START\\r\"\nexpect \"START\"\nsend \"ls /media/cdrom/apks/x86_64 | grep -i ssh; echo '---count---'; ls /media/cdrom/apks/x86_64 | wc -l; echo END\\r\"\nexpect \"END\"\nsend \"\\r\"\nexpect -re {# }\nsend \"poweroff\\r\"\nexpect eof\nEOF\nchmod +x /tmp/inspect3.exp\ntimeout 220 expect /tmp/inspect3.exp > /tmp/inspect3.out 2>&1; echo \"exit=$?\"; cat -v /tmp/inspect3.out | tail -40",
+   "timeout": 230000
+  },
+  {
+   "kind": "model",
+   "at_ms": 480828,
+   "dur_ms": 23213,
+   "tokens_in": 556,
+   "tokens_out": 787,
+   "cache_read": 18560,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 504041,
+   "dur_ms": 5034,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/setup_alpine_guest.sh <<'EOS'\n#!/bin/sh\nset -x\nexport PATH=/usr/sbin:/usr/bin:/sbin:/bin\napk add --no-cache --allow-untrusted openssh-server openssh-client openssh-keygen\nprintf 'root:password123\\n' | chpasswd\nsed -i -e 's/^#\\?PermitRootLogin.*/PermitRootLogin yes/' -e 's/^#\\?PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config\ngrep -q '^PermitRootLogin' /etc/ssh/sshd_config || echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config\ngrep -q '^PasswordAuthentication' /etc/ssh/sshd_config || echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config\nssh-keygen -A\nmkdir -p /run/sshd\nIFACE=$(ls /sys/class/net | grep -v '^lo$' | head -n1)\nip link set \"$IFACE\" up\nudhcpc -i \"$IFACE\" -n -q -t 20 || true\nrc-service sshd start || /etc/init.d/sshd start || /usr/sbin/sshd\nnetstat -lnt | grep ':22'\nEOS\nchmod +x /tmp/setup_alpine_guest.sh\ncat > /tmp/run_alpine.exp <<'EOS'\n#!/usr/bin/expect -f\nset timeout 300\nlog_file -a /tmp/alpine-console.log\nset guestscript [exec cat /tmp/setup_alpine_guest.sh]\nspawn qemu-system-x86_64 -m 1024 -smp 2 -accel tcg,thread=multi -nographic -boot d -cdrom /app/alpine.iso -hda /app/alpine-disk.qcow2 -netdev user,id=net0,hostfwd=tcp:127.0.0.1:2222-:22 -device virtio-net-pci,netdev=net0 -no-reboot\nexpect {\n  -re {login: ?$} {}\n  timeout { puts \"TIMEOUT waiting for login\"; exit 1 }\n}\nsend \"root\\r\"\nexpect {\n  -re {# } {}\n  timeout { puts \"TIMEOUT waiting for shell\"; exit 1 }\n}\nsend \"cat >/tmp/setup_alpine_guest.sh <<'ENDOFGUESTSCRIPT'\\r\"\nsend -- $guestscript\nsend \"\\rENDOFGUESTSCRIPT\\r\"\nsend \"sh /tmp/setup_alpine_guest.sh; printf '__SETUP_%s__\\\\n' DONE\\r\"\nexpect {\n  \"__SETUP_DONE__\" {}\n  timeout { puts \"TIMEOUT waiting for setup\"; exit 1 }\n}\nsend \"\\r\"\nexpect -re {# }\nputs \"SETUP COMPLETE\"\nexpect eof\nEOS\nchmod +x /tmp/run_alpine.exp\nrm -f /tmp/alpine-console.log /tmp/run_alpine.out\nsetsid nohup expect /tmp/run_alpine.exp > /tmp/run_alpine.out 2>&1 < /dev/null &\necho \"started pid $!\"; sleep 5; ps aux | grep -E 'expect|qemu' | grep -v grep"
+  },
+  {
+   "kind": "model",
+   "at_ms": 509101,
+   "dur_ms": 1741,
+   "tokens_in": 45,
+   "tokens_out": 203,
+   "cache_read": 22784,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 510842,
+   "dur_ms": 36,
+   "tool": "bash",
+   "is_error": false,
+   "command": "for i in $(seq 1 30); do python3 - <<'EOF'\nimport socket,sys\ns=socket.socket(); s.settimeout(2)\ntry:\n    s.connect((\"127.0.0.1\",2222)); print(\"PORT_OPEN\"); sys.exit(0)\nexcept Exception: sys.exit(1)\nfinally: s.close()\nEOF\nif [ $? -eq 0 ]; then break; fi; sleep 5; done; echo \"poll done\"; tail -20 /tmp/run_alpine.out 2>/dev/null; echo '---console tail---'; tail -30 /tmp/alpine-console.log 2>/dev/null | cat -v",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 510892,
+   "dur_ms": 1743,
+   "tokens_in": 600,
+   "tokens_out": 178,
+   "cache_read": 23040,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 512635,
+   "dur_ms": 60068,
+   "tool": "bash",
+   "is_error": false,
+   "command": "for i in $(seq 1 40); do if grep -q 'SETUP COMPLETE' /tmp/run_alpine.out 2>/dev/null; then echo COMPLETE; break; fi; if grep -q 'TIMEOUT' /tmp/run_alpine.out 2>/dev/null; then echo TIMEOUT; break; fi; sleep 5; done; echo '---run out tail---'; tail -40 /tmp/run_alpine.out; echo '---console tail---'; tail -60 /tmp/alpine-console.log | cat -v",
+   "timeout": 220000
+  },
+  {
+   "kind": "model",
+   "at_ms": 572723,
+   "dur_ms": 2722,
+   "tokens_in": 5151,
+   "tokens_out": 357,
+   "cache_read": 23872,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 575445,
+   "dur_ms": 582,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/test_ssh.exp <<'EOS'\n#!/usr/bin/expect -f\nset timeout 30\nspawn ssh -p 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PreferredAuthentications=password -o PubkeyAuthentication=no root@localhost\nexpect {\n  -re {[Pp]assword:} { send \"password123\\r\" }\n  timeout { puts \"NO_PASSWORD_PROMPT\"; exit 1 }\n}\nexpect {\n  -re {# } { send \"echo SSH_VERIFIED; uname -a; id\\r\" }\n  timeout { puts \"NO_SHELL\"; exit 1 }\n}\nexpect \"SSH_VERIFIED\"\nexpect -re {# }\nsend \"exit\\r\"\nexpect eof\nputs \"SSH_TEST_OK\"\nEOS\nchmod +x /tmp/test_ssh.exp\ntimeout 45 expect /tmp/test_ssh.exp > /tmp/test_ssh.out 2>&1; echo \"exit=$?\"; cat -v /tmp/test_ssh.out; echo '---processes---'; for p in /proc/[0-9]*; do c=$(tr '\\0' ' ' < $p/cmdline 2>/dev/null); case \"$c\" in *qemu-system*|*run_alpine.exp*) echo \"${p##*/}: $c\";; esac; done",
+   "timeout": 60000
+  },
+  {
+   "kind": "model",
+   "at_ms": 576046,
+   "dur_ms": 1877,
+   "tokens_in": 828,
+   "tokens_out": 54,
+   "cache_read": 29376,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "long",
+ "weight_s_per_command": 39.048,
+ "calls": 15,
+ "cell": "TB1c"
+}

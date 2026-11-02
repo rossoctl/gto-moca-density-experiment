@@ -1,0 +1,195 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "query-optimize",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 307198,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 921,
+  "output": 2074,
+  "cacheRead": 77952,
+  "cacheWrite": 0,
+  "total": 80947
+ },
+ "totals": {
+  "model_calls": 8,
+  "tool_calls": 9,
+  "model_ms": 15400,
+  "tool_ms": 291052,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 101,
+   "dur_ms": 3594,
+   "tokens_in": 50,
+   "tokens_out": 95,
+   "cache_read": 7104,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3695,
+   "dur_ms": 27,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/my-sql-query.sql"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3797,
+   "dur_ms": 170,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sqlite3 /app/oewn.sqlite \".schema\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 4049,
+   "dur_ms": 594,
+   "tokens_in": 12,
+   "tokens_out": 126,
+   "cache_read": 8896,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4643,
+   "dur_ms": 18,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sqlite3 /app/oewn.sqlite \"SELECT name, type, sql FROM sqlite_master WHERE type='index';\""
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4904,
+   "dur_ms": 36,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sqlite3 /app/oewn.sqlite \"SELECT (SELECT COUNT(*) FROM words), (SELECT COUNT(*) FROM senses), (SELECT COUNT(*) FROM synsets);\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 4954,
+   "dur_ms": 5741,
+   "tokens_in": 48,
+   "tokens_out": 100,
+   "cache_read": 9024,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 10695,
+   "dur_ms": 289445,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && time sqlite3 oewn.sqlite < my-sql-query.sql > /tmp/orig.out && wc -l /tmp/orig.out && head -3 /tmp/orig.out",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 300157,
+   "dur_ms": 1824,
+   "tokens_in": 125,
+   "tokens_out": 433,
+   "cache_read": 9920,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 301981,
+   "dur_ms": 16,
+   "tool": "write",
+   "is_error": false,
+   "input": {
+    "filePath": "/tmp/test1.sql",
+    "content": "WITH word_agg AS (\n  SELECT w.wordid AS word_id, w.word AS word,\n    COUNT(DISTINCT s.synsetid) AS total_synsets,\n    COUNT(*) AS total_senses,\n    COUNT(DISTINCT syn.domainid) AS distinct_domains,\n    COUNT(DISTINCT syn.posid) AS distinct_posids\n  FROM words w\n  JOIN senses s ON w.wordid = s.wordid\n  JOIN synsets syn ON s.synsetid = syn.synsetid\n  GROUP BY w.wordid, w.word\n  HAVING total_synsets >= 2 AND distinct_domains >= 2 AND total_senses >= 2\n),\nsense_counts AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS sense_count\n  FROM senses s\n  JOIN word_agg wa ON wa.word_id = s.wordid\n  GROUP BY s.wordid, s.synsetid\n),\nranked AS (\n  SELECT wordid, synsetid, sense_count,\n    ROW_NUMBER() OVER (PARTITION BY wordid ORDER BY sense_count DESC, synsetid ASC) AS rn\n  FROM sense_counts\n)\nSELECT wa.word_id, wa.word, wa.total_synsets, wa.total_senses,\n  wa.distinct_domains, wa.distinct_posids,\n  r.synsetid AS top_synsetid, r.sense_count AS top_synset_sense_count\nFROM word_agg wa\nJOIN ranked r ON r.wordid = wa.word_id AND r.rn = 1\nORDER BY wa.total_senses DESC, wa.total_synsets DESC, wa.distinct_domains DESC, wa.word_id ASC\nLIMIT 500;\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 302021,
+   "dur_ms": 870,
+   "tokens_in": 72,
+   "tokens_out": 96,
+   "cache_read": 10432,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 302891,
+   "dur_ms": 659,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && time sqlite3 oewn.sqlite < /tmp/test1.sql > /tmp/test1.out && diff /tmp/orig.out /tmp/test1.out && echo SAME",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 303563,
+   "dur_ms": 1647,
+   "tokens_in": 58,
+   "tokens_out": 94,
+   "cache_read": 10624,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 305210,
+   "dur_ms": 675,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cp /tmp/test1.sql /app/sol.sql && sqlite3 /app/oewn.sqlite < /app/sol.sql | diff /tmp/orig.out - && echo OK",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 305899,
+   "dur_ms": 532,
+   "tokens_in": 51,
+   "tokens_out": 43,
+   "cache_read": 10944,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 306431,
+   "dur_ms": 6,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/sol.sql"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 306474,
+   "dur_ms": 598,
+   "tokens_in": 505,
+   "tokens_out": 45,
+   "cache_read": 11008,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "long",
+ "weight_s_per_command": 42.177,
+ "calls": 9,
+ "cell": "TB1c"
+}

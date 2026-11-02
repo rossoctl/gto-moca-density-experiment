@@ -1,0 +1,101 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "multi-source-data-merger",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 30469,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 163,
+  "output": 4508,
+  "cacheRead": 95616,
+  "cacheWrite": 2944,
+  "total": 103231
+ },
+ "totals": {
+  "model_calls": 5,
+  "tool_calls": 5,
+  "model_ms": 25760,
+  "tool_ms": 3464,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 517,
+   "dur_ms": 1537
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1645,
+   "dur_ms": 860,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /data/source_a /data/source_b /data/source_c 2>&1; echo \"---\"; python3 -c \"import pandas; print('pandas', pandas.__version__); import pyarrow; print('pyarrow', pyarrow.__version__)\" 2>&1"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2054,
+   "dur_ms": 466,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "head -c 2000 /data/source_a/users.json; echo; echo \"--- CSV ---\"; head -5 /data/source_b/users.csv"
+  },
+  {
+   "kind": "model",
+   "at_ms": 2520,
+   "dur_ms": 1146
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3666,
+   "dur_ms": 648,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport pandas as pd\ndf = pd.read_parquet('/data/source_c/users.parquet')\nprint(df)\nprint('---dtypes---')\nprint(df.dtypes)\nprint('---schema---')\nprint(df.to_string())\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 4314,
+   "dur_ms": 18731
+  },
+  {
+   "kind": "tool",
+   "at_ms": 23045,
+   "dur_ms": 101,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/merge_users.py",
+    "content": "#!/usr/bin/env python3\n\"\"\"Merge user data from three sources with differing schemas and priorities.\"\"\"\n\nimport json\n\nimport numpy as np\nimport pandas as pd\n\nJSON_PATH = \"/data/source_a/users.json\"\nCSV_PATH = \"/data/source_b/users.csv\"\nPARQUET_PATH = \"/data/source_c/users.parquet\"\n\nOUT_PARQUET = \"/app/merged_users.parquet\"\nOUT_CONFLICTS = \"/app/conflicts.json\"\n\nSOURCES = [\"source_a\", \"source_b\", \"source_c\"]\nFIELDS = [\"name\", \"email\", \"created_date\", \"status\"]\n\n\ndef is_missing(value):\n    if value is None:\n        return True\n    if isinstance(value, float) and np.isnan(value):\n        return True\n    try:\n        return bool(pd.isna(value))\n    except (TypeError, ValueError):\n        return False\n\n\ndef norm_str(value):\n    if is_missing(value):\n        return None\n    text = str(value).strip()\n    return text or None\n\n\ndef norm_status(value):\n    \"\"\"Normalize string/boolean statuses to 'active' / 'inactive'.\"\"\"\n    if is_missing(value):\n        return None\n    if isinstance(value, (bool, np.bool_)):\n        return \"active\" if value else \"inactive\"\n    text = str(value).strip().lower()\n    if text in (\"true\", \"1\", \"yes\", \"active\"):\n        return \"active\"\n    if text in (\"false\", \"0\", \"no\", \"inactive\"):\n        return \"inactive\"\n    return text or None\n\n\ndef norm_date(value):\n    \"\"\"Normalize any parseable date to YYYY-MM-DD.\"\"\"\n    if is_missing(value):\n        return None\n    ts = pd.to_datetime(value, errors=\"coerce\")\n    if pd.isna(ts):\n        return norm_str(value)\n    return ts.strftime(\"%Y-%m-%d\")\n\n\ndef norm_user_id(value):\n    if is_missing(value):\n        return None\n    return int(float(value))\n\n\ndef load_source_a():\n    with open(JSON_PATH, \"r\", encoding=\"utf-8\") as handle:\n        records = json.load(handle)\n    if isinstance(records, dict):  # tolerate {\"users\": [...]}\n        records = next(v for v in records.values() if isinstance(v, list))\n    out = {}\n    for row in records:\n        uid = norm_user_id(row.get(\"id\", row.get(\"user_id\")))\n        if uid is None:\n            continue\n        out[uid] = {\n            \"name\": norm_str(row.get(\"full_name\", row.get(\"name\"))),\n            \"email\": norm_str(row.get(\"email\", row.get(\"email_address\"))),\n            \"created_date\": norm_date(\n                row.get(\"registration_date\", row.get(\"created_at\"))\n            ),\n            \"status\": norm_status(row.get(\"status\")),\n        }\n    return out\n\n\ndef load_source_b():\n    df = pd.read_csv(CSV_PATH)\n    out = {}\n    for _, row in df.iterrows():\n        uid = norm_user_id(row.get(\"user_id\", row.get(\"id\")))\n        if uid is None:\n            continue\n        out[uid] = {\n            \"name\": norm_str(row.get(\"name\", row.get(\"full_name\"))),\n            \"email\": norm_str(row.get(\"email_address\", row.get(\"email\"))),\n            \"created_date\": norm_date(row.get(\"created_at\", row.get(\"joined\"))),\n            \"status\": norm_status(row.get(\"is_active\", row.get(\"status\"))),\n        }\n    return out\n\n\ndef load_source_c():\n    df = pd.read_parquet(PARQUET_PATH)\n    out = {}\n    for _, row in df.iterrows():\n        uid = norm_user_id(row.get(\"userId\", row.get(\"user_id\")))\n        if uid is None:\n            continue\n        out[uid] = {\n            \"name\": norm_str(row.get(\"userName\", row.get(\"full_name\"))),\n            \"email\": norm_str(row.get(\"email\", row.get(\"email_address\"))),\n            \"created_date\": norm_date(row.get(\"joined\", row.get(\"created_at\"))),\n            \"status\": norm_status(row.get(\"active\", row.get(\"status\"))),\n        }\n    return out\n\n\ndef main():\n    data = {\n        \"source_a\": load_source_a(),\n        \"source_b\": load_source_b(),\n        \"source_c\": load_source_c(),\n    }\n\n    user_ids = sorted({uid for source in data.values() for uid in source})\n\n    merged_rows = []\n    conflicts = []\n\n    for uid in user_ids:\n        merged = {\"user_id\": int(uid)}\n        for field in FIELDS:\n            present = {\n                src: data[src][uid][field]\n                for src in SOURCES\n                if uid in data[src] and not is_missing(data[src][uid][field])\n            }\n\n            # Highest-priority source that actually has a value wins.\n            selected = None\n            for src in SOURCES:\n                if src in present:\n                    selected = present[src]\n                    break\n\n            merged[field] = selected\n\n            if len(set(present.values())) > 1:\n                conflicts.append(\n                    {\n                        \"user_id\": int(uid),\n                        \"field\": field,\n                        \"values\": present,\n                        \"selected\": selected,\n                    }\n                )\n\n        merged_rows.append(merged)\n\n    out_df = pd.DataFrame(merged_rows, columns=[\"user_id\", \"name\", \"email\",\n                                                 \"created_date\", \"status\"])\n    out_df[\"user_id\"] = out_df[\"user_id\"].astype(\"int64\")\n    for col in (\"name\", \"email\", \"created_date\", \"status\"):\n        out_df[col] = out_df[col].astype(\"string\")\n\n    out_df.to_parquet(OUT_PARQUET, index=False)\n\n    report = {\"total_conflicts\": len(conflicts), \"conflicts\": conflicts}\n    with open(OUT_CONFLICTS, \"w\", encoding=\"utf-8\") as handle:\n        json.dump(report, handle, indent=2)\n        handle.write(\"\\n\")\n\n    print(f\"Wrote {len(out_df)} users to {OUT_PARQUET}\")\n    print(f\"Wrote {len(conflicts)} conflicts to {OUT_CONFLICTS}\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 23146,
+   "dur_ms": 1196
+  },
+  {
+   "kind": "tool",
+   "at_ms": 24342,
+   "dur_ms": 1389,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 merge_users.py && echo \"=== merged ===\" && python3 -c \"\nimport pandas as pd, json\ndf = pd.read_parquet('/app/merged_users.parquet')\nprint(df.to_string())\nprint(df.dtypes)\nprint()\nprint(json.dumps(json.load(open('/app/conflicts.json')), indent=2))\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 25731,
+   "dur_ms": 3150
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.537,
+ "calls": 5,
+ "cell": "TB1a"
+}

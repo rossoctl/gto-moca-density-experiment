@@ -1,0 +1,248 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "regex-log",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 135267,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 201,
+  "output": 26736,
+  "cacheRead": 177408,
+  "cacheWrite": 1408,
+  "total": 205753
+ },
+ "totals": {
+  "model_calls": 7,
+  "tool_calls": 6,
+  "model_ms": 132105,
+  "tool_ms": 2357,
+  "sandbox_ms": 992
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 509,
+   "dur_ms": 32312
+  },
+  {
+   "kind": "tool",
+   "at_ms": 32821,
+   "dur_ms": 220,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npwd\nls -la\nls -la /workspace\nls -la /app 2>/dev/null || true\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 32914,
+     "dur_ms": 69,
+     "exit": 0,
+     "cpu_ms": 41.6,
+     "phases_us": {
+      "acquire": 99,
+      "resume": 21226,
+      "mount": 18289,
+      "run": 7338,
+      "destroy": 40284
+     },
+     "cold": null,
+     "vm": "vm-82"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 33041,
+   "dur_ms": 4174
+  },
+  {
+   "kind": "tool",
+   "at_ms": 37215,
+   "dur_ms": 284,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put /app/regex.txt <<'EOF'\n^(?=[^\\n]*(?<![A-Za-z0-9])(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}(?![A-Za-z0-9]))(?=[^\\n]*?(?<![A-Za-z0-9])(\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|02-(?:0[1-9]|1\\d|2[0-9])))(?![A-Za-z0-9])(?![^\\n]*?(?<![A-Za-z0-9])(?:\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|02-(?:0[1-9]|1\\d|2[0-9])))(?![A-Za-z0-9])))[^\\n]*$\nEOF\nsbx run <<'EOF'\ncat /app/regex.txt\npython3 - <<'PY'\nimport re\npattern = open('/app/regex.txt').read().strip()\nprint('groups?', re.compile(pattern).groups)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 37278,
+     "dur_ms": 55,
+     "exit": 0,
+     "cpu_ms": 44.5,
+     "phases_us": {
+      "acquire": 99,
+      "resume": 23047,
+      "mount": 20151,
+      "run": 8835,
+      "destroy": 22637
+     },
+     "cold": null,
+     "vm": "vm-86"
+    },
+    {
+     "at_ms": 37380,
+     "dur_ms": 91,
+     "exit": 0,
+     "cpu_ms": 93.2,
+     "phases_us": {
+      "acquire": 29,
+      "resume": 21174,
+      "mount": 18395,
+      "run": 42519,
+      "destroy": 27123
+     },
+     "cold": null,
+     "vm": "vm-79"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 37499,
+   "dur_ms": 5360
+  },
+  {
+   "kind": "tool",
+   "at_ms": 42859,
+   "dur_ms": 169,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\nimport re\npat = open('/app/regex.txt').read().strip()\ncases = [\n(\"basic last\", \"2024-01-01 INFO 192.168.1.1 2024-02-29\"),\n(\"no ip\", \"2024-01-01 INFO no ip 2024-02-29\"),\n(\"invalid month\", \"2024-13-01 INFO 192.168.1.1 2024-02-29\"),\n(\"invalid day apr\", \"2024-04-31 INFO 192.168.1.1\"),\n(\"feb29\", \"2024-02-29 INFO 10.0.0.1\"),\n(\"feb30\", \"2024-02-30 INFO 10.0.0.1\"),\n(\"ip invalid octet\", \"2024-01-01 INFO 256.1.1.1\"),\n(\"ip leading zero\", \"2024-01-01 INFO 192.168.01.1\"),\n(\"noise date\", \"user 1134-12-1234 INFO 192.168.1.1\"),\n(\"date then ip\", \"2024-03-01 8.8.8.8\"),\n(\"ip then date\", \"8.8.8.8 2024-03-01\"),\n(\"letter after date\", \"2024-03-01T 8.8.8.8\"),\n(\"letter before date\", \"x2024-03-01 8.8.8.8\"),\n(\"ip letter after\", \"2024-03-01 8.8.8.8x\"),\n(\"ip letter before\", \"2024-03-01 x8.8.8.8\"),\n(\"ip dotted longer\", \"2024-03-01 1.2.3.4.5\"),\n(\"embedded date noise and valid\", \"x2024-03-01 1134-12-1234 8.8.8.8 2024-04-30\"),\n(\"invalid last date\", \"2024-03-01 8.8.8.8 2024-04-31\"),\n(\"alnum adjacent last invalid\", \"2024-03-01 8.8.8.8 2024-04-30T\"),\n(\"multiple lines\", \"2024-01-01 1.1.1.1 2024-01-02\\n2024-02-01 2.2.2.2\\nno ip 2024-03-01 3.3.3.3\\n\"),\n(\"line CRLF\", \"2024-01-01 1.1.1.1 2024-01-02\\r\\n\"),\n(\"ip 0.0.0.0\", \"2024-01-01 0.0.0.0\"),\n(\"ip 255\", \"2024-01-01 255.255.255.255\"),\n(\"ip 256 prefix\", \"2024-01-01 2555.1.1.1\"),\n(\"date hyphen suffix\", \"2024-01-01-05 1.1.1.1\"),\n(\"date punctuation\", \"(2024-01-01) 1.1.1.1\"),\n(\"ip punctuation\", \"2024-01-01 (1.1.1.1).\"),\n(\"empty\", \"\"),\n]\nfor name, text in cases:\n    print(f\"{name:28} -> {re.findall(pat, text, re.MULTILINE)!r}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 42917,
+     "dur_ms": 82,
+     "exit": 0,
+     "cpu_ms": 78.8,
+     "phases_us": {
+      "acquire": 64,
+      "resume": 20595,
+      "mount": 18064,
+      "run": 41460,
+      "destroy": 19354
+     },
+     "cold": null,
+     "vm": "vm-89"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 43028,
+   "dur_ms": 38089
+  },
+  {
+   "kind": "tool",
+   "at_ms": 81117,
+   "dur_ms": 549,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\nimport re, random\npat = open('/app/regex.txt').read().strip()\ndate = re.compile(r'(?<![A-Za-z0-9])([0-9]{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-9])))(?![A-Za-z0-9])')\nip = re.compile(r'(?<![A-Za-z0-9])(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(?:\\.(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}(?![A-Za-z0-9])')\n# token pools including invalid/noise\ndate_tokens = ['2024-01-01','2024-02-29','2023-02-29','2024-02-30','2024-04-31','2024-12-31','1999-06-15']\nnoise_dates = ['1134-12-1234','x2024-01-01','2024-01-01T','2024-13-01','2024-00-10','2024-01-00','12024-01-01','2024-1-1']\nip_tokens = ['1.2.3.4','0.0.0.0','255.255.255.255','192.168.1.1']\nnoise_ips = ['256.1.1.1','1.2.3.04','01.2.3.4','1.2.3.4.5','999.1.1.1','x1.2.3.4','1.2.3.4x','1234.1.1.1','1.2.3.456']\nseps = [' ', '  ', ' | ', ':', ',', '\\t']\nrandom.seed(0)\nfails=0\nfor trial in range(20000):\n    parts=[]\n    ips=[]\n    for _ in range(random.randint(1,7)):\n        kind=random.randrange(6)\n        if kind<2:\n            t=random.choice(date_tokens); parts.append(t)\n        elif kind==2:\n            t=random.choice(noise_dates); parts.append(t)\n        elif kind<5:\n            t=random.choice(ip_tokens); parts.append(t); ips.append(t)\n        else:\n            t=random.choice(noise_ips); parts.append(t)\n    line=''\n    for i,p in enumerate(parts):\n        if i: line += random.choice(seps)\n        line += p\n    # expected: last date token accepted by standalone date regex, only if standalone ip regex finds\n    valid_dates=[m.group(1) for m in date.finditer(line)]\n    valid_ips=[m.group(0) for m in ip.finditer(line)]\n    exp=[valid_dates[-1]] if (valid_dates and valid_ips) else []\n    got=re.findall(pat,line,re.MULTILINE)\n    if got!=exp:\n        fails+=1\n        print('FAIL',repr(line),'exp',exp,'got',got,'vd',valid_dates,'vi',valid_ips)\n        if fails>10: break\nprint('fails',fails)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 81175,
+     "dur_ms": 468,
+     "exit": 0,
+     "cpu_ms": 458.0,
+     "phases_us": {
+      "acquire": 90,
+      "resume": 23598,
+      "mount": 20889,
+      "run": 415976,
+      "destroy": 28581
+     },
+     "cold": null,
+     "vm": "vm-97"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 81666,
+   "dur_ms": 23652
+  },
+  {
+   "kind": "tool",
+   "at_ms": 105318,
+   "dur_ms": 961,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put /app/regex.txt <<'EOF'\n^(?=[^\\n]*(?<![A-Za-z0-9])(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(?:\\.(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}(?![A-Za-z0-9]))(?=[^\\n]*?(?<![A-Za-z0-9])([0-9]{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-9])))(?![A-Za-z0-9])(?![^\\n]*?(?<![A-Za-z0-9])(?:[0-9]{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-9])))(?![A-Za-z0-9])))[^\\n]*$\nEOF\nsbx run <<'EOF'\npython3 - <<'PY'\nimport re\npat = open('/app/regex.txt').read().strip()\nprint('groups', re.compile(pat).groups)\ntests = {\n \"ok last\": \"2024-01-01 INFO 192.168.1.1 2024-02-29\",\n \"no ip\": \"2024-01-01 INFO 2024-02-29\",\n \"bad ip\": \"2024-01-01 256.1.1.1\",\n \"lead zero ip\": \"2024-01-01 01.2.3.4\",\n \"noise date\": \"user 1134-12-1234 192.168.1.1\",\n \"feb30\": \"2024-02-30 192.168.1.1\",\n \"feb29\": \"2024-02-29 192.168.1.1\",\n \"multi\": \"2024-01-01 1.1.1.1 2024-01-02\\n2024-02-01 2.2.2.2\\nno ip 2024-03-01\",\n \"boundary x\": \"x2024-01-01 192.168.1.1\",\n \"boundary after\": \"2024-01-01x 192.168.1.1\",\n}\nfor k,v in tests.items():\n    print(k, re.findall(pat,v,re.MULTILINE))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 106068,
+     "dur_ms": 55,
+     "exit": 0,
+     "cpu_ms": 45.2,
+     "phases_us": {
+      "acquire": 94,
+      "resume": 20880,
+      "mount": 18134,
+      "run": 7969,
+      "destroy": 26309
+     },
+     "cold": null,
+     "vm": "vm-104"
+    },
+    {
+     "at_ms": 106169,
+     "dur_ms": 90,
+     "exit": 0,
+     "cpu_ms": 79.4,
+     "phases_us": {
+      "acquire": 15,
+      "resume": 20447,
+      "mount": 17238,
+      "run": 43276,
+      "destroy": 26215
+     },
+     "cold": null,
+     "vm": "vm-88"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 106279,
+   "dur_ms": 7284
+  },
+  {
+   "kind": "tool",
+   "at_ms": 113563,
+   "dur_ms": 174,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -l /app/regex.txt\nwc -c /app/regex.txt\npython3 -c \"print(open('/app/regex.txt').read().strip())\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 113619,
+     "dur_ms": 82,
+     "exit": 0,
+     "cpu_ms": 75.9,
+     "phases_us": {
+      "acquire": 123,
+      "resume": 22679,
+      "mount": 19517,
+      "run": 33951,
+      "destroy": 25417
+     },
+     "cold": null,
+     "vm": "vm-109"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 113737,
+   "dur_ms": 21234
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.078,
+ "calls": 6,
+ "cell": "TB1b"
+}

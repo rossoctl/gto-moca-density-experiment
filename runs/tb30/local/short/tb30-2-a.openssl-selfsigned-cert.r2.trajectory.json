@@ -1,0 +1,171 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "openssl-selfsigned-cert",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 22408,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 413,
+  "output": 3105,
+  "cacheRead": 193792,
+  "cacheWrite": 2560,
+  "total": 199870
+ },
+ "totals": {
+  "model_calls": 10,
+  "tool_calls": 9,
+  "model_ms": 20600,
+  "tool_ms": 1166,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 526,
+   "dur_ms": 1204
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1730,
+   "dur_ms": 87,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "mkdir -p /app/ssl && openssl version && python3 --version"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1817,
+   "dur_ms": 983
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2800,
+   "dur_ms": 557,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app/ssl && openssl req -x509 -newkey rsa:2048 -keyout server.key -out server.crt -days 365 -nodes -subj \"/O=DevOps Team/CN=dev-internal.company.local\" && chmod 600 server.key && cat server.key server.crt > server.pem && chmod 600 server.pem && ls -l"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3357,
+   "dur_ms": 2638
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5995,
+   "dur_ms": 48,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "openssl x509 -in server.crt -noout -subject -dates -fingerprint -sha256"
+  },
+  {
+   "kind": "model",
+   "at_ms": 6043,
+   "dur_ms": 1948
+  },
+  {
+   "kind": "tool",
+   "at_ms": 7991,
+   "dur_ms": 21,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/ssl/verification.txt",
+    "content": "Subject: O=DevOps Team, CN=dev-internal.company.local\n\nValidity:\nNot Before: 2026-11-01\nNot After: 2027-11-01\n\nSHA-256 Fingerprint:\n2A:F8:93:3B:5F:B2:D6:38:C1:F5:AD:2A:FC:0D:81:5D:C6:FD:94:5E:C7:41:95:F4:E0:9E:7C:97:0F:C6:81:67\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 8012,
+   "dur_ms": 5611
+  },
+  {
+   "kind": "tool",
+   "at_ms": 13623,
+   "dur_ms": 16,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/check_cert.py",
+    "content": "#!/usr/bin/env python3\n\"\"\"Verify the self-signed TLS certificate in /app/ssl.\"\"\"\n\nimport os\nimport re\nimport subprocess\nimport sys\nfrom datetime import datetime\n\nCERT_PATH = \"/app/ssl/server.crt\"\n\n\ndef run_openssl(*args):\n    return subprocess.run(\n        [\"openssl\", \"x509\", \"-in\", CERT_PATH, \"-noout\", *args],\n        capture_output=True,\n        text=True,\n    )\n\n\ndef main():\n    # 1. Verify the certificate exists.\n    if not os.path.isfile(CERT_PATH):\n        print(f\"ERROR: certificate not found at {CERT_PATH}\")\n        return 1\n\n    # 2. Verify the certificate can be loaded / parsed by OpenSSL.\n    result = run_openssl(\"-subject\", \"-enddate\", \"-fingerprint\", \"-sha256\")\n    if result.returncode != 0:\n        print(\"ERROR: certificate could not be loaded\")\n        print(result.stderr.strip())\n        return 1\n\n    output = result.stdout\n\n    subject_match = re.search(r\"subject=.*?CN\\s*=\\s*([^,\\n]+)\", output, re.IGNORECASE)\n    if not subject_match:\n        print(\"ERROR: could not determine the certificate Common Name\")\n        return 1\n    common_name = subject_match.group(1).strip()\n\n    expiry_match = re.search(r\"notAfter=(.+)\", output)\n    if not expiry_match:\n        print(\"ERROR: could not determine the certificate expiration date\")\n        return 1\n\n    expiry_raw = expiry_match.group(1).strip()\n    # Example: \"Nov  1 16:29:07 2027 GMT\"\n    try:\n        expiry = datetime.strptime(expiry_raw[:-4].strip(), \"%b %d %H:%M:%S %Y\")\n    except ValueError:\n        print(f\"ERROR: could not parse expiration date: {expiry_raw}\")\n        return 1\n    expiry_date = expiry.strftime(\"%Y-%m-%d\")\n\n    fingerprint_match = re.search(r\"sha256 Fingerprint=(.+)\", output)\n    fingerprint = fingerprint_match.group(1).strip() if fingerprint_match else \"N/A\"\n\n    print(\"Certificate File:\", CERT_PATH)\n    print(\"Common Name:\", common_name)\n    print(\"Expiration Date:\", expiry_date)\n    print(\"SHA-256 Fingerprint:\", fingerprint)\n\n    now = datetime.utcnow()\n    if expiry < now:\n        print(\"ERROR: certificate has expired\")\n        return 1\n\n    print(\"Certificate verification successful\")\n    return 0\n\n\nif __name__ == \"__main__\":\n    sys.exit(main())\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 13639,
+   "dur_ms": 933
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14572,
+   "dur_ms": 208,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app && chmod +x check_cert.py && python3 check_cert.py; echo \"exit=$?\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 14780,
+   "dur_ms": 1414
+  },
+  {
+   "kind": "tool",
+   "at_ms": 16194,
+   "dur_ms": 23,
+   "tool": "Edit",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/check_cert.py",
+    "old_string": "from datetime import datetime",
+    "new_string": "from datetime import datetime, timezone",
+    "replace_all": false
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 16217,
+   "dur_ms": 1256
+  },
+  {
+   "kind": "tool",
+   "at_ms": 17473,
+   "dur_ms": 18,
+   "tool": "Edit",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/check_cert.py",
+    "old_string": "    now = datetime.utcnow()",
+    "new_string": "    now = datetime.now(timezone.utc).replace(tzinfo=None)",
+    "replace_all": false
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 17491,
+   "dur_ms": 1647
+  },
+  {
+   "kind": "tool",
+   "at_ms": 19138,
+   "dur_ms": 188,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 check_cert.py; echo \"exit=$?\"; echo '---'; ls -l /app/ssl; echo '---'; openssl verify -CAfile ssl/server.crt ssl/server.crt; openssl rsa -in ssl/server.key -check -noout; openssl x509 -in ssl/server.pem -noout -subject; openssl pkey -in ssl/server.pem -noout >/dev/null && echo \"PEM contains valid private key\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 19326,
+   "dur_ms": 2966
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.232,
+ "calls": 9,
+ "cell": "TB1a"
+}

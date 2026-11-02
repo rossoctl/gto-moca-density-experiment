@@ -1,0 +1,163 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-f",
+ "instance_id": "distribution-search",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 47332,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 142,
+  "output": 8091,
+  "cacheRead": 24064,
+  "cacheWrite": 1152,
+  "total": 33449
+ },
+ "totals": {
+  "model_calls": 4,
+  "tool_calls": 3,
+  "model_ms": 43617,
+  "tool_ms": 2474,
+  "sandbox_ms": 2251
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1151,
+   "dur_ms": 23244,
+   "tokens_in": 25,
+   "tokens_out": 4136,
+   "cache_read": 1344,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 24399,
+   "dur_ms": 279,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npwd\nls -la /app /workspace 2>/dev/null | head -50\npython3 - <<'PY'\nimport numpy, scipy\nprint(numpy.__version__, scipy.__version__)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 24450,
+     "dur_ms": 224,
+     "exit": 0,
+     "cpu_ms": 335.3,
+     "phases_us": {
+      "acquire": 60,
+      "resume": 20349,
+      "mount": 18051,
+      "run": 178040,
+      "destroy": 25907
+     },
+     "cold": null,
+     "vm": "vm-50"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 24682,
+   "dur_ms": 8345,
+   "tokens_in": 60,
+   "tokens_out": 1546,
+   "cache_read": 5504,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 33028,
+   "dur_ms": 1210,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\nimport numpy as np\nfrom scipy.optimize import least_squares, root\nN=150000\nLN=np.log(N)\nHt=LN-10.0\nA=LN+10.0\nK=7\nfor m in range(1,K):\n    def fun(v):\n        c,d,b=np.exp(v)\n        # use log values; c=m high, d=K-m high, b low\n        ent=-(m*c*np.log(c)+(K-m)*d*np.log(d)+(N-K)*b*np.log(b))\n        avgneg=-(m*np.log(c)+(K-m)*np.log(d)+(N-K)*np.log(b))/N\n        mass=m*c+(K-m)*d+(N-K)*b\n        return np.array([(mass-1)*1e6, (ent-Ht)*1e3, (avgneg-A)*1e3])\n    v0=np.log([1.0/K, 1.0/K, np.exp(-A)/N])\n    res=least_squares(fun,v0,bounds=([-20,-20,-50],[2,2,-5]),xtol=1e-15,ftol=1e-15,gtol=1e-15,max_nfev=10000)\n    print('m',m,'success',res.success,'cost',res.cost,'optimality',res.optimality)\n    c,d,b=np.exp(res.x)\n    print(' c,d,b',c,d,b,'rel diff',c/d-1)\n    print(' eq',fun(res.x))\n    # actual\n    p=np.full(N,b); p[:m]=c; p[m:K]=d\n    fl=np.sum(p*np.log(p*N))\n    bl=np.sum((1/N)*np.log((1/N)/p))\n    print(' FL BL',fl,bl,'sum',p.sum(),'entropy',-np.sum(p*np.log(p)))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 33077,
+     "dur_ms": 1154,
+     "exit": 0,
+     "cpu_ms": 1460.6,
+     "phases_us": {
+      "acquire": 86,
+      "resume": 20692,
+      "mount": 18325,
+      "run": 1097132,
+      "destroy": 35527
+     },
+     "cold": null,
+     "vm": "vm-54"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 34241,
+   "dur_ms": 9672,
+   "tokens_in": 26,
+   "tokens_out": 2072,
+   "cache_read": 7168,
+   "cache_write": 832,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 43913,
+   "dur_ms": 985,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put find_distribution.py <<'EOF'\n#!/usr/bin/env python3\n\"\"\"Construct a vocabulary distribution with KL(P||U) = KL(U||P) = 10.\"\"\"\n\nimport numpy as np\nfrom scipy.optimize import least_squares\n\n\nN = 150_000\nK = 7                 # number of high-probability tokens\nM = 3                 # of those K, this many share the larger value\n\n# U_i = 1/N.  The two target KL divergences imply:\n#   KL(P||U) = log(N) - H(P)                  = 10\n#   KL(U||P) = -log(N) - mean(log(P_i))       = 10\nlog_n = np.log(N)\ntarget_entropy = log_n - 10.0\ntarget_mean_neg_log = log_n + 10.0\n\n\ndef residuals(v):\n    \"\"\"Residuals for c (M entries), d (K-M entries), and b (N-K entries).\"\"\"\n    c, d, b = np.exp(v)\n    low_count = N - K\n\n    # log values are used to avoid computing logarithms of tiny numbers.\n    mass = M * c + (K - M) * d + low_count * b\n    entropy = -(M * c * np.log(c) + (K - M) * d * np.log(d)\n                + low_count * b * np.log(b))\n    mean_neg_log = -(M * np.log(c) + (K - M) * np.log(d)\n                     + low_count * np.log(b)) / N\n\n    return np.array([\n        (mass - 1.0) * 1.0e6,\n        (entropy - target_entropy) * 1.0e3,\n        (mean_neg_log - target_mean_neg_log) * 1.0e3,\n    ])\n\n\n# Start near a uniform distribution over the seven high-probability entries,\n# with the remaining entries chosen to give the required geometric mean.\nx0 = np.log(np.array([1.0 / K, 1.0 / K, np.exp(-target_mean_neg_log) / N]))\n\nresult = least_squares(\n    residuals,\n    x0,\n    bounds=([-30.0, -30.0, -60.0], [2.0, 2.0, -2.0]),\n    xtol=1e-15,\n    ftol=1e-15,\n    gtol=1e-15,\n    max_nfev=100_000,\n)\nif not result.success:\n    raise RuntimeError(f\"Optimization failed: {result.message}\")\n\nc, d, b = np.exp(result.x)\n\np = np.empty(N, dtype=np.float64)\np[:M] = c\np[M:K] = d\np[K:] = b\n\n# Validate before saving.\nforward_kl = float(np.sum(p * np.log(p * N)))\nbackward_kl = float(np.sum((1.0 / N) * np.log((1.0 / N) / p)))\n\nassert abs(p.sum() - 1.0) < 1e-12, p.sum()\nassert np.all(p > 0.0)\nassert abs(forward_kl - 10.0) <= 1e-3, forward_kl\nassert abs(backward_kl - 10.0) <= 1e-3, backward_kl\n\nnp.save(\"/app/dist.npy\", p)\n\nprint(f\"Saved /app/dist.npy\")\nprint(f\"vocabulary size: {N}\")\nprint(f\"sum:              {p.sum():.17g}\")\nprint(f\"KL(P||U):         {forward_kl:.17g}\")\nprint(f\"KL(U||P):         {backward_kl:.17g}\")\nprint(f\"distinct values:  {c:.17g}, {d:.17g}, {b:.17g}\")\nEOF\nsbx run <<'EOF'\ncd /workspace\npython3 find_distribution.py\nls -l /app/dist.npy\npython3 - <<'PY'\nimport numpy as np\np = np.load('/app/dist.npy')\nN = p.size\nU = 1.0 / N\nfl = np.sum(p * np.log(p / U))\nbl = np.sum(U * np.log(U / p))\nprint('loaded shape:', p.shape, 'dtype:', p.dtype)\nprint('sum:', p.sum())\nprint('min:', p.min(), 'max:', p.max())\nprint('forward KL:', fl, 'error:', abs(fl-10))\nprint('backward KL:', bl, 'error:', abs(bl-10))\nprint('valid:', np.all(p>0) and abs(p.sum()-1)<1e-12 and abs(fl-10)<=1e-3 and abs(bl-10)<=1e-3)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 43962,
+     "dur_ms": 55,
+     "exit": 0,
+     "cpu_ms": 39.5,
+     "phases_us": {
+      "acquire": 84,
+      "resume": 20749,
+      "mount": 18148,
+      "run": 7187,
+      "destroy": 27090
+     },
+     "cold": null,
+     "vm": "vm-58"
+    },
+    {
+     "at_ms": 44063,
+     "dur_ms": 818,
+     "exit": 0,
+     "cpu_ms": 1171.2,
+     "phases_us": {
+      "acquire": 6,
+      "resume": 20337,
+      "mount": 17797,
+      "run": 744337,
+      "destroy": 53290
+     },
+     "cold": null,
+     "vm": "vm-47"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 44901,
+   "dur_ms": 2356,
+   "tokens_in": 31,
+   "tokens_out": 337,
+   "cache_read": 10048,
+   "cache_write": 256,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.527,
+ "calls": 3,
+ "cell": "TB1f"
+}

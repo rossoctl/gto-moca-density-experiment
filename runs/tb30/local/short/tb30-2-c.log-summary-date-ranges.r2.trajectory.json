@@ -1,0 +1,79 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "log-summary-date-ranges",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 7176,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 6148,
+  "output": 594,
+  "cacheRead": 28416,
+  "cacheWrite": 0,
+  "total": 35158
+ },
+ "totals": {
+  "model_calls": 3,
+  "tool_calls": 2,
+  "model_ms": 6104,
+  "tool_ms": 422,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 111,
+   "dur_ms": 3361,
+   "tokens_in": 45,
+   "tokens_out": 69,
+   "cache_read": 7360,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3472,
+   "dur_ms": 119,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app/logs && head -5 /app/logs/*.log | head -50"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3628,
+   "dur_ms": 2385,
+   "tokens_in": 5884,
+   "tokens_out": 413,
+   "cache_read": 7360,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6013,
+   "dur_ms": 303,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport os,re,csv\nfrom datetime import date,timedelta\nfrom collections import defaultdict\nlogs='/app/logs'\ntoday=date(2025,8,12)\nranges={\n 'today':(today,today),\n 'last_7_days':(today-timedelta(days=6),today),\n 'last_30_days':(today-timedelta(days=29),today),\n 'month_to_date':(date(today.year,today.month,1),today),\n 'total':None,\n}\nsev=['ERROR','WARNING','INFO']\ncounts={p:{s:0 for s in sev} for p in ranges}\npat=re.compile(r'\\[(ERROR|WARNING|INFO)\\]')\nfor fn in os.listdir(logs):\n if not fn.endswith('.log'): continue\n m=re.match(r'(\\d{4}-\\d{2}-\\d{2})_',fn)\n if not m: continue\n d=date.fromisoformat(m.group(1))\n with open(os.path.join(logs,fn)) as f:\n  for line in f:\n   sm=pat.search(line)\n   if not sm: continue\n   s=sm.group(1)\n   for p,(rng) in ranges.items():\n    if rng is None or rng[0]<=d<=rng[1]:\n     counts[p][s]+=1\nwith open('/app/summary.csv','w',newline='') as f:\n w=csv.writer(f); w.writerow(['period','severity','count'])\n for p in ranges:\n  for s in sev:\n   w.writerow([p,s,counts[p][s]])\nEOF\ncat /app/summary.csv"
+  },
+  {
+   "kind": "model",
+   "at_ms": 6663,
+   "dur_ms": 358,
+   "tokens_in": 219,
+   "tokens_out": 21,
+   "cache_read": 13696,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.192,
+ "calls": 2,
+ "cell": "TB1c"
+}

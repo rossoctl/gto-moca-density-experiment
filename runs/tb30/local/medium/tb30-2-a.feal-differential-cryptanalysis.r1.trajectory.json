@@ -1,0 +1,184 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "feal-differential-cryptanalysis",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 186565,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 45632,
+  "output": 28895,
+  "cacheRead": 377344,
+  "cacheWrite": 9536,
+  "total": 461407
+ },
+ "totals": {
+  "model_calls": 11,
+  "tool_calls": 11,
+  "model_ms": 155436,
+  "tool_ms": 30428,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 586,
+   "dur_ms": 946
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1277,
+   "dur_ms": 15,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/feal.py"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1532,
+   "dur_ms": 52,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /app"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1584,
+   "dur_ms": 52028
+  },
+  {
+   "kind": "tool",
+   "at_ms": 53612,
+   "dur_ms": 95,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/attack.py",
+    "content": "#!/usr/bin/env python3\n\"\"\"Chosen-plaintext differential attack recovering key[5] of the FEAL-like cipher.\n\nKey observation on the F function: flipping only bit 7 of the most significant\ninput byte (i.e. XOR with 0x80000000) is addition of 0x80 modulo 256, which is\nlinear through every G call.  Hence, deterministically,\n\n    F(x ^ 0x80000000) == F(x) ^ 0x0A020820   for every x.\n\nUsing the plaintext difference\n\n    dP_hi = 0x0A020820,  dP_lo = 0x8A020820\n\ngives dL0 = 0x0A020820, dR0 = 0x80000000, and the round differences follow\ndeterministically:\n\n    round 0: dF0 = 0x0A020820, dL1 = 0x80000000, dR1 = 0\n    round 1: dF1 = 0,          dL2 = 0,          dR2 = 0x80000000\n    round 2: dF2 = 0x0A020820, dL3 = 0x80000000, dR3 = 0x0A020820\n\nSo entering the final round the input difference to F is always 0x0A020820 and\ndL3 = 0x80000000.  Since C_hi = R4 and C_lo ^ C_hi = L4 = R3, the final round\ngives, for the unknown k = key[5],\n\n    F(R3 ^ k) ^ F(R3 ^ 0x0A020820 ^ k) == C_hi ^ C'_hi ^ 0x80000000.\n\nEach round key is (seed * 1234567) mod 2^32 for a 16-bit seed, so only 65536\ncandidates need testing; a few plaintext pairs pin down the true key.\n\"\"\"\n\nimport sys\n\nsys.path.insert(0, \"/app\")\n\nMASK32 = 0xFFFFFFFF\n\nDELTA_HI = 0x0A020820\nDELTA_LO = 0x8A020820          # DELTA_HI ^ 0x80000000\nDELTA_R3 = 0x0A020820\nDELTA_P = (DELTA_HI << 32) | DELTA_LO\n\n\ndef g_function(a, b, x):\n    temp = (a + b + x) & 0xFF\n    return ((temp << 2) | (temp >> 6)) & 0xFF\n\n\ndef f_function(v):\n    x0 = v & 0xFF\n    x1 = (v >> 8) & 0xFF\n    x2 = (v >> 16) & 0xFF\n    x3 = (v >> 24) & 0xFF\n    y2 = g_function(x3 ^ x2, x1 ^ x0, 1)\n    y3 = g_function(x3, y2, 0)\n    y1 = g_function(x1 ^ x0, y2, 0)\n    y0 = g_function(x0, y1, 1)\n    return y0 | (y1 << 8) | (y2 << 16) | (y3 << 24)\n\n\ndef _make_pairs(encrypt_fn):\n    \"\"\"Collect (R3, target) constraints from a few chosen plaintext pairs.\"\"\"\n    pairs = []\n    bases = (0x0000000000000000,\n             0x0123456789ABCDEF,\n             0xFEDCBA9876543210,\n             0xA5A5A5A55A5A5A5A)\n    for base in bases:\n        p = base\n        p2 = p ^ DELTA_P\n        c = encrypt_fn(p) & 0xFFFFFFFFFFFFFFFF\n        c2 = encrypt_fn(p2) & 0xFFFFFFFFFFFFFFFF\n\n        c_hi = (c >> 32) & MASK32\n        c_lo = c & MASK32\n        c2_hi = (c2 >> 32) & MASK32\n\n        r3 = c_lo ^ c_hi\n        target = 0x80000000 ^ c_hi ^ c2_hi\n        pairs.append((r3, target))\n    return pairs\n\n\ndef attack(encrypt_fn):\n    pairs = _make_pairs(encrypt_fn)\n\n    for seed in range(0x10000):\n        k = (seed * 1234567) & MASK32\n        good = True\n        for r3, target in pairs:\n            if (f_function(r3 ^ k) ^\n                    f_function(r3 ^ DELTA_R3 ^ k)) != target:\n                good = False\n                break\n        if good:\n            return k\n    return None\n\n\nif __name__ == \"__main__\":\n    import random\n    import feal\n\n    # Self-test against a random key.\n    random.seed(1234)\n    feal.create_random_keys()\n    got = attack(feal.encrypt)\n    print(\"recovered:\", hex(got))\n    print(\"actual:   \", hex(feal.key[5]))\n    print(\"ok:       \", got == feal.key[5])\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 53707,
+   "dur_ms": 2247
+  },
+  {
+   "kind": "tool",
+   "at_ms": 55954,
+   "dur_ms": 262,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "time python3 attack.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 56216,
+   "dur_ms": 3454
+  },
+  {
+   "kind": "tool",
+   "at_ms": 59670,
+   "dur_ms": 43,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport random, feal\nfrom attack import f_function, DELTA_P, DELTA_HI, DELTA_LO, DELTA_R3\n# check F differential\nok=True\nfor _ in range(1000):\n    x=random.getrandbits(32)\n    if f_function(x^0x80000000)^f_function(x)!=0x0A020820:\n        ok=False; print('fail',hex(x),hex(f_function(x^0x80000000)^f_function(x))); break\nprint('F property ok',ok)\n# Verify attack f matches feal f\nok2=all(f_function(x)==feal.f_function(x) for x in [random.getrandbits(32) for _ in range(100)])\nprint('f match',ok2)\nrandom.seed(1234)\nfeal.create_random_keys()\nprint('key5',hex(feal.key[5]), 'keys',[hex(k) for k in feal.key])\nbasis=0x0123456789ABCDEF\np=basis;p2=p^DELTA_P\nc=feal.encrypt(p); c2=feal.encrypt(p2)\nc_hi=c>>32;c_lo=c&0xFFFFFFFF;c2_hi=c2>>32;c2_lo=c2&0xFFFFFFFF\nr3=c_lo^c_hi; r3b=c2_lo^c2_hi\nprint('r3',hex(r3),'r3b',hex(r3b),'pred',hex(r3^DELTA_R3))\nprint('c_hi diff',hex(c_hi^c2_hi))\nk=feal.key[5]\nlhs=f_function(r3^k)^f_function(r3^DELTA_R3^k)\ntgt=0x80000000^c_hi^c2_hi\nprint('lhs',hex(lhs),'tgt',hex(tgt),lhs==tgt)\n\"\n"
+  },
+  {
+   "kind": "model",
+   "at_ms": 59713,
+   "dur_ms": 40952
+  },
+  {
+   "kind": "tool",
+   "at_ms": 100665,
+   "dur_ms": 5826,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport random\nfrom attack import f_function\nrandom.seed(1)\nxs=[random.getrandbits(32) for _ in range(2000)]\ndef test(d):\n    vals=set(f_function(x^d)^f_function(x) for x in xs)\n    return vals\n# all single-byte differences\nfound=[]\nfor i in range(4):\n    for b in range(1,256):\n        d=b<<(8*i)\n        v=test(d)\n        if len(v)==1:\n            found.append((d,next(iter(v))))\nprint('single-byte deterministic:', [(hex(a),hex(b)) for a,b in found])\n# top-bit per byte masks\nfor mask in range(16):\n    d=0\n    for i in range(4):\n        if mask>>i & 1: d|=0x80<<(8*i)\n    v=test(d)\n    if len(v)==1:\n        print('mask',hex(d),'->',hex(next(iter(v))))\n\"\n"
+  },
+  {
+   "kind": "model",
+   "at_ms": 106491,
+   "dur_ms": 12731
+  },
+  {
+   "kind": "tool",
+   "at_ms": 119222,
+   "dur_ms": 4911,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport random\nfrom collections import Counter\nfrom attack import f_function\nrandom.seed(2)\nxs=[random.getrandbits(32) for _ in range(20000)]\ndef dist(d):\n    c=Counter(f_function(x^d)^f_function(x) for x in xs)\n    return c\n# test structured differences: one/two bytes with various values\ncands=[]\nfor i in range(4):\n    for v in [0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0xff]:\n        cands.append(v<<(8*i))\n        for j in range(i+1,4):\n            cands.append((v<<(8*i))|(v<<(8*j)))\nfor d in cands:\n    c=dist(d)\n    top=c.most_common(1)[0]\n    if top[1]/len(xs) > 0.1:\n        print(hex(d),'top',hex(top[0]),top[1]/len(xs),'distinct',len(c))\n\"\n"
+  },
+  {
+   "kind": "model",
+   "at_ms": 124133,
+   "dur_ms": 26177
+  },
+  {
+   "kind": "tool",
+   "at_ms": 150310,
+   "dur_ms": 235,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport random, feal\nfrom attack import f_function\nrandom.seed(1234); feal.create_random_keys()\nDL0=0x02; DR0=0x8080\nDP=(DL0<<32)|(DR0^DL0)\nprint('dP',hex(DP))\nfor base in [0,0x0123456789ABCDEF,0xFEDCBA9876543210]:\n    p=base; p2=p^DP\n    c=feal.encrypt(p); c2=feal.encrypt(p2)\n    chi=c>>32; clo=c&0xFFFFFFFF; chi2=c2>>32; clo2=c2&0xFFFFFFFF\n    r3=clo^chi; r3b=clo2^chi2\n    print('r3^r3b',hex(r3^r3b),'expect 0x2')\n    tgt=chi^chi2^0x8080\n    k=feal.key[5]\n    lhs=f_function(r3^k)^f_function(r3^0x02^k)\n    print('lhs',hex(lhs),'tgt',hex(tgt),lhs==tgt)\n# check uniqueness over seeds\ncnt=0\nbase=0x0123456789ABCDEF\np=base; p2=p^DP; c=feal.encrypt(p); c2=feal.encrypt(p2)\nchi=c>>32; clo=c&0xFFFFFFFF; chi2=c2>>32; clo2=c2&0xFFFFFFFF\nr3=clo^chi; tgt=chi^chi2^0x8080\nmatches=[]\nfor seed in range(65536):\n    k=(seed*1234567)&0xFFFFFFFF\n    if f_function(r3^k)^f_function(r3^0x02^k)==tgt: matches.append(k)\nprint('num matches',len(matches),[hex(x) for x in matches[:5]])\nprint('true in matches', feal.key[5] in matches)\n\"\n"
+  },
+  {
+   "kind": "model",
+   "at_ms": 150545,
+   "dur_ms": 7815
+  },
+  {
+   "kind": "tool",
+   "at_ms": 158360,
+   "dur_ms": 20,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/attack.py",
+    "content": "#!/usr/bin/env python3\n\"\"\"Chosen-plaintext differential attack recovering key[5] of the FEAL-like cipher.\n\nDifferential property of F\n--------------------------\nXOR-ing 0x80 into the top bit of byte i of an F input is, modulo 256, the same\nas adding 0x80 to that byte's contribution.  Since the G function is\n    G(a, b, c) = ROTL2((a + b + c) mod 256)\nand ROTL2 is XOR-linear, a single such top-bit flip changes the G output by\nROTL2(0x80) = 0x02.  Two flips on the same G cancel.  This makes certain F\ninput differences deterministic:\n\n    F(x ^ 0x00008080) = F(x) ^ 0x00000002      (top bits of bytes 0 and 1)\n    F(x ^ 0x80800000) = F(x) ^ 0x02000000      (top bits of bytes 2 and 3)\n\nCharacteristic (probability 1)\n------------------------------\nPick the plaintext difference\n    dP_hi = 0x00000002, dP_lo = 0x00008082\nso dL0 = 0x02 and dR0 = dP_lo ^ dP_hi = 0x8080.  Then, for *every* key and\nplaintext, the round differences are:\n\n    round 0: dF0 = 0x02       dL1 = 0x8080   dR1 = dL0 ^ dF0 = 0\n    round 1: dF1 = 0          dL2 = 0        dR2 = dL1 ^ dF1 = 0x8080\n    round 2: dF2 = 0x02       dL3 = 0x8080   dR3 = dL2 ^ dF2 = 0x02\n\nEntering the last round the F input difference is always 0x02 and dL3 is\nalways 0x8080.  With C_hi = R4, C_lo ^ C_hi = L4 = R3, the last round gives\n\n    F(R3 ^ k) ^ F(R3 ^ 0x02 ^ k) == C_hi ^ C'_hi ^ 0x8080\n\nfor k = key[5].  Each round key is (seed * 1234567) mod 2^32 for a 16-bit\nseed, so the 65536 candidates are tested directly; a few plaintext pairs\nintersect down to the unique true key.\n\"\"\"\n\nMASK32 = 0xFFFFFFFF\n\nDELTA_L0 = 0x00000002\nDELTA_R0 = 0x00008080\nDELTA_R3 = 0x00000002          # F input difference in the final round\nDELTA_P = (DELTA_L0 << 32) | (DELTA_R0 ^ DELTA_L0)   # 0x00000002_00008082\n\n\ndef g_function(a, b, x):\n    temp = (a + b + x) & 0xFF\n    return ((temp << 2) | (temp >> 6)) & 0xFF\n\n\ndef f_function(v):\n    x0 = v & 0xFF\n    x1 = (v >> 8) & 0xFF\n    x2 = (v >> 16) & 0xFF\n    x3 = (v >> 24) & 0xFF\n    y2 = g_function(x3 ^ x2, x1 ^ x0, 1)\n    y3 = g_function(x3, y2, 0)\n    y1 = g_function(x1 ^ x0, y2, 0)\n    y0 = g_function(x0, y1, 1)\n    return y0 | (y1 << 8) | (y2 << 16) | (y3 << 24)\n\n\ndef _constraints(encrypt_fn):\n    \"\"\"Return (R3, target) pairs from chosen-plaintext pairs.\"\"\"\n    constraints = []\n    bases = (0x0000000000000000,\n             0x0123456789ABCDEF,\n             0xFEDCBA9876543210,\n             0xA5A5A5A55A5A5A5A)\n    for base in bases:\n        c = encrypt_fn(base) & 0xFFFFFFFFFFFFFFFF\n        c2 = encrypt_fn(base ^ DELTA_P) & 0xFFFFFFFFFFFFFFFF\n\n        c_hi = (c >> 32) & MASK32\n        c_lo = c & MASK32\n        c2_hi = (c2 >> 32) & MASK32\n\n        r3 = c_lo ^ c_hi\n        target = c_hi ^ c2_hi ^ 0x8080\n        constraints.append((r3, target))\n    return constraints\n\n\ndef attack(encrypt_fn):\n    \"\"\"Recover key[5] using chosen plaintexts; returns it as a uint32.\"\"\"\n    constraints = _constraints(encrypt_fn)\n\n    for seed in range(0x10000):\n        k = (seed * 1234567) & MASK32\n        ok = True\n        for r3, target in constraints:\n            if (f_function(r3 ^ k) ^\n                    f_function(r3 ^ DELTA_R3 ^ k)) != target:\n                ok = False\n                break\n        if ok:\n            return k\n    return None\n\n\nif __name__ == \"__main__\":\n    import random\n    import time\n    import feal\n\n    random.seed(1234)\n    feal.create_random_keys()\n    t = time.time()\n    got = attack(feal.encrypt)\n    dt = time.time() - t\n    print(\"recovered:\", hex(got) if got is not None else None)\n    print(\"actual:   \", hex(feal.key[5]))\n    print(\"ok:       \", got == feal.key[5])\n    print(\"time:      %.3fs\" % dt)\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 158380,
+   "dur_ms": 963
+  },
+  {
+   "kind": "tool",
+   "at_ms": 159343,
+   "dur_ms": 69,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "time python3 attack.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 159412,
+   "dur_ms": 2761
+  },
+  {
+   "kind": "tool",
+   "at_ms": 162173,
+   "dur_ms": 18900,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport random, time, feal\nfrom attack import attack\nrandom.seed(99)\nfails=0; t0=time.time()\n# include edge seeds explicitly\nseeds=[0,1,2,0xFFFF,0x8000,12345]+[random.randint(0,0xFFFF) for _ in range(200)]\nfor s in seeds:\n    for i in range(6): feal.key[i]=(random.randint(0,0xFFFF)*1234567)&0xFFFFFFFF\n    feal.key[5]=(s*1234567)&0xFFFFFFFF\n    got=attack(feal.encrypt)\n    if got!=feal.key[5]:\n        fails+=1; print('FAIL seed',s,hex(got),hex(feal.key[5]))\nprint('trials',len(seeds),'fails',fails,'total time %.2fs'%(time.time()-t0))\n\"\n"
+  },
+  {
+   "kind": "model",
+   "at_ms": 181073,
+   "dur_ms": 5362
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.323,
+ "calls": 11,
+ "cell": "TB1a"
+}

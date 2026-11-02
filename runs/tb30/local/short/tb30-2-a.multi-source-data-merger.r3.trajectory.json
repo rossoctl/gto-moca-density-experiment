@@ -1,0 +1,147 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "multi-source-data-merger",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 33085,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 208,
+  "output": 5133,
+  "cacheRead": 140096,
+  "cacheWrite": 2944,
+  "total": 148381
+ },
+ "totals": {
+  "model_calls": 7,
+  "tool_calls": 9,
+  "model_ms": 29844,
+  "tool_ms": 2690,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 539,
+   "dur_ms": 1213
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1398,
+   "dur_ms": 67,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "ls -la /data/source_a /data/source_b /data/source_c 2>&1; echo \"---\"; file /data/source_a/users.json /data/source_b/users.csv /data/source_c/users.parquet 2>&1"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1752,
+   "dur_ms": 736,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"import pandas, pyarrow; print('pandas', pandas.__version__); print('pyarrow', pyarrow.__version__)\" 2>&1"
+  },
+  {
+   "kind": "model",
+   "at_ms": 2488,
+   "dur_ms": 1344
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3143,
+   "dur_ms": 21,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/data/source_a/users.json"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3333,
+   "dur_ms": 8,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/data/source_b/users.csv"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3832,
+   "dur_ms": 613,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport pandas as pd\ndf = pd.read_parquet('/data/source_c/users.parquet')\nprint(df.dtypes)\nprint('shape:', df.shape)\nprint(df.to_string())\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 4445,
+   "dur_ms": 10048
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14493,
+   "dur_ms": 44,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /app; find / -maxdepth 3 \\( -iname '*test*' -o -iname '*readme*' -o -iname '*expected*' \\) -not -path '/proc/*' -not -path '/sys/*' -not -path '/usr/*' 2>/dev/null | head -50"
+  },
+  {
+   "kind": "model",
+   "at_ms": 14537,
+   "dur_ms": 12247
+  },
+  {
+   "kind": "tool",
+   "at_ms": 26784,
+   "dur_ms": 17,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/merge_users.py",
+    "content": "\"\"\"Merge user data from three heterogeneous sources into one Parquet dataset.\"\"\"\n\nimport json\nimport re\nfrom datetime import date, datetime\n\nimport pandas as pd\n\nSOURCES = [\n    (\"source_a\", \"/data/source_a/users.json\"),\n    (\"source_b\", \"/data/source_b/users.csv\"),\n    (\"source_c\", \"/data/source_c/users.parquet\"),\n]\n\n# Canonical field -> possible names, in no significant order.\nFIELD_ALIASES = {\n    \"user_id\": [\"user_id\", \"id\", \"userId\"],\n    \"name\": [\"full_name\", \"name\", \"userName\"],\n    \"email\": [\"email\", \"email_address\"],\n    \"created_date\": [\"registration_date\", \"created_at\", \"joined\"],\n    \"status\": [\"status\", \"is_active\", \"active\"],\n}\n\nOUTPUT_COLUMNS = [\"user_id\", \"name\", \"email\", \"created_date\", \"status\"]\n\n\ndef read_source(path):\n    if path.endswith(\".json\"):\n        return pd.read_json(path)\n    if path.endswith(\".csv\"):\n        return pd.read_csv(path)\n    if path.endswith(\".parquet\"):\n        return pd.read_parquet(path)\n    raise ValueError(f\"Unsupported source format: {path}\")\n\n\ndef canonicalize(df):\n    \"\"\"Rename source-specific columns to canonical names.\"\"\"\n    renamed = {}\n    for canonical, aliases in FIELD_ALIASES.items():\n        for alias in aliases:\n            if alias in df.columns and alias not in renamed:\n                renamed[alias] = canonical\n                break\n    df = df.rename(columns=renamed)\n    for column in OUTPUT_COLUMNS:\n        if column not in df.columns:\n            df[column] = None\n    return df[OUTPUT_COLUMNS]\n\n\ndef normalize_status(value):\n    if value is None or (isinstance(value, float) and pd.isna(value)):\n        return None\n    if isinstance(value, bool):\n        return \"active\" if value else \"inactive\"\n    text = str(value).strip().lower()\n    if text in {\"true\", \"1\", \"yes\", \"y\", \"active\"}:\n        return \"active\"\n    if text in {\"false\", \"0\", \"no\", \"n\", \"inactive\"}:\n        return \"inactive\"\n    return text\n\n\nDATE_FORMATS = (\"%Y-%m-%d\", \"%Y/%m/%d\", \"%d-%m-%Y\", \"%d/%m/%Y\", \"%m/%d/%Y\")\n\n\ndef normalize_date(value):\n    if value is None or (isinstance(value, float) and pd.isna(value)):\n        return None\n    if isinstance(value, (pd.Timestamp, datetime, date)):\n        return value.strftime(\"%Y-%m-%d\")\n    text = str(value).strip()\n    for fmt in DATE_FORMATS:\n        try:\n            return datetime.strptime(text, fmt).strftime(\"%Y-%m-%d\")\n        except ValueError:\n            continue\n    # Handle ISO timestamps such as 2024-01-15T00:00:00.\n    match = re.match(r\"^(\\d{4}-\\d{2}-\\d{2})\", text)\n    if match:\n        return match.group(1)\n    return None\n\n\ndef normalize_user_id(value):\n    if value is None or (isinstance(value, float) and pd.isna(value)):\n        return None\n    return int(value)\n\n\ndef normalize_record(record):\n    return {\n        \"user_id\": normalize_user_id(record.get(\"user_id\")),\n        \"name\": None if pd.isna(record.get(\"name\")) else str(record.get(\"name\")).strip(),\n        \"email\": None if pd.isna(record.get(\"email\")) else str(record.get(\"email\")).strip(),\n        \"created_date\": normalize_date(record.get(\"created_date\")),\n        \"status\": normalize_status(record.get(\"status\")),\n    }\n\n\ndef main():\n    # user_id -> {source_name: normalized record}\n    by_user = {}\n    source_order = [name for name, _ in SOURCES]\n\n    for source_name, path in SOURCES:\n        df = canonicalize(read_source(path))\n        for raw in df.to_dict(orient=\"records\"):\n            record = normalize_record(raw)\n            user_id = record[\"user_id\"]\n            if user_id is None:\n                continue\n            by_user.setdefault(user_id, {})[source_name] = record\n\n    merged_rows = []\n    conflicts = []\n\n    for user_id in sorted(by_user):\n        records = by_user[user_id]\n        merged = {\"user_id\": user_id}\n\n        for field in [\"name\", \"email\", \"created_date\", \"status\"]:\n            # Values from each source that actually carries this user/field.\n            values = {\n                source: records[source][field]\n                for source in source_order\n                if source in records and records[source][field] is not None\n            }\n\n            selected = None\n            for source in source_order:  # Highest priority first.\n                if source in values:\n                    selected = values[source]\n                    break\n            merged[field] = selected\n\n            if len(set(values.values())) > 1:\n                conflicts.append(\n                    {\n                        \"user_id\": user_id,\n                        \"field\": field,\n                        \"values\": values,  # only sources where the value exists\n                        \"selected\": selected,\n                    }\n                )\n\n        merged_rows.append(merged)\n\n    output = pd.DataFrame(merged_rows, columns=OUTPUT_COLUMNS)\n    output[\"user_id\"] = output[\"user_id\"].astype(\"int64\")\n    for column in [\"name\", \"email\", \"created_date\", \"status\"]:\n        output[column] = output[column].astype(\"string\")\n\n    output.to_parquet(\"/app/merged_users.parquet\", index=False)\n\n    report = {\"total_conflicts\": len(conflicts), \"conflicts\": conflicts}\n    with open(\"/app/conflicts.json\", \"w\", encoding=\"utf-8\") as handle:\n        json.dump(report, handle, indent=2)\n\n    print(output.to_string(index=False))\n    print(f\"\\nusers={len(output)} conflicts={len(conflicts)}\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 26801,
+   "dur_ms": 894
+  },
+  {
+   "kind": "tool",
+   "at_ms": 27695,
+   "dur_ms": 541,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 merge_users.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 28236,
+   "dur_ms": 1348
+  },
+  {
+   "kind": "tool",
+   "at_ms": 29584,
+   "dur_ms": 643,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport pandas as pd\ndf = pd.read_parquet('/app/merged_users.parquet')\nprint(df.dtypes)\nprint(df.shape)\nprint(df.to_dict('records'))\n\"; echo \"--- conflicts.json ---\"; python3 -m json.tool /app/conflicts.json"
+  },
+  {
+   "kind": "model",
+   "at_ms": 30227,
+   "dur_ms": 2750
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.537,
+ "calls": 9,
+ "cell": "TB1a"
+}

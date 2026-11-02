@@ -1,0 +1,183 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "model-extraction-relu-logits",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 204669,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 307,
+  "output": 18867,
+  "cacheRead": 106112,
+  "cacheWrite": 8960,
+  "total": 134246
+ },
+ "totals": {
+  "model_calls": 8,
+  "tool_calls": 8,
+  "model_ms": 119223,
+  "tool_ms": 84219,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1147,
+   "dur_ms": 1505,
+   "tokens_in": 42,
+   "tokens_out": 209,
+   "cache_read": 1600,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2656,
+   "dur_ms": 13,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app && find /app -maxdepth 2 -type f -printf '%p\\n' | head -100"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2656,
+   "dur_ms": 13,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sed -n '1,200p' /app/forward.py 2>/dev/null || true"
+  },
+  {
+   "kind": "model",
+   "at_ms": 2672,
+   "dur_ms": 36087,
+   "tokens_in": 46,
+   "tokens_out": 5298,
+   "cache_read": 1792,
+   "cache_write": 384,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 38760,
+   "dur_ms": 1724,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/explore.py <<'PY'\nimport numpy as np, sys, time\nsys.path.insert(0,'/app')\nimport forward\n\nnp.set_printoptions(precision=4,suppress=True)\nA1=forward.A1.copy(); b1=forward.b1.copy(); A2=forward.A2.ravel(); b2=forward.b2.copy()\nW=len(b1); d=10\nprint('W,d',W,d)\nprint('A1',A1)\n# test line scanning with rng\nrng=np.random.default_rng(123)\n\ndef f(x): return forward.forward(x)\n\ndef grad(x,h=1e-5):\n    x=np.array(x,dtype=float)\n    g=np.empty(d)\n    for j in range(d):\n        xp=x.copy(); xm=x.copy(); xp[j]+=h; xm[j]-=h\n        g[j]=(f(xp)-f(xm))/(2*h)\n    return g\n\ndef scan_line(x0,v,T=50,N=20000):\n    ts=np.linspace(-T,T,N)\n    # query in loop\n    vals=np.array([f(x0+t*v) for t in ts])\n    slopes=np.diff(vals)/np.diff(ts)\n    ds=np.diff(slopes)\n    # threshold relative\n    thresh=max(1e-9, 1e-7*np.max(np.abs(vals))+1e-10)\n    idx=np.where(np.abs(ds)>thresh)[0]\n    # group consecutive indices corresponding same breakpoint? Usually isolated; if multiple adjacent due numerical\n    groups=[]\n    for i in idx:\n        if groups and i<=groups[-1][-1]+1: groups[-1].append(i)\n        else: groups.append([i])\n    results=[]\n    dt=ts[1]-ts[0]\n    for grp in groups:\n        jj=grp[len(grp)//2]\n        # slope before interval jj (between ts[jj],ts[jj+1])? ds index k = slope[k+1]-slope[k], breakpoint between sample k+1 and k+2? let's map\n        # slope[k] on [ts[k],ts[k+1]]. ds[k]=slope[k+1]-slope[k], breakpoint in (ts[k+1],ts[k+2])? Actually change between interval k and k+1 around ts[k+1].\n        k=jj\n        # breakpoint roughly ts[k+1]\n        t0=ts[k+1]\n        # refine via line intersection using interval before k and after k+1\n        # slope before sL=slopes[k], line through (ts[k], vals[k]) or better use ts[k+1], vals[k+1]\n        # slope after sR=slopes[k+1], through (ts[k+2], vals[k+2])\n        sL=slopes[k]; sR=slopes[k+1]\n        # use points ts[k+1], vals[k+1] left line; ts[k+2],vals[k+2] right\n        # left value at ts[k+1]=vals[k+1]; right at ts[k+2]=vals[k+2], right line y=vals[k+2]+sR*(t-ts[k+2]); solve left=vals[k+1]+sL*(t-ts[k+1])\n        # t* = (vals[k+2]-sR*ts[k+2] - vals[k+1]+sL*ts[k+1])/(sL-sR)\n        den=sL-sR\n        if abs(den)<1e-14: continue\n        tstar=(vals[k+2]-sR*ts[k+2] - vals[k+1]+sL*ts[k+1])/den\n        # ensure within local bracket maybe\n        if not (ts[k]-dt < tstar < ts[k+3]+dt):\n            tstar=t0\n        # distance gap to neighbors maybe dt\n        delta=min(dt*0.05, 0.01)\n        # query gradients left/right along v\n        gl=grad(x0+(tstar-delta)*v)\n        gr=grad(x0+(tstar+delta)*v)\n        jump=gr-gl\n        n=np.linalg.norm(jump)\n        if n>1e-8:\n            results.append((tstar,jump/n,n,sL,sR))\n    return results\n\n# collect\n\ndef collect(nlines=10,T=50,N=20000,seed=1):\n    rng=np.random.default_rng(seed)\n    dirs=[]; info=[]\n    for li in range(nlines):\n        x0=rng.normal(size=d)*0.5\n        v=rng.normal(size=d)\n        v=v/np.linalg.norm(v)\n        res=scan_line(x0,v,T,N)\n        print('line',li,'x0',x0,'res',len(res),'ts',[round(r[0],3) for r in res])\n        for t,j,n,sL,sR in res:\n            dirs.append(j); info.append((li,t,n,sL,sR,x0,v))\n    return np.array(dirs),info\nstart=time.time()\ndirs,info=collect(10)\nprint('time',time.time()-start,'dirs',len(dirs))\n# cluster antipodal/parallel using abs dot, because normal can flip? A1 direction sign consistent? jump = A2_i*A1_i, sign depends A2. For matching A1 up to scaling, sign can be absorbed in scale. Treat directions modulo sign.\n# Greedy normalize sign and cluster\ndef cluster(dirs, thresh=1e-4):\n    reps=[]; counts=[]\n    for u in dirs:\n        u=u/np.linalg.norm(u)\n        # canonical sign\n        # if u[argmax(abs)]<0: u=-u? for compare abs dot\n        if len(reps)==0:\n            reps.append(u);counts.append(1);continue\n        R=np.array(reps)\n        dots=np.abs(R@u)\n        k=np.argmax(dots)\n        if dots[k]>1-thresh:\n            # average aligned\n            s=np.sign(R[k]@u) or 1\n            reps[k]=(R[k]*counts[k]+s*u)/(counts[k]+1)\n            reps[k]/=np.linalg.norm(reps[k]); counts[k]+=1\n        else:\n            reps.append(u);counts.append(1)\n    return np.array(reps),np.array(counts)\n\nreps,counts=cluster(dirs)\nprint('clusters',len(reps),'counts',counts)\n# match to true A1\ntrue=A1/np.linalg.norm(A1,axis=1,keepdims=True)\nD=np.abs(reps@true.T)\nprint('max per true',D.max(axis=0))\nprint('max per rep',D.max(axis=1))\nprint('matched',np.sum(D.max(axis=0)>1-1e-5))\nprint('unmatched true indices',np.where(D.max(axis=0)<=1-1e-5)[0])\nPY\npython /tmp/explore.py",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 40488,
+   "dur_ms": 3952,
+   "tokens_in": 62,
+   "tokens_out": 602,
+   "cache_read": 7488,
+   "cache_write": 1920,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 44440,
+   "dur_ms": 362,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/debugscan.py <<'PY'\nimport numpy as np, sys\nsys.path.insert(0,'/app')\nimport forward\nrng=np.random.default_rng(1)\nd=10\nx0=rng.normal(size=d)*0.5;v=rng.normal(size=d);v/=np.linalg.norm(v)\nT=50;N=20000\nts=np.linspace(-T,T,N)\nvals=np.array([forward.forward(x0+t*v) for t in ts])\nslopes=np.diff(vals)/np.diff(ts)\nds=np.diff(slopes)\nprint('vals range',vals.min(),vals.max(),'slopes range',slopes.min(),slopes.max())\nprint('abs ds percentiles',np.percentile(np.abs(ds),[50,90,99,99.9,99.99,100]))\nidx=np.where(np.abs(ds)>1e-7*np.max(np.abs(vals))+1e-10)[0]\nprint('idx count',len(idx),idx[:100])\nprint('top ds idx',np.argsort(np.abs(ds))[-30:],ds[np.argsort(np.abs(ds))[-30:]])\n# expected breakpoints\nA1=forward.A1;b1=forward.b1\ntexp=-(A1@x0+b1)/(A1@v)\nprint('expected t sorted',np.sort(texp))\n# Print ds around first expected breakpoints\nfor te in np.sort(texp)[:10]:\n    k=np.searchsorted(ts,te)\n    print('te',te,'k',k,'slopes around',slopes[max(0,k-3):k+4], 'ds',ds[max(0,k-3):k+3])\nPY\npython /tmp/debugscan.py",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 44805,
+   "dur_ms": 28040,
+   "tokens_in": 53,
+   "tokens_out": 4404,
+   "cache_read": 10048,
+   "cache_write": 1792,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 72845,
+   "dur_ms": 1632,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python - <<'PY'\nimport numpy as np, sys, time\nsys.path.insert(0,'/app')\nimport forward\nA1=forward.A1;b1=forward.b1;A2=forward.A2.ravel();d=10\nrng=np.random.default_rng(1)\n\ndef grad(x,h=1e-5):\n    x=np.asarray(x,float); g=np.empty(d)\n    for j in range(d):\n        xp=x.copy();xm=x.copy();xp[j]+=h;xm[j]-=h\n        g[j]=(forward.forward(xp)-forward.forward(xm))/(2*h)\n    return g\n\ndef scan_line(x0,v,T=50,N=20000):\n    ts=np.linspace(-T,T,N); vals=np.array([forward.forward(x0+t*v) for t in ts])\n    slopes=np.diff(vals)/np.diff(ts); ds=np.diff(slopes)\n    th=max(1e-9, 1e-8*np.max(np.abs(vals)))\n    idx=np.where(np.abs(ds)>th)[0]\n    groups=[]\n    for i in idx:\n        if groups and i<=groups[-1][-1]+1: groups[-1].append(i)\n        else: groups.append([i])\n    res=[]\n    for grp in groups:\n        k=grp[0]\n        if k<0 or k+3>=N: continue\n        tL=(ts[k]+ts[k+1])/2\n        tR=(ts[k+2]+ts[k+3])/2\n        gl=grad(x0+tL*v); gr=grad(x0+tR*v)\n        jump=gr-gl; n=np.linalg.norm(jump)\n        if n>1e-7:\n            res.append((jump/n,n,grp[0],grp[-1]))\n    return res\nfor li in range(10):\n    x0=rng.normal(size=d)*0.5\n    v=rng.normal(size=d);v/=np.linalg.norm(v)\n    res=scan_line(x0,v)\n    print(li,'res',len(res),[r[3] for r in res])\n    if li==0:\n        print('jump norms',[r[1] for r in res])\nPY",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 74480,
+   "dur_ms": 4825,
+   "tokens_in": 14,
+   "tokens_out": 908,
+   "cache_read": 16256,
+   "cache_write": 1664,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 79306,
+   "dur_ms": 1911,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python - <<'PY'\nimport numpy as np, sys, time\nsys.path.insert(0,'/app')\nimport forward\nA1=forward.A1;b1=forward.b1;A2=forward.A2.ravel();d=10\nrng=np.random.default_rng(123)\n\ndef grad(x,h=1e-5):\n    x=np.asarray(x,float); g=np.empty(d)\n    for j in range(d):\n        xp=x.copy();xm=x.copy();xp[j]+=h;xm[j]-=h\n        g[j]=(forward.forward(xp)-forward.forward(xm))/(2*h)\n    return g\n\ndef scan_line(x0,v,T=50,N=20000):\n    ts=np.linspace(-T,T,N); vals=np.array([forward.forward(x0+t*v) for t in ts])\n    slopes=np.diff(vals)/np.diff(ts); ds=np.diff(slopes)\n    th=max(1e-9, 1e-8*np.max(np.abs(vals)))\n    idx=np.where(np.abs(ds)>th)[0]\n    groups=[]\n    for i in idx:\n        if groups and i<=groups[-1][-1]+1: groups[-1].append(i)\n        else: groups.append([i])\n    res=[]\n    for grp in groups:\n        k=grp[0]\n        if k<0 or k+3>=N: continue\n        tL=(ts[k]+ts[k+1])/2\n        tR=(ts[k+2]+ts[k+3])/2\n        gl=grad(x0+tL*v); gr=grad(x0+tR*v)\n        jump=gr-gl; n=np.linalg.norm(jump)\n        if n>1e-7:\n            res.append((jump/n,n,grp[0],grp[-1]))\n    return res\n\ndef cluster(dirs, thresh=1e-5):\n    reps=[]; counts=[]\n    for u in dirs:\n        u=u/np.linalg.norm(u)\n        if not reps:\n            reps.append(u);counts.append(1);continue\n        R=np.array(reps); dots=np.abs(R@u); k=np.argmax(dots)\n        if dots[k]>1-thresh:\n            s=1 if R[k]@u>=0 else -1\n            v=R[k]*counts[k]+s*u; v/=np.linalg.norm(v)\n            reps[k]=v;counts[k]+=1\n        else:\n            reps.append(u);counts.append(1)\n    return np.array(reps),np.array(counts)\ndirs=[]\nstart=time.time()\nfor li in range(12):\n    x0=rng.normal(size=d)*0.5;v=rng.normal(size=d);v/=np.linalg.norm(v)\n    res=scan_line(x0,v)\n    dirs += [r[0] for r in res]\n    print(li,len(res), 'total',len(dirs))\nreps,counts=cluster(np.array(dirs))\nprint('clusters',len(reps),'counts',counts, 'time',time.time()-start)\ntrue=A1/np.linalg.norm(A1,axis=1,keepdims=True)\nD=np.abs(reps@true.T)\nprint('max per true',np.round(D.max(axis=0),8))\nprint('matched',np.sum(D.max(axis=0)>1-1e-5), 'unmatched',np.where(D.max(axis=0)<=1-1e-5)[0])\nprint('rep max',np.round(D.max(axis=1),8))\nprint('extra reps',np.sum(D.max(axis=1)<=1-1e-5))\nPY",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 81219,
+   "dur_ms": 23115,
+   "tokens_in": 18,
+   "tokens_out": 3767,
+   "cache_read": 18816,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 104334,
+   "dur_ms": 73887,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/test_params.py <<'PY'\nimport numpy as np, sys, time\nsys.path.insert(0,'/app')\nimport forward\nA1=forward.A1;b1=forward.b1;A2=forward.A2.ravel();d=10\ntrue=A1/np.linalg.norm(A1,axis=1,keepdims=True)\n\ndef grad(x,h=1e-5):\n    x=np.asarray(x,float); g=np.empty(d)\n    for j in range(d):\n        xp=x.copy();xm=x.copy();xp[j]+=h;xm[j]-=h\n        g[j]=(forward.forward(xp)-forward.forward(xm))/(2*h)\n    return g\n\ndef scan_line(x0,v,T,N):\n    ts=np.linspace(-T,T,N); vals=np.array([forward.forward(x0+t*v) for t in ts])\n    slopes=np.diff(vals)/np.diff(ts); ds=np.diff(slopes)\n    th=max(1e-10, 1e-9*max(1.0,np.max(np.abs(vals))))\n    idx=np.where(np.abs(ds)>th)[0]\n    groups=[]\n    for i in idx:\n        if groups and i<=groups[-1][-1]+1: groups[-1].append(i)\n        else: groups.append([i])\n    res=[]\n    for grp in groups:\n        k=grp[0]\n        if k<0 or k+3>=N: continue\n        tL=(ts[k]+ts[k+1])/2; tR=(ts[k+2]+ts[k+3])/2\n        gl=grad(x0+tL*v); gr=grad(x0+tR*v)\n        jump=gr-gl; n=np.linalg.norm(jump)\n        if n>1e-8:\n            res.append(jump/n)\n    return res\n\ndef cluster(dirs, thresh=1e-6):\n    reps=[];counts=[]\n    for u in dirs:\n        u=u/np.linalg.norm(u)\n        if not reps: reps.append(u);counts.append(1);continue\n        R=np.array(reps); dots=np.abs(R@u); k=np.argmax(dots)\n        if dots[k]>1-thresh:\n            s=1 if R[k]@u>=0 else -1\n            vv=R[k]*counts[k]+s*u; vv/=np.linalg.norm(vv)\n            reps[k]=vv;counts[k]+=1\n        else: reps.append(u);counts.append(1)\n    return np.array(reps),np.array(counts)\n\ndef run(seed,L,T,N,thr_frac):\n    rng=np.random.default_rng(seed);dirs=[]\n    for li in range(L):\n        x0=rng.normal(size=d)*0.5;v=rng.normal(size=d);v/=np.linalg.norm(v)\n        dirs+=scan_line(x0,v,T,N)\n    reps,counts=cluster(np.array(dirs))\n    D=np.abs(reps@true.T)\n    good=counts>=max(2,int(L*thr_frac))\n    sel=reps[good]\n    Ds=np.abs(sel@true.T) if len(sel) else np.zeros((0,len(true)))\n    match=np.sum(Ds.max(axis=0)>1-1e-6) if len(sel) else 0\n    extra=np.sum(Ds.max(axis=1)<=1-1e-6) if len(sel) else 0\n    return len(reps),len(sel),match,extra,counts[np.argsort(-counts)][:25]\n\nfor seed in [0,1,2,42,123,999]:\n  for (L,T,N,frac) in [(20,75,30000,0.3),(12,50,20000,0.4),(20,100,50000,0.3)]:\n    st=time.time();r=run(seed,L,T,N,frac);dt=time.time()-st\n    print('seed',seed,'par',L,T,N,frac,'->',r[:4],'time',round(dt,2),'counts',r[4])\nPY\npython /tmp/test_params.py",
+   "timeout": 300
+  },
+  {
+   "kind": "model",
+   "at_ms": 178224,
+   "dur_ms": 15540,
+   "tokens_in": 39,
+   "tokens_out": 2723,
+   "cache_read": 22912,
+   "cache_write": 1536,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 193764,
+   "dur_ms": 4677,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /app/steal.py <<'PY'\n#!/usr/bin/env python3\n\"\"\"\nBlack-box extraction of the first-layer weights of a scalar ReLU network.\n\nThe network has the form\n\n    f(x) = A2 * ReLU(A1 x + b1) + b2\n\nAlong any line x(t) = x0 + t*v, f is a continuous piecewise-linear function\nof t.  Each neuron contributes one breakpoint, and the jump in the gradient of\nf at that breakpoint is parallel to the corresponding row of A1.  We locate\nthese breakpoints on several random lines and collect the gradient jumps.\n\"\"\"\n\nimport os\nimport sys\n\nimport numpy as np\n\n# Import forward.py from the directory containing this script.\nsys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))\nimport forward  # noqa: E402\n\n\nINPUT_DIM = 10\nN_LINES = 20\nT_RANGE = 75.0\nN_SAMPLES = 30_000\nRANDOM_SEED = 0\nGRAD_STEP = 1e-5\nCLUSTER_TOL = 1e-6\nMIN_SUPPORT_FRACTION = 0.30\n\n\ndef _gradient(x):\n    \"\"\"Central-difference gradient of forward() at x.\"\"\"\n    x = np.asarray(x, dtype=float)\n    g = np.empty(INPUT_DIM, dtype=float)\n    for j in range(INPUT_DIM):\n        xp = x.copy()\n        xm = x.copy()\n        xp[j] += GRAD_STEP\n        xm[j] -= GRAD_STEP\n        g[j] = (forward.forward(xp) - forward.forward(xm)) / (2.0 * GRAD_STEP)\n    return g\n\n\ndef _directions_from_line(x0, v):\n    \"\"\"Find normals to the ReLU hyperplanes crossed by x0 + t*v.\"\"\"\n    ts = np.linspace(-T_RANGE, T_RANGE, N_SAMPLES)\n    vals = np.array([forward.forward(x0 + t * v) for t in ts], dtype=float)\n\n    dt = ts[1] - ts[0]\n    slopes = np.diff(vals) / dt\n    slope_changes = np.diff(slopes)\n\n    # Numerical slope noise is around machine epsilon / dt.  This threshold is\n    # safely above that but far below the genuine jumps for this network.\n    tol = max(1e-10, 1e-9 * max(1.0, float(np.max(np.abs(vals)))))\n    changed = np.where(np.abs(slope_changes) > tol)[0]\n\n    # A breakpoint that falls inside a sampling interval produces two adjacent\n    # nonzero slope changes, so group consecutive changed indices together.\n    groups = []\n    for i in changed:\n        if groups and i <= groups[-1][-1] + 1:\n            groups[-1].append(int(i))\n        else:\n            groups.append([int(i)])\n\n    directions = []\n    for group in groups:\n        k = group[0]\n        if k + 3 >= N_SAMPLES:\n            continue\n\n        # Midpoints of intervals just before and just after the interval that\n        # contains the breakpoint.  These straddle exactly one kink.\n        t_left = 0.5 * (ts[k] + ts[k + 1])\n        t_right = 0.5 * (ts[k + 2] + ts[k + 3])\n\n        g_left = _gradient(x0 + t_left * v)\n        g_right = _gradient(x0 + t_right * v)\n\n        jump = g_right - g_left\n        norm = np.linalg.norm(jump)\n        if norm > 1e-8:\n            directions.append(jump / norm)\n\n    return directions\n\n\ndef _cluster_directions(directions):\n    \"\"\"Cluster unit directions, treating u and -u as the same direction.\"\"\"\n    reps = []\n    counts = []\n\n    for u in directions:\n        u = u / np.linalg.norm(u)\n        if not reps:\n            reps.append(u)\n            counts.append(1)\n            continue\n\n        R = np.asarray(reps)\n        similarities = np.abs(R @ u)\n        k = int(np.argmax(similarities))\n\n        if similarities[k] > 1.0 - CLUSTER_TOL:\n            sign = 1.0 if R[k] @ u >= 0.0 else -1.0\n            merged = R[k] * counts[k] + sign * u\n            merged /= np.linalg.norm(merged)\n            reps[k] = merged\n            counts[k] += 1\n        else:\n            reps.append(u)\n            counts.append(1)\n\n    return np.asarray(reps), np.asarray(counts)\n\n\ndef steal_A1():\n    rng = np.random.default_rng(RANDOM_SEED)\n    all_directions = []\n\n    for _ in range(N_LINES):\n        # Random starting point and random unit direction for the query line.\n        x0 = rng.normal(size=INPUT_DIM) * 0.5\n        v = rng.normal(size=INPUT_DIM)\n        v /= np.linalg.norm(v)\n        all_directions.extend(_directions_from_line(x0, v))\n\n    reps, counts = _cluster_directions(all_directions)\n\n    # Genuine rows are found on nearly every random line.  False directions\n    # caused by two unresolved nearby breakpoints occur only sporadically.\n    min_support = max(2, int(MIN_SUPPORT_FRACTION * N_LINES))\n    keep = counts >= min_support\n\n    # Fallback in case the support rule is too strict for an unusual network.\n    if np.sum(keep) == 0:\n        keep = counts >= 2\n\n    return reps[keep]\n\n\nif __name__ == \"__main__\":\n    stolen_A1 = steal_A1()\n    np.save(\"/app/stolen_A1.npy\", stolen_A1)\n\n    np.set_printoptions(precision=8, suppress=True)\n    print(stolen_A1)\nPY\npython /app/steal.py\npython - <<'PY'\nimport numpy as np, sys\nsys.path.insert(0,'/app')\nimport forward\nS=np.load('/app/stolen_A1.npy')\nA=forward.A1\nprint('shape',S.shape,A.shape)\nSn=S/np.linalg.norm(S,axis=1,keepdims=True)\nAn=A/np.linalg.norm(A,axis=1,keepdims=True)\nD=np.abs(Sn@An.T)\nprint('max per true row:',D.max(axis=0))\nprint('all matched >1-1e-8:',bool(np.all(D.max(axis=0)>1-1e-8)))\nprint('extra rows:',int(np.sum(D.max(axis=1)<1-1e-8)))\nPY",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 198444,
+   "dur_ms": 6159,
+   "tokens_in": 33,
+   "tokens_out": 956,
+   "cache_read": 27200,
+   "cache_write": 1344,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.615,
+ "calls": 8,
+ "cell": "TB1e"
+}

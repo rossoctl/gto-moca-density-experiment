@@ -1,0 +1,488 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "gcode-to-text",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 173010,
+ "resolved": false,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 42391,
+  "output": 25188,
+  "cacheRead": 1098112,
+  "cacheWrite": 21056,
+  "total": 1186747
+ },
+ "totals": {
+  "model_calls": 33,
+  "tool_calls": 32,
+  "model_ms": 164580,
+  "tool_ms": 7722,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 566,
+   "dur_ms": 770
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1336,
+   "dur_ms": 74,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /app && wc -l /app/text.gcode && head -100 /app/text.gcode"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1410,
+   "dur_ms": 1842
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3252,
+   "dur_ms": 38,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "grep -n \"M486\" text.gcode | head -50; echo ---; grep -n \"^;LAYER_CHANGE\\|^;Z:\\|^;HEIGHT\\|^;TYPE:\" text.gcode | head -80"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3290,
+   "dur_ms": 1569
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4859,
+   "dur_ms": 44,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sed -n '100,180p' text.gcode; echo ===; sed -n '1390,1560p' text.gcode"
+  },
+  {
+   "kind": "model",
+   "at_ms": 4903,
+   "dur_ms": 4410
+  },
+  {
+   "kind": "tool",
+   "at_ms": 9313,
+   "dur_ms": 217,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"import matplotlib; print(matplotlib.__version__)\" 2>&1; python3 -c \"import numpy; print(numpy.__version__)\" 2>&1; grep -c \"G1\" text.gcode; awk '/M486 S0/{s=0} /M486 S1/{s=1} /M486 S-1/{s=-1}' text.gcode | head"
+  },
+  {
+   "kind": "model",
+   "at_ms": 9530,
+   "dur_ms": 1253
+  },
+  {
+   "kind": "tool",
+   "at_ms": 10783,
+   "dur_ms": 2451,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"import PIL; print(PIL.__version__)\" 2>&1; which convert magick ffmpeg 2>&1; pip install --quiet pillow 2>&1 | tail -2"
+  },
+  {
+   "kind": "model",
+   "at_ms": 13234,
+   "dur_ms": 846
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14080,
+   "dur_ms": 36,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"import PIL; print(PIL.__version__)\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 14116,
+   "dur_ms": 3594
+  },
+  {
+   "kind": "tool",
+   "at_ms": 17710,
+   "dur_ms": 302,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /app/parse.py <<'EOF'\nimport re, collections\nx=y=z=0.0; e=0.0; obj=-1\nsegs=collections.defaultdict(list)   # obj -> (x0,y0,z0,x1,y1,e)\nzs=collections.defaultdict(set)\nm486=[]  # (line, obj)\nfor ln,line in enumerate(open('/app/text.gcode',errors='replace'),1):\n    line=line.strip()\n    if line.startswith('M486'):\n        m=re.match(r'M486 S(-?\\d+)',line)\n        if m: obj=int(m.group(1))\n        continue\n    if line.startswith(('G0','G1')) and 'X' in line or line.startswith(('G0','G1')):\n        # tokenize\n        d={}\n        for tok in line.split()[1:]:\n            if tok and tok[0] in 'XYZE':\n                try: d[tok[0]]=float(tok[1:])\n                except: pass\n        nx=d.get('X',x); ny=d.get('Y',y); nz=d.get('Z',z); ne=d.get('E',0.0)\n        extruding = ne>0.0001\n        if extruding:\n            segs[obj].append((x,y,z,nx,ny,nz,ne))\n            zs[obj].add(round(z,3))\n        x,y,z=nx,ny,nz\nfor o in segs:\n    ss=segs[o]\n    xs=[p for s in ss for p in (s[0],s[3])]; ys=[p for s in ss for p in (s[1],s[4])]\n    print(o, 'segs',len(ss),'z',min(zs[o]),max(zs[o]),'layers',len(zs[o]),'x',min(xs),max(xs),'y',min(ys),max(ys))\n    print('  zs sample', sorted(zs[o])[:10], '...', sorted(zs[o])[-10:])\nEOF\npython3 /app/parse.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 18012,
+   "dur_ms": 11797
+  },
+  {
+   "kind": "tool",
+   "at_ms": 29809,
+   "dur_ms": 456,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /app/render.py <<'EOF'\nimport re, collections\nfrom PIL import Image, ImageDraw\n\ndef parse(path):\n    x=y=z=0.0; obj=-1\n    segs=collections.defaultdict(list)\n    for line in open(path,errors='replace'):\n        line=line.strip()\n        if line.startswith('M486'):\n            m=re.match(r'M486 S(-?\\d+)',line)\n            if m: obj=int(m.group(1))\n            continue\n        if line.startswith(('G0','G1')):\n            d={}\n            for tok in line.split()[1:]:\n                if tok and tok[0] in 'XYZE':\n                    try: d[tok[0]]=float(tok[1:])\n                    except: pass\n            nx=d.get('X',x); ny=d.get('Y',y); nz=d.get('Z',z); ne=d.get('E',0.0)\n            if ne>0.00001:\n                segs[obj].append((x,y,z,nx,ny,nz,ne))\n            x,y,z=nx,ny,nz\n    return segs\n\nsegs=parse('/app/text.gcode')\n\ndef render(obj, zsel, fname, w=1600, pad=10):\n    ss=[s for s in segs[obj] if zsel(s[2])]\n    xs=[p for s in ss for p in (s[0],s[3])]; ys=[p for s in ss for p in (s[1],s[4])]\n    x0,x1=min(xs),max(xs); y0,y1=min(ys),max(ys)\n    sc=(w-2*pad)/(x1-x0)\n    h=int((y1-y0)*sc)+2*pad\n    img=Image.new('L',(w,h),255); dr=ImageDraw.Draw(img)\n    for s in ss:\n        def P(px,py): return (pad+(px-x0)*sc, pad+(y1-py)*sc)\n        dr.line([P(s[0],s[1]),P(s[3],s[4])], fill=0, width=2)\n    img.save(fname)\n    print(fname, 'segs',len(ss),'x',x0,x1,'y',y0,y1,'size',img.size)\n\n# object 0 layers\nz0=sorted({round(s[2],3) for s in segs[0]})\nprint('obj0 top z', z0[-3:])\nrender(0, lambda z: abs(z-z0[-1])<1e-6, '/app/obj0_top.png')\nrender(0, lambda z: abs(z-z0[-2])<1e-6, '/app/obj0_top2.png')\nrender(0, lambda z: True, '/app/obj0_all.png')\nz1=sorted({round(s[2],3) for s in segs[1]})\nrender(1, lambda z: abs(z-z1[-1])<1e-6, '/app/obj1_top.png')\nEOF\npython3 /app/render.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 30265,
+   "dur_ms": 1007
+  },
+  {
+   "kind": "tool",
+   "at_ms": 31272,
+   "dur_ms": 16,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/obj0_all.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 31288,
+   "dur_ms": 8249
+  },
+  {
+   "kind": "tool",
+   "at_ms": 39537,
+   "dur_ms": 289,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /app/layers.py <<'EOF'\nexec(open('/app/parse.py').read().split(\"for o in segs\")[0])\nimport collections\nlay=collections.defaultdict(list)\nfor s in segs[0]:\n    lay[round(s[2],3)].append(s)\nfor z in sorted(lay)[::10]:\n    ss=lay[z]; xs=[p for s in ss for p in (s[0],s[3])]; ys=[p for s in ss for p in (s[1],s[4])]\n    print(f\"z={z:7.2f} n={len(ss):4d} x[{min(xs):7.2f},{max(xs):7.2f}] y[{min(ys):7.2f},{max(ys):7.2f}]\")\nprint('---- last')\nfor z in sorted(lay)[-8:]:\n    ss=lay[z]; xs=[p for s in ss for p in (s[0],s[3])]; ys=[p for s in ss for p in (s[1],s[4])]\n    print(f\"z={z:7.2f} n={len(ss):4d} x[{min(xs):7.2f},{max(xs):7.2f}] y[{min(ys):7.2f},{max(ys):7.2f}]\")\nEOF\npython3 /app/layers.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 39826,
+   "dur_ms": 5895
+  },
+  {
+   "kind": "tool",
+   "at_ms": 45721,
+   "dur_ms": 130,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /app/rot.py <<'EOF'\nfrom PIL import Image, ImageOps\nimport math\nim=Image.open('/app/obj0_all.png').convert('L')\nfor ang in (-24.2,-25,-23):\n    r=im.rotate(ang, expand=True, fillcolor=255)\n    inv=ImageOps.invert(r)\n    bbox=inv.getbbox()\n    c=r.crop(bbox)\n    # upscale a bit and crop margins\n    c.save(f'/app/obj0_rot{ang}.png')\n    print(ang,bbox,c.size)\nEOF\npython3 /app/rot.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 45851,
+   "dur_ms": 1664
+  },
+  {
+   "kind": "tool",
+   "at_ms": 47515,
+   "dur_ms": 13,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/obj0_rot-24.2.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 47528,
+   "dur_ms": 4825
+  },
+  {
+   "kind": "tool",
+   "at_ms": 52353,
+   "dur_ms": 154,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /app/chunks.py <<'EOF'\nfrom PIL import Image\nim=Image.open('/app/obj0_rot-24.2.png')\nw,h=im.size\nn=4\nfor i in range(n):\n    x0=int(i*w/n); x1=int((i+1)*w/n+20)\n    c=im.crop((x0,0,min(x1,w),h))\n    c=c.resize((c.width*3,c.height*3), Image.LANCZOS)\n    c.save(f'/app/chunk{i}.png'); print(i,c.size)\nEOF\npython3 /app/chunks.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 52507,
+   "dur_ms": 737
+  },
+  {
+   "kind": "tool",
+   "at_ms": 53244,
+   "dur_ms": 19,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/chunk0.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 53263,
+   "dur_ms": 2054
+  },
+  {
+   "kind": "tool",
+   "at_ms": 55317,
+   "dur_ms": 9,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/chunk1.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 55326,
+   "dur_ms": 1805
+  },
+  {
+   "kind": "tool",
+   "at_ms": 57131,
+   "dur_ms": 9,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/chunk2.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 57140,
+   "dur_ms": 1474
+  },
+  {
+   "kind": "tool",
+   "at_ms": 58614,
+   "dur_ms": 14,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/chunk3.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 58628,
+   "dur_ms": 10132
+  },
+  {
+   "kind": "tool",
+   "at_ms": 68760,
+   "dur_ms": 645,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /app/render_hi.py <<'EOF'\nimport re, collections\nfrom PIL import Image, ImageDraw\nexec(open('/app/render.py').read().split(\"segs=parse\")[0])\nsegs=parse('/app/text.gcode')\nss=segs[0]\nxs=[p for s in ss for p in (s[0],s[3])]; ys=[p for s in ss for p in (s[1],s[4])]\nx0,x1=min(xs),max(xs); y0,y1=min(ys),max(ys)\nw=5000; pad=20\nsc=(w-2*pad)/(x1-x0); h=int((y1-y0)*sc)+2*pad\nimg=Image.new('L',(w,h),255); dr=ImageDraw.Draw(img)\nfor s in ss:\n    def P(px,py): return (pad+(px-x0)*sc, pad+(y1-py)*sc)\n    dr.line([P(s[0],s[1]),P(s[3],s[4])], fill=0, width=3)\nimg.save('/app/obj0_hi.png'); print(img.size)\n# rotate\nimport math\nbest=None\nr=img.rotate(-24.2, expand=True, fillcolor=255)\nfrom PIL import ImageOps\nbbox=ImageOps.invert(r).getbbox(); c=r.crop(bbox); c.save('/app/obj0_hi_rot.png'); print(c.size)\n# split into 6 with overlap\nw2,h2=c.size; n=6\nfor i in range(n):\n    a=int(i*(w2-80)/n); b=int((i+1)*(w2-80)/n+80)\n    ch=c.crop((a,0,min(b,w2),h2)); ch.save(f'/app/hi{i}.png')\nEOF\npython3 /app/render_hi.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 69405,
+   "dur_ms": 807
+  },
+  {
+   "kind": "tool",
+   "at_ms": 70212,
+   "dur_ms": 11,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/hi0.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 70223,
+   "dur_ms": 4394
+  },
+  {
+   "kind": "tool",
+   "at_ms": 74617,
+   "dur_ms": 9,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/hi1.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 74626,
+   "dur_ms": 1481
+  },
+  {
+   "kind": "tool",
+   "at_ms": 76107,
+   "dur_ms": 9,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/hi2.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 76116,
+   "dur_ms": 1919
+  },
+  {
+   "kind": "tool",
+   "at_ms": 78035,
+   "dur_ms": 8,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/hi3.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 78043,
+   "dur_ms": 1115
+  },
+  {
+   "kind": "tool",
+   "at_ms": 79158,
+   "dur_ms": 11,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/hi4.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 79169,
+   "dur_ms": 1239
+  },
+  {
+   "kind": "tool",
+   "at_ms": 80408,
+   "dur_ms": 10,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/hi5.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 80418,
+   "dur_ms": 7706
+  },
+  {
+   "kind": "tool",
+   "at_ms": 88124,
+   "dur_ms": 8,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/obj1_top.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 88132,
+   "dur_ms": 27149
+  },
+  {
+   "kind": "tool",
+   "at_ms": 115281,
+   "dur_ms": 528,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /app/cmp.py <<'EOF'\nfrom PIL import Image\nim=Image.open('/app/obj0_hi_rot.png')\nw,h=im.size\n# crop 3 char region around fractions\ndef crop(f0,f1,name):\n    c=im.crop((int(f0*w),0,int(f1*w),h)); c=c.resize((c.width*4,c.height*4),Image.LANCZOS); c.save(name); print(name,c.size)\ncrop(0.30,0.42,'/app/c3.png')   # around 3\ncrop(0.70,0.82,'/app/ce.png')   # around e\n# opening brace region\ncrop(0.12,0.28,'/app/cbrace.png')\nEOF\npython3 /app/cmp.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 115809,
+   "dur_ms": 1212
+  },
+  {
+   "kind": "tool",
+   "at_ms": 117021,
+   "dur_ms": 415,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/c3.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 117442,
+   "dur_ms": 2619
+  },
+  {
+   "kind": "tool",
+   "at_ms": 120061,
+   "dur_ms": 418,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/ce.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 120485,
+   "dur_ms": 1773
+  },
+  {
+   "kind": "tool",
+   "at_ms": 122258,
+   "dur_ms": 394,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/cbrace.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 122655,
+   "dur_ms": 9307
+  },
+  {
+   "kind": "tool",
+   "at_ms": 131962,
+   "dur_ms": 373,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /app/glyph.py <<'EOF'\nfrom PIL import Image\nim=Image.open('/app/obj0_hi_rot.png')\nw,h=im.size\nprint(w,h)\n# absolute crop around opening brace region\nc=im.crop((int(0.09*w),0,int(0.20*w),h)); c=c.resize((c.width*6,c.height*6),Image.LANCZOS); c.save('/app/glyph1.png'); print(c.size)\nEOF\npython3 /app/glyph.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 132335,
+   "dur_ms": 1305
+  },
+  {
+   "kind": "tool",
+   "at_ms": 133640,
+   "dur_ms": 592,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/glyph1.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 134236,
+   "dur_ms": 33295
+  },
+  {
+   "kind": "tool",
+   "at_ms": 167531,
+   "dur_ms": 20,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "printf 'flag{gcod3_iz_ch4LLenGinG}\\n' > /app/out.txt && cat /app/out.txt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 167551,
+   "dur_ms": 5336
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 2.875,
+ "calls": 32,
+ "cell": "TB1a"
+}

@@ -1,0 +1,260 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-d",
+ "instance_id": "sqlite-db-truncate",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 61608,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 11194,
+  "output": 10666,
+  "cacheRead": 102720,
+  "cacheWrite": 0,
+  "total": 124580
+ },
+ "totals": {
+  "model_calls": 7,
+  "tool_calls": 6,
+  "model_ms": 59944,
+  "tool_ms": 1164,
+  "sandbox_ms": 621
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 111,
+   "dur_ms": 3811,
+   "tokens_in": 40,
+   "tokens_out": 93,
+   "cache_read": 5632,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3922,
+   "dur_ms": 262,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\nls -la\nfile trunc.db 2>/dev/null || true\npython3 - <<'PY'\nimport os\np='/workspace/trunc.db'\nprint(os.path.getsize(p))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 4033,
+     "dur_ms": 91,
+     "exit": 0,
+     "cpu_ms": 101.9,
+     "phases_us": {
+      "acquire": 79,
+      "resume": 20973,
+      "mount": 18891,
+      "run": 46242,
+      "destroy": 23167
+     },
+     "cold": null,
+     "vm": "vm-94"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 4211,
+   "dur_ms": 947,
+   "tokens_in": 150,
+   "tokens_out": 98,
+   "cache_read": 5760,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5158,
+   "dur_ms": 165,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\nxxd trunc.db | head -100\npython3 - <<'PY'\ndata=open('/workspace/trunc.db','rb').read()\nprint(len(data))\nprint(data[:16])\nprint(data[-16:])\nPY",
+   "sandbox": [
+    {
+     "at_ms": 5209,
+     "dur_ms": 85,
+     "exit": 0,
+     "cpu_ms": 72.9,
+     "phases_us": {
+      "acquire": 85,
+      "resume": 21379,
+      "mount": 19176,
+      "run": 36013,
+      "destroy": 27269
+     },
+     "cold": null,
+     "vm": "vm-100"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 5338,
+   "dur_ms": 1702,
+   "tokens_in": 97,
+   "tokens_out": 151,
+   "cache_read": 6016,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 7040,
+   "dur_ms": 153,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\ndata=open('trunc.db','rb').read()\nfor i in range(0,len(data),16):\n    chunk=data[i:i+16]\n    hexs=' '.join(f'{b:02x}' for b in chunk)\n    asc=''.join(chr(b) if 32<=b<127 else '.' for b in chunk)\n    print(f'{i:08x}  {hexs:<47}  {asc}')\nPY",
+   "sandbox": [
+    {
+     "at_ms": 7091,
+     "dur_ms": 83,
+     "exit": 0,
+     "cpu_ms": 72.4,
+     "phases_us": {
+      "acquire": 91,
+      "resume": 21096,
+      "mount": 18899,
+      "run": 36440,
+      "destroy": 24760
+     },
+     "cold": null,
+     "vm": "vm-102"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 7210,
+   "dur_ms": 44752,
+   "tokens_in": 10241,
+   "tokens_out": 731,
+   "cache_read": 6336,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 51962,
+   "dur_ms": 228,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\nimport struct, json\ndata=open('trunc.db','rb').read()\nassert data[0]==0x0d, data[0]\nncell=int.from_bytes(data[3:5],'big')\ncontent=int.from_bytes(data[5:7],'big')\nprint('ncell',ncell,'content',content)\nptrs=[int.from_bytes(data[8+2*i:10+2*i],'big') for i in range(ncell)]\n\ndef varint(b,i):\n    v=0\n    for k in range(9):\n        c=b[i+k]\n        if k==8:\n            v=(v<<8)|c\n            return v,i+k+1\n        v=(v<<7)|(c&0x7f)\n        if not c&0x80:\n            return v,i+k+1\n\ndef serial_len(t):\n    if t==0: return 0\n    if t==1: return 1\n    if t==2: return 2\n    if t==3: return 3\n    if t==4: return 4\n    if t==5: return 6\n    if t==6: return 8\n    if t==7: return 8\n    if t in (8,9): return 0\n    if t>=12: return (t-12)//2 if t%2==0 else (t-13)//2\n    raise ValueError(t)\n\ndef serial_val(t,b):\n    if t==0: return None\n    if t==1: return int.from_bytes(b,'big',signed=True)\n    if t==2: return int.from_bytes(b,'big',signed=True)\n    if t==3: return int.from_bytes(b,'big',signed=True)\n    if t==4: return int.from_bytes(b,'big',signed=True)\n    if t==5: return int.from_bytes(b,'big',signed=True)\n    if t==6: return int.from_bytes(b,'big',signed=True)\n    if t==7: return struct.unpack('>d',b)[0]\n    if t==8: return 0\n    if t==9: return 1\n    if t%2==0: return b.hex()\n    return b.decode('utf-8','replace')\n\nrows=[]\nfor p in ptrs:\n    plen,i=varint(data,p)\n    rowid,i=varint(data,i)\n    payload=data[i:i+plen]\n    hlen,j=varint(payload,0)\n    types=[]\n    while j<hlen:\n        t,j=varint(payload,j)\n        types.append(t)\n    body=hlen\n    vals=[]\n    for t in types:\n        l=serial_len(t)\n        vals.append(serial_val(t,payload[body:body+l]))\n        body+=l\n    rows.append((rowid,vals))\n    print(rowid,vals)\nrows.sort()\nout=[{'word':v[0],'value':v[1]} for _,v in rows]\nopen('recover.json','w').write(json.dumps(out))\nprint(open('recover.json').read())\nPY",
+   "sandbox": [
+    {
+     "at_ms": 52015,
+     "dur_ms": 151,
+     "exit": 0,
+     "cpu_ms": 155.3,
+     "phases_us": {
+      "acquire": 56,
+      "resume": 21912,
+      "mount": 19512,
+      "run": 109874,
+      "destroy": 18867
+     },
+     "cold": null,
+     "vm": "vm-105"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 52358,
+   "dur_ms": 5214,
+   "tokens_in": 288,
+   "tokens_out": 559,
+   "cache_read": 25280,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 57572,
+   "dur_ms": 227,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\nimport struct, json\ndata=open('trunc.db','rb').read()\nassert data[0]==0x0d\nncell=int.from_bytes(data[3:5],'big')\nptrs=[int.from_bytes(data[8+2*i:10+2*i],'big') for i in range(ncell)]\n\ndef varint(b,i):\n    v=0\n    for k in range(9):\n        c=b[i+k]\n        if k==8:\n            return (v<<8)|c, i+9\n        v=(v<<7)|(c&0x7f)\n        if not c&0x80:\n            return v,i+k+1\n\ndef slen(t):\n    return {0:0,1:1,2:2,3:3,4:4,5:6,6:8,7:8,8:0,9:0}.get(t, (t-12)//2 if t%2==0 else (t-13)//2)\n\ndef sval(t,b):\n    if t==0: return None\n    if 1<=t<=6: return int.from_bytes(b,'big',signed=True)\n    if t==7: return struct.unpack('>d',b)[0]\n    if t==8: return 0\n    if t==9: return 1\n    if t%2==0: return b.hex()\n    return b.decode('utf-8','replace')\n\nrows=[]\nfor p in ptrs:\n    plen,i=varint(data,p)\n    rowid,i=varint(data,i)\n    payload=data[i:i+plen]\n    hlen,j=varint(payload,0)\n    types=[]\n    while j<hlen:\n        t,j=varint(payload,j); types.append(t)\n    body=hlen; vals=[]\n    for t in types:\n        l=slen(t); vals.append(sval(t,payload[body:body+l])); body+=l\n    rows.append((rowid,vals))\nrows.sort(key=lambda r:r[0])\nout=[{'word':vals[1],'value':vals[2]} for _,vals in rows]\nwith open('recover.json','w') as f:\n    json.dump(out,f)\nprint(json.dumps(out,indent=2))\nPY\nls -l recover.json",
+   "sandbox": [
+    {
+     "at_ms": 57624,
+     "dur_ms": 154,
+     "exit": 0,
+     "cpu_ms": 150.9,
+     "phases_us": {
+      "acquire": 59,
+      "resume": 21741,
+      "mount": 19444,
+      "run": 110462,
+      "destroy": 21814
+     },
+     "cold": null,
+     "vm": "vm-111"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 57816,
+   "dur_ms": 2470,
+   "tokens_in": 267,
+   "tokens_out": 87,
+   "cache_read": 26624,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 60286,
+   "dur_ms": 129,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -ld /app /workspace 2>&1\nreadlink -f /app 2>/dev/null || true\nls -l /app/recover.json 2>&1 || true",
+   "sandbox": [
+    {
+     "at_ms": 60338,
+     "dur_ms": 57,
+     "exit": 0,
+     "cpu_ms": 42.6,
+     "phases_us": {
+      "acquire": 83,
+      "resume": 21529,
+      "mount": 19279,
+      "run": 6841,
+      "destroy": 27950
+     },
+     "cold": null,
+     "vm": "vm-113"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 60432,
+   "dur_ms": 1048,
+   "tokens_in": 111,
+   "tokens_out": 174,
+   "cache_read": 27072,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.107,
+ "calls": 6,
+ "cell": "TB1d",
+ "removed": []
+}

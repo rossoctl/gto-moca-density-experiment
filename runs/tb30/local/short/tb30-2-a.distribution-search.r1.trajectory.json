@@ -1,0 +1,145 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "distribution-search",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 83878,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 353,
+  "output": 13137,
+  "cacheRead": 235072,
+  "cacheWrite": 5632,
+  "total": 254194
+ },
+ "totals": {
+  "model_calls": 9,
+  "tool_calls": 8,
+  "model_ms": 78415,
+  "tool_ms": 4757,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 576,
+   "dur_ms": 20978
+  },
+  {
+   "kind": "tool",
+   "at_ms": 21554,
+   "dur_ms": 1000,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'PY'\nimport numpy as np\nfrom scipy.optimize import root, brentq\nn=150000\nG=np.exp(-10)\nprint('log n',np.log(n),'target H',np.log(n)-10,'G',G)\n# solve continuous two-value f,A,B using equations mean=1, geom=G, forward target 10\n# use f and logA, logB maybe. A=r/(1+f(r-1)), B=1/(1+f(r-1))\n# For given f, geometric mean determines r: ln B + f ln r = -10\n# B=1/(1+f(r-1)); equation: -ln(1+f(r-1)) + f ln r = -10\ndef r_for_f(f):\n    # solve ln(1+f(r-1))-f ln r =10. r>1\n    from scipy.optimize import brentq\n    fun=lambda r: np.log1p(f*(r-1))-f*np.log(r)-10\n    lo=1+1e-12\n    hi=1.0\n    # expand hi\n    hi=1.0\n    while fun(hi)<0:\n        hi*=2\n        if hi>1e300: break\n    return brentq(fun,lo,hi)\ndef vals(f):\n    r=r_for_f(f)\n    B=1/(1+f*(r-1)); A=r*B\n    fwd=f*A*np.log(A)+(1-f)*B*np.log(B)\n    bwd=f*np.log(A)+(1-f)*np.log(B) # this should -10? log q avg = -10\n    return A,B,r,fwd,bwd\nfor f in [1e-5,2e-5,3e-5,4e-5,4.5e-5,5e-5,1e-4]:\n    print(f, vals(f)[:3], vals(f)[3:])\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 22554,
+   "dur_ms": 4947
+  },
+  {
+   "kind": "tool",
+   "at_ms": 27501,
+   "dur_ms": 745,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'PY'\nimport numpy as np\nfrom scipy.optimize import root\nn=150000.0\n# continuous f=root around 4.45e-5\nfrom scipy.optimize import brentq\ndef r_for_f(f):\n    fun=lambda r: np.log1p(f*(r-1))-f*np.log(r)-10\n    hi=1.0\n    while fun(hi)<0: hi*=2\n    return brentq(fun,1+1e-15,hi)\ndef cont(f):\n    r=r_for_f(f); B=1/(1+f*(r-1)); A=r*B; return A,B\nfor m in [5,6,7,8,9,10]:\n    f=m/n; A,B=cont(f)\n    print('\\nm',m,'f',f,'A',A,'B',B,'cont fwd',f*A*np.log(A)+(1-f)*B*np.log(B))\n    def eq(v):\n        x,y,z=v\n        # maybe use a=e^x etc\n        a,c,b=np.exp(x),np.exp(y),np.exp(z)\n        return np.array([\n            m*a+c+(n-m-1)*b-n,\n            m*a*x+c*y+(n-m-1)*b*z-10*n,\n            m*x+y+(n-m-1)*z+10*n\n        ])/np.array([n,n,n])\n    # initial y=x (c=A) maybe\n    sol=root(eq,[np.log(A),np.log(A),np.log(B)],method='hybr',options={'xtol':1e-12,'maxfev':20000})\n    print(sol.success, sol.fun, sol.x)\n    if sol.success:\n        a,c,b=np.exp(sol.x)\n        print('a,c,b',a,c,b)\n        # compute KL allowing zeros no\n        q=np.array([a]*m+[c]+[b]*(int(n)-m-1))\n        print('sum',q.sum(), 'KLf',np.sum(q*np.log(q))/n, 'KLb',np.sum(np.log(q))/n)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 28246,
+   "dur_ms": 11571
+  },
+  {
+   "kind": "tool",
+   "at_ms": 39817,
+   "dur_ms": 763,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'PY'\nimport numpy as np\nfrom scipy.optimize import root, least_squares\nfrom scipy.optimize import brentq\nn=150000.0\ndef r_for_f(f):\n    fun=lambda r: np.log1p(f*(r-1))-f*np.log(r)-10\n    hi=1.0\n    while fun(hi)<0: hi*=2\n    return brentq(fun,1e-15,hi)\ndef cont(f):\n    r=r_for_f(f); B=1/(1+f*(r-1)); A=r*B; return A,B\nfor m in [6,7]:\n    f=m/n; A,B=cont(f)\n    print('\\nm',m,'A,B',A,B)\n    def eq(v):\n        x,y,z=v\n        a,c,b=np.exp(x),np.exp(y),np.exp(z)\n        return np.array([\n            (m*a+c+(n-m-1)*b-n)/n,\n            (m*a*x+c*y+(n-m-1)*b*z-10*n)/n,\n            (m*x+y+(n-m-1)*z+10*n)/n\n        ])\n    for c0 in [B,1e-4,1e-3,1e-2,0.1,1,10,100,1000,A]:\n        sol=root(eq,[np.log(A),np.log(c0),np.log(B)],method='hybr',options={'xtol':1e-11,'maxfev':50000})\n        print('c0',c0,'success',sol.success,'fun',np.max(np.abs(sol.fun)),'x',sol.x[:2],sol.x[2])\n        if sol.success and np.max(np.abs(sol.fun))<1e-8:\n            a,c,b=np.exp(sol.x); print('   vals',a,c,b, 'KLf', (m*a*np.log(a)+c*np.log(c)+(n-m-1)*b*np.log(b))/n, 'KLb',(m*np.log(a)+np.log(c)+(n-m-1)*np.log(b))/n)\n            break\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 40580,
+   "dur_ms": 16396
+  },
+  {
+   "kind": "tool",
+   "at_ms": 56976,
+   "dur_ms": 800,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'PY'\nimport numpy as np\nfrom scipy.optimize import root\nN=150000\nM=6\n# initial from continuous two-value approximation\nfrom scipy.optimize import brentq\nf=M/N\nfun=lambda r: np.log1p(f*(r-1))-f*np.log(r)-10.0\nhi=2.0\nwhile fun(hi)<0: hi*=2\nr=brentq(fun,1+1e-15,hi)\nb0=1/(1+f*(r-1)); a0=r*b0\nprint(a0,b0)\n# use root\ndef equations(vars):\n    x,y,z=vars\n    a,c,b=np.exp(x),np.exp(y),np.exp(z)\n    r=N-M-1\n    return np.array([\n        (M*a + c + r*b - N)/N,\n        (M*a*x + c*y + r*b*z - 10*N)/N,\n        (M*x + y + r*z + 10*N)/N,\n    ])\nsol=root(equations,[np.log(a0),np.log(1000.0),np.log(b0)],method='hybr',options={'xtol':1e-13,'maxfev':50000})\nprint(sol.success,np.max(np.abs(sol.fun)),sol.x)\na,c,b=np.exp(sol.x)\nq=np.empty(N)\nq[:M]=a; q[M]=c; q[M+1:]=b\np=q/N\n# maybe normalize\np=p/p.sum()\nU=np.full(N,1/N)\nkl_f=np.sum(p*np.log(p/U))\nkl_b=np.sum(U*np.log(U/p))\nprint('sum',p.sum(),'min',p.min(),'max',p.max())\nprint('KL f',kl_f,'KL b',kl_b)\nprint('diffs',kl_f-10,kl_b-10)\nprint('values',a,c,b,p[:8],p[-1])\nnp.save('/app/dist.npy',p)\nprint('saved')\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 57776,
+   "dur_ms": 1287
+  },
+  {
+   "kind": "tool",
+   "at_ms": 59063,
+   "dur_ms": 27,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /app"
+  },
+  {
+   "kind": "model",
+   "at_ms": 59090,
+   "dur_ms": 8393
+  },
+  {
+   "kind": "tool",
+   "at_ms": 67483,
+   "dur_ms": 667,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'PY'\nimport numpy as np\nfrom scipy.optimize import root, brentq\nN=150000; M=6; f=M/N\nfun=lambda r: np.log1p(f*(r-1))-f*np.log(r)-10.0\nhi=2.0\nwhile fun(hi)<0: hi*=2\nr=brentq(fun,1+1e-15,hi); b0=1/(1+f*(r-1)); a0=r*b0\ndef eq(v):\n    x,y,z=v; a,c,b=np.exp(x),np.exp(y),np.exp(z); rr=N-M-1\n    return np.array([(M*a+c+rr*b-N)/N,(M*a*x+c*y+rr*b*z-10*N)/N,(M*x+y+rr*z+10*N)/N])\nfor c0 in [1e2,3e2,5e2,7e2,1e3,1.5e3,2e3,3e3,5e3,7e3,1e4,1.5e4,2e4,2.5e4]:\n    sol=root(eq,[np.log(a0),np.log(c0),np.log(b0)],method='hybr',options={'xtol':1e-13,'maxfev':50000})\n    print(c0, sol.success, np.max(np.abs(sol.fun)), np.exp(sol.x[0]) if np.all(np.isfinite(sol.x)) else None, np.exp(sol.x[1]) if np.all(np.isfinite(sol.x)) else None)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 68150,
+   "dur_ms": 9918
+  },
+  {
+   "kind": "tool",
+   "at_ms": 78068,
+   "dur_ms": 19,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/find_dist.py",
+    "content": "#!/usr/bin/env python3\n\"\"\"Construct a distribution over 150,000 tokens with both KL targets equal to 10.\n\nLet U_i = 1 / N be the uniform distribution and let q_i = N * p_i.  Then\n\n    KL(P || U) = sum_i p_i log(p_i / U_i) = (1/N) sum_i q_i log(q_i)\n    KL(U || P) = sum_i U_i log(U_i / p_i) = -(1/N) sum_i log(q_i).\n\nThe construction uses M large entries a, one middle entry c, and N-M-1 small\nentries b (all in q-units).  The three unknowns satisfy the three equations\n\n    M*a + c + (N-M-1)*b = N\n    M*a*log(a) + c*log(c) + (N-M-1)*b*log(b) = 10*N\n    M*log(a) + log(c) + (N-M-1)*log(b) = -10*N.\n\nLogarithms are natural logarithms.\n\"\"\"\n\nimport numpy as np\nfrom scipy.optimize import brentq, root\n\nN = 150_000\nTARGET = 10.0\nM = 6  # number of large q-values; selected so the middle value is well scaled\n\n\ndef continuous_two_value_guess():\n    \"\"\"Initial guess: solve the same problem with a non-integer large fraction.\"\"\"\n    f = M / N\n\n    def balance(r):\n        # With high/low ratio r, arithmetic mean 1 and geometric mean exp(-10)\n        # give this scalar equation.\n        return np.log1p(f * (r - 1.0)) - f * np.log(r) - TARGET\n\n    hi = 2.0\n    while balance(hi) < 0.0:\n        hi *= 2.0\n\n    r = brentq(balance, 1.0 + 1e-15, hi)\n    b = 1.0 / (1.0 + f * (r - 1.0))\n    a = r * b\n    return a, b\n\n\ndef solve_parameters():\n    a0, b0 = continuous_two_value_guess()\n    rest = N - M - 1\n\n    def equations(v):\n        x, y, z = v\n        a, c, b = np.exp(v)\n        return np.array(\n            [\n                (M * a + c + rest * b - N) / N,\n                (M * a * x + c * y + rest * b * z - TARGET * N) / N,\n                (M * x + y + rest * z + TARGET * N) / N,\n            ]\n        )\n\n    # Multi-start around a sensible scale for the one middle entry.\n    for c0 in (1.0e3, 2.0e3, 5.0e3, 1.0e4, 2.0e4):\n        sol = root(\n            equations,\n            [np.log(a0), np.log(c0), np.log(b0)],\n            method=\"hybr\",\n            options={\"xtol\": 1e-13, \"maxfev\": 50_000},\n        )\n        if sol.success and np.max(np.abs(sol.fun)) < 1e-10:\n            a, c, b = np.exp(sol.x)\n            if a > 0.0 and c > 0.0 and b > 0.0:\n                return a, c, b\n\n    raise RuntimeError(\"Failed to solve for distribution parameters\")\n\n\ndef main():\n    a, c, b = solve_parameters()\n\n    q = np.empty(N, dtype=np.float64)\n    q[:M] = a\n    q[M] = c\n    q[M + 1 :] = b\n\n    p = q / N\n    p /= p.sum()\n\n    uniform = np.full(N, 1.0 / N, dtype=np.float64)\n    forward_kl = float(np.sum(p * np.log(p / uniform)))\n    backward_kl = float(np.sum(uniform * np.log(uniform / p)))\n\n    print(f\"forward  KL(P||U) = {forward_kl:.12f}\")\n    print(f\"backward KL(U||P) = {backward_kl:.12f}\")\n    print(f\"sum(p) = {p.sum():.17g}, min(p) = {p.min():.6e}\")\n\n    assert abs(forward_kl - TARGET) <= 1e-3\n    assert abs(backward_kl - TARGET) <= 1e-3\n    assert np.all(p > 0.0)\n    assert abs(p.sum() - 1.0) < 1e-12\n\n    np.save(\"/app/dist.npy\", p)\n    print(\"Saved distribution to /app/dist.npy\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 78087,
+   "dur_ms": 2234
+  },
+  {
+   "kind": "tool",
+   "at_ms": 80321,
+   "dur_ms": 736,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python find_dist.py && ls -l /app/dist.npy"
+  },
+  {
+   "kind": "model",
+   "at_ms": 81057,
+   "dur_ms": 2691
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.527,
+ "calls": 8,
+ "cell": "TB1a"
+}

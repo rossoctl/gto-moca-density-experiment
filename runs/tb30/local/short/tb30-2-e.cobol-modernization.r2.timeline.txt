@@ -1,0 +1,98 @@
+tb30-2-e cobol-modernization rep 2: stock Pi, local hands; turn 790.6 s; 48 model calls (323.9 s), 49 tool calls (465.4 s; sandbox 0.0 s); resolved True; tokens: 2176441 total, 51676 output
+     1.2s     1.78s  MODEL  out 110 tok, stop toolUse
+     3.0s     0.01s  TOOL   read: /app/src/program.cbl
+     3.0s     0.01s  TOOL   bash: find /app -type f | head -100 && echo "---" && ls -la /app /app/src /app/data 2>/dev/null
+     3.0s     2.31s  MODEL  out 166 tok, stop toolUse
+     5.3s     0.01s  TOOL   bash: cd /app && for f in src/INPUT.DAT data/ACCOUNTS.DAT data/BOOKS.DAT data/TRANSACTIONS.DAT; do echo "=== $f ==="
+     5.3s     0.03s  TOOL   bash: which cobc || (apt list --installed 2>/dev/null | grep -i cobol); cobc --version 2>/dev/null | head -5
+     5.3s     1.29s  MODEL  out 205 tok, stop toolUse
+     6.6s     0.01s  TOOL   bash: cd /app && for f in src/INPUT.DAT data/ACCOUNTS.DAT data/BOOKS.DAT data/TRANSACTIONS.DAT; do echo "=== $f ==="
+     6.6s     2.84s  MODEL  out 573 tok, stop toolUse
+     9.5s     0.20s  TOOL   bash: rm -rf /tmp/cobtest && mkdir -p /tmp/cobtest/src /tmp/cobtest/data && cp /app/src/program.cbl /app/src/INPUT.D
+     9.6s     7.67s  MODEL  out 1149 tok, stop toolUse
+    17.3s     0.17s  TOOL   bash: rm -rf /tmp/cobvalid && mkdir -p /tmp/cobvalid/src /tmp/cobvalid/data && cp /app/src/program.cbl /tmp/cobvalid
+    17.5s     2.10s  MODEL  out 442 tok, stop toolUse
+    19.6s     0.63s  TOOL   bash: run_case() { name=$1; input=$2; rm -rf /tmp/case_$name; mkdir -p /tmp/case_$name/src /tmp/case_$name/data; cp 
+    20.2s     3.25s  MODEL  out 604 tok, stop toolUse
+    23.5s     0.14s  TOOL   bash: python3 - <<'PY' ⏎ from pathlib import Path ⏎ for case in ['short15','short16','long23','empty']: ⏎     p=Path
+    23.6s    12.48s  MODEL  out 2435 tok, stop toolUse
+    36.1s     1.11s  TOOL   bash: cat > /tmp/runcase.py <<'PY' ⏎ import os,shutil,subprocess,sys,pathlib ⏎ base=pathlib.Path('/tmp/cobcases') ⏎ 
+    37.2s    13.87s  MODEL  out 2483 tok, stop toolUse
+    51.1s     1.19s  TOOL   bash: python3 - <<'PY' ⏎ import sys ⏎ sys.path.insert(0,'/tmp') ⏎ from runcase import run ⏎ # full 22 byte input, am
+    52.3s    12.37s  MODEL  out 2299 tok, stop toolUse
+    64.6s     0.64s  TOOL   bash: python3 - <<'PY' ⏎ import sys ⏎ sys.path.insert(0,'/tmp') ⏎ from runcase import run ⏎ books=b'B001Python Basic
+    65.3s     1.65s  MODEL  out 264 tok, stop toolUse
+    66.9s     0.01s  TOOL   bash: cd /tmp/cobcases/selfU0015000 && ./program; echo EXIT=$?; od -An -c data/ACCOUNTS.DAT; od -An -c data/TRANSACT
+    66.9s     6.66s  MODEL  out 1151 tok, stop toolUse
+    73.6s     0.45s  TOOL   bash: python3 - <<'PY' ⏎ import sys,shutil ⏎ sys.path.insert(0,'/tmp') ⏎ from runcase import run ⏎ valid=b'U001U002B
+    74.1s     2.29s  MODEL  out 276 tok, stop toolUse
+    76.3s     0.01s  TOOL   bash: cd /tmp/cobcases/partacct && ./program; echo EXIT=$?; ls -l data; od -An -c data/ACCOUNTS.DAT
+    76.4s    17.78s  MODEL  out 3297 tok, stop toolUse
+    94.1s     0.00s  TOOL   write: /app/program.py
+    94.1s     9.75s  MODEL  out 1952 tok, stop toolUse
+   103.9s    83.66s  TOOL   bash: cat > /tmp/fuzz_compare.py <<'PY' ⏎ import os, random, shutil, subprocess, pathlib, sys ⏎ random.seed(12345) ⏎
+   187.6s     8.26s  MODEL  out 1559 tok, stop toolUse
+   195.8s    19.95s  TOOL   bash: cat > /tmp/fuzz_edge.py <<'PY' ⏎ import os, random, shutil, subprocess, pathlib, sys ⏎ random.seed(9981) ⏎ roo
+   215.8s     9.69s  MODEL  out 1574 tok, stop toolUse
+   225.5s     0.63s  TOOL   bash: cat > /tmp/charprobe.py <<'PY' ⏎ import pathlib,shutil,subprocess,os ⏎ base=pathlib.Path('/tmp/charprobe'); sh
+   226.1s     4.51s  MODEL  out 435 tok, stop toolUse
+   230.6s     0.02s  TOOL   bash: cd /tmp/charprobe && ls -l && od -An -c data/ACCOUNTS.DAT && od -An -c data/BOOKS.DAT && od -An -c src/INPUT.D
+   230.6s     4.56s  MODEL  out 487 tok, stop toolUse
+   235.2s     0.03s  TOOL   bash: grep -n 'books=' /tmp/charprobe.py; python3 - <<'PY' ⏎ b=b'B001Python Basics       U002' ⏎ print(len(b), b) ⏎ 
+   235.2s     1.31s  MODEL  out 143 tok, stop toolUse
+   236.5s     0.01s  TOOL   bash: sed -n '1,40p' /tmp/charprobe.py; stat /tmp/charprobe/data/BOOKS.DAT
+   236.5s     2.79s  MODEL  out 392 tok, stop toolUse
+   239.3s     0.67s  TOOL   bash: python3 - <<'PY' ⏎ p='/tmp/charprobe.py' ⏎ s=open(p).read() ⏎ s=s.replace("    (base/'data/ACCOUNTS.DAT').writ
+   240.0s     4.19s  MODEL  out 782 tok, stop toolUse
+   244.2s     0.02s  TOOL   bash: python3 - <<'PY' ⏎ for x in [737095469,737095478,737095501,737095513]: ⏎  print(x,hex(x)) ⏎ print(10**10 % 655
+   244.2s    12.85s  MODEL  out 1871 tok, stop toolUse
+   257.1s     1.89s  TOOL   bash: grep -R "cob_decimal_set_display\|cob_get_numeric\|D2I" -n /usr/include /usr/lib /usr/share 2>/dev/null | head
+   259.0s     2.19s  MODEL  out 122 tok, stop toolUse
+   261.2s     0.01s  TOOL   bash: nm -D /usr/lib/x86_64-linux-gnu/libcob.so | grep -E 'decimal|numeric|move' | head -80
+   261.2s     3.18s  MODEL  out 224 tok, stop toolUse
+   264.3s     0.43s  TOOL   bash: cd /tmp && (apt-get source gnucobol 2>&1 | head -30); ls -la /tmp | grep -i cobol
+   264.8s     2.55s  MODEL  out 283 tok, stop toolUse
+   267.3s     0.01s  TOOL   bash: objdump -d --start-address=0x22110 --stop-address=0x22450 /usr/lib/x86_64-linux-gnu/libcob.so | sed -n '1,240p
+   267.3s    14.57s  MODEL  out 2406 tok, stop toolUse
+   281.9s     0.08s  TOOL   bash: grep -R "COB_TYPE_NUMERIC_DISPLAY\|COB_TYPE_NUMERIC_PACKED\|COB_FLAG" -n /usr/include 2>/dev/null | head -50; 
+   282.0s     7.35s  MODEL  out 1243 tok, stop toolUse
+   289.4s     0.02s  TOOL   bash: python3 - <<'PY' ⏎ for c in [1,0x0a,0x21,0x41]: ⏎  d=c-0x30 ⏎  u=(d)%(2**64) ⏎  print(hex(c),d,u, u%(10**12), 
+   289.4s     8.49s  MODEL  out 1370 tok, stop toolUse
+   297.9s     0.19s  TOOL   bash: cat > /tmp/debug.cbl <<'CBL' ⏎        IDENTIFICATION DIVISION. ⏎        PROGRAM-ID. DEBUGNUM. ⏎        ENVIRON
+   298.1s    21.91s  MODEL  out 3312 tok, stop toolUse
+   320.0s     0.82s  TOOL   bash: python3 - <<'PY' ⏎ import subprocess,pathlib ⏎ res={} ⏎ for c in range(256): ⏎     inp=b'U001U002B001'+b'00000
+   320.8s    27.61s  MODEL  out 4529 tok, stop toolUse
+   348.4s     0.01s  TOOL   edit: /app/program.py (6 edits)
+   348.4s     0.99s  MODEL  out 68 tok, stop toolUse
+   349.4s     0.00s  TOOL   read: /app/program.py
+   349.4s     2.52s  MODEL  out 131 tok, stop toolUse
+   351.9s   135.05s  TOOL   bash: python3 /tmp/fuzz_compare.py && python3 /tmp/fuzz_edge.py
+   487.0s     7.08s  MODEL  out 1102 tok, stop toolUse
+   494.1s     0.10s  TOOL   bash: cat > /tmp/readdebug.cbl <<'CBL' ⏎        IDENTIFICATION DIVISION. ⏎        PROGRAM-ID. READDBG. ⏎        ENVI
+   494.2s     2.41s  MODEL  out 352 tok, stop toolUse
+   496.6s     0.18s  TOOL   bash: sed -i 's/05 ID /05 REC-ID /; s/ID = \[/REC-ID = [/; s/" ID "/" REC-ID "/' /tmp/readdebug.cbl; grep -n 'ID' /t
+   496.8s    19.69s  MODEL  out 2954 tok, stop toolUse
+   516.5s     0.18s  TOOL   bash: cat > /tmp/rewritedebug.cbl <<'CBL' ⏎        IDENTIFICATION DIVISION. ⏎        PROGRAM-ID. RWDBG. ⏎        ENV
+   516.7s    18.13s  MODEL  out 3132 tok, stop toolUse
+   534.8s     0.01s  TOOL   edit: /app/program.py (3 edits)
+   534.8s     2.46s  MODEL  out 268 tok, stop toolUse
+   537.3s   139.81s  TOOL   bash: python3 /tmp/fuzz_compare.py && python3 /tmp/fuzz_edge.py
+   677.1s     5.44s  MODEL  out 1333 tok, stop toolUse
+   682.5s    50.88s  TOOL   bash: cat > /tmp/fuzz_partial.py <<'PY' ⏎ import random, shutil, subprocess, pathlib, sys ⏎ random.seed(4242) ⏎ root
+   733.4s     5.84s  MODEL  out 929 tok, stop toolUse
+   739.2s    25.69s  TOOL   bash: cat > /tmp/fuzz_inputbytes.py <<'PY' ⏎ import random, shutil, subprocess, pathlib, sys ⏎ random.seed(77) ⏎ roo
+   764.9s     5.40s  MODEL  out 918 tok, stop toolUse
+   770.3s     0.21s  TOOL   bash: rm -rf /tmp/finalcheck && mkdir -p /tmp/finalcheck/src /tmp/finalcheck/data && cp /app/src/INPUT.DAT /app/src/
+   770.5s     7.49s  MODEL  out 1133 tok, stop toolUse
+   778.0s     0.01s  TOOL   bash: objdump -d --start-address=0x22520 --stop-address=0x22620 /usr/lib/x86_64-linux-gnu/libcob.so
+   778.1s     2.84s  MODEL  out 390 tok, stop toolUse
+   780.9s     0.01s  TOOL   bash: objdump -d --start-address=0x22430 --stop-address=0x224d0 /usr/lib/x86_64-linux-gnu/libcob.so
+   780.9s     3.74s  MODEL  out 400 tok, stop toolUse
+   784.7s     0.07s  TOOL   bash: python3 -m py_compile /app/program.py && ls -l /app/program.py && git -C /app status --short 2>/dev/null || tr
+   784.7s     1.64s  MODEL  out 87 tok, stop toolUse
+   786.4s     0.01s  TOOL   bash: rm -rf /app/__pycache__ && ls -la /app
+   786.4s     1.38s  MODEL  out 111 tok, stop toolUse
+   787.8s     0.00s  TOOL   edit: /app/program.py (1 edits)
+   787.8s     1.22s  MODEL  out 95 tok, stop toolUse
+   789.0s     0.05s  TOOL   bash: python3 -m py_compile /app/program.py && rm -rf /app/__pycache__ && echo OK
+   789.1s     1.49s  MODEL  out 135 tok, stop stop

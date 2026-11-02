@@ -1,0 +1,692 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "video-processing",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 382189,
+ "resolved": false,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 47724,
+  "output": 45286,
+  "cacheRead": 1923712,
+  "cacheWrite": 0,
+  "total": 2016722
+ },
+ "totals": {
+  "model_calls": 34,
+  "tool_calls": 38,
+  "model_ms": 299768,
+  "tool_ms": 80734,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 104,
+   "dur_ms": 3882,
+   "tokens_in": 61,
+   "tokens_out": 215,
+   "cache_read": 7296,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3986,
+   "dur_ms": 594,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app && python3 -c \"import cv2, numpy, toml; print(cv2.__version__, numpy.__version__, toml.__version__)\""
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4807,
+   "dur_ms": 446,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport cv2\ncap=cv2.VideoCapture('/app/example_video.mp4')\nprint('frames',cap.get(cv2.CAP_PROP_FRAME_COUNT))\nprint('fps',cap.get(cv2.CAP_PROP_FPS))\nprint('w',cap.get(cv2.CAP_PROP_FRAME_WIDTH))\nprint('h',cap.get(cv2.CAP_PROP_FRAME_HEIGHT))\nok,fr=cap.read()\nprint('first',ok,fr.shape)\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 5275,
+   "dur_ms": 926,
+   "tokens_in": 248,
+   "tokens_out": 96,
+   "cache_read": 7552,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6201,
+   "dur_ms": 270,
+   "tool": "bash",
+   "is_error": false,
+   "command": "which python3; python3 -m pip list 2>/dev/null | head -50; ls /usr/bin/python*"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6398,
+   "dur_ms": 24,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat /app/opencode.json"
+  },
+  {
+   "kind": "model",
+   "at_ms": 6486,
+   "dur_ms": 4214,
+   "tokens_in": 170,
+   "tokens_out": 133,
+   "cache_read": 7872,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 10700,
+   "dur_ms": 642,
+   "tool": "bash",
+   "is_error": false,
+   "command": "mkdir -p /tmp/frames && python3 -c \"\nimport cv2,numpy as np\ncap=cv2.VideoCapture('/app/example_video.mp4')\ni=0\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n if i%10==0: cv2.imwrite(f'/tmp/frames/f{i:03d}.jpg',fr)\n i+=1\nprint(i)\n\"; ls /tmp/frames"
+  },
+  {
+   "kind": "model",
+   "at_ms": 11358,
+   "dur_ms": 532,
+   "tokens_in": 97,
+   "tokens_out": 147,
+   "cache_read": 8448,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 11890,
+   "dur_ms": 103,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "filePath": "/tmp/frames/f000.jpg"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 12052,
+   "dur_ms": 27,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "filePath": "/tmp/frames/f030.jpg"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 12220,
+   "dur_ms": 26,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "filePath": "/tmp/frames/f050.jpg"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 12406,
+   "dur_ms": 27,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "filePath": "/tmp/frames/f070.jpg"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 12458,
+   "dur_ms": 3206,
+   "tokens_in": 178,
+   "tokens_out": 394,
+   "cache_read": 8640,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 15664,
+   "dur_ms": 667,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport cv2,numpy as np\ncap=cv2.VideoCapture('/app/example_video.mp4')\nok,bg=cap.read()\nbg=cv2.cvtColor(bg,cv2.COLOR_BGR2GRAY)\n# maybe median of several frames? first only\ni=0\nrows=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n g=cv2.cvtColor(fr,cv2.COLOR_BGR2GRAY)\n d=cv2.absdiff(g,bg)\n _,m=cv2.threshold(d,30,255,cv2.THRESH_BINARY)\n m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n m=cv2.dilate(m,np.ones((5,5),np.uint8),iterations=2)\n n,lab,stats,cents=cv2.connectedComponentsWithStats(m,8)\n if n>1:\n  # largest excluding tiny\n  idx=1+np.argmax(stats[1:,cv2.CC_STAT_AREA])\n  x,y,w,h,a=stats[idx]\n  rows.append((i,a,x,y,w,h,cents[idx][0],cents[idx][1]))\n else:\n  rows.append((i,0,0,0,0,0,0,0))\n i+=1\nfor r in rows:\n print('%3d area=%6d x=%3d y=%3d w=%3d h=%3d cx=%6.1f cy=%6.1f'%r)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 16347,
+   "dur_ms": 7068,
+   "tokens_in": 3981,
+   "tokens_out": 428,
+   "cache_read": 9280,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 23415,
+   "dur_ms": 3313,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport cv2,numpy as np\ncap=cv2.VideoCapture('/app/example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nprint(len(frames))\narr=np.stack(frames).astype(np.float32)\nmed=np.median(arr,axis=0).astype(np.uint8)\ncv2.imwrite('/tmp/median.jpg',med)\n# difference of each frame from median\nfor i,fr in enumerate(frames):\n d=cv2.absdiff(fr.astype(np.uint8),med)\n g=cv2.cvtColor(d,cv2.COLOR_BGR2GRAY)\n _,m=cv2.threshold(g,35,255,cv2.THRESH_BINARY)\n m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n m=cv2.dilate(m,np.ones((7,7),np.uint8),iterations=2)\n n,lab,stats,cents=cv2.connectedComponentsWithStats(m,8)\n if n>1:\n  idx=1+np.argmax(stats[1:,cv2.CC_STAT_AREA])\n  x,y,w,h,a=stats[idx]\n  # also total area\n  print('%3d bigarea=%6d x=%3d y=%3d w=%3d h=%3d cx=%6.1f cy=%6.1f tot=%6d n=%d'%(i,a,x,y,w,h,cents[idx][0],cents[idx][1],np.sum(m>0),n))\n else:\n  print('%3d none tot=%d'%(i,np.sum(m>0)))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 26744,
+   "dur_ms": 6246,
+   "tokens_in": 4230,
+   "tokens_out": 200,
+   "cache_read": 14336,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 32990,
+   "dur_ms": 942,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport cv2,numpy as np\ncap=cv2.VideoCapture('/app/example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nprev=None\nfor i,fr in enumerate(frames):\n g=cv2.cvtColor(fr,cv2.COLOR_BGR2GRAY)\n if prev is not None:\n  d=cv2.absdiff(g,prev)\n  print('%3d mean=%6.2f bright=%6.2f std=%6.2f motion=%6.2f changed=%6d'%(i,fr.mean(),g.mean(),g.std(),d.mean(),np.sum(d>30)))\n prev=g\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 33952,
+   "dur_ms": 9600,
+   "tokens_in": 3547,
+   "tokens_out": 351,
+   "cache_read": 19456,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 43552,
+   "dur_ms": 981,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport cv2,numpy as np\ncap=cv2.VideoCapture('/app/example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nbg=cv2.cvtColor(frames[0],cv2.COLOR_BGR2GRAY)\ndef show(i):\n g=cv2.cvtColor(frames[i],cv2.COLOR_BGR2GRAY)\n d=cv2.absdiff(g,bg)\n _,m=cv2.threshold(d,35,255,cv2.THRESH_BINARY)\n m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n # downsample 12x12 max\n H,W=540,960\n out=[]\n for yy in range(0,H,12):\n  line=''\n  for xx in range(0,W,12):\n   v=np.mean(m[yy:yy+12,xx:xx+12])\n   line+= '#' if v>60 else ('+' if v>15 else '.')\n  out.append(line)\n print('=== frame',i,'===')\n print('\\n'.join(out))\nfor i in [0,45,50,52,55,57,59,61,63,65,67,70,72,75,85,90,100,109,112,119]:\n show(i)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 44555,
+   "dur_ms": 5560,
+   "tokens_in": 6762,
+   "tokens_out": 275,
+   "cache_read": 24384,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 50115,
+   "dur_ms": 376,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport cv2,numpy as np\ncap=cv2.VideoCapture('/app/example_video.mp4')\nok,fr=cap.read()\ng=cv2.cvtColor(fr,cv2.COLOR_BGR2GRAY)\ne=cv2.Canny(g,50,150)\nlines=cv2.HoughLinesP(e,1,np.pi/180,threshold=60,minLineLength=50,maxLineGap=10)\nprint('nlines',0 if lines is None else len(lines))\nif lines is not None:\n for l in sorted(lines[:,0], key=lambda p:(p[1],p[0])):\n  x1,y1,x2,y2=l\n  if abs(x1-x2)<5 or abs(y1-y2)<5:\n   print(x1,y1,x2,y2)\n# color sample grid\nprint('grid colors y,x BGR:')\nfor y in range(50,500,50):\n print(y, [tuple(int(v) for v in fr[y,x]) for x in range(0,960,80)])\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 50511,
+   "dur_ms": 6252,
+   "tokens_in": 5517,
+   "tokens_out": 325,
+   "cache_read": 31808,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 56763,
+   "dur_ms": 360,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport cv2,numpy as np\ncap=cv2.VideoCapture('/app/example_video.mp4')\nok,fr=cap.read()\nhsv=cv2.cvtColor(fr,cv2.COLOR_BGR2HSV)\n# white-ish\nfor name,mask in [\n ('white',cv2.inRange(fr,np.array([180,180,180]),np.array([255,255,255]))),\n ('dark',cv2.inRange(fr,np.array([0,0,0]),np.array([40,40,40]))),\n ('blue',cv2.inRange(hsv,np.array([85,40,40]),np.array([130,255,255]))),\n]:\n m=cv2.morphologyEx(mask,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n n,lab,stats,cents=cv2.connectedComponentsWithStats(m,8)\n print('---',name,'---')\n order=np.argsort(stats[1:,cv2.CC_STAT_AREA])[::-1]+1\n for idx in order[:15]:\n  x,y,w,h,a=stats[idx]\n  print('area=%6d x=%3d y=%3d w=%3d h=%3d'%(a,x,y,w,h))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 57139,
+   "dur_ms": 5343,
+   "tokens_in": 919,
+   "tokens_out": 419,
+   "cache_read": 38080,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 62482,
+   "dur_ms": 1628,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport cv2,numpy as np\ncap=cv2.VideoCapture('/app/example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nbg=np.median(np.stack(frames[:46]).astype(np.float32),axis=0).astype(np.uint8)\ncv2.imwrite('/tmp/bg.jpg',bg)\nbgG=cv2.cvtColor(bg,cv2.COLOR_BGR2GRAY)\nfor i,fr in enumerate(frames):\n g=cv2.cvtColor(fr,cv2.COLOR_BGR2GRAY)\n d=cv2.absdiff(g,bgG)\n _,m=cv2.threshold(d,35,255,cv2.THRESH_BINARY)\n m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n m=cv2.dilate(m,np.ones((7,7),np.uint8),iterations=2)\n # only lower track region maybe y>150\n n,lab,stats,cents=cv2.connectedComponentsWithStats(m,8)\n if n>1:\n  # top 3 components\n  order=np.argsort(stats[1:,cv2.CC_STAT_AREA])[::-1]+1\n  ss=[]\n  for idx in order[:3]:\n   x,y,w,h,a=stats[idx]\n   ss.append('a%d(%d,%d,%d,%d)'%(a,x,y,w,h))\n  print('%3d tot=%6d '%(i,np.sum(m>0))+ ' '.join(ss))\n else:\n  print('%3d none'%i)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 64134,
+   "dur_ms": 10113,
+   "tokens_in": 3788,
+   "tokens_out": 362,
+   "cache_read": 39808,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 74247,
+   "dur_ms": 601,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport cv2,numpy as np\ncap=cv2.VideoCapture('/app/example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(cv2.cvtColor(fr,cv2.COLOR_BGR2GRAY))\nfor i in range(1,len(frames)-1):\n d=cv2.absdiff(frames[i+1],frames[i-1])\n _,m=cv2.threshold(d,30,255,cv2.THRESH_BINARY)\n m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n m=cv2.dilate(m,np.ones((9,9),np.uint8),iterations=2)\n n,lab,stats,cents=cv2.connectedComponentsWithStats(m,8)\n if n>1:\n  order=np.argsort(stats[1:,cv2.CC_STAT_AREA])[::-1]+1\n  ss=[]\n  for idx in order[:3]:\n   x,y,w,h,a=stats[idx]\n   ss.append('a%d(%d,%d,%d,%d)'%(a,x,y,w,h))\n  if 40<=i<=80 or np.max(stats[1:,cv2.CC_STAT_AREA])>3000:\n   print('%3d tot=%6d '%(i,np.sum(m>0))+ ' '.join(ss))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 74868,
+   "dur_ms": 16948,
+   "tokens_in": 1321,
+   "tokens_out": 541,
+   "cache_read": 45120,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 91816,
+   "dur_ms": 1531,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport cv2,numpy as np\ncap=cv2.VideoCapture('/app/example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nbg=np.median(np.stack(frames[:46]).astype(np.float32),axis=0).astype(np.uint8)\nbgG=cv2.cvtColor(bg,cv2.COLOR_BGR2GRAY)\nGs=[cv2.cvtColor(f,cv2.COLOR_BGR2GRAY) for f in frames]\nfor i in range(44,80):\n d=cv2.absdiff(Gs[i],bgG)\n _,mbg=cv2.threshold(d,30,255,cv2.THRESH_BINARY)\n dm=cv2.absdiff(Gs[min(i+1,119)],Gs[max(i-1,0)])\n _,mm=cv2.threshold(dm,25,255,cv2.THRESH_BINARY)\n mm=cv2.dilate(mm,np.ones((9,9),np.uint8),iterations=2)\n m=cv2.bitwise_and(mbg,mm)\n m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n m=cv2.dilate(m,np.ones((5,5),np.uint8),iterations=1)\n n,lab,stats,cents=cv2.connectedComponentsWithStats(m,8)\n if n>1:\n  idx=1+np.argmax(stats[1:,cv2.CC_STAT_AREA])\n  x,y,w,h,a=stats[idx]\n  # rows with enough pixels in comp\n  comp=(lab==idx)\n  ys,xs=np.where(comp)\n  # 1st/99th percentile y\n  print('%2d area=%6d bbox=(%3d,%3d,%3d,%3d) bot=%3d top=%3d cy=%6.1f ymin1=%3d ymax99=%3d'%(i,a,x,y,w,h,y+h,y,cents[idx][1],np.percentile(ys,1),np.percentile(ys,99)))\n else:\n  print(i,'none')\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 93366,
+   "dur_ms": 16078,
+   "tokens_in": 1417,
+   "tokens_out": 394,
+   "cache_read": 48960,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 109444,
+   "dur_ms": 684,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport cv2,numpy as np\ncap=cv2.VideoCapture('/app/example_video.mp4')\nG=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n G.append(cv2.cvtColor(fr,cv2.COLOR_BGR2GRAY))\ndef comp(i,k):\n a=G[max(0,i-k)]; b=G[min(len(G)-1,i+k)]\n d=cv2.absdiff(a,b)\n _,m=cv2.threshold(d,30,255,cv2.THRESH_BINARY)\n m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n m=cv2.dilate(m,np.ones((9,9),np.uint8),iterations=2)\n n,lab,stats,cents=cv2.connectedComponentsWithStats(m,8)\n if n<=1: return None\n idx=1+np.argmax(stats[1:,cv2.CC_STAT_AREA])\n x,y,w,h,a=stats[idx]\n return a,x,y,w,h,y+h\nprint('i  k1_bbox                 k2_bbox                 k3_bbox')\nfor i in range(44,78):\n vals=[]\n for k in (1,2,3):\n  r=comp(i,k)\n  vals.append('a%5d b%3d x%3d w%3d'%(r[0],r[5],r[1],r[3]) if r else 'none')\n print('%2d '%i+' | '.join(vals))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 110146,
+   "dur_ms": 10873,
+   "tokens_in": 1170,
+   "tokens_out": 443,
+   "cache_read": 52480,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 121019,
+   "dur_ms": 651,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport cv2,numpy as np\ncap=cv2.VideoCapture('/app/example_video.mp4')\nG=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n G.append(cv2.cvtColor(fr,cv2.COLOR_BGR2GRAY))\nfor i in range(46,76):\n d=cv2.absdiff(G[max(0,i-1)],G[min(len(G)-1,i+1)])\n _,m=cv2.threshold(d,30,255,cv2.THRESH_BINARY)\n m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n m=cv2.dilate(m,np.ones((9,9),np.uint8),iterations=2)\n n,lab,stats,cents=cv2.connectedComponentsWithStats(m,8)\n if n<=1: print(i,'none'); continue\n idx=1+np.argmax(stats[1:,cv2.CC_STAT_AREA])\n comp=(lab==idx); ys,xs=np.where(comp)\n print('%2d area=%6d xmed=%5.1f ymed=%5.1f ymean=%5.1f ymin=%3d ymax=%3d p5=%3d p10=%3d p25=%3d p75=%3d p90=%3d p95=%3d'%(\n  i,stats[idx,4],np.median(xs),np.median(ys),ys.mean(),ys.min(),ys.max(),np.percentile(ys,5),np.percentile(ys,10),np.percentile(ys,25),np.percentile(ys,75),np.percentile(ys,90),np.percentile(ys,95)))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 121692,
+   "dur_ms": 13681,
+   "tokens_in": 1811,
+   "tokens_out": 467,
+   "cache_read": 55232,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 135373,
+   "dur_ms": 2707,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport cv2,numpy as np,time\ncap=cv2.VideoCapture('/app/example_video.mp4')\nG=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n G.append(cv2.cvtColor(fr,cv2.COLOR_BGR2GRAY))\nN=len(G); offs=np.array([-20,-12,-6,-2,0,2,6,12,20])\nt=time.time()\nfor i in range(44,78):\n ids=np.clip(i+offs,0,N-1)\n bg=np.median(np.stack([G[j] for j in ids]).astype(np.float32),axis=0).astype(np.uint8)\n d=cv2.absdiff(G[i],bg)\n _,m=cv2.threshold(d,30,255,cv2.THRESH_BINARY)\n m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n m=cv2.dilate(m,np.ones((9,9),np.uint8),iterations=1)\n n,lab,stats,cents=cv2.connectedComponentsWithStats(m,8)\n if n>1:\n  idx=1+np.argmax(stats[1:,cv2.CC_STAT_AREA])\n  x,y,w,h,a=stats[idx]\n  comp=(lab==idx); ys,xs=np.where(comp)\n  print('%2d a=%6d bbox=(%3d,%3d,%3d,%3d) bot=%3d top=%3d cy=%5.1f p95=%3d p99=%3d ncomp=%d'%(i,a,x,y,w,h,y+h,y,cents[idx][1],np.percentile(ys,95),np.percentile(ys,99),n))\n else: print(i,'none')\nprint('time',time.time()-t)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 138099,
+   "dur_ms": 25341,
+   "tokens_in": 1240,
+   "tokens_out": 443,
+   "cache_read": 59200,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 163440,
+   "dur_ms": 6803,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport cv2,numpy as np,time\ncap=cv2.VideoCapture('/app/example_video.mp4')\nG=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n G.append(cv2.cvtColor(fr,cv2.COLOR_BGR2GRAY))\nN=len(G); W=30\nt=time.time()\nfor i in range(44,78):\n lo=max(0,i-W)\n bg=np.median(np.stack(G[lo:i]).astype(np.float32),axis=0).astype(np.uint8)\n d=cv2.absdiff(G[i],bg)\n for th in [20]:\n  _,m=cv2.threshold(d,th,255,cv2.THRESH_BINARY)\n  m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n  m=cv2.dilate(m,np.ones((7,7),np.uint8),iterations=1)\n  n,lab,stats,cents=cv2.connectedComponentsWithStats(m,8)\n  if n>1:\n   idx=1+np.argmax(stats[1:,cv2.CC_STAT_AREA])\n   x,y,w,h,a=stats[idx]\n   comp=(lab==idx); ys,xs=np.where(comp)\n   print('%2d a=%6d bbox=(%3d,%3d,%3d,%3d) bot=%3d top=%3d cy=%5.1f p95=%3d p99=%3d'%(i,a,x,y,w,h,y+h,y,cents[idx][1],np.percentile(ys,95),np.percentile(ys,99)))\n  else: print(i,'none')\nprint('time',time.time()-t)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 170265,
+   "dur_ms": 6833,
+   "tokens_in": 1383,
+   "tokens_out": 315,
+   "cache_read": 64640,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 177098,
+   "dur_ms": 364,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport cv2,numpy as np\ncap=cv2.VideoCapture('/app/example_video.mp4')\nok,fr=cap.read()\ng=cv2.cvtColor(fr,cv2.COLOR_BGR2GRAY)\n# print grayscale ascii crop x300-700 y50-400, cell 8x8\nchars=' .:-=+*#%@'\nprint('X 300..700, Y 50..400 cell 8x8')\nfor yy in range(50,400,8):\n line=''\n for xx in range(300,700,8):\n  v=g[yy:yy+8,xx:xx+8].mean()\n  line+=chars[min(9,int(v/25.6))]\n print('%3d '%yy+line)\n# edges\ne=cv2.Canny(g,80,160)\nprint('EDGES')\nfor yy in range(50,400,8):\n line=''\n for xx in range(300,700,8):\n  v=e[yy:yy+8,xx:xx+8].mean()\n  line+= '#' if v>25 else ('+' if v>8 else ('.' if v>2 else ' '))\n print('%3d '%yy+line)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 177480,
+   "dur_ms": 8515,
+   "tokens_in": 1193,
+   "tokens_out": 265,
+   "cache_read": 67072,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 185995,
+   "dur_ms": 3753,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport cv2,numpy as np\ncap=cv2.VideoCapture('/app/example_video.mp4')\nF=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n F.append(fr)\nfor i in [54,56,58,60,61,62]:\n lo=max(0,i-30)\n bg=np.median(np.stack(F[lo:i]).astype(np.float32),axis=0).astype(np.uint8)\n d=cv2.absdiff(F[i],bg)\n dg=d.max(axis=2)\n print('=== frame',i,'x400-620 y180-360 diff(max channel) cell4 ===')\n chars=' .:-=+*#%@'\n for yy in range(180,360,6):\n  line=''\n  for xx in range(400,620,6):\n   v=dg[yy:yy+6,xx:xx+6].mean()\n   line+=chars[min(9,int(v/12))]\n  print('%3d '%yy+line)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 189767,
+   "dur_ms": 7688,
+   "tokens_in": 1208,
+   "tokens_out": 431,
+   "cache_read": 69376,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 197455,
+   "dur_ms": 8729,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport cv2,numpy as np\ncap=cv2.VideoCapture('/app/example_video.mp4')\nG=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n G.append(cv2.cvtColor(fr,cv2.COLOR_BGR2GRAY))\nN=len(G); W=30\nfor dil in [9,15,21]:\n print('=== dil',dil,'===')\n for i in range(50,66):\n  lo=max(0,i-W)\n  bg=np.median(np.stack(G[lo:i]).astype(np.float32),axis=0).astype(np.uint8)\n  d=cv2.absdiff(G[i],bg)\n  _,m=cv2.threshold(d,20,255,cv2.THRESH_BINARY)\n  m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n  m=cv2.dilate(m,np.ones((dil,dil),np.uint8),iterations=1)\n  n,lab,stats,cents=cv2.connectedComponentsWithStats(m,8)\n  if n>1:\n   idx=1+np.argmax(stats[1:,cv2.CC_STAT_AREA])\n   x,y,w,h,a=stats[idx]\n   comp=(lab==idx); ys,xs=np.where(comp)\n   print('%2d a=%6d bbox=(%3d,%3d,%3d,%3d) bot=%3d top=%3d cy=%5.1f p95=%3d'%(i,a,x,y,w,h,y+h,y,cents[idx][1],np.percentile(ys,95)))\n  else: print(i,'none')\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 206205,
+   "dur_ms": 14869,
+   "tokens_in": 1757,
+   "tokens_out": 411,
+   "cache_read": 71808,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 221074,
+   "dur_ms": 2924,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport cv2,numpy as np,time\ncap=cv2.VideoCapture('/app/example_video.mp4')\nG=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n G.append(cv2.cvtColor(fr,cv2.COLOR_BGR2GRAY))\nfor hist,var in [(30,16),(50,16),(20,25),(100,25)]:\n print('=== hist',hist,'var',var)\n bs=cv2.createBackgroundSubtractorMOG2(history=hist,varThreshold=var,detectShadows=False)\n t=time.time()\n for i,g in enumerate(G):\n  m=bs.apply(g)\n  if not (50<=i<=64): continue\n  _,m=cv2.threshold(m,127,255,cv2.THRESH_BINARY)\n  m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n  m=cv2.dilate(m,np.ones((15,15),np.uint8),iterations=1)\n  n,lab,stats,cents=cv2.connectedComponentsWithStats(m,8)\n  if n>1:\n   idx=1+np.argmax(stats[1:,cv2.CC_STAT_AREA]); x,y,w,h,a=stats[idx]\n   print('%2d a=%6d bbox=(%3d,%3d,%3d,%3d) bot=%3d cy=%5.1f'%(i,a,x,y,w,h,y+h,cents[idx][1]))\n  else: print(i,'none')\n print('t',time.time()-t)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 224018,
+   "dur_ms": 11771,
+   "tokens_in": 1725,
+   "tokens_out": 471,
+   "cache_read": 76096,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 235789,
+   "dur_ms": 1158,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport cv2,numpy as np\ncap=cv2.VideoCapture('/app/example_video.mp4')\nF=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n F.append(fr)\nbs=cv2.createBackgroundSubtractorMOG2(history=30,varThreshold=16,detectShadows=False)\nfor i,fr in enumerate(F):\n g=cv2.cvtColor(fr,cv2.COLOR_BGR2GRAY)\n m=bs.apply(g)\n if i in [53,54,55,59,60,61,62,63]:\n  mm=(m>127).astype(np.uint8)*255\n  mm=cv2.morphologyEx(mm,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n  mm=cv2.dilate(mm,np.ones((15,15),np.uint8),iterations=1)\n  n,lab,stats,cents=cv2.connectedComponentsWithStats(mm,8)\n  idx=1+np.argmax(stats[1:,cv2.CC_STAT_AREA]); x,y,w,h,a=stats[idx]\n  comp=(lab==idx)\n  ys,xs=np.where(comp)\n  # bottom 30 rows of comp\n  for cut in [350,340,330]:\n   sel=ys>=cut\n   if sel.sum():\n    print('frame %d bboxbot=%d pixels y>=%d: n=%d ymin=%d ymax=%d xrange=%d-%d meanBGR=%s meanGray=%.1f'%(\n      i,y+h,cut,sel.sum(),ys[sel].min(),ys[sel].max(),xs[sel].min(),xs[sel].max(),\n      tuple(int(v) for v in fr[ys[sel],xs[sel]].mean(axis=0)),g[ys[sel],xs[sel]].mean()))\n  print()\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 236965,
+   "dur_ms": 13091,
+   "tokens_in": 742,
+   "tokens_out": 361,
+   "cache_read": 79488,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 250056,
+   "dur_ms": 1187,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport cv2,numpy as np\ncap=cv2.VideoCapture('/app/example_video.mp4')\nG=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n G.append(cv2.cvtColor(fr,cv2.COLOR_BGR2GRAY))\nbs=cv2.createBackgroundSubtractorMOG2(history=30,varThreshold=16,detectShadows=False)\nrec=[]\nfor i,g in enumerate(G):\n m=bs.apply(g)\n mm=(m>127).astype(np.uint8)*255\n mm=cv2.morphologyEx(mm,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n mm=cv2.dilate(mm,np.ones((15,15),np.uint8),iterations=1)\n n,lab,stats,cents=cv2.connectedComponentsWithStats(mm,8)\n if n>1:\n  idx=1+np.argmax(stats[1:,cv2.CC_STAT_AREA]); x,y,w,h,a=stats[idx]\n  rec.append((i,a,x,y,w,h,y+h,cents[idx][1],cents[idx][0]))\nfor r in rec:\n if r[1]>3000:\n  print('%3d a=%6d bbox=(%3d,%3d,%3d,%3d) bot=%3d cy=%5.1f cx=%6.1f'%r)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 251264,
+   "dur_ms": 10432,
+   "tokens_in": 1238,
+   "tokens_out": 217,
+   "cache_read": 82304,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 261696,
+   "dur_ms": 291,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport numpy as np\nsets={\n'55-60':(np.arange(55,61),[318,283,247,246,279,316]),\n'54-61':(np.arange(54,62),[349,318,283,247,246,279,316,370]),\n'54-60':(np.arange(54,61),[349,318,283,247,246,279,316]),\n'55-61':(np.arange(55,62),[318,283,247,246,279,316,370]),\n}\nfor name,(t,y) in sets.items():\n p=np.polyfit(t,y,2); a,b,c=p\n roots=np.roots([a,b,c-369])\n print(name,'vertex',-b/(2*a),'roots',roots,'p',p)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 262014,
+   "dur_ms": 14406,
+   "tokens_in": 272,
+   "tokens_out": 121,
+   "cache_read": 85248,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 276420,
+   "dur_ms": 317,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport numpy as np\nfor base in [369,371,373,375]:\n t=np.arange(54,61); y=np.array([349,318,283,247,246,279,316])\n p=np.polyfit(t,y,2); r=np.roots([p[0],p[1],p[2]-base])\n print(base,r)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 276756,
+   "dur_ms": 15860,
+   "tokens_in": 104,
+   "tokens_out": 40,
+   "cache_read": 87744,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 292616,
+   "dur_ms": 18,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls /app"
+  },
+  {
+   "kind": "model",
+   "at_ms": 292822,
+   "dur_ms": 8696,
+   "tokens_in": 47,
+   "tokens_out": 1777,
+   "cache_read": 90560,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 301518,
+   "dur_ms": 10,
+   "tool": "write",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/jump_analyzer.py",
+    "content": "#!/usr/bin/env python3\n\nimport sys\n\nimport cv2\nimport numpy as np\n\n\ndef read_frames(path):\n    cap = cv2.VideoCapture(path)\n    if not cap.isOpened():\n        raise ValueError(\"could not open video: %s\" % path)\n    frames = []\n    while True:\n        ok, frame = cap.read()\n        if not ok:\n            break\n        frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY))\n    cap.release()\n    if not frames:\n        raise ValueError(\"video contains no frames: %s\" % path)\n    return frames\n\n\ndef foreground_boxes(frames):\n    height, width = frames[0].shape\n    subtractor = cv2.createBackgroundSubtractorMOG2(\n        history=60, varThreshold=16, detectShadows=False\n    )\n    for _ in range(3):\n        subtractor.apply(frames[0], learningRate=1.0)\n\n    open_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))\n    dilate_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))\n    boxes = []\n\n    for frame in frames:\n        mask = subtractor.apply(frame)\n        _, mask = cv2.threshold(mask, 127, 255, cv2.THRESH_BINARY)\n        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, open_kernel)\n        mask = cv2.dilate(mask, dilate_kernel, iterations=1)\n\n        count, labels, stats, centroids = cv2.connectedComponentsWithStats(\n            mask, 8\n        )\n        if count <= 1:\n            boxes.append(None)\n            continue\n\n        index = 1 + int(\n            np.argmax(stats[1:, cv2.CC_STAT_AREA])\n        )\n        x = int(stats[index, cv2.CC_STAT_LEFT])\n        y = int(stats[index, cv2.CC_STAT_TOP])\n        w = int(stats[index, cv2.CC_STAT_WIDTH])\n        h = int(stats[index, cv2.CC_STAT_HEIGHT])\n        area = int(stats[index, cv2.CC_STAT_AREA])\n        cx = float(centroids[index][0])\n        boxes.append(\n            {\n                \"area\": area,\n                \"x\": x,\n                \"y\": y,\n                \"w\": w,\n                \"h\": h,\n                \"bottom\": y + h,\n                \"cx\": cx,\n            }\n        )\n\n    return boxes, width, height\n\n\ndef is_athlete(box, width, height):\n    if box is None:\n        return False\n    min_area = max(1500, int(0.008 * width * height))\n    min_height = max(60, int(0.22 * height))\n    return (\n        box[\"area\"] >= min_area\n        and box[\"h\"] >= min_height\n        and box[\"w\"] <= 0.9 * width\n        and box[\"h\"] >= 0.45 * box[\"w\"]\n    )\n\n\ndef find_run(boxes, width, height):\n    indices = [i for i, b in enumerate(boxes) if is_athlete(b, width, height)]\n    if not indices:\n        return None\n\n    runs = []\n    current = [indices[0]]\n    for index in indices[1:]:\n        if index - current[-1] <= 3:\n            current.append(index)\n        else:\n            runs.append(current)\n            current = [index]\n    runs.append(current)\n\n    best = None\n    best_score = None\n    for run in runs:\n        displacement = abs(boxes[run[-1]][\"cx\"] - boxes[run[0]][\"cx\"])\n        score = (displacement, len(run))\n        if best_score is None or score > best_score:\n            best_score = score\n            best = run\n    return best\n\n\ndef estimate_jump(frames):\n    boxes, width, height = foreground_boxes(frames)\n    run = find_run(boxes, width, height)\n    if run is None or len(run) < 3:\n        return 0, max(0, len(frames) - 1)\n\n    frame_numbers = np.array(run, dtype=float)\n    bottoms = np.array([boxes[i][\"bottom\"] for i in run], dtype=float)\n    baseline = float(np.percentile(bottoms, 75))\n    margin = max(10.0, 0.03 * height)\n    threshold = baseline - margin\n\n    apex = int(np.argmin(bottoms))\n    below = bottoms < threshold\n\n    left = apex\n    while left > 0 and below[left - 1]:\n        left -= 1\n    right = apex\n    while right + 1 < len(run) and below[right + 1]:\n        right += 1\n\n    if below[left]:\n        segment_t = frame_numbers[left : right + 1]\n        segment_y = bottoms[left : right + 1]\n    else:\n        segment_t = frame_numbers\n        segment_y = bottoms\n\n    takeoff = int(run[left] if below[left] else run[apex])\n    landing = int(run[right] if below[right] else run[apex])\n\n    if len(segment_t) >= 3:\n        try:\n            a, b, c = np.polyfit(segment_t, segment_y, 2)\n            discriminant = b * b - 4.0 * a * (c - baseline)\n            if a > 0 and discriminant >= 0:\n                root1 = (-b - np.sqrt(discriminant)) / (2.0 * a)\n                root2 = (-b + np.sqrt(discriminant)) / (2.0 * a)\n                if root1 > root2:\n                    root1, root2 = root2, root1\n                candidate_takeoff = int(round(root1))\n                candidate_landing = int(round(root2))\n                low = min(run) - 2\n                high = max(run) + 2\n                if low <= candidate_takeoff < candidate_landing <= high:\n                    takeoff = candidate_takeoff\n                    landing = candidate_landing\n        except (np.linalg.LinAlgError, ValueError):\n            pass\n\n    takeoff = max(0, min(takeoff, len(frames) - 1))\n    landing = max(0, min(landing, len(frames) - 1))\n    if landing <= takeoff:\n        landing = min(len(frames) - 1, takeoff + 1)\n    return takeoff, landing\n\n\ndef write_output(path, takeoff, landing):\n    try:\n        import toml\n\n        with open(path, \"w\", encoding=\"utf-8\") as handle:\n            toml.dump(\n                {\n                    \"jump_takeoff_frame_number\": int(takeoff),\n                    \"jump_land_frame_number\": int(landing),\n                },\n                handle,\n            )\n    except ImportError:\n        with open(path, \"w\", encoding=\"utf-8\") as handle:\n            handle.write(\n                \"jump_takeoff_frame_number = %d\\n\" % int(takeoff)\n            )\n            handle.write(\n                \"jump_land_frame_number = %d\\n\" % int(landing)\n            )\n\n\ndef main():\n    input_path = sys.argv[1] if len(sys.argv) > 1 else \"/app/example_video.mp4\"\n    output_path = sys.argv[2] if len(sys.argv) > 2 else \"/app/output.toml\"\n\n    frames = read_frames(input_path)\n    takeoff, landing = estimate_jump(frames)\n    write_output(output_path, takeoff, landing)\n\n\nif __name__ == \"__main__\":\n    main()\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 301567,
+   "dur_ms": 2271,
+   "tokens_in": 26,
+   "tokens_out": 88,
+   "cache_read": 92416,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 303838,
+   "dur_ms": 1403,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 jump_analyzer.py /app/example_video.mp4 /app/output.toml && cat /app/output.toml",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 305259,
+   "dur_ms": 7407,
+   "tokens_in": 70,
+   "tokens_out": 869,
+   "cache_read": 92608,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 312666,
+   "dur_ms": 27286,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport cv2,numpy as np,importlib.util\nspec=importlib.util.spec_from_file_location('ja','/app/jump_analyzer.py'); ja=importlib.util.module_from_spec(spec); spec.loader.exec_module(ja)\nframes=ja.read_frames('/app/example_video.mp4')\ndef boxes(frames,history,var,dk):\n h,w=frames[0].shape\n sub=cv2.createBackgroundSubtractorMOG2(history=history,varThreshold=var,detectShadows=False)\n for _ in range(3): sub.apply(frames[0],learningRate=1.0)\n ok=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3)); dk2=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(dk,dk))\n out=[]\n for fr in frames:\n  m=sub.apply(fr); _,m=cv2.threshold(m,127,255,cv2.THRESH_BINARY)\n  m=cv2.morphologyEx(m,cv2.MORPH_OPEN,ok); m=cv2.dilate(m,dk2,iterations=1)\n  n,lab,st,ce=cv2.connectedComponentsWithStats(m,8)\n  if n<=1: out.append(None); continue\n  idx=1+np.argmax(st[1:,cv2.CC_STAT_AREA]); x,y,ww,hh,a=map(int,st[idx,[0,1,2,3,4]])\n  out.append({'area':a,'x':x,'y':y,'w':ww,'h':hh,'bottom':y+hh,'cx':float(ce[idx][0])})\n return out,w,h\ndef est(frames,boxes,w,h):\n run=ja.find_run(boxes,w,h)\n if not run: return None\n fn=np.array(run,float); bo=np.array([boxes[i]['bottom'] for i in run],float)\n base=float(np.percentile(bo,75)); th=base-max(10.,0.03*h); apex=int(np.argmin(bo)); below=bo<th\n l=apex\n while l>0 and below[l-1]: l-=1\n r=apex\n while r+1<len(run) and below[r+1]: r+=1\n seg_t=fn[l:r+1]; seg_y=bo[l:r+1]\n to=int(run[l]); la=int(run[r])\n if len(seg_t)>=3:\n  a,b,c=np.polyfit(seg_t,seg_y,2); disc=b*b-4*a*(c-base)\n  if a>0 and disc>=0:\n   rr=sorted([(-b-np.sqrt(disc))/(2*a),(-b+np.sqrt(disc))/(2*a)])\n   ct,cl=int(round(rr[0])),int(round(rr[1]))\n   if min(run)-2<=ct<cl<=max(run)+2: to,la=ct,cl\n return to,la,(base,min(bo),run[0],run[-1],l,r)\nfor hist in [20,30,45,60,90,120]:\n for var in [12,16,20,25]:\n  b,w,h=boxes(frames,hist,var,15)\n  print('hist',hist,'var',var,est(frames,b,w,h)[:2])\nprint('dilate sweep')\nfor dk in [9,11,13,15,17,21]:\n b,w,h=boxes(frames,60,16,dk); print(dk,est(frames,b,w,h))\nPY",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 339973,
+   "dur_ms": 16210,
+   "tokens_in": 505,
+   "tokens_out": 555,
+   "cache_read": 93632,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 356183,
+   "dur_ms": 8400,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport cv2,numpy as np,importlib.util\nspec=importlib.util.spec_from_file_location('ja','/app/jump_analyzer.py'); ja=importlib.util.module_from_spec(spec); spec.loader.exec_module(ja)\nframes=ja.read_frames('/app/example_video.mp4')\ndef run(detect,thr):\n h,w=frames[0].shape\n sub=cv2.createBackgroundSubtractorMOG2(history=60,varThreshold=16,detectShadows=detect)\n for _ in range(3): sub.apply(frames[0],learningRate=1.0)\n ok=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3)); dk=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(15,15))\n out=[]\n for fr in frames:\n  m=sub.apply(fr); _,m=cv2.threshold(m,thr,255,cv2.THRESH_BINARY)\n  m=cv2.morphologyEx(m,cv2.MORPH_OPEN,ok); m=cv2.dilate(m,dk,iterations=1)\n  n,lab,st,ce=cv2.connectedComponentsWithStats(m,8)\n  if n<=1: out.append(None); continue\n  idx=1+np.argmax(st[1:,cv2.CC_STAT_AREA]); x,y,ww,hh,a=map(int,st[idx,[0,1,2,3,4]])\n  out.append({'area':a,'x':x,'y':y,'w':ww,'h':hh,'bottom':y+hh,'cx':float(ce[idx][0])})\n return out,w,h\nfor detect,thr in [(False,127),(True,200),(True,250),(True,127)]:\n b,w,h=run(detect,thr)\n r=ja.find_run(b,w,h)\n print('detect',detect,'thr',thr,'run',r[0] if r else None,r[-1] if r else None,'est',ja.estimate_jump(frames))\n if r:\n  print(' bottoms',[(i,b[i]['bottom']) for i in r])\nPY",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 364606,
+   "dur_ms": 11148,
+   "tokens_in": 661,
+   "tokens_out": 93,
+   "cache_read": 96384,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 375754,
+   "dur_ms": 1460,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 -m py_compile jump_analyzer.py && python3 jump_analyzer.py /app/example_video.mp4 && cat output.toml",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 377233,
+   "dur_ms": 1238,
+   "tokens_in": 91,
+   "tokens_out": 42,
+   "cache_read": 98624,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 378471,
+   "dur_ms": 17,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app"
+  },
+  {
+   "kind": "model",
+   "at_ms": 378529,
+   "dur_ms": 1509,
+   "tokens_in": 204,
+   "tokens_out": 47,
+   "cache_read": 98752,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 380038,
+   "dur_ms": 14,
+   "tool": "bash",
+   "is_error": false,
+   "command": "rm -rf /app/__pycache__"
+  },
+  {
+   "kind": "model",
+   "at_ms": 380089,
+   "dur_ms": 1961,
+   "tokens_in": 41,
+   "tokens_out": 57,
+   "cache_read": 99008,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 5.545,
+ "calls": 38,
+ "cell": "TB1c"
+}

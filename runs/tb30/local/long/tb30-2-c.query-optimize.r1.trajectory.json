@@ -1,0 +1,246 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "query-optimize",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 315057,
+ "resolved": false,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 2784,
+  "output": 3656,
+  "cacheRead": 105984,
+  "cacheWrite": 0,
+  "total": 112424
+ },
+ "totals": {
+  "model_calls": 10,
+  "tool_calls": 13,
+  "model_ms": 21786,
+  "tool_ms": 293848,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 119,
+   "dur_ms": 3141,
+   "tokens_in": 178,
+   "tokens_out": 95,
+   "cache_read": 6976,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3260,
+   "dur_ms": 20,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/my-sql-query.sql"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3489,
+   "dur_ms": 134,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sqlite3 /app/oewn.sqlite \".schema\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 3668,
+   "dur_ms": 706,
+   "tokens_in": 1804,
+   "tokens_out": 138,
+   "cache_read": 7104,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4374,
+   "dur_ms": 29,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sqlite3 /app/oewn.sqlite \"SELECT name, type, tbl_name FROM sqlite_master WHERE type IN ('index','table');\""
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4694,
+   "dur_ms": 37,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sqlite3 /app/oewn.sqlite \"SELECT 'words', COUNT(*) FROM words UNION ALL SELECT 'senses', COUNT(*) FROM senses UNION ALL SELECT 'synsets', COUNT(*) FROM synsets;\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 4744,
+   "dur_ms": 3827,
+   "tokens_in": 288,
+   "tokens_out": 286,
+   "cache_read": 9024,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 8571,
+   "dur_ms": 1869,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sqlite3 /app/oewn.sqlite \"SELECT 'dup_synset', COUNT(*) FROM (SELECT synsetid FROM synsets GROUP BY synsetid HAVING COUNT(*)>1); SELECT 'dup_word', COUNT(*) FROM (SELECT wordid FROM words GROUP BY wordid HAVING COUNT(*)>1); SELECT 'sense_no_synset', COUNT(*) FROM senses s LEFT JOIN synsets syn ON s.synsetid=syn.synsetid WHERE syn.synsetid IS NULL; SELECT 'sense_synset_dups', COUNT(*) FROM (SELECT s.senseid FROM senses s JOIN synsets syn ON s.synsetid=syn.synsetid GROUP BY s.senseid HAVING COUNT(*)>1);\""
+  },
+  {
+   "kind": "tool",
+   "at_ms": 8583,
+   "dur_ms": 289398,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && time sqlite3 oewn.sqlite < my-sql-query.sql > /tmp/orig.out; wc -l /tmp/orig.out; head -5 /tmp/orig.out",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 297999,
+   "dur_ms": 1407,
+   "tokens_in": 182,
+   "tokens_out": 231,
+   "cache_read": 10112,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 299406,
+   "dur_ms": 187,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sqlite3 /app/oewn.sqlite \"SELECT 'dup_word_synset_groups', COUNT(*) FROM (SELECT wordid,synsetid FROM senses GROUP BY wordid,synsetid HAVING COUNT(*)>1); SELECT 'maxdups', MAX(c) FROM (SELECT COUNT(*) c FROM senses GROUP BY wordid,synsetid);\""
+  },
+  {
+   "kind": "tool",
+   "at_ms": 299911,
+   "dur_ms": 323,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && time sqlite3 oewn.sqlite \"CREATE INDEX IF NOT EXISTS idx_senses_wordid ON senses(wordid); CREATE INDEX IF NOT EXISTS idx_senses_synsetid ON senses(synsetid); CREATE INDEX IF NOT EXISTS idx_synsets_synsetid ON synsets(synsetid); ANALYZE;\"",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 300248,
+   "dur_ms": 4900,
+   "tokens_in": 92,
+   "tokens_out": 85,
+   "cache_read": 10624,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 305148,
+   "dur_ms": 165,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sqlite3 /app/oewn.sqlite \"DROP INDEX IF EXISTS idx_senses_wordid; DROP INDEX IF EXISTS idx_senses_synsetid; DROP INDEX IF EXISTS idx_synsets_synsetid;\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 305328,
+   "dur_ms": 2369,
+   "tokens_in": 20,
+   "tokens_out": 467,
+   "cache_read": 11776,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 307697,
+   "dur_ms": 9,
+   "tool": "write",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/sol.sql",
+    "content": "WITH word_synset AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS sense_count\n  FROM senses s\n  GROUP BY s.wordid, s.synsetid\n),\nranked AS (\n  SELECT wordid, synsetid, sense_count,\n         ROW_NUMBER() OVER (PARTITION BY wordid ORDER BY sense_count DESC, synsetid ASC) AS rn\n  FROM word_synset\n),\ntop_synset AS (\n  SELECT wordid, synsetid AS top_synsetid, sense_count AS top_synset_sense_count\n  FROM ranked\n  WHERE rn = 1\n),\nword_stats AS (\n  SELECT s.wordid,\n         COUNT(*) AS total_senses,\n         COUNT(DISTINCT s.synsetid) AS total_synsets,\n         COUNT(DISTINCT syn.domainid) AS distinct_domains,\n         COUNT(DISTINCT syn.posid) AS distinct_posids\n  FROM senses s\n  JOIN synsets syn ON s.synsetid = syn.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(DISTINCT s.synsetid) >= 2\n     AND COUNT(DISTINCT syn.domainid) >= 2\n     AND COUNT(*) >= 2\n)\nSELECT w.wordid AS word_id,\n       w.word AS word,\n       ws.total_synsets,\n       ws.total_senses,\n       ws.distinct_domains,\n       ws.distinct_posids,\n       t.top_synsetid,\n       t.top_synset_sense_count\nFROM word_stats ws\nJOIN words w ON w.wordid = ws.wordid\nJOIN top_synset t ON t.wordid = ws.wordid\nORDER BY ws.total_senses DESC,\n         ws.total_synsets DESC,\n         ws.distinct_domains DESC,\n         w.wordid ASC\nLIMIT 500;\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 307741,
+   "dur_ms": 707,
+   "tokens_in": 58,
+   "tokens_out": 91,
+   "cache_read": 12224,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 308448,
+   "dur_ms": 818,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && time sqlite3 oewn.sqlite < sol.sql > /tmp/new.out; diff /tmp/orig.out /tmp/new.out && echo SAME",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 309279,
+   "dur_ms": 2989,
+   "tokens_in": 62,
+   "tokens_out": 72,
+   "cache_read": 12352,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 312268,
+   "dur_ms": 26,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sqlite3 /app/oewn.sqlite \"SELECT name,type FROM sqlite_master WHERE name LIKE 'sqlite_stat%' OR type='index';\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 312320,
+   "dur_ms": 1179,
+   "tokens_in": 58,
+   "tokens_out": 114,
+   "cache_read": 12800,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 313499,
+   "dur_ms": 833,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sqlite3 /app/oewn.sqlite \"DROP TABLE IF EXISTS sqlite_stat1;\"; cd /app && time sqlite3 oewn.sqlite < sol.sql > /tmp/new2.out; diff /tmp/orig.out /tmp/new2.out && echo SAME",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 314348,
+   "dur_ms": 561,
+   "tokens_in": 42,
+   "tokens_out": 51,
+   "cache_read": 12992,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "long",
+ "weight_s_per_command": 42.177,
+ "calls": 13,
+ "cell": "TB1c"
+}

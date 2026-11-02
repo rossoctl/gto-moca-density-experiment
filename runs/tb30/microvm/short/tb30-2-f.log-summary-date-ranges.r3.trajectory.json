@@ -1,0 +1,148 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-f",
+ "instance_id": "log-summary-date-ranges",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 9171,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 178,
+  "output": 1366,
+  "cacheRead": 11520,
+  "cacheWrite": 2624,
+  "total": 15688
+ },
+ "totals": {
+  "model_calls": 4,
+  "tool_calls": 3,
+  "model_ms": 7272,
+  "tool_ms": 656,
+  "sandbox_ms": 469
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1129,
+   "dur_ms": 667,
+   "tokens_in": 60,
+   "tokens_out": 119,
+   "cache_read": 1408,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1799,
+   "dur_ms": 125,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -la /app/logs | head -50\necho '---'\nls /app/logs | wc -l\necho '--- sample ---'\nfor f in $(ls /app/logs | head -3); do echo \"== $f ==\"; head -5 \"/app/logs/$f\"; done\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 1849,
+     "dur_ms": 57,
+     "exit": 0,
+     "cpu_ms": 50.2,
+     "phases_us": {
+      "acquire": 66,
+      "resume": 21214,
+      "mount": 19148,
+      "run": 14837,
+      "destroy": 21067
+     },
+     "cold": null,
+     "vm": "vm-77"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 1927,
+   "dur_ms": 1804,
+   "tokens_in": 61,
+   "tokens_out": 315,
+   "cache_read": 1536,
+   "cache_write": 1792,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3731,
+   "dur_ms": 192,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /app\nls logs | sed -E 's/_.*//' | sort | uniq -c | tail -10\necho '--- tokens ---'\ngrep -rhoE '\\[[A-Za-z]+\\]' logs | sort | uniq -c\necho '--- nonmatching-ish ---'\ngrep -rhvE '^[0-9]{4}-[0-9]{2}-[0-9]{2} .*\\[(ERROR|WARNING|INFO)\\]' logs | head -20\necho '--- line sample w/ severity not bracket? ---'\ngrep -rhE 'ERROR|WARNING|INFO' logs | grep -vE '\\[(ERROR|WARNING|INFO)\\]' | head -20\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 3780,
+     "dur_ms": 134,
+     "exit": 0,
+     "cpu_ms": 198.6,
+     "phases_us": {
+      "acquire": 66,
+      "resume": 20960,
+      "mount": 18864,
+      "run": 93282,
+      "destroy": 19881
+     },
+     "cold": null,
+     "vm": "vm-79"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 3926,
+   "dur_ms": 3254,
+   "tokens_in": 55,
+   "tokens_out": 603,
+   "cache_read": 3648,
+   "cache_write": 640,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 7180,
+   "dur_ms": 339,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /app\npython3 - <<'PY'\nimport os, re, csv\nfrom collections import Counter\nfrom datetime import date, timedelta\n\nref = date(2025,8,12)\nlogs = '/app/logs'\nsev_re = re.compile(r'\\[(ERROR|WARNING|INFO)\\]')\nby_date = {}\nmismatch = 0\nfor name in os.listdir(logs):\n    m = re.match(r'^(\\d{4}-\\d{2}-\\d{2})_.*\\.log$', name)\n    if not m:\n        continue\n    d = date.fromisoformat(m.group(1))\n    c = Counter()\n    with open(os.path.join(logs,name), errors='replace') as f:\n        for line in f:\n            sm = sev_re.search(line)\n            if sm:\n                c[sm.group(1)] += 1\n                ld = line[:10]\n                if ld != m.group(1):\n                    mismatch += 1\n    by_date[d] = by_date.get(d, Counter()) + c\n\ndef in_range(start, end=ref):\n    c = Counter()\n    for d, sc in by_date.items():\n        if start <= d <= end:\n            c.update(sc)\n    return c\n\nperiods = [\n    ('today', ref, ref),\n    ('last_7_days', ref - timedelta(days=6), ref),\n    ('last_30_days', ref - timedelta(days=29), ref),\n    ('month_to_date', ref.replace(day=1), ref),\n    ('total', date.min, date.max),\n]\nseverities = ['ERROR','WARNING','INFO']\nwith open('/app/summary.csv','w',newline='') as f:\n    w = csv.writer(f)\n    w.writerow(['period','severity','count'])\n    for pname, s, e in periods:\n        c = in_range(s,e)\n        for sev in severities:\n            w.writerow([pname, sev, c[sev]])\n\nprint('date range:', min(by_date), max(by_date), 'mismatched line dates:', mismatch)\nprint(open('/app/summary.csv').read())\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 7230,
+     "dur_ms": 278,
+     "exit": 0,
+     "cpu_ms": 300.2,
+     "phases_us": {
+      "acquire": 106,
+      "resume": 21195,
+      "mount": 18869,
+      "run": 230194,
+      "destroy": 26519
+     },
+     "cold": null,
+     "vm": "vm-80"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 7521,
+   "dur_ms": 1547,
+   "tokens_in": 2,
+   "tokens_out": 329,
+   "cache_read": 4928,
+   "cache_write": 192,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.192,
+ "calls": 3,
+ "cell": "TB1f"
+}

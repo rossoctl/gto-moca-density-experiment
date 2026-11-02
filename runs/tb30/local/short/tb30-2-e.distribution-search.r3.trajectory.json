@@ -1,0 +1,178 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "distribution-search",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 43746,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 246,
+  "output": 6235,
+  "cacheRead": 42752,
+  "cacheWrite": 1792,
+  "total": 51025
+ },
+ "totals": {
+  "model_calls": 8,
+  "tool_calls": 7,
+  "model_ms": 34258,
+  "tool_ms": 8284,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1112,
+   "dur_ms": 4284,
+   "tokens_in": 51,
+   "tokens_out": 800,
+   "cache_read": 1728,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5405,
+   "dur_ms": 968,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app && python - <<'PY'\nimport numpy as np\nfrom scipy.optimize import root\nN=150000\n# variables f (fraction high), x high q, y low q\ndef fun(v):\n    f,x,y=v\n    return [f*x+(1-f)*y-1,\n            f*x*np.log(x)+(1-f)*y*np.log(y)-10,\n            f*np.log(x)+(1-f)*np.log(y)+10]\nfor guess in [(0.5,5,0.1),(0.1,50,0.1),(0.3,10,0.01),(0.8,2,0.01)]:\n    sol=root(fun,guess)\n    print(sol.success, sol.x, fun(sol.x))\nPY",
+   "timeout": 30
+  },
+  {
+   "kind": "model",
+   "at_ms": 6373,
+   "dur_ms": 3491,
+   "tokens_in": 44,
+   "tokens_out": 628,
+   "cache_read": 2560,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 9865,
+   "dur_ms": 747,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python - <<'PY'\nimport numpy as np\nfrom scipy.optimize import least_squares\nN=150000\ndef fun(v):\n    f,x,y=v\n    return np.array([f*x+(1-f)*y-1,\n            f*x*np.log(x)+(1-f)*y*np.log(y)-10,\n            f*np.log(x)+(1-f)*np.log(y)+10])\nbest=None\nrng=np.random.default_rng(0)\nfor i in range(200):\n    f=rng.uniform(1e-4,0.999)\n    x=10**rng.uniform(0,3)\n    y=10**rng.uniform(-8,0)\n    sol=least_squares(fun,[f,x,y],bounds=([1e-12,1e-12,1e-300],[1-1e-12,np.inf,np.inf]),xtol=1e-14,ftol=1e-14,gtol=1e-14,max_nfev=10000)\n    err=np.max(np.abs(fun(sol.x)))\n    if best is None or err<best[0]:\n        best=(err,sol.x,fun(sol.x),sol.cost)\n        print('best',best)\n    if err<1e-10:\n        print('found',sol.x,fun(sol.x))\n        break\nPY",
+   "timeout": 60
+  },
+  {
+   "kind": "model",
+   "at_ms": 10615,
+   "dur_ms": 4361,
+   "tokens_in": 13,
+   "tokens_out": 826,
+   "cache_read": 3456,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14976,
+   "dur_ms": 2981,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python - <<'PY'\nimport numpy as np\nfrom scipy.optimize import brentq\nN=150000\nfor k in range(1,50):\n    f=k/N\n    def vals(x):\n        y=(N-k*x)/(N-k)\n        if y<=0: return None\n        A=f*x*np.log(x)+(1-f)*y*np.log(y)\n        B=f*np.log(x)+(1-f)*np.log(y)\n        return A,B,y\n    # search x between 1 and N/k\n    xs=np.linspace(1.000001,N/k-1e-6,10000)\n    Bs=[]\n    for x in xs:\n        a,b,y=vals(x)\n        Bs.append(b)\n    # find b=-10 crossings\n    roots=[]\n    for i in range(len(xs)-1):\n        if (Bs[i]+10)*(Bs[i+1]+10)<0:\n            try:\n                r=brentq(lambda z: vals(z)[1]+10, xs[i], xs[i+1])\n                roots.append(r)\n            except Exception as e: pass\n    for x in roots:\n        A,B,y=vals(x)\n        if abs(A-10)<1e-6:\n            print('k',k,'x',x,'y',y,'A',A,'B',B)\nPY",
+   "timeout": 30
+  },
+  {
+   "kind": "model",
+   "at_ms": 17959,
+   "dur_ms": 4403,
+   "tokens_in": 20,
+   "tokens_out": 760,
+   "cache_read": 4416,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 22363,
+   "dur_ms": 1616,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python - <<'PY'\nimport numpy as np\nfrom scipy.optimize import brentq\nN=150000\nfor k in [1,2,3,4,5,6,7,8,9,10,20,100,1000,10000,50000,100000]:\n    f=k/N\n    def B(x):\n        y=(N-k*x)/(N-k)\n        if y<=0: return np.nan\n        return f*np.log(x)+(1-f)*np.log(y)\n    def A(x):\n        y=(N-k*x)/(N-k)\n        if y<=0: return np.nan\n        return f*x*np.log(x)+(1-f)*y*np.log(y)\n    # scan\n    lo,hi=1.0000001,N/k*(1-1e-12)\n    xs=np.linspace(lo,hi,20000)\n    bs=np.array([B(x) for x in xs])\n    cross=[]\n    for i in range(len(xs)-1):\n        if bs[i]+10>0 and bs[i+1]+10<=0:\n            r=brentq(lambda z:B(z)+10,xs[i],xs[i+1]); cross.append(r)\n    print('k',k,'B range',np.nanmin(bs),np.nanmax(bs),'crosses',cross[:3], 'A', [A(r) for r in cross[:3]])\nPY",
+   "timeout": 60
+  },
+  {
+   "kind": "model",
+   "at_ms": 23981,
+   "dur_ms": 4656,
+   "tokens_in": 15,
+   "tokens_out": 879,
+   "cache_read": 5184,
+   "cache_write": 768,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 28638,
+   "dur_ms": 939,
+   "tool": "bash",
+   "is_error": true,
+   "command": "python - <<'PY'\nimport numpy as np\nfrom scipy.optimize import least_squares, root\nN=150000\ndef solve(counts):\n    c=np.array(counts,dtype=float)\n    def fun(v):\n        # v: q values, logs for positivity maybe directly exp\n        q=np.exp(v)\n        return np.array([c@q/N-1,\n                         c@(q*np.log(q))/N-10,\n                         c@np.log(q)/N+10])\n    # initial from interpolation k=6,7\n    starts=[]\n    for z in [500,1000,5000,10000,20000,30000,40000]:\n        starts.append(np.log([z, 20000, 1e-4]))\n        starts.append(np.log([z, 50000, 1e-5]))\n    best=(1e9,None)\n    for s in starts:\n        sol=least_squares(fun,s,max_nfev=10000,xtol=1e-15,ftol=1e-15,gtol=1e-15)\n        err=np.max(np.abs(fun(sol.x)))\n        if err<best[0]: best=(err,sol.x,fun(sol.x))\n    print(counts,best[0],np.exp(best[1]),best[2])\nfor counts in ([1,6,N-7],[1,7,N-8],[2,5,N-7],[3,4,N-7],[1,5,1,N-7],[1,6,1,N-8]):\n    solve(counts)\nPY",
+   "timeout": 60
+  },
+  {
+   "kind": "model",
+   "at_ms": 29577,
+   "dur_ms": 10317,
+   "tokens_in": 4,
+   "tokens_out": 1946,
+   "cache_read": 6784,
+   "cache_write": 512,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 39896,
+   "dur_ms": 2,
+   "tool": "write",
+   "is_error": false,
+   "input": {
+    "path": "/app/solution.py",
+    "content": "\"\"\"Construct a distribution with forward and backward KL divergence 10 from uniform.\"\"\"\n\nimport numpy as np\nfrom scipy.optimize import least_squares\n\nN = 150_000\nTARGET_KL = 10.0\nTOL = 1e-3\n\n# Use three probability levels: one special large entry, six equal large\n# entries, and the remaining N-7 equal small entries.  With q_i = N * p_i,\n# the two KL divergences from the uniform distribution U(i) = 1/N are\n#\n#   KL(P || U) = (1/N) sum_i q_i log(q_i)\n#   KL(U || P) = -(1/N) sum_i log(q_i).\n#\n# We therefore solve for the three q values subject to sum_i q_i = N.\ncounts = np.array([1.0, 6.0, N - 7.0])\n\n\ndef residuals(log_q: np.ndarray) -> np.ndarray:\n    q = np.exp(log_q)\n    return np.array(\n        [\n            counts @ q / N - 1.0,\n            counts @ (q * np.log(q)) / N - TARGET_KL,\n            counts @ np.log(q) / N + TARGET_KL,\n        ]\n    )\n\n\n# Several deterministic starting points make the solve robust.\nstarts = [\n    np.log([10_000.0, 23_000.0, 4.535e-5]),\n    np.log([15_000.0, 22_000.0, 4.535e-5]),\n    np.log([5_000.0, 25_000.0, 4.535e-5]),\n]\n\nbest = None\nfor start in starts:\n    result = least_squares(\n        residuals,\n        start,\n        xtol=1e-15,\n        ftol=1e-15,\n        gtol=1e-15,\n        max_nfev=10_000,\n    )\n    max_error = np.max(np.abs(residuals(result.x)))\n    if best is None or max_error < best[0]:\n        best = (max_error, result)\n\nmax_error, result = best\nif not result.success or max_error > 1e-10:\n    raise RuntimeError(f\"Failed to solve for distribution (error={max_error})\")\n\nq = np.exp(result.x)\n\np = np.empty(N, dtype=np.float64)\np[:1] = q[0] / N\np[1:7] = q[1] / N\np[7:] = q[2] / N\n\n# Correct the tiny floating-point sum error.\np /= p.sum()\n\nforward_kl = np.sum(p * np.log(N * p))\nbackward_kl = -np.mean(np.log(N * p))\n\nassert np.all(p > 0.0), \"Distribution contains non-positive probabilities\"\nassert np.isclose(p.sum(), 1.0), \"Distribution does not sum to 1\"\nassert abs(forward_kl - TARGET_KL) <= TOL, forward_kl\nassert abs(backward_kl - TARGET_KL) <= TOL, backward_kl\n\nnp.save(\"/app/dist.npy\", p)\n\nprint(f\"Saved /app/dist.npy with {p.size} probabilities\")\nprint(f\"forward  KL(P||U) = {forward_kl:.12f}\")\nprint(f\"backward KL(U||P) = {backward_kl:.12f}\")\nprint(f\"sum(p)            = {p.sum():.17g}\")\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 39900,
+   "dur_ms": 1272,
+   "tokens_in": 54,
+   "tokens_out": 186,
+   "cache_read": 9216,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 41173,
+   "dur_ms": 1031,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python solution.py && python - <<'PY'\nimport numpy as np\np=np.load('/app/dist.npy')\nN=p.size\nu=np.full(N,1/N)\nf=np.sum(p*np.log(p/u))\nb=np.sum(u*np.log(u/p))\nprint('shape',p.shape,'dtype',p.dtype)\nprint('min',p.min(),'max',p.max(),'sum',p.sum())\nprint('forward',f,'backward',b)\nprint('within tolerance:',abs(f-10)<=1e-3,abs(b-10)<=1e-3)\nPY",
+   "timeout": 60
+  },
+  {
+   "kind": "model",
+   "at_ms": 42207,
+   "dur_ms": 1474,
+   "tokens_in": 45,
+   "tokens_out": 210,
+   "cache_read": 9408,
+   "cache_write": 128,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.527,
+ "calls": 7,
+ "cell": "TB1e"
+}

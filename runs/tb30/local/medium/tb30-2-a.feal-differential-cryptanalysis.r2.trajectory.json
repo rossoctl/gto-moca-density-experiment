@@ -1,0 +1,108 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "feal-differential-cryptanalysis",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 79047,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 263,
+  "output": 10979,
+  "cacheRead": 142976,
+  "cacheWrite": 1728,
+  "total": 155946
+ },
+ "totals": {
+  "model_calls": 6,
+  "tool_calls": 5,
+  "model_ms": 73023,
+  "tool_ms": 5401,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 504,
+   "dur_ms": 772
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1276,
+   "dur_ms": 32,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/feal.py"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 1308,
+   "dur_ms": 51562
+  },
+  {
+   "kind": "tool",
+   "at_ms": 52870,
+   "dur_ms": 1015,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la && python3 -c \"\nimport random, feal\n\n# verify F differential property: input diff 0x80800000 -> output diff 0x02000000 always\nok=True\nfor _ in range(200000):\n    x=random.getrandbits(32)\n    if feal.f_function(x) ^ feal.f_function(x ^ 0x80800000) != 0x02000000:\n        ok=False; print('fail',hex(x)); break\nprint('F differential holds:',ok)\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 53885,
+   "dur_ms": 2622
+  },
+  {
+   "kind": "tool",
+   "at_ms": 56507,
+   "dur_ms": 1545,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport random, feal\n\ndef trial():\n    feal.create_random_keys()\n    k5 = feal.key[5]\n    DP = (0x82800000 << 32) | 0x02000000\n    cands = [(s*1234567)&0xFFFFFFFF for s in range(65536)]\n    survivors = set(cands)\n    for t in range(2):\n        P = random.getrandbits(64)\n        P2 = P ^ DP\n        C = feal.encrypt(P); C2 = feal.encrypt(P2)\n        cl, cr = feal.getleft(C), feal.getright(C)\n        cl2, cr2 = feal.getleft(C2), feal.getright(C2)\n        R3 = cl ^ cr\n        R32 = cl2 ^ cr2\n        rhs = (cl ^ cl2) ^ 0x82800000\n        survivors = {k for k in survivors if (feal.f_function(R3 ^ k) ^ feal.f_function(R32 ^ k)) == rhs}\n        print('  after pair',t,'survivors',len(survivors))\n    return k5, survivors\n\nfor i in range(5):\n    k5,s = trial()\n    print(i, 'true', hex(k5), 'found', [hex(x) for x in list(s)[:5]], 'ok', (s=={k5}))\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 58052,
+   "dur_ms": 8626
+  },
+  {
+   "kind": "tool",
+   "at_ms": 66678,
+   "dur_ms": 19,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/attack.py",
+    "content": "#!/usr/bin/env python3\n\"\"\"Chosen-plaintext differential attack recovering FEAL key[5].\n\nThe F function has a probability-1 differential:\n    F(x) ^ F(x ^ 0x80800000) == 0x02000000   for every x.\n\nPick the plaintext difference\n    dP = (0x82800000 << 32) | 0x02000000\nso that, entering the Feistel rounds, the state differences are\n    dL0 = 0x82800000, dR0 = 0x80800000.\n\nRounds 0 and 1 then propagate deterministically:\n    dF0 = 0x02000000 -> dL1 = 0x80800000, dR1 = 0x80800000\n    dF1 = 0x02000000 -> dL2 = 0x80800000, dR2 = 0x82800000\n    dL3 = dR2 = 0x82800000\nindependent of every round key.\n\nFor the final round (which uses key[5]):\n    R4 = L3 ^ F(R3 ^ key5),  L4 = R3\nThe ciphertext gives R3 directly:\n    C_left = R4, C_right = L4 ^ R4 = R3 ^ R4  =>  R3 = C_left ^ C_right\nHence for a plaintext pair:\n    F(R3 ^ key5) ^ F(R3* ^ key5) = dR4 ^ dL3\n                                  = (C_left ^ C_left*) ^ 0x82800000.\n\nEach of the six round keys is (seed * 1234567) & 0xFFFFFFFF for a\n16-bit seed, so key[5] is one of only 65536 known values.  Filter those\nwith a few plaintext pairs; a single pair already leaves one candidate\nwith overwhelming probability.\n\"\"\"\n\nimport random\n\n# Plaintext XOR difference that drives the deterministic characteristic.\nDELTA_P = (0x82800000 << 32) | 0x02000000\nDELTA_L3 = 0x82800000\nMULT = 1234567\n\n\ndef _left(x):\n    return (x >> 32) & 0xFFFFFFFF\n\n\ndef _right(x):\n    return x & 0xFFFFFFFF\n\n\ndef _f(input_val):\n    \"\"\"Local copy of the FEAL F function (avoids importing feal.py).\"\"\"\n    x = [0] * 4\n    for i in range(4):\n        x[i] = input_val & 0xFF\n        input_val >>= 8\n\n    def g(a, b, c):\n        t = (a + b + c) & 0xFF\n        return ((t << 2) | (t >> 6)) & 0xFF\n\n    y2 = g(x[3] ^ x[2], x[1] ^ x[0], 1)\n    y3 = g(x[3], y2, 0)\n    y1 = g(x[1] ^ x[0], y2, 0)\n    y0 = g(x[0], y1, 1)\n    return (y0 | (y1 << 8) | (y2 << 16) | (y3 << 24)) & 0xFFFFFFFF\n\n\ndef attack(encrypt_fn):\n    # All possible key[5] values (16-bit seed schedule).\n    candidates = [(seed * MULT) & 0xFFFFFFFF for seed in range(0x10000)]\n\n    rng = random.Random(0xC0FFEE)\n    survivors = candidates\n    for _ in range(8):\n        base = rng.getrandbits(64)\n        c1 = encrypt_fn(base)\n        c2 = encrypt_fn(base ^ DELTA_P)\n\n        l1, r1 = _left(c1), _right(c1)\n        l2, r2 = _left(c2), _right(c2)\n\n        # State entering the final round, recoverable from ciphertext alone.\n        r3 = l1 ^ r1\n        r3_star = l2 ^ r2\n\n        # Required F-output difference for the final round.\n        target = (l1 ^ l2) ^ DELTA_L3\n\n        survivors = [\n            k for k in survivors\n            if (_f(r3 ^ k) ^ _f(r3_star ^ k)) == target\n        ]\n        if len(survivors) == 1:\n            break\n\n    if not survivors:\n        raise RuntimeError(\"differential attack found no candidate\")\n\n    # If several remain (astronomically unlikely), keep filtering until one.\n    while len(survivors) > 1:\n        base = rng.getrandbits(64)\n        c1 = encrypt_fn(base)\n        c2 = encrypt_fn(base ^ DELTA_P)\n        l1, r1 = _left(c1), _right(c1)\n        l2, r2 = _left(c2), _right(c2)\n        r3, r3_star = l1 ^ r1, l2 ^ r2\n        target = (l1 ^ l2) ^ DELTA_L3\n        survivors = [k for k in survivors\n                     if (_f(r3 ^ k) ^ _f(r3_star ^ k)) == target]\n        if not survivors:\n            raise RuntimeError(\"differential attack lost all candidates\")\n\n    return survivors[0]\n\n\nif __name__ == \"__main__\":\n    import time\n    import feal\n\n    feal.create_random_keys()\n    expected = feal.key[5]\n    t0 = time.time()\n    got = attack(feal.encrypt)\n    elapsed = time.time() - t0\n    print(f\"expected=0x{expected:08x} got=0x{got:08x} ok={got == expected} time={elapsed:.2f}s\")\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 66697,
+   "dur_ms": 2977
+  },
+  {
+   "kind": "tool",
+   "at_ms": 69674,
+   "dur_ms": 2790,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 attack.py && python3 -c \"\nimport time, feal, attack\nfor i in range(10):\n    feal.create_random_keys()\n    t=time.time(); k=attack.attack(feal.encrypt); dt=time.time()-t\n    assert k==feal.key[5], (k,feal.key[5])\nprint('all ok')\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 72464,
+   "dur_ms": 6464
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.323,
+ "calls": 5,
+ "cell": "TB1a"
+}

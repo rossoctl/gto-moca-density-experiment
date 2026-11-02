@@ -1,0 +1,143 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "openssl-selfsigned-cert",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 39163,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 158,
+  "output": 5595,
+  "cacheRead": 61312,
+  "cacheWrite": 832,
+  "total": 67897
+ },
+ "totals": {
+  "model_calls": 4,
+  "tool_calls": 3,
+  "model_ms": 34988,
+  "tool_ms": 3391,
+  "sandbox_ms": 1015
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 609,
+   "dur_ms": 1187
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1796,
+   "dur_ms": 166,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace && pwd && openssl version && python3 --version && ls -la\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 1876,
+     "dur_ms": 70,
+     "exit": 0,
+     "cpu_ms": 59.5,
+     "phases_us": {
+      "acquire": 130,
+      "resume": 20963,
+      "mount": 18533,
+      "run": 20657,
+      "destroy": 28091
+     },
+     "cold": null,
+     "vm": "vm-45"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 1962,
+   "dur_ms": 13864
+  },
+  {
+   "kind": "tool",
+   "at_ms": 15826,
+   "dur_ms": 654,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nset -e\ncd /workspace\nmkdir -p ssl\nopenssl genrsa -out ssl/server.key 2048\nchmod 600 ssl/server.key\nopenssl req -new -x509 -sha256 -key ssl/server.key -out ssl/server.crt -days 365 \\\n  -subj \"/O=DevOps Team/CN=dev-internal.company.local\"\nchmod 644 ssl/server.crt\ncat ssl/server.key ssl/server.crt > ssl/server.pem\nchmod 600 ssl/server.pem\necho \"--- files ---\"\nls -l ssl/\necho \"--- subject ---\"\nopenssl x509 -in ssl/server.crt -noout -subject\necho \"--- issuer ---\"\nopenssl x509 -in ssl/server.crt -noout -issuer\necho \"--- dates ---\"\nopenssl x509 -in ssl/server.crt -noout -dates\necho \"--- fingerprint ---\"\nopenssl x509 -in ssl/server.crt -noout -fingerprint -sha256\necho \"--- key check ---\"\nopenssl rsa -in ssl/server.key -check -noout\necho \"--- pem check ---\"\nopenssl x509 -in ssl/server.pem -noout -subject\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 15886,
+     "dur_ms": 548,
+     "exit": 0,
+     "cpu_ms": 550.2,
+     "phases_us": {
+      "acquire": 82,
+      "resume": 20132,
+      "mount": 17311,
+      "run": 498449,
+      "destroy": 29267
+     },
+     "cold": null,
+     "vm": "vm-48"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 16480,
+   "dur_ms": 14666
+  },
+  {
+   "kind": "tool",
+   "at_ms": 31146,
+   "dur_ms": 2571,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put check_cert.py <<'PYEOF'\n#!/usr/bin/env python3\n\"\"\"Verify the self-signed TLS certificate for the internal dev server.\"\"\"\n\nimport os\nimport ssl\nimport sys\nfrom datetime import datetime, timezone\n\nBASE_DIR = os.path.dirname(os.path.abspath(__file__))\nCERT_PATH = os.path.join(BASE_DIR, \"ssl\", \"server.crt\")\nKEY_PATH = os.path.join(BASE_DIR, \"ssl\", \"server.key\")\n\n\ndef get_common_name(subject):\n    \"\"\"Return the commonName value from a decoded certificate subject.\"\"\"\n    for rdn in subject:\n        for key, value in rdn:\n            if key == \"commonName\":\n                return value\n    return None\n\n\ndef to_date(timestamp_str):\n    \"\"\"Convert an OpenSSL certificate timestamp to YYYY-MM-DD.\"\"\"\n    return datetime.fromtimestamp(\n        ssl.cert_time_to_seconds(timestamp_str), tz=timezone.utc\n    ).strftime(\"%Y-%m-%d\")\n\n\ndef main():\n    if not os.path.isfile(CERT_PATH):\n        print(f\"ERROR: certificate not found: {CERT_PATH}\")\n        return 1\n\n    # Verify the certificate exists and can be loaded/decoded.\n    try:\n        cert = ssl._ssl._test_decode_cert(CERT_PATH)\n    except Exception as exc:\n        print(f\"ERROR: could not load certificate: {exc}\")\n        return 1\n\n    common_name = get_common_name(cert.get(\"subject\", ()))\n    if not common_name:\n        print(\"ERROR: certificate has no Common Name\")\n        return 1\n\n    not_before = cert[\"notBefore\"]\n    not_after = cert[\"notAfter\"]\n\n    # Verify the private key exists and matches the certificate.\n    if not os.path.isfile(KEY_PATH):\n        print(f\"ERROR: private key not found: {KEY_PATH}\")\n        return 1\n    try:\n        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)\n        context.load_cert_chain(certfile=CERT_PATH, keyfile=KEY_PATH)\n    except Exception as exc:\n        print(f\"ERROR: could not load private key: {exc}\")\n        return 1\n\n    # Verify the certificate is currently within its validity period.\n    now = datetime.now(timezone.utc).timestamp()\n    if now < ssl.cert_time_to_seconds(not_before):\n        print(\"ERROR: certificate is not yet valid\")\n        return 1\n    if now > ssl.cert_time_to_seconds(not_after):\n        print(\"ERROR: certificate has expired\")\n        return 1\n\n    print(f\"Certificate: {CERT_PATH}\")\n    print(f\"Common Name: {common_name}\")\n    print(f\"Not Before: {to_date(not_before)}\")\n    print(f\"Expiration Date: {to_date(not_after)}\")\n    print(\"Certificate verification successful\")\n    return 0\n\n\nif __name__ == \"__main__\":\n    sys.exit(main())\nPYEOF\nsbx run <<'EOF'\nset -e\ncd /workspace\nchmod 755 check_cert.py\n\nsubject=$(openssl x509 -in ssl/server.crt -noout -subject | sed 's/^subject=//')\nstart_date=$(openssl x509 -in ssl/server.crt -noout -startdate -dateopt iso_8601 2>/dev/null | sed 's/^notBefore=//' | cut -d'T' -f1)\nend_date=$(openssl x509 -in ssl/server.crt -noout -enddate -dateopt iso_8601 2>/dev/null | sed 's/^notAfter=//' | cut -d'T' -f1)\n[ -n \"$start_date\" ] || start_date=$(date -u -d \"$(openssl x509 -in ssl/server.crt -noout -startdate | cut -d= -f2)\" +%Y-%m-%d)\n[ -n \"$end_date\" ] || end_date=$(date -u -d \"$(openssl x509 -in ssl/server.crt -noout -enddate | cut -d= -f2)\" +%Y-%m-%d)\nfingerprint=$(openssl x509 -in ssl/server.crt -noout -fingerprint -sha256 | sed 's/^sha256 Fingerprint=//')\n\n{\n  echo \"Subject: $subject\"\n  echo \"Not Before: $start_date\"\n  echo \"Not After: $end_date\"\n  echo \"SHA-256 Fingerprint: $fingerprint\"\n} > ssl/verification.txt\nchmod 644 ssl/verification.txt\n\necho \"=== verification.txt ===\"\ncat ssl/verification.txt\necho\necho \"=== check_cert.py output ===\"\npython3 check_cert.py\necho\necho \"=== file listing ===\"\nls -l ssl/ check_cert.py\necho\necho \"=== pem contains key + certificate ===\"\ngrep -c \"BEGIN PRIVATE KEY\\|BEGIN RSA PRIVATE KEY\" ssl/server.pem || true\ngrep -c \"BEGIN CERTIFICATE\" ssl/server.pem || true\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 33257,
+     "dur_ms": 52,
+     "exit": 0,
+     "cpu_ms": 39.0,
+     "phases_us": {
+      "acquire": 61,
+      "resume": 20930,
+      "mount": 17860,
+      "run": 8338,
+      "destroy": 22785
+     },
+     "cold": null,
+     "vm": "vm-56"
+    },
+    {
+     "at_ms": 33356,
+     "dur_ms": 345,
+     "exit": 0,
+     "cpu_ms": 358.3,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 20716,
+      "mount": 17940,
+      "run": 293796,
+      "destroy": 30063
+     },
+     "cold": null,
+     "vm": "vm-42"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 33717,
+   "dur_ms": 5271
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.232,
+ "calls": 3,
+ "cell": "TB1b"
+}

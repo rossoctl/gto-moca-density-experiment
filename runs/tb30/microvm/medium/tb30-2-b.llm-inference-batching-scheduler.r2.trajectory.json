@@ -1,0 +1,1118 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "llm-inference-batching-scheduler",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 358645,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 851,
+  "output": 68063,
+  "cacheRead": 1780992,
+  "cacheWrite": 33088,
+  "total": 1882994
+ },
+ "totals": {
+  "model_calls": 31,
+  "tool_calls": 30,
+  "model_ms": 333221,
+  "tool_ms": 24788,
+  "sandbox_ms": 15024
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 540,
+   "dur_ms": 1149
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1689,
+   "dur_ms": 158,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\nls -la /workspace\necho \"=== task_file ===\"\nls -la /workspace/task_file 2>/dev/null || ls -la /app/task_file\necho \"=== scripts ===\"\nls -la /workspace/task_file/scripts /workspace/task_file/input_data /workspace/task_file/output_data 2>/dev/null\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 1770,
+     "dur_ms": 57,
+     "exit": 2,
+     "cpu_ms": 40.1,
+     "phases_us": {
+      "acquire": 66,
+      "resume": 20362,
+      "mount": 17994,
+      "run": 7345,
+      "destroy": 28848
+     },
+     "cold": null,
+     "vm": "vm-117"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 1847,
+   "dur_ms": 1111
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2958,
+   "dur_ms": 132,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\necho \"=== cost_model.py ===\"\ncat /workspace/task_file/scripts/cost_model.py\necho \"\"\necho \"=== baseline_packer.py ===\"\ncat /workspace/task_file/scripts/baseline_packer.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 3015,
+     "dur_ms": 52,
+     "exit": 0,
+     "cpu_ms": 35.7,
+     "phases_us": {
+      "acquire": 73,
+      "resume": 20561,
+      "mount": 18085,
+      "run": 4843,
+      "destroy": 26552
+     },
+     "cold": null,
+     "vm": "vm-119"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 3090,
+   "dur_ms": 8267
+  },
+  {
+   "kind": "tool",
+   "at_ms": 11357,
+   "dur_ms": 266,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace/task_file/scripts\npython3 - <<'PY'\nimport json, statistics\ndef load(p):\n    return [json.loads(l) for l in open(p)]\nfor b in (1,2):\n    reqs=load(f'/workspace/task_file/input_data/requests_bucket_{b}.jsonl')\n    print(\"=== bucket\",b,\"n=\",len(reqs),\"===\")\n    print(reqs[:3])\n    pl=[r['prompt_len'] for r in reqs]; gl=[r['gen_len'] for r in reqs]\n    def stats(x,n):\n        x=sorted(x)\n        print(f\"{n}: min={x[0]} p10={x[int(.1*len(x))]} p50={x[len(x)//2]} p90={x[int(.9*len(x))]} max={x[-1]} mean={statistics.mean(x):.1f} unique={len(set(x))}\")\n    stats(pl,'prompt_len'); stats(gl,'gen_len')\n    # alignment overhead\n    tot_real=sum(a+b2 for a,b2 in zip(pl,gl))\n    padp=sum(((p+63)//64)*64-p for p in pl)\n    print(\"real tokens\",tot_real,\"prefill-only pad\",padp,\"ratio\",padp/tot_real)\n    # gen_len distribution\n    from collections import Counter\n    c=Counter(gl)\n    print(\"gen_len top:\",c.most_common(15))\n    print(\"num unique gen\", len(c), \"num unique prompt\", len(set(pl)))\n    # aligned prompt uniq\n    ap=Counter(((p+63)//64)*64 for p in pl)\n    print(\"aligned prompt uniq:\",len(ap), sorted(ap)[:10], \"...\", sorted(ap)[-5:])\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 11414,
+     "dur_ms": 188,
+     "exit": 0,
+     "cpu_ms": 183.6,
+     "phases_us": {
+      "acquire": 84,
+      "resume": 20592,
+      "mount": 17967,
+      "run": 145853,
+      "destroy": 20987
+     },
+     "cold": null,
+     "vm": "vm-121"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 11623,
+   "dur_ms": 16988
+  },
+  {
+   "kind": "tool",
+   "at_ms": 28611,
+   "dur_ms": 346,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace/task_file/scripts\npython3 - <<'PY'\nimport json, math\nfrom collections import Counter, defaultdict\nfrom cost_model import CostModel, CostConsts, align, HIDDEN\n\ncm=CostModel(64)\ndef load(p): return [json.loads(l) for l in open(p)]\n\nfor b in (1,2):\n    reqs=load(f'/workspace/task_file/input_data/requests_bucket_{b}.jsonl')\n    for r in reqs:\n        r['S']=align(r['prompt_len'],64)\n    real=sum(r['prompt_len']+r['gen_len'] for r in reqs)\n    padp=sum(r['S']-r['prompt_len'] for r in reqs)\n    pre=sum(cm._prefill_cost(r['prompt_len']) for r in reqs)\n    dec_min=sum(1.0*cm._sum_sq_arith(r['S'],r['gen_len'])+2048.0*(r['gen_len']*r['S']+r['gen_len']*(r['gen_len']-1)/2) for r in reqs)\n    lat=[cm._prefill_lat(r['prompt_len'])+cm._decode_step_lat(r['S'])*0  for r in reqs] # placeholder\n    # per req minimal latency\n    lats=[]\n    for r in reqs:\n        n=r['gen_len']; a=r['S']\n        ssq=cm._sum_sq_arith(a,n); slin=n*a+n*(n-1)/2\n        ld=0.0012*ssq+0.0006*HIDDEN*slin\n        lats.append(cm._prefill_lat(r['prompt_len'])+ld+8.0)\n    lats_s=sorted(lats)\n    print(\"=== bucket\",b,\"n\",len(reqs))\n    print(\" real\",real,\"padp\",padp,\"padp_ratio\",padp/real)\n    print(\" prefill cost\",f\"{pre:.4e}\")\n    print(\" decode min cost\",f\"{dec_min:.4e}\",\"total min(excl compile/overhead)\",f\"{pre+dec_min:.4e}\")\n    print(\" p95 min lat\",f\"{cm.pxx_latency(lats,0.95):.4e}\",\"max\",f\"{max(lats):.4e}\",\"sum lats\",f\"{sum(lats):.4e}\")\n    print(\" num (S,G) pairs\",len(set((r['S'],r['gen_len']) for r in reqs)))\n    print(\" num distinct (S,G) exact groups; batches if exact grouping\")\n    # sequential with exact (S,G) grouping: max lat per group\n    g=defaultdict(list)\n    for r,l in zip(reqs,lats): g[(r['S'],r['gen_len'])].append(l)\n    seq=sum(max(v) for v in g.values())\n    print(\" seq timecost exact grouping\",f\"{seq:.4e}\", \"nbatches\",len(g))\n    # thresholds\n    if b==1: print(\" THRESH cost 3.0e11 pad .055 p95 2.1e6 seq 2.7e8\")\n    else: print(\" THRESH cost 4.8e10 pad .15 p95 2.1e5 seq 3.2e7\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 28667,
+     "dur_ms": 272,
+     "exit": 0,
+     "cpu_ms": 276.4,
+     "phases_us": {
+      "acquire": 64,
+      "resume": 20992,
+      "mount": 18018,
+      "run": 227076,
+      "destroy": 23699
+     },
+     "cold": null,
+     "vm": "vm-127"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 28957,
+   "dur_ms": 16129
+  },
+  {
+   "kind": "tool",
+   "at_ms": 45086,
+   "dur_ms": 350,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace/task_file/scripts\npython3 - <<'PY'\nimport json\nfrom collections import Counter, defaultdict\nfrom cost_model import CostModel, align, HIDDEN\ncm=CostModel(64)\ndef load(p): return [json.loads(l) for l in open(p)]\n\ndef req_stats(r):\n    n=r['gen_len']; a=r['S']\n    ssq=cm._sum_sq_arith(a,n); slin=n*a+n*(n-1)/2\n    dc=1.0*ssq+2048.0*slin\n    ld=0.0012*ssq+0.0006*HIDDEN*slin\n    lat=cm._prefill_lat(r['prompt_len'])+ld+8.0\n    return dc, ld, lat\n\nfor b in (1,2):\n    reqs=load(f'/workspace/task_file/input_data/requests_bucket_{b}.jsonl')\n    for r in reqs:\n        r['S']=align(r['prompt_len'],64)\n        r['dc'],r['ld'],r['lat']=req_stats(r)\n    print(\"=== bucket\",b)\n    thr = 2.1e6 if b==1 else 2.1e5\n    over=[r for r in reqs if r['lat']>thr]\n    print(\" n over p95 threshold (minimal lat):\",len(over),\"need <=40\")\n    print(\" lat percentiles:\", [f\"{v:.3e}\" for v in [sorted(r['lat'] for r in reqs)[int(q*800)] for q in (.5,.9,.93,.94,.95,.96,.97,.98,.99)]])\n    # cost concentration\n    dc_sorted=sorted(reqs,key=lambda r:-r['dc'])\n    tot=sum(r['dc'] for r in reqs)\n    for frac in (1,5,10,20,40,80):\n        print(f\"  top {frac} reqs = {sum(r['dc'] for r in dc_sorted[:frac])/tot:.3%} of decode cost\")\n    print(\" top5:\", [(r['S'],r['gen_len'],f\"{r['dc']:.2e}\",f\"{r['lat']:.2e}\") for r in dc_sorted[:5]])\n    print(\" lat top5:\", [(r['S'],r['gen_len'],f\"{r['lat']:.2e}\") for r in sorted(reqs,key=lambda r:-r['lat'])[:5]])\n    # how many with S large\n    print(\" S distribution:\", Counter(r['S'] for r in reqs).most_common(8))\n    print(\" count S>=1024:\",sum(1 for r in reqs if r['S']>=1024), \" count G>=256:\",sum(1 for r in reqs if r['gen_len']>=256))\n    print(\" joint high S&G:\",sum(1 for r in reqs if r['S']>=512 and r['gen_len']>=128))\n    # sum of lat for small lat requests\n    for t in (1e4,3e4,1e5,3e5,1e6):\n        sub=[r for r in reqs if r['lat']<t]\n        print(f\"  lat<{t:.0e}: n={len(sub)} sumlat={sum(r['lat'] for r in sub):.3e} sumdc={sum(r['dc'] for r in sub):.3e}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 45142,
+     "dur_ms": 278,
+     "exit": 0,
+     "cpu_ms": 279.9,
+     "phases_us": {
+      "acquire": 88,
+      "resume": 20837,
+      "mount": 17912,
+      "run": 230056,
+      "destroy": 26486
+     },
+     "cold": null,
+     "vm": "vm-131"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 45436,
+   "dur_ms": 36981
+  },
+  {
+   "kind": "tool",
+   "at_ms": 82417,
+   "dur_ms": 127,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -la /workspace/task_file; find /workspace -maxdepth 3 -name '*.py' -o -maxdepth 3 -name '*test*' 2>/dev/null | head -50\necho \"---- root ----\"\nls -la / 2>/dev/null | head -40\nls -la /app 2>/dev/null | head\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 82471,
+     "dur_ms": 48,
+     "exit": 0,
+     "cpu_ms": 46.7,
+     "phases_us": {
+      "acquire": 3,
+      "resume": 20542,
+      "mount": 17736,
+      "run": 10148,
+      "destroy": 17575
+     },
+     "cold": null,
+     "vm": "vm-134"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 82544,
+   "dur_ms": 1434
+  },
+  {
+   "kind": "tool",
+   "at_ms": 83978,
+   "dur_ms": 128,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nfind /opt -maxdepth 4 2>/dev/null | head -60\necho \"--- tmp ---\"; ls -la /tmp\necho \"--- mnt ---\"; ls -la /mnt /srv 2>/dev/null\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 84033,
+     "dur_ms": 51,
+     "exit": 0,
+     "cpu_ms": 42.8,
+     "phases_us": {
+      "acquire": 52,
+      "resume": 20332,
+      "mount": 17812,
+      "run": 8492,
+      "destroy": 21953
+     },
+     "cold": null,
+     "vm": "vm-139"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 84106,
+   "dur_ms": 5698
+  },
+  {
+   "kind": "tool",
+   "at_ms": 89804,
+   "dur_ms": 1473,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "mkdir -p /tmp/x 2>/dev/null; sbx put /workspace/task_file/scripts/eval_harness.py <<'EOF'\n#!/usr/bin/env python3\n\"\"\"Shared evaluation helpers for the batching task.\"\"\"\nimport json, sys, pathlib\nfrom cost_model import CostModel, align, HEADS, HIDDEN\nfrom collections import defaultdict\n\nROOT = pathlib.Path(__file__).resolve().parents[1]\n\nTHRESH = {\n    1: dict(cost=3.0e11, pad_ratio=0.055, p95_latency_ms=2.1e6, sequential_timecost=2.7e8),\n    2: dict(cost=4.8e10, pad_ratio=0.15,  p95_latency_ms=2.1e5, sequential_timecost=3.2e7),\n}\n\ndef load_requests(bucket):\n    path = ROOT / 'input_data' / f'requests_bucket_{bucket}.jsonl'\n    reqs = [json.loads(l) for l in open(path)]\n    return reqs\n\ndef req_map(reqs):\n    return {r['request_id']: {'prompt_len': r['prompt_len'], 'gen_len': r['gen_len']} for r in reqs}\n\ndef evaluate(requests, plan, bucket):\n    cm = CostModel(64)\n    m = cm.plan_metrics(requests, plan)\n    th = THRESH[bucket]\n    ok = True\n    res = {}\n    for k, v in th.items():\n        got = m[k]\n        good = got <= v\n        ok = ok and good\n        res[k] = (got, v, good)\n    return m, res, ok\n\ndef write_plan(path, plan):\n    pathlib.Path(path).parent.mkdir(parents=True, exist_ok=True)\n    with open(path, 'w') as f:\n        for r in plan:\n            f.write(json.dumps(r) + '\\n')\n\ndef validate(reqs, plan, bucket=None):\n    \"\"\"Schema + constraints check. Returns list of problems.\"\"\"\n    probs = []\n    ids = [p['request_id'] for p in plan]\n    if len(ids) != len(set(ids)):\n        probs.append('duplicate request_ids')\n    want = {r['request_id'] for r in reqs}\n    if set(ids) != want:\n        probs.append(f'id mismatch missing={len(want-set(ids))} extra={len(set(ids)-want)}')\n    rm = {r['request_id']: r for r in reqs}\n    shapes = set()\n    for p in plan:\n        sh = p['shape']\n        shapes.add((sh['seq_align'], sh['heads_align'], sh['hidden_align']))\n        S = sh['seq_align']\n        if S % 64 != 0:\n            probs.append(f'{p[\"request_id\"]}: seq_align not multiple of 64')\n        if S < align(rm[p['request_id']]['prompt_len'], 64):\n            probs.append(f'{p[\"request_id\"]}: seq_align too small')\n        if sh['heads_align'] != 32 or sh['hidden_align'] != 4096:\n            probs.append('bad heads/hidden align')\n    if len(shapes) > 8:\n        probs.append(f'too many shapes {len(shapes)}')\n    by = defaultdict(set)\n    for p in plan:\n        sh = p['shape']\n        by[p['batch_id']].add((sh['seq_align'], sh['heads_align'], sh['hidden_align']))\n    for b, s in by.items():\n        if len(s) != 1:\n            probs.append(f'batch {b} has multiple shapes')\n    return probs\n\ndef report(name, m, res, ok):\n    print(f'--- {name}: {\"PASS\" if ok else \"FAIL\"}')\n    for k, (got, thr, good) in res.items():\n        print(f'   {k:22s} {got:12.4e}  thr {thr:10.3e}  {\"ok\" if good else \"XX\"}  ({got/thr*100:5.1f}%)')\nEOF\necho written",
+   "sandbox": [
+    {
+     "at_ms": 91212,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 39.3,
+     "phases_us": {
+      "acquire": 37,
+      "resume": 20495,
+      "mount": 17734,
+      "run": 7310,
+      "destroy": 28263
+     },
+     "cold": null,
+     "vm": "vm-141"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 91277,
+   "dur_ms": 1573
+  },
+  {
+   "kind": "tool",
+   "at_ms": 92850,
+   "dur_ms": 411,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace/task_file/scripts\npython3 - <<'PY'\nimport eval_harness as H\nfrom baseline_packer import _plan_for_requests\nfor b in (1,2):\n    reqs=H.load_requests(b); rm=H.req_map(reqs)\n    plan=_plan_for_requests(reqs,64,8)\n    probs=H.validate(reqs,plan)\n    m,res,ok=H.evaluate(rm,plan,b)\n    print(\"bucket\",b,\"probs\",probs[:3])\n    H.report(\"baseline\",m,res,ok)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 92905,
+     "dur_ms": 308,
+     "exit": 0,
+     "cpu_ms": 303.2,
+     "phases_us": {
+      "acquire": 57,
+      "resume": 20378,
+      "mount": 17999,
+      "run": 255088,
+      "destroy": 32805
+     },
+     "cold": null,
+     "vm": "vm-143"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 93261,
+   "dur_ms": 14172
+  },
+  {
+   "kind": "tool",
+   "at_ms": 107433,
+   "dur_ms": 939,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\ncd /workspace/task_file/scripts\npython3 - <<'PY'\nimport eval_harness as H\nfrom cost_model import CostModel, align, HEADS, HIDDEN\nfrom collections import defaultdict\nimport json\ncm=CostModel(64)\n\ndef shape_of(S): return {'seq_align':S,'heads_align':32,'hidden_align':4096}\n\ndef plan_from_batches(batches, req_by_id, shape_val=None):\n    plan=[]\n    for bi,members in enumerate(batches):\n        bid=f\"b-{bi:04d}\"\n        Smax=max(req_by_id[m]['S'] for m in members)\n        sh=shape_of(shape_val if shape_val is not None else Smax)\n        for m in members:\n            plan.append({'request_id':m,'batch_id':bid,'shape':sh})\n    return plan\n\ndef build_group_exactG(reqs, K=10000, sband=None):\n    rg=defaultdict(list)\n    for r in reqs: rg[r['gen_len']].append(r)\n    batches=[]\n    for g,rs in rg.items():\n        rs=sorted(rs,key=lambda r:r['S'])\n        if sband is None:\n            batches.append([r['request_id'] for r in rs])\n        else:\n            cur=[]\n            for r in rs:\n                if cur and (r['S']-cur[0]['S']>sband or len(cur)>=K):\n                    batches.append([x['request_id'] for x in cur]); cur=[]\n                cur.append(r)\n            if cur: batches.append([x['request_id'] for x in cur])\n    return batches\n\nfor b in (1,2):\n    reqs=H.load_requests(b); rm=H.req_map(reqs)\n    rbi={r['request_id']:dict(r) for r in reqs}\n    for r in rbi.values(): r['S']=align(r['prompt_len'],64)\n    for sb in (None,256,128,64,32):\n        bs=build_group_exactG(reqs,10000,sb)\n        plan=plan_from_batches(bs,rbi,shape_val=max(r['S'] for r in reqs))\n        m,res,ok=H.evaluate(rm,plan,b)\n        print(f\"bucket {b} exactG sband={sb}: nbatches={len(bs)} cost={m['cost']:.3e} pad={m['pad_ratio']:.4f} p95={m['p95_latency_ms']:.3e} seq={m['sequential_timecost']:.3e}\")\n    print()\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 108055,
+     "dur_ms": 304,
+     "exit": 1,
+     "cpu_ms": 306.5,
+     "phases_us": {
+      "acquire": 389,
+      "resume": 21343,
+      "mount": 18088,
+      "run": 255789,
+      "destroy": 25987
+     },
+     "cold": null,
+     "vm": "vm-144"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 108372,
+   "dur_ms": 3222
+  },
+  {
+   "kind": "tool",
+   "at_ms": 111594,
+   "dur_ms": 698,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "cd /workspace/task_file/scripts && sbx put /workspace/task_file/scripts/exp1.py <<'EOF'\nimport eval_harness as H\nfrom cost_model import CostModel, align, HEADS, HIDDEN\nfrom collections import defaultdict\ncm=CostModel(64)\n\ndef shape_of(S): return {'seq_align':S,'heads_align':32,'hidden_align':4096}\n\ndef plan_from_batches(batches, reqs, shape_val=None):\n    rbi={r['request_id']:r for r in reqs}\n    plan=[]\n    for bi,members in enumerate(batches):\n        bid=f\"b-{bi:04d}\"\n        Smax=max(rbi[m]['S'] for m in members)\n        sh=shape_of(shape_val if shape_val is not None else Smax)\n        for m in members:\n            plan.append({'request_id':m,'batch_id':bid,'shape':sh})\n    return plan\n\ndef build_group_exactG(reqs, K=10000, sband=None):\n    rg=defaultdict(list)\n    for r in reqs: rg[r['gen_len']].append(r)\n    batches=[]\n    for g,rs in rg.items():\n        rs=sorted(rs,key=lambda r:r['S'])\n        if sband is None:\n            batches.append([r['request_id'] for r in rs])\n        else:\n            cur=[]\n            for r in rs:\n                if cur and (r['S']-cur[0]['S']>sband or len(cur)>=K):\n                    batches.append([x['request_id'] for x in cur]); cur=[]\n                cur.append(r)\n            if cur: batches.append([x['request_id'] for x in cur])\n    return batches\n\nfor b in (1,2):\n    reqs=H.load_requests(b); rm=H.req_map(reqs)\n    for r in reqs: r['S']=align(r['prompt_len'],64)\n    for sb in (None,256,128,64,32):\n        bs=build_group_exactG(reqs,10000,sb)\n        plan=plan_from_batches(bs,reqs,shape_val=max(r['S'] for r in reqs))\n        m,res,ok=H.evaluate(rm,plan,b)\n        print(f\"bucket {b} exactG sband={sb}: nbatches={len(bs)} cost={m['cost']:.3e} pad={m['pad_ratio']:.4f} p95={m['p95_latency_ms']:.3e} seq={m['sequential_timecost']:.3e}\")\n    print()\nEOF\nsbx run <<'EOF'\ncd /workspace/task_file/scripts && python3 exp1.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 112195,
+     "dur_ms": 76,
+     "exit": 2,
+     "cpu_ms": 67.7,
+     "phases_us": {
+      "acquire": 4,
+      "resume": 20394,
+      "mount": 17875,
+      "run": 31634,
+      "destroy": 24202
+     },
+     "cold": null,
+     "vm": "vm-147"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 112292,
+   "dur_ms": 3154
+  },
+  {
+   "kind": "tool",
+   "at_ms": 115446,
+   "dur_ms": 1073,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put /workspace/task_file/scripts/exp1.py <<'EOF'\nimport eval_harness as H\nfrom cost_model import CostModel, align, HEADS, HIDDEN\nfrom collections import defaultdict\ncm=CostModel(64)\n\ndef shape_of(S): return {'seq_align':S,'heads_align':32,'hidden_align':4096}\n\ndef plan_from_batches(batches, reqs, shape_val=None):\n    rbi={r['request_id']:r for r in reqs}\n    plan=[]\n    for bi,members in enumerate(batches):\n        bid=f\"b-{bi:04d}\"\n        Smax=max(rbi[m]['S'] for m in members)\n        sh=shape_of(shape_val if shape_val is not None else Smax)\n        for m in members:\n            plan.append({'request_id':m,'batch_id':bid,'shape':sh})\n    return plan\n\ndef build_group_exactG(reqs, K=10000, sband=None):\n    rg=defaultdict(list)\n    for r in reqs: rg[r['gen_len']].append(r)\n    batches=[]\n    for g,rs in rg.items():\n        rs=sorted(rs,key=lambda r:r['S'])\n        if sband is None:\n            batches.append([r['request_id'] for r in rs])\n        else:\n            cur=[]\n            for r in rs:\n                if cur and (r['S']-cur[0]['S']>sband or len(cur)>=K):\n                    batches.append([x['request_id'] for x in cur]); cur=[]\n                cur.append(r)\n            if cur: batches.append([x['request_id'] for x in cur])\n    return batches\n\nfor b in (1,2):\n    reqs=H.load_requests(b); rm=H.req_map(reqs)\n    for r in reqs: r['S']=align(r['prompt_len'],64)\n    for sb in (None,256,128,64,32):\n        bs=build_group_exactG(reqs,10000,sb)\n        plan=plan_from_batches(bs,reqs,shape_val=max(r['S'] for r in reqs))\n        m,res,ok=H.evaluate(rm,plan,b)\n        print(f\"bucket {b} exactG sband={sb}: nbatches={len(bs)} cost={m['cost']:.3e} pad={m['pad_ratio']:.4f} p95={m['p95_latency_ms']:.3e} seq={m['sequential_timecost']:.3e}\")\n    print()\nEOF\nsbx run <<'EOF'\ncd /workspace/task_file/scripts && python3 exp1.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 116063,
+     "dur_ms": 51,
+     "exit": 0,
+     "cpu_ms": 43.3,
+     "phases_us": {
+      "acquire": 47,
+      "resume": 19783,
+      "mount": 17524,
+      "run": 7811,
+      "destroy": 23530
+     },
+     "cold": null,
+     "vm": "vm-148"
+    },
+    {
+     "at_ms": 116160,
+     "dur_ms": 342,
+     "exit": 0,
+     "cpu_ms": 347.1,
+     "phases_us": {
+      "acquire": 24,
+      "resume": 20760,
+      "mount": 17548,
+      "run": 297970,
+      "destroy": 22663
+     },
+     "cold": null,
+     "vm": "vm-114"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 116519,
+   "dur_ms": 15807
+  },
+  {
+   "kind": "tool",
+   "at_ms": 132326,
+   "dur_ms": 1140,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put /workspace/task_file/scripts/exp2.py <<'EOF'\nimport eval_harness as H\nfrom cost_model import CostModel, align, HEADS, HIDDEN\nfrom collections import defaultdict\ncm=CostModel(64)\ndef shape_of(S): return {'seq_align':S,'heads_align':32,'hidden_align':4096}\n\ndef build_group_exactG(reqs, K=10000, sband=None):\n    rg=defaultdict(list)\n    for r in reqs: rg[r['gen_len']].append(r)\n    batches=[]\n    for g,rs in rg.items():\n        rs=sorted(rs,key=lambda r:r['S'])\n        cur=[]\n        for r in rs:\n            if cur and (sband is not None and r['S']-cur[0]['S']>sband or len(cur)>=K):\n                batches.append(cur); cur=[]\n            cur.append(r)\n        if cur: batches.append(cur)\n    return batches\n\nfor b in (1,2):\n    reqs=H.load_requests(b); rm=H.req_map(reqs)\n    for r in reqs: r['S']=align(r['prompt_len'],64)\n    bs=build_group_exactG(reqs,10000,64)\n    # lat of batch\n    info=[]\n    for batch in bs:\n        Smax=max(r['S'] for r in batch); Gmax=max(r['gen_len'] for r in batch)\n        pf=max(cm._prefill_lat(r['prompt_len']) for r in batch)\n        L=pf+cm._decode_step_lat(1)*0\n        n=Gmax; a=Smax\n        ssq=cm._sum_sq_arith(a,n); slin=n*a+n*(n-1)/2\n        L=pf+0.0012*ssq+0.0006*HIDDEN*slin+8\n        info.append((L,Smax,Gmax,len(batch)))\n    info.sort(reverse=True)\n    tot=sum(x[0] for x in info)\n    print(f\"=== bucket {b}: nbatches={len(info)} seq={tot:.3e}\")\n    print(\" top 15 batches by latency (L,Smax,Gmax,n):\")\n    for x in info[:15]: print(\"   \", f\"{x[0]:.3e}\", x[1:])\n    print(\" cumulative seq by top-K:\", [(k, f\"{sum(x[0] for x in info[:k]):.2e}\") for k in (10,20,40,60,80,100,150,200)])\n    # histogram of batch latency\n    import statistics\n    print(\" median batch L\", f\"{statistics.median([x[0] for x in info]):.2e}\", \"mean\", f\"{statistics.mean([x[0] for x in info]):.2e}\")\n    # how many batches have L< various\n    for t in (1e4,3e4,1e5,3e5,1e6):\n        sub=[x for x in info if x[0]<t]\n        print(f\"  batches L<{t:.0e}: n={len(sub)} sumL={sum(x[0] for x in sub):.2e}\")\n    print(\" threshold seq:\", 2.7e8 if b==1 else 3.2e7)\nEOF\nsbx run <<'EOF'\ncd /workspace/task_file/scripts && python3 exp2.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 133034,
+     "dur_ms": 53,
+     "exit": 0,
+     "cpu_ms": 42.7,
+     "phases_us": {
+      "acquire": 77,
+      "resume": 20561,
+      "mount": 17777,
+      "run": 7469,
+      "destroy": 25008
+     },
+     "cold": null,
+     "vm": "vm-150"
+    },
+    {
+     "at_ms": 133134,
+     "dur_ms": 321,
+     "exit": 0,
+     "cpu_ms": 313.5,
+     "phases_us": {
+      "acquire": 16,
+      "resume": 20314,
+      "mount": 17714,
+      "run": 272141,
+      "destroy": 28600
+     },
+     "cold": null,
+     "vm": "vm-149"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 133466,
+   "dur_ms": 53885
+  },
+  {
+   "kind": "tool",
+   "at_ms": 187351,
+   "dur_ms": 848,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put /workspace/task_file/scripts/optimizer.py <<'PYEOF'\n#!/usr/bin/env python3\n\"\"\"Shape-aware batching optimizer.\n\nCore facts about the supplied cost model:\n  * prefill cost/latency per request depend only on that request's own aligned\n    prompt -> constant, independent of the batching.\n  * decode cost for a batch = n * f(S_max, G_max) where S_max / G_max are the\n    maxima over the batch members.  Every member is charged G_max decode steps\n    at context S_max.\n  * decode padding = sum(G_max - G_i); prefill padding is fixed.\n  * batch overhead 1e7 cost / 8 ms latency per batch.\n  * latency_i = prefill_lat(P_i) + latdec(S_max, G_max) + 8 (+ compile once).\n  * sequential_timecost = sum over batches of max latency in batch.\n  * the declared shape seq_align is *not* used by the cost model except for the\n    per-shape compile cost, and one single shape large enough for every request\n    minimises that (compile is super-linear in S and counts distinct shapes).\n\"\"\"\nfrom __future__ import annotations\nimport math\nfrom bisect import bisect_right\n\nHEADS = 32\nHIDDEN = 4096\nGRAN = 64\nKP_ATTN, KP_MLP = 2.0, 1.0\nTP_ATTN, TP_MLP = 0.002, 0.0015\nKD_ATTN, KD_MLP = 1.0, 0.5\nTD_ATTN, TD_MLP = 0.0012, 0.0006\nKSHAPE_ATTN, KSHAPE_MLP = 500.0, 2.0\nTSHAPE_COMPILE_MS = 1500.0\nKBATCH_OVERHEAD_COST = 10_000_000.0\nTBATCH_OVERHEAD_MS = 8.0\n\n_fcache = {}\n_ldcache = {}\n\n\ndef align(x, g=GRAN):\n    return ((x + g - 1) // g) * g\n\n\ndef sum_sq_arith(a, n):\n    return n * (a * a) + a * n * (n - 1) + (n * (n - 1) * (2 * n - 1)) // 6\n\n\ndef f_cost(S, G):\n    \"\"\"Per-request decode cost inside a batch with context S and steps G.\"\"\"\n    v = _fcache.get((S, G))\n    if v is None:\n        sl = G * S + G * (G - 1) / 2.0\n        v = KD_ATTN * sum_sq_arith(S, G) + KD_MLP * HIDDEN * sl\n        _fcache[(S, G)] = v\n    return v\n\n\ndef lat_dec(S, G):\n    v = _ldcache.get((S, G))\n    if v is None:\n        sl = G * S + G * (G - 1) / 2.0\n        v = TD_ATTN * sum_sq_arith(S, G) + TD_MLP * HIDDEN * sl\n        _ldcache[(S, G)] = v\n    return v\n\n\nclass Batch:\n    __slots__ = ('id', 'members', 'S', 'G', 'n', 'sumG', 'pref', 'alive', 'ver')\n\n    def __init__(self, bid, members, S, G, n, sumG, pref):\n        self.id = bid\n        self.members = members\n        self.S = S\n        self.G = G\n        self.n = n\n        self.sumG = sumG\n        self.pref = pref  # sorted list of prefill latencies\n        self.alive = True\n        self.ver = 0\n\n\nclass Problem:\n    def __init__(self, reqs, thr_cost, thr_pad_ratio, thr_p95, thr_seq, max_above=40):\n        self.reqs = reqs\n        self.rid = [r['request_id'] for r in reqs]\n        self.S = [align(r['prompt_len']) for r in reqs]\n        self.G = [r['gen_len'] for r in reqs]\n        self.pl = [r['prompt_len'] for r in reqs]\n        self.n = len(reqs)\n        self.pref_cost = [KP_ATTN * s * s + KP_MLP * s * HIDDEN for s in self.S]\n        self.pref_lat = [TP_ATTN * s * s + TP_MLP * s * HIDDEN for s in self.S]\n        self.real_tokens = sum(r['prompt_len'] + r['gen_len'] for r in reqs)\n        self.pref_pad = sum(s - p for s, p in zip(self.S, self.pl))\n        self.pref_cost_total = sum(self.pref_cost)\n        self.thr_cost = thr_cost\n        self.thr_pad_ratio = thr_pad_ratio\n        self.thr_p95 = thr_p95\n        self.thr_seq = thr_seq\n        self.max_above = max_above\n        self.Smax_all = max(self.S)\n        # compile cost with a single shape covering everything\n        self.compile_cost = (KSHAPE_ATTN * self.Smax_all ** 2\n                             + KSHAPE_MLP * self.Smax_all * HIDDEN)\n        self.pad_budget = thr_pad_ratio * self.real_tokens - self.pref_pad\n        self.cost_budget = thr_cost - self.pref_cost_total - self.compile_cost\n\n    # ---- aggregate metrics from a list of live batches ----\n    def metrics(self, batches):\n        dec_cost = 0.0\n        pad = 0.0\n        seq = 0.0\n        lats = []\n        for b in batches:\n            dec_cost += b.n * f_cost(b.S, b.G)\n            pad += b.n * b.G - b.sumG\n            ld = lat_dec(b.S, b.G) + TBATCH_OVERHEAD_MS\n            seq += b.pref[-1] + ld\n            lats.extend(x + ld for x in b.pref)\n        nb = len(batches)\n        cost = self.pref_cost_total + dec_cost + self.compile_cost + KBATCH_OVERHEAD_COST * nb\n        pad_ratio = (self.pref_pad + pad) / self.real_tokens\n        lats.sort()\n        k = min(len(lats) - 1, int(math.ceil(0.95 * len(lats))) - 1)\n        p95 = lats[k]\n        return dict(cost=cost, pad_ratio=pad_ratio, p95=p95, seq=seq, nbatches=nb,\n                    dec_cost=dec_cost, pad_tokens=pad, lats=lats)\n\n\ndef _count_above(pref_sorted, latdec_plus8, thr):\n    # count of x with x + latdec_plus8 > thr\n    return len(pref_sorted) - bisect_right(pref_sorted, thr - latdec_plus8)\n\n\ndef greedy_merge(P: Problem, target_seq, target_cost, target_pad, target_p95,\n                 kn=8, verbose=True, max_rounds=400):\n    \"\"\"Agglomerative merging of singleton batches driven by seq saved per budget.\"\"\"\n    batches = []\n    for i in range(P.n):\n        b = Batch(i, [i], P.S[i], P.G[i], 1, P.G[i], [P.pref_lat[i]])\n        batches.append(b)\n    nxt = P.n\n\n    live = {b.id: b for b in batches}\n    cost_avail = P.cost_budget\n    pad_avail = P.pad_budget\n    tover = TBATCH_OVERHEAD_MS\n    thr = target_p95\n    above = 0\n    for b in batches:\n        above += _count_above(b.pref, lat_dec(b.S, b.G) + tover, thr)\n    if above > P.max_above:\n        raise RuntimeError('initial above too high')\n\n    cost_slack = max(1.0, target_cost - (P.pref_cost_total + P.compile_cost))\n    pad_slack = max(1.0, P.pad_budget)\n\n    batching = True\n    rounds = 0\n    while batching and rounds < max_rounds:\n        rounds += 1\n        cur = list(live.values())\n        # current seq\n        seq = sum(b.pref[-1] + lat_dec(b.S, b.G) + tover for b in cur)\n        if seq <= target_seq:\n            break\n        # candidate neighbours: orderings by G, by S, by S*G\n        pairs = set()\n        def add_order(key, k=kn):\n            cur.sort(key=key)\n            for i in range(len(cur)):\n                for j in range(i + 1, min(len(cur), i + 1 + k)):\n                    a, b = cur[i], cur[j]\n                    pairs.add((a.id, b.id) if a.id < b.id else (b.id, a.id))\n        add_order(lambda b: (b.G, b.S))\n        add_order(lambda b: (b.S, b.G))\n        add_order(lambda b: (b.S * b.G, b.G))\n        cand = []\n        for (ia, ib) in pairs:\n            A = live.get(ia); B = live.get(ib)\n            if A is None or B is None:\n                continue\n            nS = A.S if A.S >= B.S else B.S\n            nG = A.G if A.G >= B.G else B.G\n            nn = A.n + B.n\n            nsumG = A.sumG + B.sumG\n            dc = nn * f_cost(nS, nG) - A.n * f_cost(A.S, A.G) - B.n * f_cost(B.S, B.G)\n            dc -= KBATCH_OVERHEAD_COST\n            dp = (nn * nG - nsumG) - ((A.n * A.G - A.sumG) + (B.n * B.G - B.sumG))\n            if dc > cost_avail or dp > pad_avail:\n                continue\n            lda = lat_dec(A.S, A.G) + tover\n            ldb = lat_dec(B.S, B.G) + tover\n            ldn = lat_dec(nS, nG) + tover\n            dseq = (A.pref[-1] + lda) + (B.pref[-1] + ldb) - (max(A.pref[-1], B.pref[-1]) + ldn)\n            dseq = -dseq  # saving\n            if dseq <= 0:\n                continue\n            ab_a = _count_above(A.pref, lda, thr)\n            ab_b = _count_above(B.pref, ldb, thr)\n            ab_n = _count_above(sorted(A.pref + B.pref), ldn, thr)\n            dab = ab_n - ab_a - ab_b\n            if above + dab > P.max_above:\n                continue\n            denom = max(0.0, dc) / cost_slack + dp / pad_slack\n            score = dseq / denom if denom > 1e-18 else float('inf')\n            cand.append((score, dseq, ia, ib, dc, dp, dab, nS, nG, nn, nsumG))\n        if not cand:\n            break\n        cand.sort(key=lambda x: -x[0])\n        merged_any = False\n        for (score, dseq, ia, ib, dc, dp, dab, nS, nG, nn, nsumG) in cand:\n            A = live.get(ia); B = live.get(ib)\n            if A is None or B is None or not A.alive or not B.alive:\n                continue\n            if dc > cost_avail or dp > pad_avail:\n                continue\n            if above + dab > P.max_above:\n                continue\n            # recompute dab with current state is same as computed (fresh)\n            nb = Batch(nxt, A.members + B.members, nS, nG, nn, nsumG,\n                       sorted(A.pref + B.pref))\n            nxt += 1\n            A.alive = False; B.alive = False\n            del live[ia]; del live[ib]\n            live[nb.id] = nb\n            cost_avail -= dc\n            pad_avail -= dp\n            above += dab\n            merged_any = True\n        if not merged_any:\n            break\n    res = P.metrics(list(live.values()))\n    if verbose:\n        print(f'  greedy: rounds={rounds} nbatches={res[\"nbatches\"]} seq={res[\"seq\"]:.4e} '\n              f'cost={res[\"cost\"]:.4e} pad={res[\"pad_ratio\"]:.5f} p95={res[\"p95\"]:.4e} above={above}')\n    return list(live.values()), res\n\n\ndef make_plan(P: Problem, batches):\n    shape = {'seq_align': P.Smax_all, 'heads_align': HEADS, 'hidden_align': HIDDEN}\n    batches = sorted(batches, key=lambda b: (b.S, b.G, b.id))\n    plan = []\n    for i, b in enumerate(batches):\n        bid = f'b-{i:04d}'\n        for m in b.members:\n            plan.append({'request_id': P.rid[m], 'batch_id': bid, 'shape': dict(shape)})\n    return plan\nPYEOF\necho ok",
+   "sandbox": [
+    {
+     "at_ms": 188145,
+     "dur_ms": 43,
+     "exit": 0,
+     "cpu_ms": 41.0,
+     "phases_us": {
+      "acquire": 45,
+      "resume": 20273,
+      "mount": 17474,
+      "run": 7271,
+      "destroy": 15611
+     },
+     "cold": null,
+     "vm": "vm-155"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 188199,
+   "dur_ms": 3854
+  },
+  {
+   "kind": "tool",
+   "at_ms": 192053,
+   "dur_ms": 607,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put /workspace/task_file/scripts/run_opt.py <<'PYEOF'\nimport time, sys\nimport eval_harness as H\nfrom optimizer import Problem, greedy_merge, make_plan\nimport json\n\ndef run(bucket, seq_frac=0.85, cost_frac=0.95, pad_frac=0.95, p95_frac=0.97, max_above=40, kn=8, out=None):\n    reqs = H.load_requests(bucket)\n    th = H.THRESH[bucket]\n    P = Problem(reqs, th['cost'], th['pad_ratio'], th['p95_latency_ms'], th['sequential_timecost'],\n                max_above=max_above)\n    print(f'== bucket {bucket}: real={P.real_tokens} pref_pad={P.pref_pad} '\n          f'pad_budget={P.pad_budget:.1f} cost_budget={P.cost_budget:.4e} compile={P.compile_cost:.3e}')\n    t0 = time.time()\n    batches, res = greedy_merge(P, target_seq=seq_frac*th['sequential_timecost'],\n                                target_cost=cost_frac*th['cost'],\n                                target_pad=pad_frac*th['pad_ratio'],\n                                target_p95=p95_frac*th['p95_latency_ms'],\n                                kn=kn)\n    print(' greedy time', round(time.time()-t0, 1))\n    plan = make_plan(P, batches)\n    probs = H.validate(reqs, plan, bucket)\n    m, r, ok = H.evaluate(H.req_map(reqs), plan, bucket)\n    H.report(f'bucket{bucket} plan', m, r, ok)\n    if probs: print(' PROBLEMS:', probs[:5])\n    print(' nbatches', len(set(p[\"batch_id\"] for p in plan)), 'shapes', len(set((p[\"shape\"][\"seq_align\"],p[\"shape\"][\"heads_align\"],p[\"shape\"][\"hidden_align\"]) for p in plan)))\n    if out:\n        H.write_plan(out, plan)\n    return plan, m, ok\n\nif __name__ == '__main__':\n    for b in (1, 2):\n        run(b)\n        print()\nPYEOF\nsbx run <<'EOF'\ncd /workspace/task_file/scripts && time python3 run_opt.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 192107,
+     "dur_ms": 45,
+     "exit": 0,
+     "cpu_ms": 42.1,
+     "phases_us": {
+      "acquire": 60,
+      "resume": 20418,
+      "mount": 17872,
+      "run": 7516,
+      "destroy": 17095
+     },
+     "cold": null,
+     "vm": "vm-162"
+    },
+    {
+     "at_ms": 192198,
+     "dur_ms": 448,
+     "exit": 0,
+     "cpu_ms": 453.7,
+     "phases_us": {
+      "acquire": 3,
+      "resume": 20124,
+      "mount": 17364,
+      "run": 403391,
+      "destroy": 23781
+     },
+     "cold": null,
+     "vm": "vm-154"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 192660,
+   "dur_ms": 12708
+  },
+  {
+   "kind": "tool",
+   "at_ms": 205368,
+   "dur_ms": 122,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\ncd /workspace/task_file/scripts && python3 - <<'PY'\nimport re, pathlib\np=pathlib.Path('optimizer.py'); s=p.read_text()\ns=s.replace(\"\"\"    cost_slack = max(1.0, target_cost - (P.pref_cost_total + P.compile_cost))\n    pad_slack = max(1.0, P.pad_budget)\"\"\",\n\"\"\"    pad_slack = max(1.0, P.pad_budget)\"\"\")\ns=s.replace(\"\"\"            denom = max(0.0, dc) / cost_slack + dp / pad_slack\"\"\",\n\"\"\"            denom = max(0.0, dc) / cost_slack + dp / pad_slack\"\"\")\ns=s.replace(\"\"\"        # current seq\n        seq = sum(b.pref[-1] + lat_dec(b.S, b.G) + tover for b in cur)\"\"\",\n\"\"\"        # current seq and remaining cost headroom\n        seq = sum(b.pref[-1] + lat_dec(b.S, b.G) + tover for b in cur)\n        cur_dec = sum(b.n * f_cost(b.S, b.G) for b in cur) + KBATCH_OVERHEAD_COST * len(cur)\n        cost_slack = max(1.0, cost_avail - cur_dec)\n        if cost_slack < 0:\n            cost_slack = 1.0\"\"\")\np.write_text(s)\nprint(\"patched\")\nPY\nsbx run <<'EOF'\ncd /workspace/task_file/scripts && time python3 run_opt.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 205421,
+     "dur_ms": 44,
+     "exit": 2,
+     "cpu_ms": 31.5,
+     "phases_us": {
+      "acquire": 3,
+      "resume": 20305,
+      "mount": 17701,
+      "run": 1225,
+      "destroy": 22543
+     },
+     "cold": null,
+     "vm": "vm-164"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 205490,
+   "dur_ms": 3268
+  },
+  {
+   "kind": "tool",
+   "at_ms": 208758,
+   "dur_ms": 340,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put /workspace/task_file/scripts/patch1.py <<'PYEOF'\nimport pathlib\np = pathlib.Path('/workspace/task_file/scripts/optimizer.py'); s = p.read_text()\ns = s.replace(\"\"\"    cost_slack = max(1.0, target_cost - (P.pref_cost_total + P.compile_cost))\n    pad_slack = max(1.0, P.pad_budget)\"\"\",\n\"\"\"    pad_slack = max(1.0, P.pad_budget)\"\"\")\ns = s.replace(\"\"\"        # current seq\n        seq = sum(b.pref[-1] + lat_dec(b.S, b.G) + tover for b in cur)\"\"\",\n\"\"\"        # current seq and remaining cost headroom\n        seq = sum(b.pref[-1] + lat_dec(b.S, b.G) + tover for b in cur)\n        cur_dec = sum(b.n * f_cost(b.S, b.G) for b in cur) + KBATCH_OVERHEAD_COST * len(cur)\n        cost_slack = max(1.0, cost_avail - cur_dec)\"\"\")\np.write_text(s)\nprint('patched', 'cost_slack = max(1.0, P.pad_budget)' in s)\nPYEOF\nsbx run <<'XEOF'\ncd /workspace/task_file/scripts && python3 patch1.py && grep -n \"cost_slack\\|pad_slack\" optimizer.py\nXEOF",
+   "sandbox": [
+    {
+     "at_ms": 208812,
+     "dur_ms": 45,
+     "exit": 0,
+     "cpu_ms": 43.3,
+     "phases_us": {
+      "acquire": 56,
+      "resume": 20108,
+      "mount": 17627,
+      "run": 7839,
+      "destroy": 17267
+     },
+     "cold": null,
+     "vm": "vm-166"
+    },
+    {
+     "at_ms": 208904,
+     "dur_ms": 170,
+     "exit": 0,
+     "cpu_ms": 163.7,
+     "phases_us": {
+      "acquire": 4,
+      "resume": 19957,
+      "mount": 17241,
+      "run": 126991,
+      "destroy": 22321
+     },
+     "cold": null,
+     "vm": "vm-163"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 209098,
+   "dur_ms": 1228
+  },
+  {
+   "kind": "tool",
+   "at_ms": 210326,
+   "dur_ms": 520,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'XEOF'\ncd /workspace/task_file/scripts && time python3 run_opt.py\nXEOF",
+   "sandbox": [
+    {
+     "at_ms": 210381,
+     "dur_ms": 446,
+     "exit": 0,
+     "cpu_ms": 456.3,
+     "phases_us": {
+      "acquire": 64,
+      "resume": 20377,
+      "mount": 17818,
+      "run": 405726,
+      "destroy": 20041
+     },
+     "cold": null,
+     "vm": "vm-168"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 210846,
+   "dur_ms": 7889
+  },
+  {
+   "kind": "tool",
+   "at_ms": 218735,
+   "dur_ms": 1078,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'XEOF'\ncd /workspace/task_file/scripts && python3 - <<'PY'\nimport eval_harness as H\nfrom optimizer import Problem, greedy_merge, f_cost, lat_dec, KBATCH_OVERHEAD_COST\nimport optimizer as O\nth=H.THRESH[1]; reqs=H.load_requests(1)\nP=Problem(reqs, th['cost'], th['pad_ratio'], th['p95_latency_ms'], th['sequential_timecost'], max_above=40)\ninit_dec=sum(f_cost(P.S[i],P.G[i]) for i in range(P.n))+KBATCH_OVERHEAD_COST*P.n\nprint(\"prefill_total\",f\"{P.pref_cost_total:.4e}\",\"compile\",f\"{P.compile_cost:.4e}\")\nprint(\"init decode+overhead\",f\"{init_dec:.4e}\",\"cost_budget\",f\"{P.cost_budget:.4e}\",\"slack\",f\"{P.cost_budget-init_dec:.4e}\")\nprint(\"pad_budget\",P.pad_budget)\n# monkeypatch to trace\norig=O.greedy_merge\nimport types\nbs,res=greedy_merge(P, target_seq=0.85*th['sequential_timecost'], target_cost=0.95*th['cost'], target_pad=0.95*th['pad_ratio'], target_p95=0.97*th['p95_latency_ms'], kn=8, verbose=False)\nprint(\"result\", {k:f\"{v:.4e}\" if isinstance(v,float) else v for k,v in res.items() if k!='lats'})\nprint(\"sum of b.n\", sum(b.n for b in bs))\nPY\nXEOF",
+   "sandbox": [
+    {
+     "at_ms": 219391,
+     "dur_ms": 375,
+     "exit": 0,
+     "cpu_ms": 373.2,
+     "phases_us": {
+      "acquire": 4,
+      "resume": 20962,
+      "mount": 18261,
+      "run": 322960,
+      "destroy": 31044
+     },
+     "cold": null,
+     "vm": "vm-169"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 219813,
+   "dur_ms": 26364
+  },
+  {
+   "kind": "tool",
+   "at_ms": 246177,
+   "dur_ms": 678,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put /workspace/task_file/scripts/optimizer.py <<'PYEOF'\n#!/usr/bin/env python3\n\"\"\"Shape-aware batching optimizer (agglomerative, budget driven).\"\"\"\nfrom __future__ import annotations\nimport math\nfrom bisect import bisect_right\n\nHEADS, HIDDEN, GRAN = 32, 4096, 64\nKP_ATTN, KP_MLP = 2.0, 1.0\nTP_ATTN, TP_MLP = 0.002, 0.0015\nKD_ATTN, KD_MLP = 1.0, 0.5\nTD_ATTN, TD_MLP = 0.0012, 0.0006\nKSHAPE_ATTN, KSHAPE_MLP = 500.0, 2.0\nTSHAPE_COMPILE_MS = 1500.0\nKBATCH_OVERHEAD_COST = 10_000_000.0\nTBATCH_OVERHEAD_MS = 8.0\n\n_fcache = {}\n_ldcache = {}\n\n\ndef align(x, g=GRAN):\n    return ((x + g - 1) // g) * g\n\n\ndef sum_sq_arith(a, n):\n    return n * (a * a) + a * n * (n - 1) + (n * (n - 1) * (2 * n - 1)) // 6\n\n\ndef f_cost(S, G):\n    v = _fcache.get((S, G))\n    if v is None:\n        sl = G * S + G * (G - 1) / 2.0\n        v = KD_ATTN * sum_sq_arith(S, G) + KD_MLP * HIDDEN * sl\n        _fcache[(S, G)] = v\n    return v\n\n\ndef lat_dec(S, G):\n    v = _ldcache.get((S, G))\n    if v is None:\n        sl = G * S + G * (G - 1) / 2.0\n        v = TD_ATTN * sum_sq_arith(S, G) + TD_MLP * HIDDEN * sl\n        _ldcache[(S, G)] = v\n    return v\n\n\nclass Batch:\n    __slots__ = ('id', 'members', 'S', 'G', 'n', 'sumG', 'pref')\n\n    def __init__(self, bid, members, S, G, n, sumG, pref):\n        self.id = bid; self.members = members; self.S = S; self.G = G\n        self.n = n; self.sumG = sumG; self.pref = pref  # sorted prefill lats\n\n    def lat(self):\n        return self.pref[-1] + lat_dec(self.S, self.G) + TBATCH_OVERHEAD_MS\n\n    def cost(self):\n        return self.n * f_cost(self.S, self.G)\n\n    def pad(self):\n        return self.n * self.G - self.sumG\n\n\nclass Problem:\n    def __init__(self, reqs, thr_cost, thr_pad_ratio, thr_p95, thr_seq,\n                 max_above=40, shape_levels=None):\n        self.reqs = reqs\n        self.rid = [r['request_id'] for r in reqs]\n        self.S = [align(r['prompt_len']) for r in reqs]\n        self.G = [r['gen_len'] for r in reqs]\n        self.pl = [r['prompt_len'] for r in reqs]\n        self.n = len(reqs)\n        self.pref_cost = [KP_ATTN * s * s + KP_MLP * s * HIDDEN for s in self.S]\n        self.pref_lat = [TP_ATTN * s * s + TP_MLP * s * HIDDEN for s in self.S]\n        self.real_tokens = sum(r['prompt_len'] + r['gen_len'] for r in reqs)\n        self.pref_pad = sum(s - p for s, p in zip(self.S, self.pl))\n        self.pref_cost_total = sum(self.pref_cost)\n        self.thr_cost = thr_cost\n        self.thr_pad_ratio = thr_pad_ratio\n        self.thr_p95 = thr_p95\n        self.thr_seq = thr_seq\n        self.max_above = max_above\n        self.Smax_all = max(self.S)\n        if shape_levels is None:\n            shape_levels = [self.Smax_all]\n        self.shape_levels = sorted(set(shape_levels))\n        self.compile_cost = sum(KSHAPE_ATTN * s * s + KSHAPE_MLP * s * HIDDEN\n                                for s in self.shape_levels)\n        self.pad_budget = thr_pad_ratio * self.real_tokens - self.pref_pad\n        self.cost_budget = thr_cost - self.pref_cost_total - self.compile_cost\n\n    def shape_for(self, Smax):\n        for s in self.shape_levels:\n            if s >= Smax:\n                return s\n        return self.shape_levels[-1]\n\n    def metrics(self, batches):\n        dec_cost = pad = seq = 0.0\n        lats = []\n        for b in batches:\n            ld = lat_dec(b.S, b.G) + TBATCH_OVERHEAD_MS\n            dec_cost += b.n * f_cost(b.S, b.G)\n            pad += b.n * b.G - b.sumG\n            seq += b.pref[-1] + ld\n            lats.extend(x + ld for x in b.pref)\n        nb = len(batches)\n        cost = (self.pref_cost_total + dec_cost\n                + self.compile_cost + KBATCH_OVERHEAD_COST * nb)\n        lats.sort()\n        k = min(len(lats) - 1, int(math.ceil(0.95 * len(lats))) - 1)\n        return dict(cost=cost, pad_ratio=(self.pref_pad + pad) / self.real_tokens,\n                    p95=lats[k], seq=seq, nbatches=nb, dec_cost=dec_cost,\n                    pad_tokens=pad, lats=lats)\n\n\ndef count_above(pref_sorted, latdec_plus_over, thr):\n    return len(pref_sorted) - bisect_right(pref_sorted, thr - latdec_plus_over)\n\n\ndef make_batches_from_groups(P, groups):\n    \"\"\"groups: list of lists of request indices.\"\"\"\n    out = []\n    for i, members in enumerate(groups):\n        if not members:\n            continue\n        S = max(P.S[m] for m in members); G = max(P.G[m] for m in members)\n        out.append(Batch(i, list(members), S, G, len(members),\n                         sum(P.G[m] for m in members),\n                         sorted(P.pref_lat[m] for m in members)))\n    return out\n\n\ndef greedy_merge(P: Problem, batches, target_seq, target_p95, kn=10,\n                 cost_frac=1.0, pad_frac=1.0, trace=False, max_rounds=2000):\n    live = {b.id: b for b in batches}\n    nxt = max(live) + 1\n    cost_budget = P.cost_budget * cost_frac\n    pad_budget = P.pad_budget * pad_frac\n    tover = TBATCH_OVERHEAD_MS\n    thr = target_p95\n\n    cur_dec = sum(b.cost() for b in live.values()) + KBATCH_OVERHEAD_COST * len(live)\n    cost_avail = cost_budget - cur_dec          # remaining decode+overhead allowance\n    pad_avail = pad_budget - sum(b.pad() for b in live.values())\n    above = sum(count_above(b.pref, lat_dec(b.S, b.G) + tover, thr) for b in live.values())\n\n    rounds = 0\n    total_applied = 0\n    while rounds < max_rounds:\n        rounds += 1\n        seq = sum(b.lat() for b in live.values())\n        if seq <= target_seq:\n            break\n        cur = list(live.values())\n        pairs = set()\n        for key in (lambda b: (b.G, b.S), lambda b: (b.S, b.G), lambda b: (b.S * b.G, b.G)):\n            cur.sort(key=key)\n            L = len(cur)\n            for i in range(L):\n                bi = cur[i]\n                for j in range(i + 1, min(L, i + 1 + kn)):\n                    bj = cur[j]\n                    pairs.add((bi.id, bj.id) if bi.id < bj.id else (bj.id, bi.id))\n        cand = []\n        for ia, ib in pairs:\n            A = live.get(ia); B = live.get(ib)\n            if A is None or B is None:\n                continue\n            nS = A.S if A.S >= B.S else B.S\n            nG = A.G if A.G >= B.G else B.G\n            nn = A.n + B.n\n            dc = nn * f_cost(nS, nG) - A.n * f_cost(A.S, A.G) - B.n * f_cost(B.S, B.G)\n            dc -= KBATCH_OVERHEAD_COST\n            dp = (nn * nG - A.sumG - B.sumG) - (A.pad() + B.pad())\n            if dc > cost_avail or dp > pad_avail or dc < -KBATCH_OVERHEAD_COST - 1:\n                continue\n            lda = lat_dec(A.S, A.G) + tover\n            ldb = lat_dec(B.S, B.G) + tover\n            ldn = lat_dec(nS, nG) + tover\n            dseq = (A.pref[-1] + lda) + (B.pref[-1] + ldb) - (max(A.pref[-1], B.pref[-1]) + ldn)\n            if dseq <= 0:\n                continue\n            ab_n = count_above(sorted(A.pref + B.pref), ldn, thr)\n            dab = ab_n - count_above(A.pref, lda, thr) - count_above(B.pref, ldb, thr)\n            if above + dab > P.max_above:\n                continue\n            denom = max(0.0, dc) / max(1.0, cost_avail) + dp / max(1.0, pad_avail)\n            score = dseq / denom if denom > 1e-18 else float('inf')\n            cand.append((score, dseq, ia, ib, dc, dp, dab, nS, nG, nn))\n        cand.sort(key=lambda x: -x[0])\n        applied = 0\n        for (score, dseq, ia, ib, dc, dp, dab, nS, nG, nn) in cand:\n            A = live.get(ia); B = live.get(ib)\n            if A is None or B is None:\n                continue\n            if dc > cost_avail or dp > pad_avail:\n                continue\n            if above + dab > P.max_above:\n                continue\n            nb = Batch(nxt, A.members + B.members, nS, nG, nn, A.sumG + B.sumG,\n                       sorted(A.pref + B.pref))\n            nxt += 1\n            del live[ia]; del live[ib]\n            live[nb.id] = nb\n            cost_avail -= dc\n            pad_avail -= dp\n            above += dab\n            applied += 1\n            if trace:\n                print(f'    merge {ia}+{ib} -> {nb.id} S={nS} G={nG} n={nn} '\n                      f'dc={dc:.3e} dp={dp:.1f} dseq={dseq:.3e}')\n        total_applied += applied\n        if applied == 0:\n            break\n    res = P.metrics(list(live.values()))\n    if trace:\n        print(f'  greedy rounds={rounds} applied={total_applied} nb={res[\"nbatches\"]} '\n              f'seq={res[\"seq\"]:.4e} cost={res[\"cost\"]:.4e} pad={res[\"pad_ratio\"]:.5f} '\n              f'p95={res[\"p95\"]:.4e} above={above} cost_avail={cost_avail:.3e} pad_avail={pad_avail:.1f}')\n    return list(live.values()), res\n\n\ndef make_plan(P: Problem, batches):\n    batches = sorted(batches, key=lambda b: (b.S, b.G, b.id))\n    plan = []\n    for i, b in enumerate(batches):\n        bid = f'b-{i:04d}'\n        sl = P.shape_for(b.S)\n        for m in b.members:\n            plan.append({'request_id': P.rid[m], 'batch_id': bid,\n                         'shape': {'seq_align': sl, 'heads_align': HEADS,\n                                   'hidden_align': HIDDEN}})\n    return plan\nPYEOF\necho rewrote",
+   "sandbox": [
+    {
+     "at_ms": 246801,
+     "dur_ms": 43,
+     "exit": 0,
+     "cpu_ms": 42.9,
+     "phases_us": {
+      "acquire": 59,
+      "resume": 20509,
+      "mount": 17916,
+      "run": 7390,
+      "destroy": 15193
+     },
+     "cold": null,
+     "vm": "vm-171"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 246855,
+   "dur_ms": 12505
+  },
+  {
+   "kind": "tool",
+   "at_ms": 259360,
+   "dur_ms": 598,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put /workspace/task_file/scripts/exp3.py <<'PYEOF'\nimport eval_harness as H\nimport optimizer as O\n\ndef run(b, trace=False, kn=10):\n    th = H.THRESH[b]; reqs = H.load_requests(b)\n    P = O.Problem(reqs, th['cost'], th['pad_ratio'], th['p95_latency_ms'], th['sequential_timecost'], max_above=40)\n    init = O.make_batches_from_groups(P, [[i] for i in range(P.n)])\n    bs, res = O.greedy_merge(P, init, target_seq=0.85*th['sequential_timecost'],\n                             target_p95=0.97*th['p95_latency_ms'], kn=kn, trace=trace)\n    plan = O.make_plan(P, bs)\n    m, r, ok = H.evaluate(H.req_map(reqs), plan, b)\n    H.report(f'b{b}', m, r, ok)\n    return P, bs, res\n\nif __name__ == '__main__':\n    for b in (1, 2):\n        print('==== bucket', b)\n        run(b, trace=True, kn=10)\nPYEOF\nsbx run <<'XEOF'\ncd /workspace/task_file/scripts && python3 exp3.py 2>&1 | head -60\nXEOF",
+   "sandbox": [
+    {
+     "at_ms": 259414,
+     "dur_ms": 60,
+     "exit": 0,
+     "cpu_ms": 39.7,
+     "phases_us": {
+      "acquire": 86,
+      "resume": 21129,
+      "mount": 18212,
+      "run": 7718,
+      "destroy": 31070
+     },
+     "cold": null,
+     "vm": "vm-174"
+    },
+    {
+     "at_ms": 259520,
+     "dur_ms": 411,
+     "exit": 0,
+     "cpu_ms": 410.2,
+     "phases_us": {
+      "acquire": 21,
+      "resume": 20415,
+      "mount": 17658,
+      "run": 360299,
+      "destroy": 29640
+     },
+     "cold": null,
+     "vm": "vm-167"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 259958,
+   "dur_ms": 1630
+  },
+  {
+   "kind": "tool",
+   "at_ms": 261588,
+   "dur_ms": 480,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'XEOF'\ncd /workspace/task_file/scripts && python3 exp3.py 2>&1 | grep -E \"^====|greedy rounds|^---|^   \" | head -40\nXEOF",
+   "sandbox": [
+    {
+     "at_ms": 261640,
+     "dur_ms": 396,
+     "exit": 0,
+     "cpu_ms": 393.3,
+     "phases_us": {
+      "acquire": 89,
+      "resume": 20591,
+      "mount": 18058,
+      "run": 348719,
+      "destroy": 25920
+     },
+     "cold": null,
+     "vm": "vm-179"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 262068,
+   "dur_ms": 2223
+  },
+  {
+   "kind": "tool",
+   "at_ms": 264291,
+   "dur_ms": 1104,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'XEOF'\ncd /workspace/task_file/scripts && python3 - <<'PY'\nimport eval_harness as H\nimport optimizer as O\nfor b in (1,2):\n    th=H.THRESH[b]; reqs=H.load_requests(b)\n    P=O.Problem(reqs, th['cost'], th['pad_ratio'], th['p95_latency_ms'], th['sequential_timecost'], max_above=40)\n    init=O.make_batches_from_groups(P, [[i] for i in range(P.n)])\n    bs,res=O.greedy_merge(P, init, target_seq=0.85*th['sequential_timecost'], target_p95=0.97*th['p95_latency_ms'], kn=10, trace=False)\n    print('bucket',b,{k:(f'{v:.4e}' if isinstance(v,float) else v) for k,v in res.items() if k!='lats'})\n    plan=O.make_plan(P,bs)\n    m,r,ok=H.evaluate(H.req_map(reqs),plan,b); H.report(f'b{b}',m,r,ok)\nPY\nXEOF",
+   "sandbox": [
+    {
+     "at_ms": 264950,
+     "dur_ms": 424,
+     "exit": 0,
+     "cpu_ms": 425.1,
+     "phases_us": {
+      "acquire": 68,
+      "resume": 20081,
+      "mount": 17711,
+      "run": 377417,
+      "destroy": 26745
+     },
+     "cold": null,
+     "vm": "vm-180"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 265395,
+   "dur_ms": 25556
+  },
+  {
+   "kind": "tool",
+   "at_ms": 290951,
+   "dur_ms": 1287,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put /workspace/task_file/scripts/gmerge.py <<'PYEOF'\n\"\"\"Budget-aware agglomerative merge (v2).\"\"\"\nfrom optimizer import (f_cost, lat_dec, Batch, Problem, KBATCH_OVERHEAD_COST,\n                       TBATCH_OVERHEAD_MS, count_above)\n\n\ndef greedy_merge2(P, batches, target_seq, target_p95, kn=10,\n                  cost_frac=1.0, pad_frac=1.0, trace=False, max_rounds=5000):\n    live = {b.id: b for b in batches}\n    nxt = max(live) + 1\n    tover = TBATCH_OVERHEAD_MS\n    thr = target_p95\n    cost_budget = P.cost_budget * cost_frac\n    pad_budget = P.pad_budget * pad_frac\n\n    seq = sum(b.lat() for b in live.values())\n    cur_dec = sum(b.cost() for b in live.values()) + KBATCH_OVERHEAD_COST * len(live)\n    pad_cur = sum(b.pad() for b in live.values())\n    above = sum(count_above(b.pref, lat_dec(b.S, b.G) + tover, thr) for b in live.values())\n\n    rounds = applied_total = 0\n    while rounds < max_rounds:\n        rounds += 1\n        if seq <= target_seq:\n            break\n        cost_avail = cost_budget - cur_dec      # remaining decode+overhead slack\n        pad_avail = pad_budget - pad_cur\n        cur = list(live.values())\n        pairs = set()\n        for key in (lambda b: (b.G, b.S), lambda b: (b.S, b.G), lambda b: (b.S * b.G, b.G)):\n            cur.sort(key=key)\n            L = len(cur)\n            for i in range(L):\n                bi = cur[i]\n                for j in range(i + 1, min(L, i + 1 + kn)):\n                    bj = cur[j]\n                    pairs.add((bi.id, bj.id) if bi.id < bj.id else (bj.id, bi.id))\n        cand = []\n        for ia, ib in pairs:\n            A = live.get(ia); B = live.get(ib)\n            if A is None or B is None:\n                continue\n            nS = A.S if A.S >= B.S else B.S\n            nG = A.G if A.G >= B.G else B.G\n            nn = A.n + B.n\n            dc = nn * f_cost(nS, nG) - A.n * f_cost(A.S, A.G) - B.n * f_cost(B.S, B.G)\n            dc -= KBATCH_OVERHEAD_COST\n            dp = (nn * nG - A.sumG - B.sumG) - (A.pad() + B.pad())\n            if dc > 0 and dc > cost_avail:\n                continue\n            if dp > 0 and dp > pad_avail:\n                continue\n            lda = lat_dec(A.S, A.G) + tover\n            ldb = lat_dec(B.S, B.G) + tover\n            ldn = lat_dec(nS, nG) + tover\n            dseq = (A.pref[-1] + lda) + (B.pref[-1] + ldb) - (max(A.pref[-1], B.pref[-1]) + ldn)\n            if dseq <= 0:\n                continue\n            ab_n = count_above(sorted(A.pref + B.pref), ldn, thr)\n            dab = ab_n - count_above(A.pref, lda, thr) - count_above(B.pref, ldb, thr)\n            if above + dab > P.max_above:\n                continue\n            cterm = 0.0 if dc <= 0 else dc / max(1.0, cost_avail)\n            pterm = 0.0 if dp <= 0 else dp / max(1.0, pad_avail)\n            denom = cterm + pterm\n            score = dseq / denom if denom > 1e-18 else float('inf')\n            cand.append((score, dseq, ia, ib, dc, dp, dab, nS, nG, nn))\n        cand.sort(key=lambda x: -x[0])\n        applied = 0\n        for (score, dseq, ia, ib, dc, dp, dab, nS, nG, nn) in cand:\n            if seq <= target_seq:\n                break\n            A = live.get(ia); B = live.get(ib)\n            if A is None or B is None:\n                continue\n            if dc > 0 and dc > (cost_budget - cur_dec):\n                continue\n            if dp > 0 and dp > (pad_budget - pad_cur):\n                continue\n            if above + dab > P.max_above:\n                continue\n            nb = Batch(nxt, A.members + B.members, nS, nG, nn, A.sumG + B.sumG,\n                       sorted(A.pref + B.pref))\n            nxt += 1\n            del live[ia]; del live[ib]\n            live[nb.id] = nb\n            seq -= dseq\n            cur_dec += dc\n            pad_cur += dp\n            above += dab\n            applied += 1\n            if trace:\n                print(f'    {ia}+{ib} S={nS} G={nG} n={nn} dc={dc:.3e} dp={dp:.1f} dseq={dseq:.3e}')\n        applied_total += applied\n        if applied == 0:\n            break\n    res = P.metrics(list(live.values()))\n    if trace:\n        print(f'  rounds={rounds} applied={applied_total} nb={res[\"nbatches\"]} '\n              f'seq={res[\"seq\"]:.4e} cost={res[\"cost\"]:.4e} pad={res[\"pad_ratio\"]:.5f} '\n              f'p95={res[\"p95\"]:.4e} above={above}')\n    return list(live.values()), res\nPYEOF\nsbx put /workspace/task_file/scripts/exp4.py <<'PYEOF'\nimport sys\nimport eval_harness as H\nimport optimizer as O\nfrom gmerge import greedy_merge2\n\ndef run(b, seq_fracs=(0.9, 0.8, 0.7, 0.6), cost_frac=1.0, pad_frac=0.98, verbosity=1):\n    th = H.THRESH[b]; reqs = H.load_requests(b)\n    P = O.Problem(reqs, th['cost'], th['pad_ratio'], th['p95_latency_ms'],\n                  th['sequential_timecost'], max_above=40)\n    init = O.make_batches_from_groups(P, [[i] for i in range(P.n)])\n    out = []\n    for sf in seq_fracs:\n        bs, res = greedy_merge2(P, init, target_seq=sf * th['sequential_timecost'],\n                                target_p95=0.97 * th['p95_latency_ms'], kn=10,\n                                cost_frac=cost_frac, pad_frac=pad_frac)\n        plan = O.make_plan(P, bs)\n        m, r, ok = H.evaluate(H.req_map(reqs), plan, b)\n        print(f'b{b} seq_frac={sf}: nb={res[\"nbatches\"]} cost={m[\"cost\"]:.4e} '\n              f'pad={m[\"pad_ratio\"]:.5f} p95={m[\"p95_latency_ms\"]:.4e} '\n              f'seq={m[\"sequential_timecost\"]:.4e} pass={ok}')\n        out.append((sf, bs, res, m, ok))\n    return out\n\nif __name__ == '__main__':\n    for b in (1, 2):\n        run(b)\nPYEOF\nsbx run <<'XEOF'\ncd /workspace/task_file/scripts && time python3 exp4.py\nXEOF",
+   "sandbox": [
+    {
+     "at_ms": 291011,
+     "dur_ms": 50,
+     "exit": 0,
+     "cpu_ms": 48.2,
+     "phases_us": {
+      "acquire": 71,
+      "resume": 22931,
+      "mount": 19769,
+      "run": 8687,
+      "destroy": 17878
+     },
+     "cold": null,
+     "vm": "vm-181"
+    },
+    {
+     "at_ms": 291108,
+     "dur_ms": 52,
+     "exit": 0,
+     "cpu_ms": 40.8,
+     "phases_us": {
+      "acquire": 15,
+      "resume": 20272,
+      "mount": 17640,
+      "run": 7541,
+      "destroy": 23627
+     },
+     "cold": null,
+     "vm": "vm-178"
+    },
+    {
+     "at_ms": 291206,
+     "dur_ms": 1010,
+     "exit": 0,
+     "cpu_ms": 990.9,
+     "phases_us": {
+      "acquire": 19553,
+      "resume": 19668,
+      "mount": 17757,
+      "run": 950051,
+      "destroy": 20269
+     },
+     "cold": "exhausted",
+     "vm": "vm-183"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 292238,
+   "dur_ms": 16873
+  },
+  {
+   "kind": "tool",
+   "at_ms": 309111,
+   "dur_ms": 4989,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put /workspace/task_file/scripts/exp5.py <<'PYEOF'\nimport eval_harness as H\nimport optimizer as O\nfrom gmerge import greedy_merge2\n\ndef experiment(b, seq_frac, kn=10, cost_frac=1.0, pad_frac=0.98, max_above=40, p95_frac=0.97):\n    th = H.THRESH[b]; reqs = H.load_requests(b)\n    P = O.Problem(reqs, th['cost'], th['pad_ratio'], th['p95_latency_ms'],\n                  th['sequential_timecost'], max_above=max_above)\n    init = O.make_batches_from_groups(P, [[i] for i in range(P.n)])\n    bs, res = greedy_merge2(P, init, target_seq=seq_frac * th['sequential_timecost'],\n                            target_p95=p95_frac * th['p95_latency_ms'], kn=kn,\n                            cost_frac=cost_frac, pad_frac=pad_frac)\n    plan = O.make_plan(P, bs)\n    m, r, ok = H.evaluate(H.req_map(reqs), plan, b)\n    fracs = {k: m[k] / th[k] for k in th}\n    return m, fracs, ok, plan, bs, P\n\nif __name__ == '__main__':\n    for b in (1, 2):\n        print(f'==== bucket {b}')\n        for kn in (10, 20, 40):\n            for sf in (0.95, 0.9, 0.85, 0.8):\n                m, fr, ok, plan, bs, P = experiment(b, sf, kn=kn)\n                print(f'  kn={kn:2d} sf={sf}: cost={fr[\"cost\"]*100:5.2f}% pad={fr[\"pad_ratio\"]*100:5.2f}% '\n                      f'p95={fr[\"p95_latency_ms\"]*100:5.2f}% seq={fr[\"sequential_timecost\"]*100:5.2f}% '\n                      f'nb={len(bs)} pass={ok}')\nPYEOF\nsbx run <<'XEOF'\ncd /workspace/task_file/scripts && time python3 exp5.py\nXEOF",
+   "sandbox": [
+    {
+     "at_ms": 309166,
+     "dur_ms": 50,
+     "exit": 0,
+     "cpu_ms": 41.4,
+     "phases_us": {
+      "acquire": 69,
+      "resume": 20200,
+      "mount": 17481,
+      "run": 7294,
+      "destroy": 22836
+     },
+     "cold": null,
+     "vm": "vm-185"
+    },
+    {
+     "at_ms": 309263,
+     "dur_ms": 4826,
+     "exit": 0,
+     "cpu_ms": 4834.1,
+     "phases_us": {
+      "acquire": 16,
+      "resume": 23719,
+      "mount": 20714,
+      "run": 4777034,
+      "destroy": 25376
+     },
+     "cold": null,
+     "vm": "vm-184"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 314100,
+   "dur_ms": 11585
+  },
+  {
+   "kind": "tool",
+   "at_ms": 325685,
+   "dur_ms": 1980,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put /workspace/task_file/scripts/exp6.py <<'PYEOF'\nimport eval_harness as H\nimport optimizer as O\nfrom gmerge import greedy_merge2\n\ndef experiment(b, seq_frac, kn=10, max_above=40, p95_frac=0.97, pad_frac=0.98):\n    th = H.THRESH[b]; reqs = H.load_requests(b)\n    P = O.Problem(reqs, th['cost'], th['pad_ratio'], th['p95_latency_ms'],\n                  th['sequential_timecost'], max_above=max_above)\n    init = O.make_batches_from_groups(P, [[i] for i in range(P.n)])\n    bs, res = greedy_merge2(P, init, target_seq=seq_frac * th['sequential_timecost'],\n                            target_p95=p95_frac * th['p95_latency_ms'], kn=kn,\n                            pad_frac=pad_frac)\n    plan = O.make_plan(P, bs)\n    m, r, ok = H.evaluate(H.req_map(reqs), plan, b)\n    fr = {k: m[k] / th[k] for k in th}\n    return m, fr, ok\n\nfor b in (1,2):\n    print('==== bucket', b)\n    for ma, pf in ((40,0.97),(38,0.965),(36,0.962),(44,0.97),(40,0.99)):\n        for sf in (0.9, 0.85):\n            m, fr, ok = experiment(b, sf, max_above=ma, p95_frac=pf)\n            print(f'  max_above={ma} p95f={pf} sf={sf}: cost={fr[\"cost\"]*100:5.2f}% pad={fr[\"pad_ratio\"]*100:5.2f}% '\n                  f'p95={fr[\"p95_latency_ms\"]*100:5.2f}% seq={fr[\"sequential_timecost\"]*100:5.2f}% pass={ok}')\nPYEOF\nsbx run <<'XEOF'\ncd /workspace/task_file/scripts && python3 exp6.py\nXEOF",
+   "sandbox": [
+    {
+     "at_ms": 325741,
+     "dur_ms": 45,
+     "exit": 0,
+     "cpu_ms": 42.7,
+     "phases_us": {
+      "acquire": 10,
+      "resume": 19942,
+      "mount": 17429,
+      "run": 7624,
+      "destroy": 16961
+     },
+     "cold": null,
+     "vm": "vm-187"
+    },
+    {
+     "at_ms": 325831,
+     "dur_ms": 1819,
+     "exit": 0,
+     "cpu_ms": 1827.7,
+     "phases_us": {
+      "acquire": 16,
+      "resume": 20210,
+      "mount": 17572,
+      "run": 1776937,
+      "destroy": 21460
+     },
+     "cold": null,
+     "vm": "vm-186"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 327665,
+   "dur_ms": 10889
+  },
+  {
+   "kind": "tool",
+   "at_ms": 338554,
+   "dur_ms": 772,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put /workspace/task_file/scripts/gmerge.py <<'PYEOF'\n\"\"\"Budget-aware agglomerative merge used by the final packer.\"\"\"\nfrom optimizer import (f_cost, lat_dec, Batch, KBATCH_OVERHEAD_COST,\n                       TBATCH_OVERHEAD_MS, count_above)\n\n\ndef greedy_merge2(P, batches, target_seq, target_p95, kn=10,\n                  cost_frac=1.0, pad_frac=1.0, trace=False, max_rounds=5000):\n    live = {b.id: b for b in batches}\n    nxt = max(live) + 1\n    tover = TBATCH_OVERHEAD_MS\n    thr = target_p95\n    cost_budget = P.cost_budget * cost_frac\n    pad_budget = P.pad_budget * pad_frac\n\n    seq = sum(b.lat() for b in live.values())\n    cur_dec = sum(b.cost() for b in live.values()) + KBATCH_OVERHEAD_COST * len(live)\n    pad_cur = sum(b.pad() for b in live.values())\n    above = sum(count_above(b.pref, lat_dec(b.S, b.G) + tover, thr) for b in live.values())\n\n    rounds = applied_total = 0\n    while rounds < max_rounds:\n        rounds += 1\n        if seq <= target_seq:\n            break\n        cost_avail = cost_budget - cur_dec\n        pad_avail = pad_budget - pad_cur\n        cur = list(live.values())\n        pairs = set()\n        for key in (lambda b: (b.G, b.S), lambda b: (b.S, b.G), lambda b: (b.S * b.G, b.G)):\n            cur.sort(key=key)\n            L = len(cur)\n            for i in range(L):\n                bi = cur[i]\n                for j in range(i + 1, min(L, i + 1 + kn)):\n                    bj = cur[j]\n                    pairs.add((bi.id, bj.id) if bi.id < bj.id else (bj.id, bi.id))\n        cand = []\n        for ia, ib in pairs:\n            A = live.get(ia); B = live.get(ib)\n            if A is None or B is None:\n                continue\n            nS = A.S if A.S >= B.S else B.S\n            nG = A.G if A.G >= B.G else B.G\n            nn = A.n + B.n\n            dc = nn * f_cost(nS, nG) - A.n * f_cost(A.S, A.G) - B.n * f_cost(B.S, B.G)\n            dc -= KBATCH_OVERHEAD_COST\n            dp = (nn * nG - A.sumG - B.sumG) - (A.pad() + B.pad())\n            if dc > 0 and dc > cost_avail:\n                continue\n            if dp > 0 and dp > pad_avail:\n                continue\n            lda = lat_dec(A.S, A.G) + tover\n            ldb = lat_dec(B.S, B.G) + tover\n            ldn = lat_dec(nS, nG) + tover\n            dseq = (A.pref[-1] + lda) + (B.pref[-1] + ldb) - (max(A.pref[-1], B.pref[-1]) + ldn)\n            if dseq <= 0:\n                continue\n            ab_n = count_above(sorted(A.pref + B.pref), ldn, thr)\n            dab = ab_n - count_above(A.pref, lda, thr) - count_above(B.pref, ldb, thr)\n            if above + dab > P.max_above:\n                continue\n            cterm = 0.0 if dc <= 0 else dc / max(1.0, cost_avail)\n            pterm = 0.0 if dp <= 0 else dp / max(1.0, pad_avail)\n            denom = cterm + pterm\n            score = dseq / denom if denom > 1e-18 else float('inf')\n            cand.append((score, dseq, ia, ib, dc, dp, dab, nS, nG, nn))\n        # deterministic ordering: best score, then lowest ids\n        cand.sort(key=lambda x: (-x[0], x[2], x[3]))\n        applied = 0\n        for (score, dseq, ia, ib, dc, dp, dab, nS, nG, nn) in cand:\n            if seq <= target_seq:\n                break\n            A = live.get(ia); B = live.get(ib)\n            if A is None or B is None:\n                continue\n            if dc > 0 and dc > (cost_budget - cur_dec):\n                continue\n            if dp > 0 and dp > (pad_budget - pad_cur):\n                continue\n            if above + dab > P.max_above:\n                continue\n            nb = Batch(nxt, A.members + B.members, nS, nG, nn, A.sumG + B.sumG,\n                       sorted(A.pref + B.pref))\n            nxt += 1\n            del live[ia]; del live[ib]\n            live[nb.id] = nb\n            seq -= dseq\n            cur_dec += dc\n            pad_cur += dp\n            above += dab\n            applied += 1\n            if trace:\n                print(f'    {ia}+{ib} S={nS} G={nG} n={nn} dc={dc:.3e} dp={dp:.1f} dseq={dseq:.3e}')\n        applied_total += applied\n        if applied == 0:\n            break\n    res = P.metrics(list(live.values()))\n    if trace:\n        print(f'  rounds={rounds} applied={applied_total} nb={res[\"nbatches\"]} '\n              f'seq={res[\"seq\"]:.4e} cost={res[\"cost\"]:.4e} pad={res[\"pad_ratio\"]:.5f} '\n              f'p95={res[\"p95\"]:.4e} above={above}')\n    return list(live.values()), res\nPYEOF\nsbx put /workspace/task_file/scripts/solve.py <<'PYEOF'\n#!/usr/bin/env python3\n\"\"\"Shape-aware batching scheduler.\n\nBuilds a plan for each request bucket that satisfies the task constraints\n(all requests once, <=8 shapes, shape.seq_align >= aligned prompt length,\none identical shape per batch) and the performance thresholds from the\nsupplied analytical cost model.\n\nUsage:  python3 solve.py            # writes ../../output_data/plan_b{1,2}.jsonl\n\"\"\"\nfrom __future__ import annotations\nimport pathlib\nimport sys\n\nimport eval_harness as H\nimport optimizer as O\nfrom gmerge import greedy_merge2\n\n# tuned per bucket (see notes in README/solution): sequential target as a\n# fraction of the hard threshold, p95 target as a fraction, shape budget.\nPARAMS = {\n    1: dict(seq_frac=0.90, p95_frac=0.97, max_above=40, kn=10, pad_frac=0.98),\n    2: dict(seq_frac=0.90, p95_frac=0.97, max_above=40, kn=10, pad_frac=0.98),\n}\n\n\ndef build(bucket: int):\n    th = H.THRESH[bucket]\n    reqs = H.load_requests(bucket)\n    P = O.Problem(reqs, th['cost'], th['pad_ratio'], th['p95_latency_ms'],\n                  th['sequential_timecost'],\n                  max_above=PARAMS[bucket]['max_above'])\n    init = O.make_batches_from_groups(P, [[i] for i in range(P.n)])\n    batches, _ = greedy_merge2(\n        P, init,\n        target_seq=PARAMS[bucket]['seq_frac'] * th['sequential_timecost'],\n        target_p95=PARAMS[bucket]['p95_frac'] * th['p95_latency_ms'],\n        kn=PARAMS[bucket]['kn'],\n        pad_frac=PARAMS[bucket]['pad_frac'])\n    plan = O.make_plan(P, batches)\n    return reqs, plan\n\n\ndef main() -> int:\n    root = pathlib.Path(__file__).resolve().parents[1]\n    outdir = root / 'output_data'\n    all_ok = True\n    for bucket in (1, 2):\n        reqs, plan = build(bucket)\n        problems = H.validate(reqs, plan, bucket)\n        m, res, ok = H.evaluate(H.req_map(reqs), plan, bucket)\n        H.report(f'bucket {bucket}', m, res, ok)\n        if problems:\n            all_ok = False\n            print('  CONSTRAINTS:', problems[:5])\n        out = outdir / f'plan_b{bucket}.jsonl'\n        H.write_plan(str(out), plan)\n        print(f'  wrote {out} ({len(plan)} records)')\n        all_ok = all_ok and ok and not problems\n    return 0 if all_ok else 1\n\n\nif __name__ == '__main__':\n    sys.exit(main())\nPYEOF\nsbx run <<'XEOF'\ncd /workspace/task_file/scripts && python3 solve.py; echo \"exit=$?\"\nXEOF",
+   "sandbox": [
+    {
+     "at_ms": 338612,
+     "dur_ms": 52,
+     "exit": 0,
+     "cpu_ms": 41.9,
+     "phases_us": {
+      "acquire": 66,
+      "resume": 20935,
+      "mount": 17785,
+      "run": 7514,
+      "destroy": 22824
+     },
+     "cold": null,
+     "vm": "vm-193"
+    },
+    {
+     "at_ms": 338711,
+     "dur_ms": 45,
+     "exit": 0,
+     "cpu_ms": 43.4,
+     "phases_us": {
+      "acquire": 3,
+      "resume": 20151,
+      "mount": 17377,
+      "run": 7541,
+      "destroy": 16835
+     },
+     "cold": null,
+     "vm": "vm-192"
+    },
+    {
+     "at_ms": 338801,
+     "dur_ms": 508,
+     "exit": 0,
+     "cpu_ms": 487.9,
+     "phases_us": {
+      "acquire": 25738,
+      "resume": 19672,
+      "mount": 18041,
+      "run": 437632,
+      "destroy": 24543
+     },
+     "cold": "exhausted",
+     "vm": "vm-196"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 339326,
+   "dur_ms": 6829
+  },
+  {
+   "kind": "tool",
+   "at_ms": 346155,
+   "dur_ms": 1216,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put /workspace/task_file/scripts/verify_deliverables.py <<'PYEOF'\n#!/usr/bin/env python3\n\"\"\"Independent grader-style verification of the delivered plan files.\"\"\"\nimport hashlib, json, math, pathlib, sys\nfrom collections import defaultdict\nfrom cost_model import CostModel, align, HEADS, HIDDEN\n\nROOT = pathlib.Path('/workspace/task_file')\nTHRESH = {\n    1: dict(cost=3.0e11, pad_ratio=0.055, p95_latency_ms=2.1e6, sequential_timecost=2.7e8),\n    2: dict(cost=4.8e10, pad_ratio=0.15, p95_latency_ms=2.1e5, sequential_timecost=3.2e7),\n}\n\ndef sha(p):\n    return hashlib.sha256(open(p, 'rb').read()).hexdigest()\n\nok_all = True\nprint('input fingerprints (must match /opt/testbed-src):')\nfor f in ('requests_bucket_1.jsonl', 'requests_bucket_2.jsonl'):\n    a = ROOT / 'input_data' / f\n    b = pathlib.Path('/opt/testbed-src/task_file/input_data') / f\n    same = sha(a) == sha(b)\n    ok_all &= same\n    print(f'  {f}: {\"UNCHANGED\" if same else \"MODIFIED!\"} {sha(a)[:16]}')\n\nfor bucket in (1, 2):\n    reqs = [json.loads(l) for l in open(ROOT / 'input_data' / f'requests_bucket_{bucket}.jsonl')]\n    rmap = {r['request_id']: r for r in reqs}\n    plan_path = ROOT / 'output_data' / f'plan_b{bucket}.jsonl'\n    plan = [json.loads(l) for l in open(plan_path)]\n    problems = []\n\n    # 1. every request exactly once\n    ids = [p['request_id'] for p in plan]\n    if len(ids) != len(set(ids)):\n        problems.append('duplicate request_id')\n    if set(ids) != set(rmap):\n        problems.append('request set mismatch')\n    # 2. schema + shape legality\n    shapes = set()\n    by_batch = defaultdict(list)\n    for p in plan:\n        for k in ('request_id', 'batch_id', 'shape'):\n            if k not in p:\n                problems.append(f'missing key {k}')\n        sh = p['shape']\n        tri = (sh['seq_align'], sh['heads_align'], sh['hidden_align'])\n        shapes.add(tri)\n        S = sh['seq_align']\n        if S % 64 != 0:\n            problems.append(f'{p[\"request_id\"]}: seq_align {S} not multiple of 64')\n        need = align(rmap[p['request_id']]['prompt_len'], 64)\n        if S < need:\n            problems.append(f'{p[\"request_id\"]}: seq_align {S} < {need}')\n        if sh['heads_align'] != 32 or sh['hidden_align'] != 4096:\n            problems.append(f'{p[\"request_id\"]}: bad heads/hidden align')\n        by_batch[p['batch_id']].append(tri)\n    if len(shapes) > 8:\n        problems.append(f'{len(shapes)} unique shapes > 8')\n    for bid, tris in by_batch.items():\n        if len(set(tris)) != 1:\n            problems.append(f'batch {bid}: shapes differ within batch')\n    # 3. metrics\n    m = CostModel(64).plan_metrics(\n        {r['request_id']: {'prompt_len': r['prompt_len'], 'gen_len': r['gen_len']} for r in reqs},\n        plan)\n    print(f'\\n=== bucket {bucket}: {len(plan)} records, {len(by_batch)} batches, '\n          f'{len(shapes)} unique shape(s) {sorted(shapes)}')\n    if problems:\n        ok_all = False\n        print('  CONSTRAINT FAILURES:', problems[:10])\n    else:\n        print('  constraints: OK')\n    for k, thr in THRESH[bucket].items():\n        got = m[k]\n        good = got <= thr\n        ok_all &= good\n        print(f'  {k:22s} {got:12.4e}  <= {thr:10.3e}  {\"PASS\" if good else \"FAIL\"}  ({got/thr*100:5.1f}% of limit)')\n    print('  extra model readouts:', {k: m[k] for k in ('pad_tokens', 'real_tokens')})\n\nprint('\\nOVERALL:', 'PASS' if ok_all else 'FAIL')\nsys.exit(0 if ok_all else 1)\nPYEOF\nsbx run <<'XEOF'\ncd /workspace/task_file/scripts && python3 verify_deliverables.py; echo \"exit=$?\"\nXEOF",
+   "sandbox": [
+    {
+     "at_ms": 346927,
+     "dur_ms": 68,
+     "exit": 0,
+     "cpu_ms": 43.7,
+     "phases_us": {
+      "acquire": 57,
+      "resume": 21299,
+      "mount": 18430,
+      "run": 7671,
+      "destroy": 38373
+     },
+     "cold": null,
+     "vm": "vm-198"
+    },
+    {
+     "at_ms": 347041,
+     "dur_ms": 309,
+     "exit": 0,
+     "cpu_ms": 309.9,
+     "phases_us": {
+      "acquire": 3,
+      "resume": 20468,
+      "mount": 17748,
+      "run": 268427,
+      "destroy": 19933
+     },
+     "cold": null,
+     "vm": "vm-197"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 347371,
+   "dur_ms": 3885
+  },
+  {
+   "kind": "tool",
+   "at_ms": 351256,
+   "dur_ms": 127,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'XEOF'\ncd /workspace/task_file/scripts && rm -f exp1.py exp2.py exp3.py exp4.py exp5.py exp6.py run_opt.py patch1.py && ls -la\necho \"=== output_data ===\"\nls -la /workspace/task_file/output_data\necho \"=== plan_b1 head ===\"\nhead -2 /workspace/task_file/output_data/plan_b1.jsonl\necho \"=== plan_b2 head ===\"\nhead -2 /workspace/task_file/output_data/plan_b2.jsonl\necho \"=== line counts ===\"\nwc -l /workspace/task_file/output_data/*.jsonl\nXEOF",
+   "sandbox": [
+    {
+     "at_ms": 351308,
+     "dur_ms": 61,
+     "exit": 0,
+     "cpu_ms": 48.3,
+     "phases_us": {
+      "acquire": 49,
+      "resume": 20443,
+      "mount": 17858,
+      "run": 10858,
+      "destroy": 29817
+     },
+     "cold": null,
+     "vm": "vm-200"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 351383,
+   "dur_ms": 2042
+  },
+  {
+   "kind": "tool",
+   "at_ms": 353425,
+   "dur_ms": 801,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'XEOF'\ncd /workspace/task_file/scripts\nsha256sum /workspace/task_file/output_data/*.jsonl > /tmp/before.sha\npython3 solve.py > /tmp/solve.log 2>&1; echo \"solve exit=$?\"\nsha256sum /workspace/task_file/output_data/*.jsonl > /tmp/after.sha\ndiff /tmp/before.sha /tmp/after.sha && echo \"REPRODUCIBLE: identical output\"\necho \"--- verify ---\"\npython3 verify_deliverables.py | tail -20\nXEOF",
+   "sandbox": [
+    {
+     "at_ms": 353478,
+     "dur_ms": 722,
+     "exit": 0,
+     "cpu_ms": 744.1,
+     "phases_us": {
+      "acquire": 41,
+      "resume": 20168,
+      "mount": 17784,
+      "run": 680823,
+      "destroy": 21246
+     },
+     "cold": null,
+     "vm": "vm-201"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 354226,
+   "dur_ms": 4323
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 6.676,
+ "calls": 30,
+ "cell": "TB1b"
+}

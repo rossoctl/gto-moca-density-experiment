@@ -1,0 +1,303 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-d",
+ "instance_id": "query-optimize",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 598766,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 2346,
+  "output": 4657,
+  "cacheRead": 63488,
+  "cacheWrite": 0,
+  "total": 70491
+ },
+ "totals": {
+  "model_calls": 7,
+  "tool_calls": 7,
+  "model_ms": 29273,
+  "tool_ms": 568993,
+  "sandbox_ms": 568373
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 98,
+   "dur_ms": 3611,
+   "tokens_in": 24,
+   "tokens_out": 131,
+   "cache_read": 5696,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3709,
+   "dur_ms": 206,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat /app/my-sql-query.sql",
+   "sandbox": [
+    {
+     "at_ms": 3828,
+     "dur_ms": 53,
+     "exit": 0,
+     "cpu_ms": 38.3,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 21540,
+      "mount": 19054,
+      "run": 4106,
+      "destroy": 27300
+     },
+     "cold": null,
+     "vm": "vm-216"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4072,
+   "dur_ms": 133,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sqlite3 /app/oewn.sqlite \".tables\"\nsqlite3 /app/oewn.sqlite \".schema\" | head -200",
+   "sandbox": [
+    {
+     "at_ms": 4126,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 49.1,
+     "phases_us": {
+      "acquire": 85,
+      "resume": 21389,
+      "mount": 19007,
+      "run": 11749,
+      "destroy": 23022
+     },
+     "cold": null,
+     "vm": "vm-221"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 4226,
+   "dur_ms": 1279,
+   "tokens_in": 1780,
+   "tokens_out": 147,
+   "cache_read": 5696,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5505,
+   "dur_ms": 121,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sqlite3 /app/oewn.sqlite \".indexes\"\necho \"---counts---\"\nsqlite3 /app/oewn.sqlite \"SELECT 'words',COUNT(*) FROM words UNION ALL SELECT 'senses',COUNT(*) FROM senses UNION ALL SELECT 'synsets',COUNT(*) FROM synsets;\"\necho \"---index list---\"\nsqlite3 /app/oewn.sqlite \"SELECT type,name,tbl_name,sql FROM sqlite_master WHERE type='index';\"",
+   "sandbox": [
+    {
+     "at_ms": 5518,
+     "dur_ms": 92,
+     "exit": 0,
+     "cpu_ms": 115.8,
+     "phases_us": {
+      "acquire": 69,
+      "resume": 21046,
+      "mount": 18848,
+      "run": 40753,
+      "destroy": 29633
+     },
+     "cold": null,
+     "vm": "vm-222"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 5642,
+   "dur_ms": 8375,
+   "tokens_in": 51,
+   "tokens_out": 324,
+   "cache_read": 7616,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14017,
+   "dur_ms": 621,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sqlite3 /app/oewn.sqlite \"SELECT sqlite_version();\"\necho \"dup synsetids:\"; sqlite3 /app/oewn.sqlite \"SELECT COUNT(*)-COUNT(DISTINCT synsetid) FROM synsets;\"\necho \"senses missing synset:\"; sqlite3 /app/oewn.sqlite \"SELECT COUNT(*) FROM senses s LEFT JOIN synsets sy ON s.synsetid=sy.synsetid WHERE sy.synsetid IS NULL;\"\necho \"senses missing word:\"; sqlite3 /app/oewn.sqlite \"SELECT COUNT(*) FROM senses s LEFT JOIN words w ON s.wordid=w.wordid WHERE w.wordid IS NULL;\"\necho \"dup wordids:\"; sqlite3 /app/oewn.sqlite \"SELECT COUNT(*)-COUNT(DISTINCT wordid) FROM words;\"\necho \"senses dup (wordid,synsetid):\"; sqlite3 /app/oewn.sqlite \"SELECT COUNT(*)-COUNT(*) FROM (SELECT wordid,synsetid FROM senses GROUP BY wordid,synsetid);\" 2>/dev/null || true\nsqlite3 /app/oewn.sqlite \"SELECT SUM(c)-COUNT(*) FROM (SELECT COUNT(*) c FROM senses GROUP BY wordid,synsetid);\"",
+   "sandbox": [
+    {
+     "at_ms": 14068,
+     "dur_ms": 543,
+     "exit": 0,
+     "cpu_ms": 571.4,
+     "phases_us": {
+      "acquire": 89,
+      "resume": 21529,
+      "mount": 19047,
+      "run": 502838,
+      "destroy": 18371
+     },
+     "cold": null,
+     "vm": "vm-224"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 14652,
+   "dur_ms": 10481,
+   "tokens_in": 110,
+   "tokens_out": 525,
+   "cache_read": 9152,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 25133,
+   "dur_ms": 808,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put /app/sol.sql <<'EOF'\nWITH syn AS (\n  SELECT s.wordid, s.synsetid, sy.domainid, sy.posid, COUNT(*) AS cnt\n  FROM senses s\n  JOIN synsets sy ON s.synsetid = sy.synsetid\n  GROUP BY s.wordid, s.synsetid\n),\nwordstats AS (\n  SELECT wordid,\n         SUM(cnt) AS total_senses,\n         COUNT(*) AS total_synsets,\n         COUNT(DISTINCT domainid) AS distinct_domains,\n         COUNT(DISTINCT posid) AS distinct_posids\n  FROM syn\n  GROUP BY wordid\n  HAVING COUNT(*) >= 2\n     AND COUNT(DISTINCT domainid) >= 2\n     AND SUM(cnt) >= 2\n),\ntop_words AS (\n  SELECT * FROM wordstats\n  ORDER BY total_senses DESC, total_synsets DESC, distinct_domains DESC, wordid ASC\n  LIMIT 500\n),\nranked AS (\n  SELECT sy.wordid, sy.synsetid, sy.cnt,\n         ROW_NUMBER() OVER (PARTITION BY sy.wordid ORDER BY sy.cnt DESC, sy.synsetid ASC) AS rn\n  FROM syn sy\n  JOIN top_words tw ON tw.wordid = sy.wordid\n)\nSELECT w.wordid AS word_id,\n       w.word AS word,\n       tw.total_synsets,\n       tw.total_senses,\n       tw.distinct_domains,\n       tw.distinct_posids,\n       r.synsetid AS top_synsetid,\n       r.cnt AS top_synset_sense_count\nFROM top_words tw\nJOIN words w ON w.wordid = tw.wordid\nJOIN ranked r ON r.wordid = tw.wordid AND r.rn = 1\nORDER BY tw.total_senses DESC,\n         tw.total_synsets DESC,\n         tw.distinct_domains DESC,\n         tw.wordid ASC\nLIMIT 500;\nEOF\nsbx run <<'EOF'\ncd /app\ntime sqlite3 oewn.sqlite < sol.sql > /tmp/sol_out.txt\nwc -l /tmp/sol_out.txt\nhead -5 /tmp/sol_out.txt\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 25186,
+     "dur_ms": 47,
+     "exit": 0,
+     "cpu_ms": 47.1,
+     "phases_us": {
+      "acquire": 33,
+      "resume": 21501,
+      "mount": 18608,
+      "run": 8165,
+      "destroy": 17067
+     },
+     "cold": null,
+     "vm": "vm-226"
+    },
+    {
+     "at_ms": 25280,
+     "dur_ms": 636,
+     "exit": 0,
+     "cpu_ms": 657.9,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 21409,
+      "mount": 18284,
+      "run": 591496,
+      "destroy": 22351
+     },
+     "cold": null,
+     "vm": "vm-213"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 25960,
+   "dur_ms": 2360,
+   "tokens_in": 166,
+   "tokens_out": 132,
+   "cache_read": 11264,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 28320,
+   "dur_ms": 286855,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app\ntime sqlite3 oewn.sqlite < my-sql-query.sql > /tmp/orig_out.txt\nwc -l /tmp/orig_out.txt\nhead -5 /tmp/orig_out.txt\ndiff -q /tmp/orig_out.txt /tmp/sol_out.txt && echo IDENTICAL",
+   "timeout": 900000,
+   "sandbox": [
+    {
+     "at_ms": 28372,
+     "dur_ms": 286786,
+     "exit": 2,
+     "cpu_ms": 286868.6,
+     "phases_us": {
+      "acquire": 73,
+      "resume": 21492,
+      "mount": 19155,
+      "run": 286733285,
+      "destroy": 31223
+     },
+     "cold": null,
+     "vm": "vm-229"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 315193,
+   "dur_ms": 2355,
+   "tokens_in": 196,
+   "tokens_out": 128,
+   "cache_read": 11776,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 317548,
+   "dur_ms": 280249,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app\nsqlite3 oewn.sqlite < my-sql-query.sql > orig_out.txt\nsqlite3 oewn.sqlite < sol.sql > sol_out.txt\ndiff -q orig_out.txt sol_out.txt && echo IDENTICAL\nrm -f orig_out.txt sol_out.txt",
+   "timeout": 900000,
+   "sandbox": [
+    {
+     "at_ms": 317603,
+     "dur_ms": 280160,
+     "exit": 0,
+     "cpu_ms": 280206.1,
+     "phases_us": {
+      "acquire": 21315,
+      "resume": 21107,
+      "mount": 19102,
+      "run": 280096861,
+      "destroy": 20063
+     },
+     "cold": "parked",
+     "vm": "vm-265"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 597818,
+   "dur_ms": 812,
+   "tokens_in": 19,
+   "tokens_out": 37,
+   "cache_read": 12288,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "long",
+ "weight_s_per_command": 42.177,
+ "calls": 7,
+ "cell": "TB1d",
+ "removed": []
+}

@@ -1,0 +1,163 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-d",
+ "instance_id": "distribution-search",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 39724,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 590,
+  "output": 6440,
+  "cacheRead": 38784,
+  "cacheWrite": 0,
+  "total": 45814
+ },
+ "totals": {
+  "model_calls": 4,
+  "tool_calls": 3,
+  "model_ms": 37249,
+  "tool_ms": 2180,
+  "sandbox_ms": 1793
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 100,
+   "dur_ms": 25452,
+   "tokens_in": 49,
+   "tokens_out": 95,
+   "cache_read": 5824,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 25552,
+   "dur_ms": 398,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npwd\nls -la\nls -la /app 2>/dev/null || echo no-app\npython3 - <<'PY'\nimport numpy, scipy\nprint(numpy.__version__, scipy.__version__)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 25667,
+     "dur_ms": 232,
+     "exit": 0,
+     "cpu_ms": 339.4,
+     "phases_us": {
+      "acquire": 85,
+      "resume": 21247,
+      "mount": 18648,
+      "run": 178638,
+      "destroy": 31328
+     },
+     "cold": null,
+     "vm": "vm-51"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 25972,
+   "dur_ms": 3123,
+   "tokens_in": 165,
+   "tokens_out": 353,
+   "cache_read": 9856,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 29095,
+   "dur_ms": 821,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\nimport numpy as np\nfrom scipy.optimize import root\n\nn=150000\nlogf=np.log(n)-10.0          # target entropy\nmeanlogf=-np.log(n)-10.0     # target mean log p\nm=7\ns=np.arange(m,dtype=float)\n\ndef make(x):\n    c, logt = x\n    z=c*s\n    z-=z.max()\n    q=np.exp(z); q/=q.sum()\n    t=np.exp(logt)\n    a=1.0-(n-m)*t\n    p=np.empty(n)\n    p[:m]=a*q\n    p[m:]=t\n    return p\n\ndef fun(x):\n    p=make(x)\n    if np.any(p<=0) or not np.all(np.isfinite(p)):\n        return np.array([1e6,1e6])\n    H=-(p*np.log(p)).sum()\n    ml=np.log(p).mean()\n    return np.array([H-logf, ml-meanlogf])\n\nfor x0 in ([0.0, meanlogf], [1.0, meanlogf], [-1.0, meanlogf], [5.0, meanlogf]):\n    sol=root(fun,x0,method='hybr')\n    print('x0',x0,'success',sol.success,'x',sol.x,'f',fun(sol.x))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 29150,
+     "dur_ms": 747,
+     "exit": 0,
+     "cpu_ms": 965.0,
+     "phases_us": {
+      "acquire": 33,
+      "resume": 20553,
+      "mount": 18314,
+      "run": 695716,
+      "destroy": 30441
+     },
+     "cold": null,
+     "vm": "vm-55"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 29933,
+   "dur_ms": 7930,
+   "tokens_in": 263,
+   "tokens_out": 716,
+   "cache_read": 10560,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 37863,
+   "dur_ms": 961,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put solution.py <<'EOF'\nimport numpy as np\nfrom scipy.optimize import root\n\n\ndef build_distribution(n=150_000, target_kl=10.0, head_size=7):\n    log_n = np.log(n)\n    target_entropy = log_n - target_kl\n    target_mean_log = -log_n - target_kl\n    scores = np.arange(head_size, dtype=np.float64)\n\n    def distribution(params):\n        slope, log_tail = params\n        z = slope * scores\n        z -= z.max()\n        weights = np.exp(z)\n        weights /= weights.sum()\n\n        tail = np.exp(log_tail)\n        head_mass = 1.0 - (n - head_size) * tail\n\n        p = np.empty(n, dtype=np.float64)\n        p[:head_size] = head_mass * weights\n        p[head_size:] = tail\n        return p\n\n    def equations(params):\n        p = distribution(params)\n        entropy = -np.sum(p * np.log(p))\n        mean_log = np.mean(np.log(p))\n        return np.array([entropy - target_entropy, mean_log - target_mean_log])\n\n    guess = np.array([1.0, target_mean_log])\n    solution = root(equations, guess, method=\"hybr\")\n\n    if not solution.success:\n        raise RuntimeError(f\"Solver failed: {solution.message}\")\n\n    return distribution(solution.x)\n\n\ndef main():\n    n = 150_000\n    target_kl = 10.0\n\n    p = build_distribution(n=n, target_kl=target_kl)\n    p = p / p.sum()\n    p = np.asarray(p, dtype=np.float64)\n\n    uniform = np.full(n, 1.0 / n, dtype=np.float64)\n    forward_kl = np.sum(p * np.log(p / uniform))\n    backward_kl = np.sum(uniform * np.log(uniform / p))\n\n    assert np.all(np.isfinite(p))\n    assert np.all(p >= 0.0)\n    assert abs(p.sum() - 1.0) < 1e-12\n    assert abs(forward_kl - target_kl) <= 1e-3\n    assert abs(backward_kl - target_kl) <= 1e-3\n\n    np.save(\"/app/dist.npy\", p)\n\n    print(f\"forward KL:  {forward_kl:.12f}\")\n    print(f\"backward KL: {backward_kl:.12f}\")\n    print(f\"saved {p.shape[0]} probabilities to /app/dist.npy\")\n\n\nif __name__ == \"__main__\":\n    main()\nEOF\nsbx run <<'EOF'\npython3 /app/solution.py\npython3 - <<'PY'\nimport numpy as np\np=np.load('/app/dist.npy')\nn=p.size\nu=np.full(n,1.0/n)\nf=np.sum(p*np.log(p/u))\nb=np.sum(u*np.log(u/p))\nprint('n',n,'sum',p.sum(),'min',p.min(),'max',p.max())\nprint('forward',f,'backward',b)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 37917,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 43.1,
+     "phases_us": {
+      "acquire": 254,
+      "resume": 20510,
+      "mount": 17811,
+      "run": 7626,
+      "destroy": 27632
+     },
+     "cold": null,
+     "vm": "vm-57"
+    },
+    {
+     "at_ms": 38020,
+     "dur_ms": 758,
+     "exit": 0,
+     "cpu_ms": 1042.8,
+     "phases_us": {
+      "acquire": 21,
+      "resume": 21163,
+      "mount": 18634,
+      "run": 703987,
+      "destroy": 32135
+     },
+     "cold": null,
+     "vm": "vm-48"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 38843,
+   "dur_ms": 744,
+   "tokens_in": 113,
+   "tokens_out": 61,
+   "cache_read": 12544,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.527,
+ "calls": 3,
+ "cell": "TB1d"
+}

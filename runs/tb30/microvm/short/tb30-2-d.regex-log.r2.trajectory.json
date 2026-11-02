@@ -1,0 +1,253 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-d",
+ "instance_id": "regex-log",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 81788,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 1319,
+  "output": 15296,
+  "cacheRead": 108608,
+  "cacheWrite": 0,
+  "total": 125223
+ },
+ "totals": {
+  "model_calls": 7,
+  "tool_calls": 6,
+  "model_ms": 80149,
+  "tool_ms": 873,
+  "sandbox_ms": 365
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 100,
+   "dur_ms": 32435,
+   "tokens_in": 10,
+   "tokens_out": 67,
+   "cache_read": 5824,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 32535,
+   "dur_ms": 203,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -la /workspace\nls -la /workspace/app 2>/dev/null || true\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 32652,
+     "dur_ms": 45,
+     "exit": 0,
+     "cpu_ms": 37.2,
+     "phases_us": {
+      "acquire": 96,
+      "resume": 21079,
+      "mount": 18315,
+      "run": 5752,
+      "destroy": 17853
+     },
+     "cold": null,
+     "vm": "vm-49"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 32905,
+   "dur_ms": 2267,
+   "tokens_in": 109,
+   "tokens_out": 277,
+   "cache_read": 11968,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 35172,
+   "dur_ms": 111,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put regex.txt <<'EOF'\n^(?=[^\\n]*(?<![A-Za-z0-9])(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])(?:\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}(?![A-Za-z0-9]))[^\\n]*(?<![A-Za-z0-9])([0-9]{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-9])))(?![A-Za-z0-9])\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 35224,
+     "dur_ms": 48,
+     "exit": 0,
+     "cpu_ms": 41.1,
+     "phases_us": {
+      "acquire": 62,
+      "resume": 20352,
+      "mount": 17888,
+      "run": 7431,
+      "destroy": 19621
+     },
+     "cold": null,
+     "vm": "vm-51"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 35313,
+   "dur_ms": 3473,
+   "tokens_in": 34,
+   "tokens_out": 758,
+   "cache_read": 12544,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 38786,
+   "dur_ms": 161,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\nimport re\nwith open('/workspace/regex.txt') as f:\n    p=f.read().strip()\nprint(p)\ncases = {\n    'IP 1.2.3.4 date 2024-01-01': ['2024-01-01'],\n    '2024-01-01 192.168.0.1 2024-02-29 2023-12-31': ['2023-12-31'],\n    'no ip 2024-01-01': [],\n    '1.2.3.4 2024-02-30 2024-04-31 2023-02-29': ['2023-02-29'],\n    '999.1.1.1 2024-01-01': [],\n    '01.2.3.4 2024-01-01': [],\n    'a1.2.3.4 2024-01-01': [],\n    '1.2.3.4a 2024-01-01': [],\n    '1.2.3.4 x2024-01-01': [],\n    '1.2.3.4 2024-01-01x': [],\n    '1.2.3.4 2024-01-01 2024-02-30': ['2024-01-01'],\n    'user 1134-12-1234 1.2.3.4': [],\n    '1.2.3.4 1134-12-12': ['1134-12-12'],\n    '1.2.3.4 2024-13-01 2024-00-01': [],\n    '1.2.3.4 256.1.1.1': [],\n    '1.2.3.4 1.2.3.256': [],\n    '1.2.3.4 1.2.3.4.5 2024-01-01': ['2024-01-01'],\n    '1.2.3.4.5 2024-01-01': ['2024-01-01'],\n    'ip=1.2.3.4;date=2024-01-01;date=2024-01-02.': ['2024-01-02'],\n    '1.2.3.4 2024-01-01-02': ['2024-01-01'],\n    '1.2.3.4 2024-01-01_foo': ['2024-01-01'],\n    '1.2.3.4 _2024-01-01': ['2024-01-01'],\n}\nfor s, exp in cases.items():\n    got=re.findall(p,s,re.MULTILINE)\n    print(('OK ' if got==exp else 'BAD'), repr(s), '->', got, 'expected', exp)\n\nmulti='''no ip 1999-09-09\\nIP 10.0.0.1 first 2020-01-01 second 2021-02-28\\nIP 10.0.0.2 2022-03-31\\n'''\nprint('multi', re.findall(p,multi,re.MULTILINE))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 38838,
+     "dur_ms": 82,
+     "exit": 0,
+     "cpu_ms": 93.6,
+     "phases_us": {
+      "acquire": 61,
+      "resume": 20594,
+      "mount": 18113,
+      "run": 42582,
+      "destroy": 18072
+     },
+     "cold": null,
+     "vm": "vm-52"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 38963,
+   "dur_ms": 36835,
+   "tokens_in": 1000,
+   "tokens_out": 294,
+   "cache_read": 13312,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 75798,
+   "dur_ms": 112,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put regex.txt <<'EOF'\n^(?=[^\\n]*(?<![A-Za-z0-9])(?<![0-9]\\.)(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])(?:\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}(?![A-Za-z0-9])(?!\\.[0-9]))[^\\n]*(?<![A-Za-z0-9])([0-9]{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-9])))(?![A-Za-z0-9])\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 75850,
+     "dur_ms": 54,
+     "exit": 0,
+     "cpu_ms": 43.0,
+     "phases_us": {
+      "acquire": 76,
+      "resume": 20929,
+      "mount": 18206,
+      "run": 7663,
+      "destroy": 25418
+     },
+     "cold": null,
+     "vm": "vm-53"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 76191,
+   "dur_ms": 2620,
+   "tokens_in": 60,
+   "tokens_out": 725,
+   "cache_read": 21056,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 78811,
+   "dur_ms": 164,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\nimport re\np=open('/workspace/regex.txt').read().strip()\ncases = [\n ('IP 1.2.3.4 date 2024-01-01', ['2024-01-01']),\n ('2024-01-01 192.168.0.1 2024-02-29 2023-12-31', ['2023-12-31']),\n ('no ip 2024-01-01', []),\n ('1.2.3.4 2024-02-30 2024-04-31 2023-02-29', ['2023-02-29']),\n ('999.1.1.1 2024-01-01', []),\n ('01.2.3.4 2024-01-01', []),\n ('a1.2.3.4 2024-01-01', []),\n ('1.2.3.4a 2024-01-01', []),\n ('1.2.3.4 x2024-01-01', []),\n ('1.2.3.4 2024-01-01x', []),\n ('1.2.3.4 2024-01-01 2024-02-30', ['2024-01-01']),\n ('user 1134-12-1234 1.2.3.4', []),\n ('1.2.3.4 1134-12-12', ['1134-12-12']),\n ('1.2.3.4 2024-13-01 2024-00-01', []),\n ('1.2.3.4 256.1.1.1', []),\n ('1.2.3.4 1.2.3.256', []),\n ('1.2.3.4.5 2024-01-01', []),\n ('0.1.2.3.4 2024-01-01', []),\n ('IP is 1.2.3.4. Then date 2024-01-01.', ['2024-01-01']),\n ('ip=1.2.3.4;date=2024-01-01;date=2024-01-02.', ['2024-01-02']),\n ('1.2.3.4 2024-01-01-02', ['2024-01-01']),\n ('1.2.3.4 2024-01-01_foo', ['2024-01-01']),\n ('1.2.3.4 _2024-01-01', ['2024-01-01']),\n ('1.2.3.4 0.0.0.0 255.255.255.255 2024-12-31', ['2024-12-31']),\n]\nfor s, exp in cases:\n    got=re.findall(p,s,re.MULTILINE)\n    if got!=exp: print('BAD', repr(s), got, exp)\nelse:\n    print('done', len(cases))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 78863,
+     "dur_ms": 79,
+     "exit": 0,
+     "cpu_ms": 89.0,
+     "phases_us": {
+      "acquire": 72,
+      "resume": 20610,
+      "mount": 18114,
+      "run": 41524,
+      "destroy": 16937
+     },
+     "cold": null,
+     "vm": "vm-59"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 78991,
+   "dur_ms": 1421,
+   "tokens_in": 35,
+   "tokens_out": 74,
+   "cache_read": 21824,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 80412,
+   "dur_ms": 122,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -ld /app /workspace 2>&1 || true\nreadlink -f /app 2>/dev/null || true\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 80463,
+     "dur_ms": 57,
+     "exit": 0,
+     "cpu_ms": 36.9,
+     "phases_us": {
+      "acquire": 70,
+      "resume": 20674,
+      "mount": 17806,
+      "run": 5439,
+      "destroy": 31041
+     },
+     "cold": null,
+     "vm": "vm-61"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 80549,
+   "dur_ms": 1098,
+   "tokens_in": 71,
+   "tokens_out": 30,
+   "cache_read": 22080,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.078,
+ "calls": 6,
+ "cell": "TB1d"
+}

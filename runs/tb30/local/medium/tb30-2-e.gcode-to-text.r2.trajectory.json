@@ -1,0 +1,685 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "gcode-to-text",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 244722,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 895,
+  "output": 36719,
+  "cacheRead": 1288448,
+  "cacheWrite": 49856,
+  "total": 1375918
+ },
+ "totals": {
+  "model_calls": 33,
+  "tool_calls": 39,
+  "model_ms": 200511,
+  "tool_ms": 43345,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1150,
+   "dur_ms": 857,
+   "tokens_in": 20,
+   "tokens_out": 111,
+   "cache_read": 1536,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2011,
+   "dur_ms": 12,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app && wc -l /app/text.gcode && head -50 /app/text.gcode"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2011,
+   "dur_ms": 12,
+   "tool": "bash",
+   "is_error": false,
+   "command": "grep -n \"^;.*\" /app/text.gcode | head -100"
+  },
+  {
+   "kind": "model",
+   "at_ms": 2026,
+   "dur_ms": 1570,
+   "tokens_in": 5,
+   "tokens_out": 212,
+   "cache_read": 1664,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3597,
+   "dur_ms": 18,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && grep -c \"^G1\" text.gcode; grep -n \"M486\\|;LAYER\\|;TYPE\\|;Z:\" text.gcode | head -50; grep -n \"G1 Z\\|G1 E\" text.gcode | head -30"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3597,
+   "dur_ms": 18,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && awk '/^G1/ {print}' text.gcode | tail -100"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3619,
+   "dur_ms": 2914,
+   "tokens_in": 0,
+   "tokens_out": 352,
+   "cache_read": 2176,
+   "cache_write": 2112,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6535,
+   "dur_ms": 13,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && sed -n '14880,15150p' text.gcode"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6536,
+   "dur_ms": 43,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\ntry:\n import PIL; print('PIL',PIL.__version__)\nexcept Exception as e: print('no PIL',e)\ntry:\n import matplotlib; print('mpl',matplotlib.__version__)\nexcept Exception as e: print('no mpl',e)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 6581,
+   "dur_ms": 2363,
+   "tokens_in": 43,
+   "tokens_out": 403,
+   "cache_read": 4608,
+   "cache_write": 2496,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 8944,
+   "dur_ms": 10,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && grep -n \"M486 S0\\|M486 S1\\|M486 S-1\" text.gcode | tail -20 && tail -120 text.gcode"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 8944,
+   "dur_ms": 926,
+   "tool": "bash",
+   "is_error": false,
+   "command": "which convert magick gnuplot ffmpeg python3 node; python3 -c \"import numpy; print(numpy.__version__)\" 2>&1; pip list 2>/dev/null | head -50"
+  },
+  {
+   "kind": "model",
+   "at_ms": 9873,
+   "dur_ms": 4309,
+   "tokens_in": 51,
+   "tokens_out": 646,
+   "cache_read": 7488,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14183,
+   "dur_ms": 57,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport re,collections\nlines=open('text.gcode').read().splitlines()\n# find high-level Z moves G1 ... Z without E? parse all G1 with Z\nzs=[]\nfor i,l in enumerate(lines):\n    if l.startswith('G1') and ' Z' in l:\n        m=re.search(r'Z([-+]?\\d*\\.?\\d+)',l)\n        if m: zs.append((i,float(m.group(1)),l))\n# print max/min and distribution per 10000 lines\nprint('total z moves',len(zs),'min',min(z for _,z,_ in zs),'max',max(z for _,z,_ in zs))\nfor start in range(0,len(lines),10000):\n    sub=[(i,z,l) for i,z,l in zs if start<=i<start+10000]\n    if sub:\n      print(start, 'n',len(sub),'zrange',min(z for _,z,_ in sub),max(z for _,z,_ in sub))\nprint('first zs')\nfor x in zs[:30]:print(x)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 14242,
+   "dur_ms": 3624,
+   "tokens_in": 24,
+   "tokens_out": 766,
+   "cache_read": 8384,
+   "cache_write": 896,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 17867,
+   "dur_ms": 62,
+   "tool": "bash",
+   "is_error": true,
+   "command": "cd /app && python3 - <<'PY'\nimport re,collections\nlines=open('text.gcode').read().splitlines()\n# find intervals M486 S0 ... M486 S-1\nintervals=[]; cur=None\nfor i,l in enumerate(lines):\n    if l.startswith('M486 S0'):\n        cur=i\n    elif l.startswith('M486 S-1') and cur is not None:\n        intervals.append((cur,i)); cur=None\nprint(intervals)\nfor a,b in intervals:\n    zs=[]; xs=[]; ys=[]\n    for l in lines[a:b]:\n        if l.startswith('G1'):\n            mz=re.search(r'Z([-+]?\\d*\\.?\\d+)',l)\n            if mz: zs.append(float(mz.group(1)))\n            mx=re.search(r'X([-+]?\\d*\\.?\\d+)',l); my=re.search(r'Y([-+]?\\d*\\.?\\d+)',l)\n            if mx: xs.append(float(mx.group(1)))\n            if my: ys.append(float(my.group(1)))\n    print('interval',a,b,'z unique count',len(set(zs)),'minmax',min(zs),max(zs),'x',min(xs),max(xs),'y',min(ys),max(ys))\n    # print unique z sorted\n    print(sorted(set(zs))[:100])\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 17929,
+   "dur_ms": 1872,
+   "tokens_in": 37,
+   "tokens_out": 315,
+   "cache_read": 10048,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 19802,
+   "dur_ms": 18,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && sed -n '100,200p' text.gcode && echo ---- && sed -n '1390,1450p' text.gcode"
+  },
+  {
+   "kind": "model",
+   "at_ms": 19820,
+   "dur_ms": 4149,
+   "tokens_in": 52,
+   "tokens_out": 821,
+   "cache_read": 10496,
+   "cache_write": 1408,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 23969,
+   "dur_ms": 78,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport re,collections\nlines=open('text.gcode').read().splitlines()\na,b=15013,98472\n# gather all z from G1, and layer transitions (G1 Z... F720)\nzs=[]; layers=[]\nfor i in range(a,b):\n l=lines[i]\n if l.startswith('G1'):\n  m=re.search(r' Z([-+]?\\d*\\.?\\d+)',l)\n  if m:\n   z=float(m.group(1)); zs.append((i,z,l))\n   if re.search(r'Z[-+]?\\d*\\.?\\d+ F720',l): layers.append((i,z))\nprint('z moves',len(zs),'layers',len(layers))\nprint('unique layer z count',len(set(z for _,z in layers)))\nprint('layers first 60',layers[:60])\nprint('layers last 20',layers[-20:])\n# counts histogram by z rounded 0.08 etc\nprint('z min max', min(z for _,z in layers), max(z for _,z in layers))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 24050,
+   "dur_ms": 2080,
+   "tokens_in": 43,
+   "tokens_out": 431,
+   "cache_read": 12736,
+   "cache_write": 768,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 26130,
+   "dur_ms": 206,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport re\nlines=open('text.gcode').read().splitlines()\na,b=15013,98472\nxs=[];ys=[];pts=[]\ncurx=cury=None\nfor i in range(a,b):\n l=lines[i]\n if l.startswith('G1'):\n  mx=re.search(r'X([-+]?\\d*\\.?\\d+)',l); my=re.search(r'Y([-+]?\\d*\\.?\\d+)',l)\n  if mx: curx=float(mx.group(1))\n  if my: cury=float(my.group(1))\n  me=re.search(r'E([-+]?\\d*\\.?\\d+)',l)\n  if me and float(me.group(1))>0 and curx is not None and cury is not None:\n   pts.append((curx,cury))\n   xs.append(curx);ys.append(cury)\nprint('extruding pts',len(pts),'bbox',min(xs),max(xs),min(ys),max(ys))\n# bbox per z layer groups (layer changes)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 26339,
+   "dur_ms": 3809,
+   "tokens_in": 63,
+   "tokens_out": 866,
+   "cache_read": 13952,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 30148,
+   "dur_ms": 320,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport re\nlines=open('text.gcode').read().splitlines()\nints=[];cur=None;obj=None\nfor i,l in enumerate(lines):\n if l.startswith('M486 S0'): \n  if cur is not None: ints.append((cur,i,obj))\n  cur=i;obj=0\n elif l.startswith('M486 S1'):\n  if cur is not None: ints.append((cur,i,obj))\n  cur=i;obj=1\n elif l.startswith('M486 S-1'):\n  if cur is not None: ints.append((cur,i,obj)); cur=None;obj=None\nif cur is not None: ints.append((cur,len(lines),obj))\nfor idx,(a,b,o) in enumerate(ints):\n zs=[];nE=0;minx=miny=1e9;maxx=maxy=-1e9\n for l in lines[a:b]:\n  if l.startswith('G1'):\n   mz=re.search(r' Z([-+]?\\d*\\.?\\d+)',l)\n   if mz: zs.append(float(mz.group(1)))\n   mx=re.search(r'X([-+]?\\d*\\.?\\d+)',l); my=re.search(r'Y([-+]?\\d*\\.?\\d+)',l)\n   if mx: minx=min(minx,float(mx.group(1)));maxx=max(maxx,float(mx.group(1)))\n   if my: miny=min(miny,float(my.group(1)));maxy=max(maxy,float(my.group(1)))\n   me=re.search(r'E([-+]?\\d*\\.?\\d+)',l)\n   if me and float(me.group(1))>0:nE+=1\n if idx<20 or idx>len(ints)-10:\n  print(idx,'obj',o,'lines',a,b,'z',min(zs) if zs else None,max(zs) if zs else None,'extr',nE,'bbox',minx,maxx,miny,maxy)\nprint('total intervals',len(ints))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 30470,
+   "dur_ms": 8265,
+   "tokens_in": 3,
+   "tokens_out": 1761,
+   "cache_read": 14848,
+   "cache_write": 1024,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 38735,
+   "dur_ms": 231,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport re\nlines=open('text.gcode').read().splitlines()\na,b=15013,98472\n# group by layer z: detect G1 Z... F720 layer start; collect points with E>0 and current x,y until next layer\nlayers=[]; curz=None; pts=[]; curx=cury=None\nfor i in range(a,b):\n l=lines[i]\n if l.startswith('G1'):\n  mz=re.search(r' Z([-+]?\\d*\\.?\\d+)',l)\n  if mz:\n   z=float(mz.group(1))\n   if re.search(r'Z[-+]?\\d*\\.?\\d+ F720',l):\n    if curz is not None: layers.append((curz,pts))\n    curz=z;pts=[]\n  mx=re.search(r'X([-+]?\\d*\\.?\\d+)',l); my=re.search(r'Y([-+]?\\d*\\.?\\d+)',l)\n  if mx: curx=float(mx.group(1))\n  if my: cury=float(my.group(1))\n  me=re.search(r'E([-+]?\\d*\\.?\\d+)',l)\n  if me and float(me.group(1))>0 and curx is not None and cury is not None:\n   pts.append((curx,cury))\nif curz is not None: layers.append((curz,pts))\n# combine same z (multiple sublayers due travel)\nfrom collections import defaultdict\nd=defaultdict(list)\nfor z,p in layers:d[round(z,3)].extend(p)\nfor z in sorted(d):\n p=d[z]\n if p:\n  xs=[x for x,y in p];ys=[y for x,y in p]\n  print(f'{z:.2f} n={len(p):4d} bbox X {min(xs):.1f}-{max(xs):.1f} Y {min(ys):.1f}-{max(ys):.1f}')\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 38967,
+   "dur_ms": 9546,
+   "tokens_in": 55,
+   "tokens_out": 2097,
+   "cache_read": 17600,
+   "cache_write": 6208,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 48513,
+   "dur_ms": 986,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && cat > render.py <<'PY'\nimport re,zlib,struct,math,sys\nlines=open('text.gcode').read().splitlines()\na,b=15013,98472\n\ndef png_write(path,w,h,pix):\n    # pix bytearray RGB rows\n    raw=b''.join(b'\\x00'+bytes(pix[y*w*3:(y+1)*w*3]) for y in range(h))\n    def chunk(t,d):\n        c=struct.pack('>I',len(d))+t+d\n        return c+struct.pack('>I',zlib.crc32(t+d)&0xffffffff)\n    hdr=struct.pack('>IIBBBBB',w,h,8,2,0,0,0)\n    open(path,'wb').write(b'\\x89PNG\\r\\n\\x1a\\n'+chunk(b'IHDR',hdr)+chunk(b'IDAT',zlib.compress(raw,6))+chunk(b'IEND',b''))\n\ndef render(segs, path, W=1600, H=800, pad=20, color_by_z=False, zmin=0,zmax=65, bbox=None):\n    if bbox is None:\n        xs=[p[0] for s in segs for p in s]; ys=[p[1] for s in segs for p in s]\n        minx,maxx=min(xs),max(xs); miny,maxy=min(ys),max(ys)\n    else: minx,maxx,miny,maxy=bbox\n    sx=(W-2*pad)/(maxx-minx); sy=(H-2*pad)/(maxy-miny); s=min(sx,sy)\n    def tx(x): return pad+(x-minx)*s\n    def ty(y): return H-pad-(y-miny)*s\n    pix=bytearray([255])*(W*H*3)\n    def put(x,y,c):\n        if 0<=x<W and 0<=y<H:\n            i=(y*W+x)*3; pix[i:i+3]=bytes(c)\n    def line(x0,y0,x1,y1,c):\n        x0,y0,x1,y1=tx(x0),ty(y0),tx(x1),ty(y1)\n        dx=abs(x1-x0); dy=abs(y1-y0); n=int(max(dx,dy))\n        if n==0: put(int(x0),int(y0),c); return\n        for i in range(n+1):\n            t=i/n; put(int(x0+(x1-x0)*t+.5),int(y0+(y1-y0)*t+.5),c)\n    if color_by_z:\n        import colorsys\n        for (x0,y0,z0),(x1,y1,z1) in segs:\n            hh=(z0-zmin)/(zmax-zmin)*0.8\n            r,g,bb=colorsys.hsv_to_rgb(hh,0.9,0.8)\n            line(x0,y0,x1,y1,(int(r*255),int(g*255),int(bb*255)))\n    else:\n        for (x0,y0,z0),(x1,y1,z1) in segs:\n            line(x0,y0,x1,y1,(0,0,0))\n    png_write(path,W,H,pix)\n\n# parse segments with extruding E>0, current pos\nx=y=z=None\nsegs=[]\nfor i in range(a,b):\n    l=lines[i]\n    if not l.startswith('G1'): continue\n    mx=re.search(r'X([-+]?\\d*\\.?\\d+)',l); my=re.search(r'Y([-+]?\\d*\\.?\\d+)',l); mz=re.search(r' Z([-+]?\\d*\\.?\\d+)',l)\n    me=re.search(r'E([-+]?\\d*\\.?\\d+)',l)\n    nx=float(mx.group(1)) if mx else x\n    ny=float(my.group(1)) if my else y\n    nz=float(mz.group(1)) if mz else z\n    if me and float(me.group(1))>0 and x is not None and y is not None:\n        segs.append(((x,y,z),(nx,ny,nz)))\n    x,y,z=nx,ny,nz\nprint('segs',len(segs))\nrender(segs,'top_all.png',color_by_z=True,zmin=3,zmax=65)\n# main text? could be all\n# side views: XZ, YZ with z vertical; adjust render function bad because uses y as vertical. custom\ndef render_proj(segs, path, horizontal, vertical, W=1600,H=900,pad=20,color_by_z=False):\n    # point maps to (horizontal coordinate, vertical coordinate)\n    pts=[]\n    for p0,p1 in segs:\n        pts.append(p0);pts.append(p1)\n    hs=[p[horizontal] for p in pts]; vs=[p[vertical] for p in pts]\n    minx,maxx=min(hs),max(hs); miny,maxy=min(vs),max(vs)\n    sx=(W-2*pad)/(maxx-minx); sy=(H-2*pad)/(maxy-miny); s=min(sx,sy)\n    def tx(x): return pad+(x-minx)*s\n    def ty(y): return H-pad-(y-miny)*s\n    pix=bytearray([255])*(W*H*3)\n    def put(x,y,c):\n        if 0<=x<W and 0<=y<H:\n            i=(y*W+x)*3; pix[i:i+3]=bytes(c)\n    def line(x0,y0,x1,y1,c):\n        x0,y0,x1,y1=tx(x0),ty(y0),tx(x1),ty(y1)\n        dx=abs(x1-x0); dy=abs(y1-y0); n=int(max(dx,dy))\n        if n==0: put(int(x0),int(y0),c); return\n        for i in range(n+1):\n            t=i/n; put(int(x0+(x1-x0)*t+.5),int(y0+(y1-y0)*t+.5),c)\n    import colorsys\n    for p0,p1 in segs:\n        if color_by_z:\n            hh=(p0[2]-3)/62*0.8\n            r,g,bb=colorsys.hsv_to_rgb(hh,0.9,0.8); c=(int(r*255),int(g*255),int(bb*255))\n        else:c=(0,0,0)\n        line(p0[horizontal],p0[vertical],p1[horizontal],p1[vertical],c)\n    png_write(path,W,H,pix)\nrender_proj(segs,'side_xz.png',0,2,color_by_z=True)\nrender_proj(segs,'side_yz.png',1,2,color_by_z=True)\nPY\npython3 render.py && ls -l *.png"
+  },
+  {
+   "kind": "model",
+   "at_ms": 49499,
+   "dur_ms": 1020,
+   "tokens_in": 3,
+   "tokens_out": 112,
+   "cache_read": 25920,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 50521,
+   "dur_ms": 203,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "path": "/app/top_all.png"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 50521,
+   "dur_ms": 204,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "path": "/app/side_yz.png"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 50521,
+   "dur_ms": 205,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "path": "/app/side_xz.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 50734,
+   "dur_ms": 6037,
+   "tokens_in": 55,
+   "tokens_out": 1084,
+   "cache_read": 26112,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 56771,
+   "dur_ms": 385,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport re\nlines=open('text.gcode').read().splitlines();a,b=15013,98472\nsegs=[];x=y=z=None\nfor i in range(a,b):\n l=lines[i]\n if not l.startswith('G1'): continue\n mx=re.search(r'X([-+]?\\d*\\.?\\d+)',l); my=re.search(r'Y([-+]?\\d*\\.?\\d+)',l); mz=re.search(r' Z([-+]?\\d*\\.?\\d+)',l)\n me=re.search(r'E([-+]?\\d*\\.?\\d+)',l)\n nx=float(mx.group(1)) if mx else x; ny=float(my.group(1)) if my else y; nz=float(mz.group(1)) if mz else z\n if me and float(me.group(1))>0 and x is not None:segs.append((x,y,z,nx,ny,nz))\n x,y,z=nx,ny,nz\n# density map top view 200x80\nW,H=200,80\nminx=min(min(s[0],s[3]) for s in segs);maxx=max(max(s[0],s[3]) for s in segs)\nminy=min(min(s[1],s[4]) for s in segs);maxy=max(max(s[1],s[4]) for s in segs)\ngrid=[[0]*W for _ in range(H)]\nfor x0,y0,z0,x1,y1,z1 in segs:\n n=int(max(abs(x1-x0),abs(y1-y0))*2)+1\n for i in range(n+1):\n  t=i/n;x=x0+(x1-x0)*t;y=y0+(y1-y0)*t\n  ix=int((x-minx)/(maxx-minx)*(W-1));iy=int((y-miny)/(maxy-miny)*(H-1))\n  grid[H-1-iy][ix]+=1\nchars=' .:-=+*#%@'\nmx=max(max(r) for r in grid)\nprint('bbox',minx,maxx,miny,maxy,'maxcell',mx)\nfor row in grid:\n print(''.join(chars[min(len(chars)-1,int(v/mx*(len(chars)-1)*1.5))] for v in row))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 57156,
+   "dur_ms": 5944,
+   "tokens_in": 30,
+   "tokens_out": 1183,
+   "cache_read": 27328,
+   "cache_write": 1344,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 63100,
+   "dur_ms": 389,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport re\nlines=open('text.gcode').read().splitlines();a,b=15013,98472\nsegs=[];x=y=z=None\nfor i in range(a,b):\n l=lines[i]\n if not l.startswith('G1'): continue\n mx=re.search(r'X([-+]?\\d*\\.?\\d+)',l); my=re.search(r'Y([-+]?\\d*\\.?\\d+)',l); mz=re.search(r' Z([-+]?\\d*\\.?\\d+)',l)\n me=re.search(r'E([-+]?\\d*\\.?\\d+)',l)\n nx=float(mx.group(1)) if mx else x; ny=float(my.group(1)) if my else y; nz=float(mz.group(1)) if mz else z\n if me and float(me.group(1))>0 and x is not None:segs.append((x,y,z,nx,ny,nz))\n x,y,z=nx,ny,nz\ndef ascii_proj(segs,h,v,W=180,H=60,label=''):\n minx=min(min(s[h],s[h+3]) for s in segs);maxx=max(max(s[h],s[h+3]) for s in segs)\n miny=min(min(s[v],s[v+3]) for s in segs);maxy=max(max(s[v],s[v+3]) for s in segs)\n grid=[[0]*W for _ in range(H)]\n for s in segs:\n  x0,y0=s[h],s[v];x1,y1=s[h+3],s[v+3]\n  n=int(max(abs(x1-x0),abs(y1-y0))*3)+1\n  for i in range(n+1):\n   t=i/n;x=x0+(x1-x0)*t;y=y0+(y1-y0)*t\n   ix=int((x-minx)/(maxx-minx)*(W-1));iy=int((y-miny)/(maxy-miny)*(H-1))\n   grid[H-1-iy][ix]+=1\n chars=' .:-=+*#%@';mx=max(max(r) for r in grid)\n print(label,'min',minx,maxx,miny,maxy,'maxcell',mx)\n for row in grid:\n  print(''.join(chars[min(len(chars)-1,int(v/mx*(len(chars)-1)*1.5))] for v in row))\nascii_proj(segs,1,2,label='YZ')\nascii_proj(segs,0,2,label='XZ')\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 63489,
+   "dur_ms": 9475,
+   "tokens_in": 1,
+   "tokens_out": 1938,
+   "cache_read": 29184,
+   "cache_write": 2752,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 72965,
+   "dur_ms": 291,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport re\nlines=open('text.gcode').read().splitlines();a,b=15013,98472\n# group segments by layer z (rounded) but include all segments with z near given\nsegs=[];x=y=z=None\nfor i in range(a,b):\n l=lines[i]\n if not l.startswith('G1'): continue\n mx=re.search(r'X([-+]?\\d*\\.?\\d+)',l); my=re.search(r'Y([-+]?\\d*\\.?\\d+)',l); mz=re.search(r' Z([-+]?\\d*\\.?\\d+)',l)\n me=re.search(r'E([-+]?\\d*\\.?\\d+)',l)\n nx=float(mx.group(1)) if mx else x; ny=float(my.group(1)) if my else y; nz=float(mz.group(1)) if mz else z\n if me and float(me.group(1))>0 and x is not None:segs.append((x,y,z,nx,ny,nz))\n x,y,z=nx,ny,nz\nfrom collections import defaultdict\nd=defaultdict(list)\nfor s in segs:d[round(s[2],2)].append(s)\ndef show(z,W=160,H=45):\n ss=d[z]\n minx=min(min(s[0],s[3]) for s in ss);maxx=max(max(s[0],s[3]) for s in ss)\n miny=min(min(s[1],s[4]) for s in ss);maxy=max(max(s[1],s[4]) for s in ss)\n # add margin\n padx=(maxx-minx)*0.05+1;pady=(maxy-miny)*0.05+1\n minx-=padx;maxx+=padx;miny-=pady;maxy+=pady\n grid=[[0]*W for _ in range(H)]\n for s in ss:\n  x0,y0=s[0],s[1];x1,y1=s[3],s[4]\n  n=int(max(abs(x1-x0),abs(y1-y0))*5)+1\n  for i in range(n+1):\n   t=i/n;x=x0+(x1-x0)*t;y=y0+(y1-y0)*t\n   ix=int((x-minx)/(maxx-minx)*(W-1));iy=int((y-miny)/(maxy-miny)*(H-1))\n   grid[H-1-iy][ix]+=1\n chars=' .:-=+*#%@';mx=max(max(r) for r in grid)\n print('\\n=== z',z,'bbox',minx,maxx,miny,maxy,'nsegs',len(ss))\n for row in grid:\n  print(''.join(chars[min(len(chars)-1,int(v/mx*(len(chars)-1)*1.3))] for v in row))\nfor z in [3.0,5.0,10.0,15.0,20.0,25.0,30.0,35.0,40.0,45.0,50.0,55.0,60.0,64.0]:\n # find nearest\n zz=min(d,key=lambda zz:abs(zz-z));show(zz)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 73258,
+   "dur_ms": 6220,
+   "tokens_in": 24,
+   "tokens_out": 1054,
+   "cache_read": 33856,
+   "cache_write": 4160,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 79478,
+   "dur_ms": 21,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && grep -n \";\" text.gcode | head -20; grep -oE 'M[0-9]+ [^ ]*' text.gcode | sort | uniq -c | sort -nr | head -30; grep -n \"M862\\|M115\\|M555\\|M486\" text.gcode | head -50"
+  },
+  {
+   "kind": "model",
+   "at_ms": 79499,
+   "dur_ms": 6588,
+   "tokens_in": 56,
+   "tokens_out": 1306,
+   "cache_read": 39040,
+   "cache_write": 640,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 86088,
+   "dur_ms": 493,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && cat > pca.py <<'PY'\nimport re,math\nlines=open('text.gcode').read().splitlines();a,b=15013,98472\npts=[];x=y=z=None\nfor i in range(a,b):\n l=lines[i]\n if not l.startswith('G1'): continue\n mx=re.search(r'X([-+]?\\d*\\.?\\d+)',l); my=re.search(r'Y([-+]?\\d*\\.?\\d+)',l); mz=re.search(r' Z([-+]?\\d*\\.?\\d+)',l)\n me=re.search(r'E([-+]?\\d*\\.?\\d+)',l)\n nx=float(mx.group(1)) if mx else x; ny=float(my.group(1)) if my else y; nz=float(mz.group(1)) if mz else z\n if me and float(me.group(1))>0 and x is not None:\n  # sample endpoints to reduce\n  pts.append((x,y,z));pts.append((nx,ny,nz))\n x,y,z=nx,ny,nz\nn=len(pts)\ncx=sum(p[0] for p in pts)/n;cy=sum(p[1] for p in pts)/n;cz=sum(p[2] for p in pts)/n\ncov=[[0.0]*3 for _ in range(3)]\nfor x,y,z in pts:\n d=(x-cx,y-cy,z-cz)\n for i in range(3):\n  for j in range(3):cov[i][j]+=d[i]*d[j]/n\nprint('centroid',cx,cy,cz)\nprint('cov',cov)\n# jacobi eigen\nimport copy\nA=copy.deepcopy(cov);V=[[1.0 if i==j else 0.0 for j in range(3)] for i in range(3)]\nfor it in range(100):\n # find largest offdiag\n off=[(abs(A[i][j]),i,j) for i in range(3) for j in range(i+1,3)]\n _,p,q=max(off)\n if abs(A[p][q])<1e-12:break\n phi=0.5*math.atan2(2*A[p][q],A[q][q]-A[p][p])\n c,s=math.cos(phi),math.sin(phi)\n # rotate A using J^T A J with J[p][p]=c,J[p][q]=-s? implement\n for k in range(3):\n  akp=A[k][p];akq=A[k][q]\n  A[k][p]=c*akp-s*akq;A[k][q]=s*akp+c*akq\n for k in range(3):\n  apk=A[p][k];aqk=A[q][k]\n  A[p][k]=c*apk-s*aqk;A[q][k]=s*apk+c*aqk\n for k in range(3):\n  vkp=V[k][p];vkq=V[k][q]\n  V[k][p]=c*vkp-s*vkq;V[k][q]=s*vkp+c*vkq\nprint('eig diag',[A[i][i] for i in range(3)])\nfor j in range(3):\n print('eigvec',j,[V[i][j] for i in range(3)])\nPY\npython3 pca.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 86585,
+   "dur_ms": 17020,
+   "tokens_in": 18,
+   "tokens_out": 3204,
+   "cache_read": 41024,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 103606,
+   "dur_ms": 492,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport re,math\nlines=open('text.gcode').read().splitlines();a,b=15013,98472\npts=[];x=y=z=None\nfor i in range(a,b):\n l=lines[i]\n if not l.startswith('G1'): continue\n mx=re.search(r'X([-+]?\\d*\\.?\\d+)',l); my=re.search(r'Y([-+]?\\d*\\.?\\d+)',l); mz=re.search(r' Z([-+]?\\d*\\.?\\d+)',l)\n me=re.search(r'E([-+]?\\d*\\.?\\d+)',l)\n nx=float(mx.group(1)) if mx else x; ny=float(my.group(1)) if my else y; nz=float(mz.group(1)) if mz else z\n if me and float(me.group(1))>0 and x is not None:pts.append((x,y,z,nx,ny,nz))\n x,y,z=nx,ny,nz\n# basis from pca\nc=(126.12079211713414,110.7931071671581,30.6846268995237)\ne1=(-0.2935635477036887,-0.20132077345589353,0.9345000747109359) # smallest\ne2=(0.4029731907464937,-0.912531027457639,-0.0699980818786891) # middle\ne3=(0.8668523813194575,0.3560295916103413,0.34901272025323005) # largest\ndef dot(p,e):return (p[0]-c[0])*e[0]+(p[1]-c[1])*e[1]+(p[2]-c[2])*e[2]\ndef show(h,v,W=200,H=60):\n segs=[]\n for p in pts:\n  p0=p[:3];p1=p[3:]\n  segs.append((dot(p0,h),dot(p0,v),dot(p1,h),dot(p1,v)))\n minx=min(min(s[0],s[2]) for s in segs);maxx=max(max(s[0],s[2]) for s in segs)\n miny=min(min(s[1],s[3]) for s in segs);maxy=max(max(s[1],s[3]) for s in segs)\n grid=[[0]*W for _ in range(H)]\n for x0,y0,x1,y1 in segs:\n  n=int(max(abs(x1-x0),abs(y1-y0))*5)+1\n  for i in range(n+1):\n   t=i/n;x=x0+(x1-x0)*t;y=y0+(y1-y0)*t\n   ix=int((x-minx)/(maxx-minx)*(W-1));iy=int((y-miny)/(maxy-miny)*(H-1))\n   grid[H-1-iy][ix]+=1\n chars=' .:-=+*#%@';mx=max(max(r) for r in grid)\n print('--- range',minx,maxx,miny,maxy)\n for row in grid:print(''.join(chars[min(len(chars)-1,int(v/mx*(len(chars)-1)*1.5))] for v in row))\nprint('Proj e3 (x) vs e2 (y)');\nshow(e3,e2)\nprint('Proj e3 vs e1');\nshow(e3,e1)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 104099,
+   "dur_ms": 12524,
+   "tokens_in": 48,
+   "tokens_out": 2496,
+   "cache_read": 44480,
+   "cache_write": 8448,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 116624,
+   "dur_ms": 547,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY' > /tmp/proj.txt\nimport re,math\nlines=open('text.gcode').read().splitlines();a,b=15013,98472\npts=[];x=y=z=None\nfor i in range(a,b):\n l=lines[i]\n if not l.startswith('G1'): continue\n mx=re.search(r'X([-+]?\\d*\\.?\\d+)',l); my=re.search(r'Y([-+]?\\d*\\.?\\d+)',l); mz=re.search(r' Z([-+]?\\d*\\.?\\d+)',l)\n me=re.search(r'E([-+]?\\d*\\.?\\d+)',l)\n nx=float(mx.group(1)) if mx else x; ny=float(my.group(1)) if my else y; nz=float(mz.group(1)) if mz else z\n if me and float(me.group(1))>0 and x is not None:pts.append((x,y,z,nx,ny,nz))\n x,y,z=nx,ny,nz\nc=(126.12079211713414,110.7931071671581,30.6846268995237)\ne1=(-0.2935635477036887,-0.20132077345589353,0.9345000747109359)\ne2=(0.4029731907464937,-0.912531027457639,-0.0699980818786891)\ne3=(0.8668523813194575,0.3560295916103413,0.34901272025323005)\ndef dot(p,e):return (p[0]-c[0])*e[0]+(p[1]-c[1])*e[1]+(p[2]-c[2])*e[2]\nsegs=[(dot(p[:3],e3),dot(p[:3],e2),dot(p[3:],e3),dot(p[3:],e2)) for p in pts]\nminx=min(min(s[0],s[2]) for s in segs);maxx=max(max(s[0],s[2]) for s in segs)\nminy=min(min(s[1],s[3]) for s in segs);maxy=max(max(s[1],s[3]) for s in segs)\nW=500;H=int((maxy-miny)/(maxx-minx)*W*0.55)+1\ngrid=[[0]*W for _ in range(H)]\nfor x0,y0,x1,y1 in segs:\n n=int(max(abs(x1-x0),abs(y1-y0))*8)+1\n for i in range(n+1):\n  t=i/n;x=x0+(x1-x0)*t;y=y0+(y1-y0)*t\n  ix=int((x-minx)/(maxx-minx)*(W-1));iy=int((y-miny)/(maxy-miny)*(H-1))\n  grid[H-1-iy][ix]+=1\nchars=' .:-=+*#%@';mx=max(max(r) for r in grid)\nfor row in grid:print(''.join(chars[min(len(chars)-1,int(v/mx*(len(chars)-1)*1.5))] for v in row))\nPY\nwc -l /tmp/proj.txt; head -25 /tmp/proj.txt; echo ----; tail -25 /tmp/proj.txt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 117171,
+   "dur_ms": 3280,
+   "tokens_in": 6,
+   "tokens_out": 423,
+   "cache_read": 55424,
+   "cache_write": 3776,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 120452,
+   "dur_ms": 10,
+   "tool": "bash",
+   "is_error": false,
+   "command": "which tesseract; tesseract --version 2>/dev/null | head -2"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 120452,
+   "dur_ms": 12,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && awk '{printf \"%03d \", NR-1; print substr($0,1,125)}' /tmp/proj.txt | sed -n '1,21p'"
+  },
+  {
+   "kind": "model",
+   "at_ms": 120469,
+   "dur_ms": 1873,
+   "tokens_in": 7,
+   "tokens_out": 183,
+   "cache_read": 59584,
+   "cache_write": 640,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 122343,
+   "dur_ms": 20,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nrows=open('/tmp/proj.txt').read().splitlines()\nfor start in range(0,500,125):\n print('\\n===== x chars',start,'-',start+124)\n for i,r in enumerate(rows):\n  print(f'{i:02d} '+r[start:start+125])\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 122369,
+   "dur_ms": 11371,
+   "tokens_in": 39,
+   "tokens_out": 2085,
+   "cache_read": 60352,
+   "cache_write": 2112,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 133740,
+   "dur_ms": 757,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && cat > proj_components.py <<'PY'\nimport re,math,collections,sys\nlines=open('text.gcode').read().splitlines();a,b=15013,98472\npts=[];x=y=z=None\nfor i in range(a,b):\n l=lines[i]\n if not l.startswith('G1'): continue\n mx=re.search(r'X([-+]?\\d*\\.?\\d+)',l); my=re.search(r'Y([-+]?\\d*\\.?\\d+)',l); mz=re.search(r' Z([-+]?\\d*\\.?\\d+)',l)\n me=re.search(r'E([-+]?\\d*\\.?\\d+)',l)\n nx=float(mx.group(1)) if mx else x; ny=float(my.group(1)) if my else y; nz=float(mz.group(1)) if mz else z\n if me and float(me.group(1))>0 and x is not None:pts.append((x,y,z,nx,ny,nz))\n x,y,z=nx,ny,nz\nc=(126.12079211713414,110.7931071671581,30.6846268995237)\ne2=(0.4029731907464937,-0.912531027457639,-0.0699980818786891)\ne3=(0.8668523813194575,0.3560295916103413,0.34901272025323005)\ndef dot(p,e):return (p[0]-c[0])*e[0]+(p[1]-c[1])*e[1]+(p[2]-c[2])*e[2]\nsegs=[(dot(p[:3],e3),dot(p[:3],e2),dot(p[3:],e3),dot(p[3:],e2)) for p in pts]\nminx=min(min(s[0],s[2]) for s in segs);maxx=max(max(s[0],s[2]) for s in segs)\nminy=min(min(s[1],s[3]) for s in segs);maxy=max(max(s[1],s[3]) for s in segs)\nscale=10 # px per mm\nW=int((maxx-minx)*scale)+5;H=int((maxy-miny)*scale)+5\ng=[bytearray(W) for _ in range(H)]\ndef put(ix,iy):\n if 0<=ix<W and 0<=iy<H:g[iy][ix]=1\nfor x0,y0,x1,y1 in segs:\n X0=(x0-minx)*scale+2;Y0=(y0-miny)*scale+2;X1=(x1-minx)*scale+2;Y1=(y1-miny)*scale+2\n n=int(max(abs(X1-X0),abs(Y1-Y0))*2)+1\n for i in range(n+1):\n  t=i/n;put(round(X0+(X1-X0)*t),round(Y0+(Y1-Y0)*t))\nprint('raster',W,H,'bbox',minx,maxx,miny,maxy)\n# connected components 8-neigh\ncomp=[[-1]*W for _ in range(H)]; comps=[]\nfor yy in range(H):\n for xx in range(W):\n  if g[yy][xx] and comp[yy][xx]<0:\n   idx=len(comps);q=[(xx,yy)];comp[yy][xx]=idx;cells=[]\n   while q:\n    x0,y0=q.pop();cells.append((x0,y0))\n    for dy in (-1,0,1):\n     for dx in (-1,0,1):\n      if dx==0 and dy==0:continue\n      nx=x0+dx;ny=y0+dy\n      if 0<=nx<W and 0<=ny<H and g[ny][nx] and comp[ny][nx]<0:\n       comp[ny][nx]=idx;q.append((nx,ny))\n   comps.append(cells)\nprint('components',len(comps))\ninfo=[]\nfor i,cells in enumerate(comps):\n xs=[p[0] for p in cells];ys=[p[1] for p in cells]\n if len(cells)>10:\n  info.append((min(xs),max(xs),min(ys),max(ys),len(cells),i))\ninfo.sort()\nfor a0,a1,b0,b1,n,i in info:\n print(f'comp {i}: x {minx+a0/scale:.1f}-{minx+a1/scale:.1f} y {miny+b0/scale:.1f}-{miny+b1/scale:.1f} w {(a1-a0)/scale:.1f} h {(b1-b0)/scale:.1f} n{n}')\nPY\npython3 proj_components.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 134502,
+   "dur_ms": 6697,
+   "tokens_in": 32,
+   "tokens_out": 1311,
+   "cache_read": 64576,
+   "cache_write": 1024,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 141200,
+   "dur_ms": 2106,
+   "tool": "bash",
+   "is_error": false,
+   "command": "pip install --quiet pillow 2>&1 | tail -5; python3 -c \"import PIL; print(PIL.__version__)\" 2>&1",
+   "timeout": 60
+  },
+  {
+   "kind": "model",
+   "at_ms": 143306,
+   "dur_ms": 1596,
+   "tokens_in": 2,
+   "tokens_out": 163,
+   "cache_read": 66880,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 144902,
+   "dur_ms": 16152,
+   "tool": "bash",
+   "is_error": false,
+   "command": "apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq tesseract-ocr >/dev/null 2>&1; which tesseract && tesseract --version | head -1",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 161054,
+   "dur_ms": 6165,
+   "tokens_in": 0,
+   "tokens_out": 1304,
+   "cache_read": 67200,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 167219,
+   "dur_ms": 13280,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && cat > ocr_render.py <<'PY'\nimport re,math\nfrom PIL import Image,ImageDraw,ImageOps,ImageFilter\nlines=open('text.gcode').read().splitlines();a,b=15013,98472\npts=[];x=y=z=None\nfor i in range(a,b):\n l=lines[i]\n if not l.startswith('G1'): continue\n mx=re.search(r'X([-+]?\\d*\\.?\\d+)',l); my=re.search(r'Y([-+]?\\d*\\.?\\d+)',l); mz=re.search(r' Z([-+]?\\d*\\.?\\d+)',l)\n me=re.search(r'E([-+]?\\d*\\.?\\d+)',l)\n nx=float(mx.group(1)) if mx else x; ny=float(my.group(1)) if my else y; nz=float(mz.group(1)) if mz else z\n if me and float(me.group(1))>0 and x is not None:pts.append((x,y,z,nx,ny,nz))\n x,y,z=nx,ny,nz\nc=(126.12079211713414,110.7931071671581,30.6846268995237)\ne1=(-0.2935635477036887,-0.20132077345589353,0.9345000747109359)\ne2=(0.4029731907464937,-0.912531027457639,-0.0699980818786891)\ne3=(0.8668523813194575,0.3560295916103413,0.34901272025323005)\ndef dot(p,e):return (p[0]-c[0])*e[0]+(p[1]-c[1])*e[1]+(p[2]-c[2])*e[2]\ndef make(axis_h,axis_v,flip_h=False,flip_v=False,fn='out.png',scale=30,width=3):\n segs=[]\n for p in pts:\n  h0=dot(p[:3],axis_h);v0=dot(p[:3],axis_v);h1=dot(p[3:],axis_h);v1=dot(p[3:],axis_v)\n  segs.append((h0,v0,h1,v1))\n minx=min(min(s[0],s[2]) for s in segs);maxx=max(max(s[0],s[2]) for s in segs)\n miny=min(min(s[1],s[3]) for s in segs);maxy=max(max(s[1],s[3]) for s in segs)\n W=int((maxx-minx)*scale)+100;H=int((maxy-miny)*scale)+100\n im=Image.new('L',(W,H),255);d=ImageDraw.Draw(im)\n def tx(x):return 50+(x-minx)*scale\n def ty(y):return H-50-(y-miny)*scale\n for x0,y0,x1,y1 in segs:\n  d.line((tx(x0),ty(y0),tx(x1),ty(y1)),fill=0,width=width)\n if flip_h:im=ImageOps.mirror(im)\n if flip_v:im=ImageOps.flip(im)\n im.save(fn)\n return im\nfor label,h,v in [('e3_e2',e3,e2),('e2_e3',e2,e3),('e3_ne2',e3,tuple(-q for q in e2)),('ne3_e2',tuple(-q for q in e3),e2)]:\n for fh in (False,True):\n  for fv in (False,True):\n   fn=f'/app/ocr_{label}_{int(fh)}{int(fv)}.png'\n   im=make(h,v,fh,fv,fn)\n   print(fn,im.size)\nPY\npython3 ocr_render.py\nfor f in /app/ocr_*.png; do for psm in 6 7 13; do echo \"=== $f psm$psm\"; tesseract \"$f\" stdout --psm $psm 2>/dev/null; done; done",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 180500,
+   "dur_ms": 23109,
+   "tokens_in": 44,
+   "tokens_out": 4169,
+   "cache_read": 68544,
+   "cache_write": 1728,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 203609,
+   "dur_ms": 3867,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport re\nfrom PIL import Image,ImageDraw,ImageOps,ImageFilter\nexec(open('ocr_render.py').read().split(\"for label\")[0])\n# make correct orientation: e3 horizontal, e2 vertical flipped = flip_v True on make\nim=make(e3,e2,False,True,'/app/best60.png',scale=60,width=4)\n# some preprocessing variants\nim.save('/app/best60_dil.png')\nim.filter(ImageFilter.MinFilter(3)).save('/app/best60_min.png')\n# invert for tesseract? no\nprint(im.size)\nPY\nfor f in best60 best60_min; do for psm in 6 7 13; do echo \"=== $f psm$psm\"; tesseract /app/$f.png stdout --psm $psm -c tessedit_char_whitelist='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_{}' 2>/dev/null; done; done",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 207482,
+   "dur_ms": 5414,
+   "tokens_in": 23,
+   "tokens_out": 1049,
+   "cache_read": 74432,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 212897,
+   "dur_ms": 859,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && cat > show_comps.py <<'PY'\n# reuse raster build from proj_components but print selected comps\nexec(open('proj_components.py').read().split(\"print('components'\")[0])\n# comps variable exists, comp map\nwant={18:'g',19:'c',10:'0',3:'d',11:'3',20:'z?',21:'c',5:'h',14:'4',8:'L',9:'L',22:'e',24:'n',6:'G?',13:'N?',26:'g',7:'}',1:'f',2:'l',16:'a',17:'g',0:'{'}\nfor i in sorted(want):\n cells=comps[i]\n xs=[p[0] for p in cells];ys=[p[1] for p in cells]\n x0,x1,y0,y1=min(xs),max(xs),min(ys),max(ys)\n # pad\n x0=max(0,x0-5);x1=min(W-1,x1+5);y0=max(0,y0-5);y1=min(H-1,y1+5)\n print('\\n=== comp',i,want[i],'bbox',x0,x1,y0,y1)\n # bin 2x2, invert y so top=max y? raw y increases e2; we'll print y1->y0 to match earlier\n cw=x1-x0+1;ch=y1-y0+1\n for yy in range(y1,y0-1,-2):\n  row=''\n  for xx in range(x0,x1+1,2):\n   cnt=0;tot=0\n   for dy in range(2):\n    for dx in range(2):\n     x=xx+dx;y=yy-dy\n     if x0<=x<=x1 and y0<=y<=y1:\n      tot+=1;cnt+=g[y][x]\n   row += '#' if cnt else ' '\n  print(row)\nPY\npython3 show_comps.py > /tmp/comps.txt\nsed -n '1,220p' /tmp/comps.txt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 213762,
+   "dur_ms": 1671,
+   "tokens_in": 5,
+   "tokens_out": 153,
+   "cache_read": 75648,
+   "cache_write": 1152,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 215434,
+   "dur_ms": 16,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sed -n '220,700p' /tmp/comps.txt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 215450,
+   "dur_ms": 1559,
+   "tokens_in": 32,
+   "tokens_out": 115,
+   "cache_read": 76928,
+   "cache_write": 2944,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 217010,
+   "dur_ms": 8,
+   "tool": "bash",
+   "is_error": false,
+   "command": "grep -n \"comp 20\\|comp 21\\|comp 22\\|comp 24\\|comp 26\\|comp 16\\|comp 17\\|comp 18\\|comp 19\" /tmp/comps.txt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 217023,
+   "dur_ms": 1365,
+   "tokens_in": 9,
+   "tokens_out": 52,
+   "cache_read": 80000,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 218389,
+   "dur_ms": 10,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sed -n '714,1075p' /tmp/comps.txt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 218405,
+   "dur_ms": 20566,
+   "tokens_in": 29,
+   "tokens_out": 3629,
+   "cache_read": 80192,
+   "cache_write": 2368,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 238971,
+   "dur_ms": 8,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && printf 'flag{gc0d3_iz_ch4LLenGiNg}\\n' > /app/out.txt && cat /app/out.txt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 238985,
+   "dur_ms": 5659,
+   "tokens_in": 36,
+   "tokens_out": 925,
+   "cache_read": 86208,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 2.875,
+ "calls": 39,
+ "cell": "TB1e"
+}

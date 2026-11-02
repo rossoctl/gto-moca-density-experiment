@@ -1,0 +1,246 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "feal-differential-cryptanalysis",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 90534,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 2448,
+  "output": 16268,
+  "cacheRead": 198400,
+  "cacheWrite": 0,
+  "total": 217116
+ },
+ "totals": {
+  "model_calls": 10,
+  "tool_calls": 12,
+  "model_ms": 84222,
+  "tool_ms": 4758,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 109,
+   "dur_ms": 3372,
+   "tokens_in": 179,
+   "tokens_out": 75,
+   "cache_read": 6976,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3481,
+   "dur_ms": 37,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/feal.py"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3712,
+   "dur_ms": 85,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3849,
+   "dur_ms": 50519,
+   "tokens_in": 1007,
+   "tokens_out": 105,
+   "cache_read": 7232,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 54368,
+   "dur_ms": 16,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/opencode.json"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 54653,
+   "dur_ms": 35,
+   "tool": "bash",
+   "is_error": false,
+   "command": "find / -maxdepth 3 -name '*attack*' -o -maxdepth 3 -name '*test*' 2>/dev/null | head -50"
+  },
+  {
+   "kind": "model",
+   "at_ms": 55265,
+   "dur_ms": 10386,
+   "tokens_in": 173,
+   "tokens_out": 214,
+   "cache_read": 18816,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 65651,
+   "dur_ms": 51,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - << 'PY'\nimport random\nfrom feal import f_function\n\ndef const_diff(d):\n    vals=set()\n    for _ in range(100):\n        x=random.randrange(1<<32)\n        vals.add(f_function(x)^f_function(x^d))\n        if len(vals)>1: return None\n    return vals.pop()\n\nspecials={}\nfor mask in range(1,16):\n    d=0\n    for i in range(4):\n        if (mask>>i)&1: d |= 0x80<<(8*i)\n    c=const_diff(d)\n    if c is not None:\n        specials[d]=c\nprint(len(specials))\nfor d,c in specials.items():\n    print(f\"{d:08x} -> {c:08x}\")\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 65800,
+   "dur_ms": 3037,
+   "tokens_in": 97,
+   "tokens_out": 248,
+   "cache_read": 21056,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 68837,
+   "dur_ms": 29,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - << 'PY'\nimport random\nfrom feal import f_function\n\nspecials={\n0x00008080:0x00000002,\n0x80800000:0x02000000,\n0x80808080:0x02000002,\n}\n# simulate difference planning\npairs=[]\nfor b0,c0 in specials.items():\n    for b1,c1 in specials.items():\n        a0=b1^c0\n        dphi=a0\n        dplo=b0^a0\n        dL3=b0^c1\n        # b2=dL3; can compute actual b3 via round 3? b3=b1 ^ deltaF(b2) if b2 in specials\n        if dL3==0: continue\n        pairs.append((b0,b1,dphi,dplo,dL3))\nprint(len(pairs))\nfor p in pairs[:20]:\n    print([hex(x) for x in p])\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 68894,
+   "dur_ms": 4154,
+   "tokens_in": 320,
+   "tokens_out": 629,
+   "cache_read": 21696,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 73048,
+   "dur_ms": 1474,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - << 'PY'\nimport random, time\nimport feal\nfrom feal import f_function, merge, getleft, getright\n\nspecials={0x00008080:0x00000002,0x80800000:0x02000000,0x80808080:0x02000002}\nplans=[]\nfor b0,c0 in specials.items():\n    for b1,c1 in specials.items():\n        a0=b1^c0\n        dphi=a0; dplo=b0^a0\n        dL3=b0^c1\n        if dL3!=0:\n            plans.append((dphi,dplo,dL3))\n\ndef attack_logic(encrypt_fn):\n    constraints=[]\n    bases=[random.randrange(1<<64) for _ in range(6)]\n    for idx,(dphi,dplo,dL3) in enumerate(plans):\n        base=bases[idx%len(bases)]\n        p1=base; p2=base^merge(dphi,dplo)\n        c1=encrypt_fn(p1); c2=encrypt_fn(p2)\n        h1=getleft(c1); l1=getright(c1)\n        h2=getleft(c2); l2=getright(c2)\n        R3a=h1^l1; R3b=h2^l2\n        if R3a==R3b: continue\n        need=h1^h2^dL3\n        constraints.append((R3a,R3b,need))\n        if len(constraints)>=4: break\n    cands=list(range(65536))\n    for (ra,rb,need) in constraints:\n        nxt=[]\n        for seed in cands:\n            k=(seed*1234567)&0xFFFFFFFF\n            if f_function(ra^k)^f_function(rb^k)==need:\n                nxt.append(seed)\n        cands=nxt\n        print('after constraint',len(cands), [hex((s*1234567)&0xFFFFFFFF) for s in cands[:5]])\n        if len(cands)==1: break\n    return [(s*1234567)&0xFFFFFFFF for s in cands]\n\nfor trial in range(5):\n    feal.create_random_keys()\n    feal.key[5]=(random.randrange(0x10000)*1234567)&0xFFFFFFFF\n    t=time.time()\n    res=attack_logic(feal.encrypt)\n    print('trial',trial,'target',hex(feal.key[5]),'candidates',[hex(x) for x in res],'time',time.time()-t)\nPY",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 74537,
+   "dur_ms": 7313,
+   "tokens_in": 291,
+   "tokens_out": 965,
+   "cache_read": 22784,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 81850,
+   "dur_ms": 17,
+   "tool": "write",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/attack.py",
+    "content": "#!/usr/bin/env python3\n\nMULT = 1234567\n\n\ndef getleft(x):\n    return (x >> 32) & 0xFFFFFFFF\n\n\ndef getright(x):\n    return x & 0xFFFFFFFF\n\n\ndef merge(left, right):\n    return ((left & 0xFFFFFFFF) << 32) | (right & 0xFFFFFFFF)\n\n\ndef g_function(a, b, x):\n    temp = (a + b + x) & 0xFF\n    return ((temp << 2) | (temp >> 6)) & 0xFF\n\n\ndef f_function(value):\n    x = [0] * 4\n    y = [0] * 4\n    for i in range(4):\n        x[i] = value & 0xFF\n        value >>= 8\n\n    y[2] = g_function(x[3] ^ x[2], x[1] ^ x[0], 1)\n    y[3] = g_function(x[3], y[2], 0)\n    y[1] = g_function(x[1] ^ x[0], y[2], 0)\n    y[0] = g_function(x[0], y[1], 1)\n\n    output = 0\n    for i in range(4):\n        output |= y[i] << (8 * i)\n    return output & 0xFFFFFFFF\n\n\n# Input differences for which F(x) ^ F(x ^ d) is a known constant,\n# independent of x.  These follow from complementing selected bytes.\nSPECIAL_DIFFS = {\n    0x00008080: 0x00000002,\n    0x80800000: 0x02000000,\n    0x80808080: 0x02000002,\n}\n\n\ndef build_plans():\n    \"\"\"Build (plaintext_diff, known_delta_L3) pairs.\n\n    The first three rounds' differences are forced to follow deterministic\n    F-function differentials, so the difference entering the last round's\n    left half is known without knowing any key.\n    \"\"\"\n    plans = []\n    for b0, c0 in SPECIAL_DIFFS.items():\n        for b1, c1 in SPECIAL_DIFFS.items():\n            # b0 = delta R0, b1 = delta R1\n            a0 = b1 ^ c0\n            delta_hi = a0\n            delta_lo = b0 ^ a0\n            delta_l3 = b0 ^ c1\n            if delta_l3 != 0:\n                plans.append((merge(delta_hi, delta_lo), delta_l3))\n    return plans\n\n\ndef attack(encrypt_fn):\n    plans = build_plans()\n\n    constraints = []\n    candidates = list(range(0x10000))\n    base = 0x0123456789ABCDEF\n\n    # Add differential constraints until only one seed remains.\n    for step in range(64):\n        plain_diff, delta_l3 = plans[step % len(plans)]\n        p1 = (base + step * 0x9E3779B97F4A7C15) & 0xFFFFFFFFFFFFFFFF\n        p2 = p1 ^ plain_diff\n\n        c1 = encrypt_fn(p1)\n        c2 = encrypt_fn(p2)\n\n        h1, l1 = getleft(c1), getright(c1)\n        h2, l2 = getleft(c2), getright(c2)\n\n        # R3 = out_hi ^ out_lo is available directly from each ciphertext.\n        r3a = h1 ^ l1\n        r3b = h2 ^ l2\n        if r3a == r3b:\n            continue\n\n        required = h1 ^ h2 ^ delta_l3\n        constraints.append((r3a, r3b, required))\n\n        remaining = []\n        for seed in candidates:\n            k = (seed * MULT) & 0xFFFFFFFF\n            if f_function(r3a ^ k) ^ f_function(r3b ^ k) == required:\n                remaining.append(seed)\n        candidates = remaining\n\n        if len(candidates) == 1:\n            break\n\n    return (candidates[0] * MULT) & 0xFFFFFFFF\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 81928,
+   "dur_ms": 2338,
+   "tokens_in": 34,
+   "tokens_out": 221,
+   "cache_read": 24576,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 84266,
+   "dur_ms": 2930,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - << 'PY'\nimport random, time\nimport feal\nfrom attack import attack\nfor t in range(10):\n    feal.create_random_keys()\n    feal.key[5] = (random.randrange(0x10000) * 1234567) & 0xFFFFFFFF\n    started=time.time()\n    got=attack(feal.encrypt)\n    ok=got==feal.key[5]\n    print(t, ok, hex(got), '%.3fs' % (time.time()-started))\n    assert ok\nPY",
+   "timeout": 120000
+  },
+  {
+   "kind": "tool",
+   "at_ms": 84494,
+   "dur_ms": 53,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 -m py_compile attack.py && echo OK"
+  },
+  {
+   "kind": "model",
+   "at_ms": 87212,
+   "dur_ms": 1037,
+   "tokens_in": 240,
+   "tokens_out": 101,
+   "cache_read": 24832,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 88249,
+   "dur_ms": 16,
+   "tool": "edit",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/attack.py",
+    "oldString": "    constraints = []\n    candidates = list(range(0x10000))",
+    "newString": "    candidates = list(range(0x10000))"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 88289,
+   "dur_ms": 1291,
+   "tokens_in": 49,
+   "tokens_out": 123,
+   "cache_read": 25152,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 89580,
+   "dur_ms": 15,
+   "tool": "edit",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/attack.py",
+    "oldString": "        required = h1 ^ h2 ^ delta_l3\n        constraints.append((r3a, r3b, required))\n\n        remaining = []",
+    "newString": "        required = h1 ^ h2 ^ delta_l3\n\n        remaining = []"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 89622,
+   "dur_ms": 775,
+   "tokens_in": 58,
+   "tokens_out": 50,
+   "cache_read": 25280,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.323,
+ "calls": 12,
+ "cell": "TB1c"
+}

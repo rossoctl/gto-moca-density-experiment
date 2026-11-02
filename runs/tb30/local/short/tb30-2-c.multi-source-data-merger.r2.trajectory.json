@@ -1,0 +1,152 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "multi-source-data-merger",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 17425,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 1230,
+  "output": 2482,
+  "cacheRead": 54144,
+  "cacheWrite": 0,
+  "total": 57856
+ },
+ "totals": {
+  "model_calls": 6,
+  "tool_calls": 7,
+  "model_ms": 14121,
+  "tool_ms": 3540,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 98,
+   "dur_ms": 3472,
+   "tokens_in": 1,
+   "tokens_out": 136,
+   "cache_read": 7488,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3570,
+   "dur_ms": 118,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /data/source_a /data/source_b /data/source_c 2>&1; echo \"---\"; ls -la /app"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3820,
+   "dur_ms": 68,
+   "tool": "bash",
+   "is_error": false,
+   "command": "head -c 2000 /data/source_a/users.json 2>&1; echo; echo \"---CSV---\"; head -20 /data/source_b/users.csv 2>&1"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3917,
+   "dur_ms": 656,
+   "tokens_in": 479,
+   "tokens_out": 131,
+   "cache_read": 7616,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4573,
+   "dur_ms": 1232,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 -c \"import pandas, pyarrow; print(pandas.__version__, pyarrow.__version__)\" 2>&1"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4890,
+   "dur_ms": 946,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 -c \"import pandas as pd; df=pd.read_parquet('/data/source_c/users.parquet'); print(df.to_string()); print(df.dtypes)\" 2>&1"
+  },
+  {
+   "kind": "model",
+   "at_ms": 6003,
+   "dur_ms": 7208,
+   "tokens_in": 161,
+   "tokens_out": 1085,
+   "cache_read": 8192,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 13211,
+   "dur_ms": 21,
+   "tool": "write",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/merge_users.py",
+    "content": "import json\nimport pandas as pd\n\nSOURCES = [\n    (\"source_a\", \"/data/source_a/users.json\"),\n    (\"source_b\", \"/data/source_b/users.csv\"),\n    (\"source_c\", \"/data/source_c/users.parquet\"),\n]\n\nFIELD_MAP = {\n    \"user_id\": [\"user_id\", \"id\", \"userId\"],\n    \"email\": [\"email\", \"email_address\"],\n    \"name\": [\"full_name\", \"name\", \"userName\"],\n    \"created_date\": [\"registration_date\", \"created_at\", \"joined\"],\n    \"status\": [\"status\", \"is_active\", \"active\"],\n}\n\nOUTPUT_COLUMNS = [\"user_id\", \"name\", \"email\", \"created_date\", \"status\"]\n\n\ndef normalize_status(value):\n    if value is None or (isinstance(value, float) and pd.isna(value)):\n        return None\n    if isinstance(value, bool):\n        return \"active\" if value else \"inactive\"\n    text = str(value).strip()\n    if text.lower() in {\"true\", \"1\", \"yes\", \"active\"}:\n        return \"active\"\n    if text.lower() in {\"false\", \"0\", \"no\", \"inactive\"}:\n        return \"inactive\"\n    return text\n\n\ndef normalize_date(value):\n    if value is None or (isinstance(value, float) and pd.isna(value)):\n        return None\n    text = str(value).strip()\n    if not text:\n        return None\n    return pd.to_datetime(text).strftime(\"%Y-%m-%d\")\n\n\ndef normalize_user_id(value):\n    if value is None or (isinstance(value, float) and pd.isna(value)):\n        return None\n    return int(value)\n\n\ndef load_source(path):\n    if path.endswith(\".json\"):\n        return pd.read_json(path)\n    if path.endswith(\".csv\"):\n        return pd.read_csv(path)\n    if path.endswith(\".parquet\"):\n        return pd.read_parquet(path)\n    raise ValueError(f\"Unsupported file type: {path}\")\n\n\ndef unify(df):\n    records = []\n    columns = set(df.columns)\n    for _, row in df.iterrows():\n        record = {}\n        for unified, candidates in FIELD_MAP.items():\n            value = None\n            for candidate in candidates:\n                if candidate in columns:\n                    value = row[candidate]\n                    break\n            if unified == \"user_id\":\n                value = normalize_user_id(value)\n            elif unified == \"created_date\":\n                value = normalize_date(value)\n            elif unified == \"status\":\n                value = normalize_status(value)\n            elif value is not None and not (isinstance(value, float) and pd.isna(value)):\n                value = str(value).strip()\n            else:\n                value = None\n            record[unified] = value\n        records.append(record)\n    return records\n\n\ndef main():\n    source_records = {}\n    for source_name, path in SOURCES:\n        df = load_source(path)\n        source_records[source_name] = {}\n        for record in unify(df):\n            if record[\"user_id\"] is not None:\n                source_records[source_name][record[\"user_id\"]] = record\n\n    all_user_ids = sorted(\n        {uid for records in source_records.values() for uid in records}\n    )\n\n    merged_rows = []\n    conflicts = []\n\n    for user_id in all_user_ids:\n        merged = {\"user_id\": user_id}\n        for field in OUTPUT_COLUMNS[1:]:\n            values = {}\n            for source_name, _ in SOURCES:\n                record = source_records[source_name].get(user_id)\n                if record and record.get(field) is not None:\n                    values[source_name] = record[field]\n\n            selected = None\n            for source_name, _ in SOURCES:\n                if source_name in values:\n                    selected = values[source_name]\n                    break\n\n            merged[field] = selected\n\n            if len(set(values.values())) > 1:\n                conflicts.append(\n                    {\n                        \"user_id\": user_id,\n                        \"field\": field,\n                        \"values\": values,\n                        \"selected\": selected,\n                    }\n                )\n\n        merged_rows.append(merged)\n\n    merged_df = pd.DataFrame(merged_rows, columns=OUTPUT_COLUMNS)\n    merged_df[\"user_id\"] = merged_df[\"user_id\"].astype(\"int64\")\n    merged_df.to_parquet(\"/app/merged_users.parquet\", index=False)\n\n    report = {\"total_conflicts\": len(conflicts), \"conflicts\": conflicts}\n    with open(\"/app/conflicts.json\", \"w\") as fh:\n        json.dump(report, fh, indent=2)\n\n    print(f\"Wrote {len(merged_df)} users, {len(conflicts)} conflicts\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 13288,
+   "dur_ms": 1300,
+   "tokens_in": 68,
+   "tokens_out": 50,
+   "cache_read": 10048,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14588,
+   "dur_ms": 21,
+   "tool": "bash",
+   "is_error": false,
+   "command": "grep -n 'field' /app/merge_users.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 14637,
+   "dur_ms": 707,
+   "tokens_in": 113,
+   "tokens_out": 101,
+   "cache_read": 10304,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 15344,
+   "dur_ms": 1134,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 merge_users.py && echo \"--- conflicts ---\" && cat conflicts.json && echo \"--- merged ---\" && python3 -c \"import pandas as pd; df=pd.read_parquet('/app/merged_users.parquet'); print(df.to_string()); print(df.dtypes)\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 16493,
+   "dur_ms": 778,
+   "tokens_in": 408,
+   "tokens_out": 110,
+   "cache_read": 10496,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.537,
+ "calls": 7,
+ "cell": "TB1c"
+}

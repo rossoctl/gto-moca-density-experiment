@@ -1,0 +1,99 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "distribution-search",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 30489,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 148,
+  "output": 5132,
+  "cacheRead": 18816,
+  "cacheWrite": 704,
+  "total": 24800
+ },
+ "totals": {
+  "model_calls": 4,
+  "tool_calls": 3,
+  "model_ms": 26323,
+  "tool_ms": 2321,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1161,
+   "dur_ms": 16938,
+   "tokens_in": 51,
+   "tokens_out": 3170,
+   "cache_read": 1472,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 18104,
+   "dur_ms": 382,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app && python -c \"import numpy, scipy; print(numpy.__version__, scipy.__version__)\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 18491,
+   "dur_ms": 1930,
+   "tokens_in": 25,
+   "tokens_out": 378,
+   "cache_read": 4928,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 20421,
+   "dur_ms": 958,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport numpy as np\nfrom scipy.optimize import root, least_squares\nN=150000; k=7; s=N-k\n\ndef make(x):\n    t,q=x\n    e=np.exp(t)\n    r=np.full(k, 1.0/(e+(k-1)))\n    r[0]=e/(e+(k-1))\n    main=(1-s*q)*r\n    p=np.empty(N)\n    p[:k]=main\n    p[k:]=q\n    return p\n\ndef f(x):\n    p=make(x)\n    logN=np.log(N)\n    klf=np.sum(p*np.log(p))+logN\n    klb=-logN-np.mean(np.log(p))\n    return np.array([klf-10, klb-10])\n\nfor t0 in [0.1,0.2,0.3,0.5,1.0]:\n    q0=np.exp(-(np.log(N)+10))\n    sol=root(f,[t0,q0],method='hybr')\n    print(t0, sol.success, sol.x, f(sol.x), np.sum(make(sol.x)))\nPY",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 21382,
+   "dur_ms": 6345,
+   "tokens_in": 34,
+   "tokens_out": 1395,
+   "cache_read": 5376,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 27728,
+   "dur_ms": 981,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && cat > find_distribution.py <<'PY'\n#!/usr/bin/env python3\n\"\"\"Construct a distribution over 150,000 tokens with both KL divergences equal to 10.\"\"\"\n\nimport numpy as np\nfrom scipy.optimize import root\n\nN = 150_000\nK = 7  # size of the high-probability part of the support\nS = N - K\n\ndef distribution(params: np.ndarray) -> np.ndarray:\n    \"\"\"Build the distribution from the main-token logit offset and background mass.\"\"\"\n    t, q = params\n\n    # K-1 equally likely main tokens and one main token with relative weight e**t.\n    e = np.exp(t)\n    denom = e + (K - 1)\n    r = np.full(K, 1.0 / denom)\n    r[0] = e / denom\n\n    p = np.empty(N, dtype=np.float64)\n    p[:K] = (1.0 - S * q) * r\n    p[K:] = q\n    return p\n\ndef kl_errors(params: np.ndarray) -> np.ndarray:\n    p = distribution(params)\n    log_n = np.log(N)\n\n    # KL(P || U) = log(N) + sum(p * log(p))\n    kl_forward = log_n + np.sum(p * np.log(p))\n\n    # KL(U || P) = -log(N) - mean(log(p))\n    kl_backward = -log_n - np.mean(np.log(p))\n\n    return np.array([kl_forward - 10.0, kl_backward - 10.0])\n\ndef main() -> None:\n    # The background probability is close to exp(-(log N + 10)).\n    initial_guess = np.array([0.6, np.exp(-(np.log(N) + 10.0))])\n    result = root(kl_errors, initial_guess, method=\"hybr\", tol=1e-12)\n\n    if not result.success:\n        raise RuntimeError(f\"Solver failed: {result.message}\")\n\n    p = distribution(result.x)\n\n    # Validate the requested properties.\n    if not np.all(np.isfinite(p)) or np.any(p <= 0.0):\n        raise RuntimeError(\"Distribution contains invalid probabilities\")\n    if not np.isclose(p.sum(), 1.0, atol=1e-12):\n        raise RuntimeError(f\"Probabilities sum to {p.sum()!r}\")\n\n    log_n = np.log(N)\n    kl_forward = log_n + np.sum(p * np.log(p))\n    kl_backward = -log_n - np.mean(np.log(p))\n\n    if abs(kl_forward - 10.0) > 1e-3 or abs(kl_backward - 10.0) > 1e-3:\n        raise RuntimeError(\n            f\"KL targets not met: forward={kl_forward!r}, backward={kl_backward!r}\"\n        )\n\n    np.save(\"/app/dist.npy\", p)\n    print(f\"Saved /app/dist.npy\")\n    print(f\"sum                 = {p.sum():.17g}\")\n    print(f\"KL(P || U)          = {kl_forward:.17g}\")\n    print(f\"KL(U || P)          = {kl_backward:.17g}\")\n    print(f\"min / max           = {p.min():.6e} / {p.max():.6e}\")\n\nif __name__ == \"__main__\":\n    main()\nPY\npython find_distribution.py\npython - <<'PY'\nimport numpy as np\np=np.load('/app/dist.npy')\nN=p.size\nu=np.full(N,1/N)\nf=np.sum(p*np.log(p/u))\nb=np.sum(u*np.log(u/p))\nprint('shape',p.shape,'dtype',p.dtype)\nprint('sum',p.sum(),'min',p.min(),'max',p.max())\nprint('forward',f,'backward',b)\nprint('valid',bool(np.all(np.isfinite(p)) and np.all(p>=0) and abs(p.sum()-1)<1e-12))\nPY",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 28712,
+   "dur_ms": 1110,
+   "tokens_in": 38,
+   "tokens_out": 189,
+   "cache_read": 7040,
+   "cache_write": 128,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.527,
+ "calls": 3,
+ "cell": "TB1e"
+}

@@ -1,0 +1,1598 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "video-processing",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 1106850,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 130685,
+  "output": 102250,
+  "cacheRead": 2457152,
+  "cacheWrite": 53952,
+  "total": 2744039
+ },
+ "totals": {
+  "model_calls": 53,
+  "tool_calls": 52,
+  "model_ms": 519897,
+  "tool_ms": 566901,
+  "sandbox_ms": 561074
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 537,
+   "dur_ms": 1249
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1786,
+   "dur_ms": 440,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\nls -la /workspace\npython3 -c \"import cv2, numpy, toml; print(cv2.__version__, numpy.__version__)\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 1867,
+     "dur_ms": 325,
+     "exit": 1,
+     "cpu_ms": 452.5,
+     "phases_us": {
+      "acquire": 118,
+      "resume": 21391,
+      "mount": 18961,
+      "run": 260549,
+      "destroy": 42917
+     },
+     "cold": null,
+     "vm": "vm-179"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 2226,
+   "dur_ms": 1077
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3303,
+   "dur_ms": 1445,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 -c \"import cv2, numpy; print(cv2.__version__, numpy.__version__)\"\npip install toml 2>&1 | tail -3\npython3 -c \"import toml; print(toml.__version__)\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 3364,
+     "dur_ms": 1343,
+     "exit": 0,
+     "cpu_ms": 1266.4,
+     "phases_us": {
+      "acquire": 132,
+      "resume": 21919,
+      "mount": 19424,
+      "run": 1290995,
+      "destroy": 29836
+     },
+     "cold": null,
+     "vm": "vm-182"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 4748,
+   "dur_ms": 2433
+  },
+  {
+   "kind": "tool",
+   "at_ms": 7181,
+   "dur_ms": 1057,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2\ncap = cv2.VideoCapture('example_video.mp4')\nprint(\"opened\", cap.isOpened())\nfps = cap.get(cv2.CAP_PROP_FPS)\nn = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))\nw = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))\nh = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))\nprint(\"fps\", fps, \"frames\", n, \"size\", w, h, \"duration\", n/fps if fps else None)\n# sample frames stats\nimport numpy as np\nfor i in range(0, n, max(1,n//10)):\n    cap.set(cv2.CAP_PROP_POS_FRAMES, i)\n    ret, fr = cap.read()\n    if not ret: \n        print(i, \"no frame\"); continue\n    print(i, fr.shape, fr.mean(axis=(0,1)))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 7247,
+     "dur_ms": 951,
+     "exit": 0,
+     "cpu_ms": 1604.8,
+     "phases_us": {
+      "acquire": 91,
+      "resume": 21165,
+      "mount": 18821,
+      "run": 901359,
+      "destroy": 28545
+     },
+     "cold": null,
+     "vm": "vm-185"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 8238,
+   "dur_ms": 3773
+  },
+  {
+   "kind": "tool",
+   "at_ms": 12011,
+   "dur_ms": 3603,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nret, bg = cap.read()\nbgf = bg.astype(np.float32)\nframes=[]\nwhile True:\n    ret, fr = cap.read()\n    if not ret: break\n    frames.append(fr)\nprint(\"num frames after first\", len(frames))\n# background subtraction\ndef fgmask(fr):\n    d = cv2.absdiff(fr.astype(np.float32), bgf)\n    g = d.max(axis=2)\n    m = (g > 25).astype(np.uint8)*255\n    m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((3,3),np.uint8))\n    m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((7,7),np.uint8))\n    return m\nfor i, fr in enumerate(frames):\n    m = fgmask(fr)\n    n = cv2.countNonZero(m)\n    ys, xs = np.where(m>0)\n    if len(ys)==0:\n        print(i+1, \"empty\"); continue\n    print(f\"f{i+1:3d} area={n:6d} cx={xs.mean():6.1f} cy={ys.mean():6.1f} x[{xs.min():3d},{xs.max():3d}] y[{ys.min():3d},{ys.max():3d}]\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 12068,
+     "dur_ms": 3529,
+     "exit": 0,
+     "cpu_ms": 3822.2,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 21452,
+      "mount": 18761,
+      "run": 3471939,
+      "destroy": 35630
+     },
+     "cold": null,
+     "vm": "vm-188"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 15614,
+   "dur_ms": 5254
+  },
+  {
+   "kind": "tool",
+   "at_ms": 20868,
+   "dur_ms": 778,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nbgs=[]\nfor i in range(120):\n    ret, fr = cap.read()\n    if not ret: break\n    bgs.append(fr)\nprint(len(bgs))\nchars=\" .:-=+*#%@\"\ndef ascii_frame(fr, w=96, h=32):\n    g = cv2.cvtColor(fr, cv2.COLOR_BGR2GRAY)\n    g = cv2.resize(g, (w,h), interpolation=cv2.INTER_AREA)\n    out=[]\n    for row in g:\n        out.append(\"\".join(chars[min(9,int(v)*10//256)] for v in row))\n    return \"\\n\".join(out)\nprint(\"=== FRAME 0 ===\")\nprint(ascii_frame(bgs[0]))\nprint(\"=== FRAME 60 ===\")\nprint(ascii_frame(bgs[60]))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 20931,
+     "dur_ms": 691,
+     "exit": 0,
+     "cpu_ms": 953.8,
+     "phases_us": {
+      "acquire": 65,
+      "resume": 22401,
+      "mount": 18836,
+      "run": 631023,
+      "destroy": 37523
+     },
+     "cold": null,
+     "vm": "vm-192"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 21646,
+   "dur_ms": 5465
+  },
+  {
+   "kind": "tool",
+   "at_ms": 27111,
+   "dur_ms": 8600,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    ret, fr = cap.read()\n    if not ret: break\n    frames.append(fr)\nF=np.stack(frames).astype(np.float32)  # N,H,W,3\nprint(\"shape\", F.shape)\n# consecutive diff\nd = np.abs(F[1:]-F[:-1]).mean(axis=(1,2,3))\nfor i,v in enumerate(d):\n    if i%5==0 or v>3: print(f\"dt {i}->{i+1}: {v:.3f}\")\nprint(\"max\", d.max(), \"at\", d.argmax())\n# temporal median background\nmed = np.median(F, axis=0)\ncv2.imwrite('median_bg.png', med.astype(np.uint8))\n# diff from median\nD = np.abs(F-med).max(axis=3)  # N,H,W\nfor t in [0,10,20,30,40,50,60,70,80,90,100,110,119]:\n    m=(D[t]>40)\n    ys,xs=np.where(m)\n    print(f\"f{t} area={m.sum()} x[{xs.min() if len(xs) else 0},{xs.max() if len(xs) else 0}] y[{ys.min() if len(ys) else 0},{ys.max() if len(ys) else 0}]\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 27167,
+     "dur_ms": 8533,
+     "exit": 0,
+     "cpu_ms": 8765.1,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 21280,
+      "mount": 18255,
+      "run": 8350250,
+      "destroy": 161577
+     },
+     "cold": null,
+     "vm": "vm-195"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 35711,
+   "dur_ms": 4467
+  },
+  {
+   "kind": "tool",
+   "at_ms": 40178,
+   "dur_ms": 7666,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    ret, fr = cap.read()\n    if not ret: break\n    frames.append(fr)\nF=np.stack(frames).astype(np.float32)\n# use running median of a window? First try median all\nmed=np.median(F,axis=0)\nD=np.abs(F-med).max(axis=3)\nfor t in range(0,120,4):\n    m=(D[t]>50).astype(np.uint8)\n    m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n    m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((9,9),np.uint8))\n    n,lab,stats,cent=cv2.connectedComponentsWithStats(m,8)\n    comps=[]\n    for j in range(1,n):\n        x,y,w,h,area=stats[j]\n        if area>50: comps.append((area,x,y,w,h))\n    comps.sort(reverse=True)\n    print(f\"f{t:3d}\", comps[:4])\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 40234,
+     "dur_ms": 7599,
+     "exit": 0,
+     "cpu_ms": 7802.4,
+     "phases_us": {
+      "acquire": 90,
+      "resume": 21582,
+      "mount": 19094,
+      "run": 7401183,
+      "destroy": 176244
+     },
+     "cold": null,
+     "vm": "vm-198"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 47844,
+   "dur_ms": 6953
+  },
+  {
+   "kind": "tool",
+   "at_ms": 54797,
+   "dur_ms": 7625,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    ret, fr = cap.read()\n    if not ret: break\n    frames.append(fr)\nF=np.stack(frames).astype(np.float32)\nmed=np.median(F,axis=0)\nD=np.abs(F-med).max(axis=3)\nchars=\" .:-=+*#%@\"\ndef show(m, w=96, h=32):\n    mm=cv2.resize(m.astype(np.float32),(w,h),interpolation=cv2.INTER_AREA)\n    out=[]\n    for row in mm:\n        out.append(\"\".join(chars[min(9,int(v/12))] for v in row))\n    return \"\\n\".join(out)\nfor t in [45,48,50,52,54,56,58,60,62,64,66,68,70,72,75]:\n    m=np.clip(D[t],0,120)\n    print(f\"===== f{t} =====\")\n    print(show(m))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 54811,
+     "dur_ms": 7600,
+     "exit": 0,
+     "cpu_ms": 7757.8,
+     "phases_us": {
+      "acquire": 79,
+      "resume": 21794,
+      "mount": 18681,
+      "run": 7404026,
+      "destroy": 174067
+     },
+     "cold": null,
+     "vm": "vm-201"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 62422,
+   "dur_ms": 2352
+  },
+  {
+   "kind": "tool",
+   "at_ms": 64774,
+   "dur_ms": 7748,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    ret, fr = cap.read()\n    if not ret: break\n    frames.append(fr)\nF=np.stack(frames).astype(np.float32)\nmed=np.median(F,axis=0)\nD=np.abs(F-med).max(axis=3)\nchars=\" .:-=+*#%@\"\ndef show(m, w=64, h=20):\n    mm=cv2.resize(m.astype(np.float32),(w,h),interpolation=cv2.INTER_AREA)\n    return \"\\n\".join(\"\".join(chars[min(9,int(v/12))] for v in row) for row in mm)\nfor t in [50,54,58,62,66,70]:\n    print(f\"===== f{t} =====\")\n    print(show(np.clip(D[t],0,120)))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 64788,
+     "dur_ms": 7726,
+     "exit": 0,
+     "cpu_ms": 7860.1,
+     "phases_us": {
+      "acquire": 60,
+      "resume": 21267,
+      "mount": 18559,
+      "run": 7531357,
+      "destroy": 173046
+     },
+     "cold": null,
+     "vm": "vm-205"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 72522,
+   "dur_ms": 9312
+  },
+  {
+   "kind": "tool",
+   "at_ms": 81834,
+   "dur_ms": 2008,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    ret, fr = cap.read()\n    if not ret: break\n    frames.append(fr)\nF=np.stack(frames).astype(np.float32)\nchars=\" .:-=+*#%@\"\ndef show(m,w=64,h=20,scale=12):\n    mm=cv2.resize(m.astype(np.float32),(w,h),interpolation=cv2.INTER_AREA)\n    return \"\\n\".join(\"\".join(chars[min(9,int(v/scale))] for v in row) for row in mm)\nfor a,b in [(75,76),(84,85),(88,89),(95,96),(103,104),(107,108),(108,109),(113,114),(118,119)]:\n    d=np.abs(F[b]-F[a]).max(axis=2)\n    print(f\"===== {a}->{b} mean={d.mean():.2f} =====\")\n    print(show(np.clip(d,0,120)))\n# where is energy at 118->119?\nd=np.abs(F[119]-F[118]).max(axis=2)\nprint(\"sum regions: top half\", d[:270].sum(), \"bottom\", d[270:].sum())\nys,xs=np.where(d>60)\nprint(\"n>60\", len(ys), \"bbox\", (xs.min(),xs.max(),ys.min(),ys.max()) if len(xs) else None)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 81891,
+     "dur_ms": 1941,
+     "exit": 0,
+     "cpu_ms": 2226.8,
+     "phases_us": {
+      "acquire": 47,
+      "resume": 21568,
+      "mount": 18922,
+      "run": 1819859,
+      "destroy": 99739
+     },
+     "cold": null,
+     "vm": "vm-208"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 83842,
+   "dur_ms": 8436
+  },
+  {
+   "kind": "tool",
+   "at_ms": 92278,
+   "dur_ms": 3419,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    ret, fr = cap.read()\n    if not ret: break\n    frames.append(fr)\nF=np.stack(frames).astype(np.float32)\nbg=np.median(F[0:38],axis=0)\nfor t in range(36,80):\n    d=np.abs(F[t]-bg).max(axis=2)\n    m=(d>35).astype(np.uint8)\n    m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n    m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((11,11),np.uint8))\n    n,lab,stats,cent=cv2.connectedComponentsWithStats(m,8)\n    comps=[]\n    for j in range(1,n):\n        x,y,w,h,area=stats[j]\n        if area>150: comps.append((area,x,y,w,h,cent[j][0],cent[j][1]))\n    comps.sort(reverse=True)\n    s=\"\"\n    for c in comps[:3]:\n        s+=f\" [a{c[0]} x{c[1]}-{c[1]+c[3]} y{c[2]}-{c[2]+c[4]} cx{c[5]:.0f} cy{c[6]:.0f}]\"\n    print(f\"f{t:3d}{s}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 92335,
+     "dur_ms": 3353,
+     "exit": 0,
+     "cpu_ms": 3684.0,
+     "phases_us": {
+      "acquire": 41,
+      "resume": 21567,
+      "mount": 18414,
+      "run": 3235323,
+      "destroy": 96077
+     },
+     "cold": null,
+     "vm": "vm-213"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 95697,
+   "dur_ms": 12727
+  },
+  {
+   "kind": "tool",
+   "at_ms": 108424,
+   "dur_ms": 2534,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    ret, fr = cap.read()\n    if not ret: break\n    frames.append(fr)\nF=np.stack(frames).astype(np.float32)\nfor t in range(44,75):\n    d=np.abs(F[min(t+1,119)]-F[max(t-1,0)]).max(axis=2)\n    m=(d>30).astype(np.uint8)\n    m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n    m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((11,11),np.uint8))\n    n,lab,stats,cent=cv2.connectedComponentsWithStats(m,8)\n    comps=[]\n    for j in range(1,n):\n        x,y,w,h,area=stats[j]\n        if area>200: comps.append((area,x,y,w,h))\n    comps.sort(reverse=True)\n    s=\" \".join(f\"[a{a} x{x}-{x+w} y{y}-{y+h}]\" for a,x,y,w,h in comps[:3])\n    print(f\"f{t:3d} {s}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 108478,
+     "dur_ms": 2472,
+     "exit": 0,
+     "cpu_ms": 2706.8,
+     "phases_us": {
+      "acquire": 67,
+      "resume": 21480,
+      "mount": 18786,
+      "run": 2338335,
+      "destroy": 111732
+     },
+     "cold": null,
+     "vm": "vm-217"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 110958,
+   "dur_ms": 8073
+  },
+  {
+   "kind": "tool",
+   "at_ms": 119031,
+   "dur_ms": 15022,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    ret, fr = cap.read()\n    if not ret: break\n    frames.append(fr)\nF=np.stack(frames).astype(np.float32)\nN=len(F)\n# local median bg excluding self, window +-12\nfor t in range(40,76):\n    lo=max(0,t-12); hi=min(N,t+13)\n    idx=[i for i in range(lo,hi) if abs(i-t)>2]\n    bg=np.median(F[idx],axis=0)\n    d=np.abs(F[t]-bg).max(axis=2)\n    m=(d>35).astype(np.uint8)\n    m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n    m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((9,9),np.uint8))\n    n,lab,stats,cent=cv2.connectedComponentsWithStats(m,8)\n    comps=[]\n    for j in range(1,n):\n        x,y,w,h,area=stats[j]\n        if area>200: comps.append((area,x,y,w,h))\n    comps.sort(reverse=True)\n    s=\" \".join(f\"[a{a} x{x}-{x+w} y{y}-{y+h}]\" for a,x,y,w,h in comps[:3])\n    print(f\"f{t:3d} {s}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 119086,
+     "dur_ms": 14957,
+     "exit": 0,
+     "cpu_ms": 15204.0,
+     "phases_us": {
+      "acquire": 3,
+      "resume": 21250,
+      "mount": 18239,
+      "run": 14820889,
+      "destroy": 114903
+     },
+     "cold": null,
+     "vm": "vm-220"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 134053,
+   "dur_ms": 6360
+  },
+  {
+   "kind": "tool",
+   "at_ms": 140413,
+   "dur_ms": 2202,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    ret, fr = cap.read()\n    if not ret: break\n    frames.append(fr)\nF=np.stack(frames).astype(np.float32)\nbg=np.median(F[0:30],axis=0).astype(np.uint8)\ncv2.imwrite('bg0.png', bg)\ng=cv2.cvtColor(bg,cv2.COLOR_BGR2GRAY)\nchars=\"@%#*+=-:. \"  # dark->light\ndef show(img, w=120, h=36):\n    mm=cv2.resize(img,(w,h),interpolation=cv2.INTER_AREA)\n    out=[]\n    for row in mm:\n        out.append(\"\".join(chars[min(9,int(v)*10//256)] for v in row))\n    return \"\\n\".join(out)\nprint(\"=== BG grayscale (dark=@ light=space) ===\")\nprint(show(g))\n# edge map\ne=cv2.Canny(g,50,150)\nprint(\"=== edges ===\")\nprint(\"\\n\".join(\"\".join('#' if v else '.' for v in row) for row in cv2.resize(e,(120,36),interpolation=cv2.INTER_AREA)))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 140428,
+     "dur_ms": 2177,
+     "exit": 0,
+     "cpu_ms": 2457.3,
+     "phases_us": {
+      "acquire": 79,
+      "resume": 22442,
+      "mount": 18575,
+      "run": 2056004,
+      "destroy": 98482
+     },
+     "cold": null,
+     "vm": "vm-226"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 142615,
+   "dur_ms": 10147
+  },
+  {
+   "kind": "tool",
+   "at_ms": 152762,
+   "dur_ms": 5456,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    ret, fr = cap.read()\n    if not ret: break\n    frames.append(fr)\nF=np.stack(frames).astype(np.float32)\nN=len(F)\ndef getmask(t,thr=35):\n    lo=max(0,t-12); hi=min(N,t+13)\n    idx=[i for i in range(lo,hi) if abs(i-t)>2]\n    bg=np.median(F[idx],axis=0)\n    d=np.abs(F[t]-bg).max(axis=2)\n    m=(d>thr).astype(np.uint8)\n    m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n    m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((9,9),np.uint8))\n    return m\n# find athlete main comp center for each t, then crop\ndef biggest(m):\n    n,lab,stats,cent=cv2.connectedComponentsWithStats(m,8)\n    best=None\n    for j in range(1,n):\n        x,y,w,h,area=stats[j]\n        if area<300: continue\n        if best is None or area>best[0]: best=(area,x,y,w,h)\n    return best\nfor t in [48,52,56,58,60,62,64,66,68,70]:\n    m=getmask(t)\n    b=biggest(m)\n    if not b: print(t,\"none\"); continue\n    a,x,y,w,h=b\n    x0=max(0,x-10); x1=min(960,x+w+10); y0=max(0,y-10); y1=min(540,y+h+10)\n    crop=m[y0:y1,x0:x1]\n    # resize to char grid 1 char=10px\n    cw=max(1,(x1-x0)//10); ch=max(1,(y1-y0)//10)\n    sm=cv2.resize(crop,(cw,ch),interpolation=cv2.INTER_AREA)\n    print(f\"===== f{t} bbox x{x}-{x+w} y{y}-{y+h} crop x{x0}-{x1} y{y0}-{y1} =====\")\n    for row in sm:\n        print(\"\".join('#' if v>120 else ('.' if v>40 else ' ') for v in row))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 152818,
+     "dur_ms": 5390,
+     "exit": 0,
+     "cpu_ms": 5622.8,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 21100,
+      "mount": 18015,
+      "run": 5277554,
+      "destroy": 91491
+     },
+     "cold": null,
+     "vm": "vm-230"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 158218,
+   "dur_ms": 6372
+  },
+  {
+   "kind": "tool",
+   "at_ms": 164590,
+   "dur_ms": 2196,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    ret, fr = cap.read()\n    if not ret: break\n    frames.append(fr)\nF=np.stack(frames).astype(np.float32); N=len(F)\ndef getmask(t,thr=35):\n    lo=max(0,t-12); hi=min(N,t+13)\n    idx=[i for i in range(lo,hi) if abs(i-t)>2]\n    bg=np.median(F[idx],axis=0)\n    d=np.abs(F[t]-bg).max(axis=2)\n    m=(d>thr).astype(np.uint8)*255\n    m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n    m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((9,9),np.uint8))\n    return m\nt=52\nm=getmask(t)\nprint(\"sum\",m.sum(),\"max\",m.max(), \"shape\",m.shape)\nn,lab,stats,cent=cv2.connectedComponentsWithStats(m,8)\nareas=[(stats[j][4],j) for j in range(1,n)]\nareas.sort(reverse=True)\nprint(areas[:5])\nj=areas[0][1]; print(\"stats\",stats[j])\nx,y,w,h,area=stats[j]\ncrop=m[y:y+h,x:x+w]\nprint(\"cropsum\",crop.sum(),crop.shape)\nsm=cv2.resize(crop,(20,30),interpolation=cv2.INTER_AREA)\nprint(sm.max(),sm.mean())\nfor row in sm:\n    print(\"\".join('#' if v>120 else ('.' if v>40 else ' ') for v in row))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 164645,
+     "dur_ms": 2132,
+     "exit": 0,
+     "cpu_ms": 2432.2,
+     "phases_us": {
+      "acquire": 24,
+      "resume": 21710,
+      "mount": 18544,
+      "run": 2019535,
+      "destroy": 90762
+     },
+     "cold": null,
+     "vm": "vm-233"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 166786,
+   "dur_ms": 14994
+  },
+  {
+   "kind": "tool",
+   "at_ms": 181780,
+   "dur_ms": 3666,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    ret, fr = cap.read()\n    if not ret: break\n    frames.append(fr)\nF=np.stack(frames).astype(np.float32); N=len(F)\ndef getmask(t,thr=40):\n    lo=max(0,t-12); hi=min(N,t+13)\n    idx=[i for i in range(lo,hi) if abs(i-t)>2]\n    bg=np.median(F[idx],axis=0)\n    d=np.abs(F[t]-bg).max(axis=2)\n    m=(d>thr).astype(np.uint8)*255\n    m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n    m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((13,13),np.uint8))\n    return m,d\nfor t in [52,58,60,64,68]:\n    m,d=getmask(t)\n    img=frames[t]\n    hsv=cv2.cvtColor(img,cv2.COLOR_BGR2HSV)\n    sel=m>0\n    print(f\"--- f{t} mask pixels {sel.sum()}\")\n    print(\"  BGR fg\", img[sel].mean(axis=0).round(1), \"BV\", img[sel].std(axis=0).round(1))\n    print(\"  HSV fg Hmean\", hsv[sel][:,0].mean().round(1),\"S\",hsv[sel][:,1].mean().round(1),\"V\",hsv[sel][:,2].mean().round(1))\n    # background around (same rows, shift x)\n    # show dominant V quantiles\n    print(\"  V quantiles\", np.percentile(hsv[sel][:,2],[5,25,50,75,95]).round(0))\n    print(\"  S quantiles\", np.percentile(hsv[sel][:,1],[5,25,50,75,95]).round(0))\n    bg=np.median(F[max(0,t-12):t+13][[i for i in range(len(F[max(0,t-12):t+13])) if True]],axis=0) if False else None\n# global sat\nhsv0=cv2.cvtColor(frames[0],cv2.COLOR_BGR2HSV)\nprint(\"global S mean\",hsv0[:,:,1].mean(), \"V\",hsv0[:,:,2].mean())\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 181834,
+     "dur_ms": 3605,
+     "exit": 0,
+     "cpu_ms": 3824.0,
+     "phases_us": {
+      "acquire": 75,
+      "resume": 21333,
+      "mount": 18078,
+      "run": 3481830,
+      "destroy": 101005
+     },
+     "cold": null,
+     "vm": "vm-235"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 185446,
+   "dur_ms": 3852
+  },
+  {
+   "kind": "tool",
+   "at_ms": 189298,
+   "dur_ms": 810,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    ret, fr = cap.read()\n    if not ret: break\n    frames.append(fr)\nfor t in range(44,76,2):\n    img=frames[t]\n    hsv=cv2.cvtColor(img,cv2.COLOR_BGR2HSV)\n    H,S,V=hsv[:,:,0],hsv[:,:,1],hsv[:,:,2]\n    m=((S>70)&(V<150)).astype(np.uint8)*255\n    m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n    m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((7,7),np.uint8))\n    n,lab,stats,cent=cv2.connectedComponentsWithStats(m,8)\n    comps=[]\n    for j in range(1,n):\n        x,y,w,h,area=stats[j]\n        if area>300: comps.append((area,x,y,w,h))\n    comps.sort(reverse=True)\n    print(f\"f{t:3d}\", \" \".join(f\"[a{a} x{x}-{x+w} y{y}-{y+h}]\" for a,x,y,w,h in comps[:4]))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 189351,
+     "dur_ms": 741,
+     "exit": 0,
+     "cpu_ms": 1098.2,
+     "phases_us": {
+      "acquire": 81,
+      "resume": 21331,
+      "mount": 18466,
+      "run": 676524,
+      "destroy": 43134
+     },
+     "cold": null,
+     "vm": "vm-238"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 190108,
+   "dur_ms": 9430
+  },
+  {
+   "kind": "tool",
+   "at_ms": 199538,
+   "dur_ms": 15597,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    ret, fr = cap.read()\n    if not ret: break\n    frames.append(fr)\nF=np.stack(frames).astype(np.float32); N=len(F)\nH,W=540,960\nres=[]\nprev=None\nfor t in range(40,82):\n    lo=max(0,t-10); hi=min(N,t+11)\n    idx=[i for i in range(lo,hi) if abs(i-t)>1]\n    bg=np.median(F[idx],axis=0)\n    d=np.abs(F[t]-bg).max(axis=2)\n    hsv=cv2.cvtColor(frames[t],cv2.COLOR_BGR2HSV)\n    S,V=hsv[:,:,1],hsv[:,:,2]\n    m=((S>55)&(V<170)&(d>20)).astype(np.uint8)*255\n    m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n    m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((9,9),np.uint8))\n    n,lab,stats,cent=cv2.connectedComponentsWithStats(m,8)\n    comps=[]\n    for j in range(1,n):\n        x,y,w,h,area=stats[j]\n        if area>300: comps.append((area,x,y,w,h,cent[j][0],cent[j][1]))\n    comps.sort(reverse=True)\n    if not comps:\n        print(f\"f{t:3d} NONE\"); continue\n    if prev is None:\n        chosen=max(comps,key=lambda c:c[0])\n    else:\n        # choose component whose centroid closest to prev x, prefer area\n        chosen=max(comps,key=lambda c: c[0]-0.5*abs(c[5]-prev))\n    a,x,y,w,h,cx,cy=chosen\n    prev=cx\n    res.append((t,a,x,y,w,h,cx,cy))\n    print(f\"f{t:3d} a{a:6d} x{x}-{x+w} y{y}-{y+h} cx{cx:6.1f} cy{cy:6.1f} bottom{y+h} top{y}\")\nnp.save('/workspace/track.npy', np.array(res))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 199591,
+     "dur_ms": 15535,
+     "exit": 0,
+     "cpu_ms": 15897.5,
+     "phases_us": {
+      "acquire": 94,
+      "resume": 21599,
+      "mount": 18099,
+      "run": 15393447,
+      "destroy": 119873
+     },
+     "cold": null,
+     "vm": "vm-239"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 215135,
+   "dur_ms": 16976
+  },
+  {
+   "kind": "tool",
+   "at_ms": 232111,
+   "dur_ms": 2656,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    ret, fr = cap.read()\n    if not ret: break\n    frames.append(fr)\nF=np.stack(frames).astype(np.float32)\nbg=np.median(F[0:40],axis=0).astype(np.uint8)\ng=cv2.cvtColor(bg,cv2.COLOR_BGR2GRAY)\ne=cv2.Canny(g,40,120)\nlines=cv2.HoughLinesP(e,1,np.pi/180,threshold=50,minLineLength=60,maxLineGap=8)\nprint(\"nlines\",0 if lines is None else len(lines))\nsegs=[]\nfor l in (lines if lines is not None else []):\n    x1,y1,x2,y2=l[0]\n    L=((x2-x1)**2+(y2-y1)**2)**0.5\n    ang=np.degrees(np.arctan2(y2-y1,x2-x1))\n    segs.append((L,ang,x1,y1,x2,y2))\nsegs.sort(reverse=True)\nfor s in segs[:60]:\n    print(f\"L{s[0]:.0f} ang{s[1]:.0f} ({s[2]},{s[3]})-({s[4]},{s[5]})\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 232125,
+     "dur_ms": 2633,
+     "exit": 0,
+     "cpu_ms": 2923.5,
+     "phases_us": {
+      "acquire": 79,
+      "resume": 26885,
+      "mount": 23440,
+      "run": 2474642,
+      "destroy": 131583
+     },
+     "cold": null,
+     "vm": "vm-245"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 234767,
+   "dur_ms": 12010
+  },
+  {
+   "kind": "tool",
+   "at_ms": 246777,
+   "dur_ms": 2447,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    ret, fr = cap.read()\n    if not ret: break\n    frames.append(fr)\nF=np.stack(frames).astype(np.float32)\nbg=np.median(F[0:40],axis=0).astype(np.uint8)\ng=cv2.cvtColor(bg,cv2.COLOR_BGR2GRAY)\n# crop\nx0,x1,y0,y1=350,820,150,380\ncrop=g[y0:y1,x0:x1]\nchars=\"@%#*+=-:. \"\ndef show(img,w,h):\n    mm=cv2.resize(img,(w,h),interpolation=cv2.INTER_AREA)\n    return \"\\n\".join(\"\".join(chars[min(9,int(v)*10//256)] for v in row) for row in mm)\nprint(\"=== bg crop x350-820 y150-380 (light=space) ===\")\nprint(show(crop,94,46))\n# normalized local contrast\ncn=cv2.normalize(crop,None,0,255,cv2.NORM_MINMAX)\nprint(\"=== normalized ===\")\nprint(show(cn,94,46))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 246831,
+     "dur_ms": 2384,
+     "exit": 0,
+     "cpu_ms": 2657.5,
+     "phases_us": {
+      "acquire": 63,
+      "resume": 21735,
+      "mount": 18571,
+      "run": 2257371,
+      "destroy": 104941
+     },
+     "cold": null,
+     "vm": "vm-250"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 249224,
+   "dur_ms": 14034
+  },
+  {
+   "kind": "tool",
+   "at_ms": 263258,
+   "dur_ms": 17327,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    ret, fr = cap.read()\n    if not ret: break\n    frames.append(fr)\nF=np.stack(frames).astype(np.float32); N=len(F)\nfor t in range(0,N,2):\n    lo=max(0,t-8); hi=min(N,t+9)\n    idx=[i for i in range(lo,hi) if abs(i-t)>1]\n    bg=np.median(F[idx],axis=0)\n    d=np.abs(F[t]-bg).max(axis=2)\n    hsv=cv2.cvtColor(frames[t],cv2.COLOR_BGR2HSV)\n    S,V=hsv[:,:,1],hsv[:,:,2]\n    m=((S>55)&(V<170)&(d>20)).astype(np.uint8)*255\n    m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n    m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((9,9),np.uint8))\n    n,lab,stats,cent=cv2.connectedComponentsWithStats(m,8)\n    comps=[]\n    for j in range(1,n):\n        x,y,w,h,area=stats[j]\n        if area>400: comps.append((area,x,y,w,h))\n    comps.sort(reverse=True)\n    if comps:\n        print(f\"f{t:3d}\", \" \".join(f\"[a{a} x{x}-{x+w} y{y}-{y+h}]\" for a,x,y,w,h in comps[:3]))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 263315,
+     "dur_ms": 17262,
+     "exit": 0,
+     "cpu_ms": 17685.9,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 21755,
+      "mount": 18387,
+      "run": 17131815,
+      "destroy": 108279
+     },
+     "cold": null,
+     "vm": "vm-255"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 280585,
+   "dur_ms": 15939
+  },
+  {
+   "kind": "tool",
+   "at_ms": 296524,
+   "dur_ms": 12060,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    ret, fr = cap.read()\n    if not ret: break\n    frames.append(fr)\nF=np.stack(frames).astype(np.float32); N=len(F)\ndef masks(t):\n    lo=max(0,t-10); hi=min(N,t+11)\n    idx=[i for i in range(lo,hi) if abs(i-t)>1]\n    bg=np.median(F[idx],axis=0)\n    d=np.abs(F[t]-bg).max(axis=2)\n    hsv=cv2.cvtColor(frames[t],cv2.COLOR_BGR2HSV)\n    S=hsv[:,:,1]\n    mot=(d>30)\n    sat=(S>50)\n    comb=(mot&sat)\n    comb=cv2.morphologyEx(comb.astype(np.uint8),cv2.MORPH_CLOSE,np.ones((5,5),np.uint8))>0\n    return d,mot,sat,comb,S\nrows=[]\nprev=None\nfor t in range(44,76):\n    d,mot,sat,comb,S=masks(t)\n    n,lab,stats,cent=cv2.connectedComponentsWithStats(comb.astype(np.uint8),8)\n    best=None\n    for j in range(1,n):\n        x,y,w,h,area=stats[j]\n        if area<250: continue\n        if best is None or area>best[0]: best=(area,x,y,w,h,cent[j][0])\n    if best is None:\n        print(f\"f{t:3d} no athlete\"); continue\n    a,x,y,w,h,cx=best\n    # x window around athlete\n    x0=max(0,x-10); x1=min(960,x+w+10)\n    def dense_bottom(mask,k=5):\n        # lowest row with >=k pixels in x window\n        sub=mask[:,x0:x1]\n        cnt=sub.sum(axis=1)\n        ys=np.where(cnt>=k)[0]\n        return ys.max() if len(ys) else -1\n    b_sat=dense_bottom(sat)\n    b_mot=dense_bottom(mot)\n    # athlete-ish: motion & not (low sat & dark) -> use sat OR bright\n    ath=mot & ((S>45) | (frames[t][:,:,2]>150))\n    ath=cv2.morphologyEx(ath.astype(np.uint8),cv2.MORPH_CLOSE,np.ones((5,5),np.uint8))>0\n    b_ath=dense_bottom(ath)\n    cy=np.where(mot[:,x0:x1])[0]\n    rows.append((t,cx,b_sat,b_mot,b_ath))\n    print(f\"f{t:3d} cx{cx:6.1f} satBot{b_sat:4d} motBot{b_mot:4d} athBot{b_ath:4d} satTop{y:4d}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 296578,
+     "dur_ms": 11998,
+     "exit": 0,
+     "cpu_ms": 12353.3,
+     "phases_us": {
+      "acquire": 66,
+      "resume": 21959,
+      "mount": 18218,
+      "run": 11864023,
+      "destroy": 111498
+     },
+     "cold": null,
+     "vm": "vm-259"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 308584,
+   "dur_ms": 7644
+  },
+  {
+   "kind": "tool",
+   "at_ms": 316228,
+   "dur_ms": 423,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nwhich ffprobe ffmpeg mediainfo exiftool 2>/dev/null\npython3 - <<'PY'\nimport cv2\ncap=cv2.VideoCapture('example_video.mp4')\nprint(\"meta keys:\")\nfor k in dir(cv2):\n    if k.startswith('CAP_PROP_METADATA'):\n        pass\nprint(\"fourcc\", cap.get(cv2.CAP_PROP_FOURCC))\nprint(\"fps\",cap.get(cv2.CAP_PROP_FPS))\n# Try reading raw metadata via cv2\ntry:\n    print(cap.get(cv2.CAP_PROP_BITRATE))\nexcept Exception as e: print(e)\nPY\n# search file for text strings\nstrings -n 6 example_video.mp4 | head -40\nls -la /workspace /app 2>/dev/null\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 316281,
+     "dur_ms": 342,
+     "exit": 0,
+     "cpu_ms": 536.7,
+     "phases_us": {
+      "acquire": 62,
+      "resume": 21717,
+      "mount": 18582,
+      "run": 284359,
+      "destroy": 36187
+     },
+     "cold": null,
+     "vm": "vm-264"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 316651,
+   "dur_ms": 6288
+  },
+  {
+   "kind": "tool",
+   "at_ms": 322939,
+   "dur_ms": 2414,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    ret, fr = cap.read()\n    if not ret: break\n    frames.append(fr)\nF=np.stack(frames).astype(np.float32)\nbg=np.median(F[0:40],axis=0).astype(np.uint8)\ng=cv2.cvtColor(bg,cv2.COLOR_BGR2GRAY).astype(np.float32)\n# vertical edges: abs gradient in x\ngx=np.abs(cv2.Sobel(g,cv2.CV_32F,1,0,ksize=3))\ngy=np.abs(cv2.Sobel(g,cv2.CV_32F,0,1,ksize=3))\n# columns strong vertical edges in band y 180-360\nband=gx[180:360,:]\ncolscore=band.sum(axis=0)\n# smooth\nk=np.ones(5)/5; cs=np.convolve(colscore,k,'same')\n# local peaks in x 400-750\nfor region in [(400,750),(0,960)]:\n    a,b=region\n    idx=a+np.argsort(cs[a:b])[-12:]\n    idx=sorted(idx)\n    print(\"cols\",region, [(int(i),int(cs[i])) for i in idx])\n# rows strong horizontal edges in x 480-680\nband2=gy[:,470:690]\nrowscore=band2.sum(axis=1)\nrs=np.convolve(rowscore,k,'same')\nidx=180+np.argsort(rs[180:380])[-12:]\nprint(\"rows\",sorted([(int(i),int(rs[i])) for i in idx]))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 322992,
+     "dur_ms": 2352,
+     "exit": 0,
+     "cpu_ms": 2564.0,
+     "phases_us": {
+      "acquire": 17,
+      "resume": 21365,
+      "mount": 18324,
+      "run": 2229937,
+      "destroy": 100959
+     },
+     "cold": null,
+     "vm": "vm-266"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 325353,
+   "dur_ms": 62487
+  },
+  {
+   "kind": "tool",
+   "at_ms": 387840,
+   "dur_ms": 10596,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    ret, fr = cap.read()\n    if not ret: break\n    frames.append(fr)\nF=np.stack(frames)  # uint8 N,H,W,3\nN=len(F); H,W=F.shape[1:3]\n# bg median of sampled frames\nstep=max(1,N//50)\nsamp=F[::step]\nbg=np.median(samp.astype(np.float32),axis=0)\nprint(\"samples\",len(samp))\nDI=np.abs(F.astype(np.float32)-bg).max(axis=3)\nMO=np.zeros_like(DI)\nMO[1:]=np.abs(F[1:].astype(np.float32)-F[:-1].astype(np.float32)).max(axis=3)\n# dilate motion a bit\nMOd=np.zeros_like(MO)\nfor i in range(N):\n    MOd[i]=cv2.dilate((MO[i]>15).astype(np.uint8),np.ones((5,5),np.uint8))*255\nfg=((DI>35)&(MOd>0)).astype(np.uint8)\n# print components and bottom for each t\nres=[]\nprev=None\nfor t in range(N):\n    m=cv2.morphologyEx(fg[t]*255,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n    m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((9,9),np.uint8))\n    n,lab,stats,cent=cv2.connectedComponentsWithStats(m,8)\n    cands=[]\n    for j in range(1,n):\n        x,y,w,h,area=stats[j]\n        if area>300 and h>50: cands.append((area,x,y,w,h,cent[j][0],cent[j][1]))\n    if not cands: continue\n    if prev is None:\n        ch=max(cands,key=lambda c:c[0])\n    else:\n        ch=max(cands,key=lambda c:c[0]-0.3*abs(c[5]-prev))\n    a,x,y,w,h,cx,cy=ch; prev=cx\n    res.append((t,a,x,y,w,h,cx,cy))\n# print frames around action\nfor r in res:\n    print(f\"f{r[0]:3d} a{r[1]:6d} x{r[2]}-{r[2]+r[4]} y{r[3]}-{r[3]+r[5]} cx{r[6]:6.1f} cy{r[7]:6.1f}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 387895,
+     "dur_ms": 10532,
+     "exit": 0,
+     "cpu_ms": 10706.7,
+     "phases_us": {
+      "acquire": 65,
+      "resume": 23907,
+      "mount": 20314,
+      "run": 10301386,
+      "destroy": 206748
+     },
+     "cold": null,
+     "vm": "vm-267"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 398436,
+   "dur_ms": 12516
+  },
+  {
+   "kind": "tool",
+   "at_ms": 410952,
+   "dur_ms": 10629,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    ret, fr = cap.read()\n    if not ret: break\n    frames.append(fr)\nF=np.stack(frames); N=len(F); H,W=F.shape[1:3]\nstep=max(1,N//50)\nbg=np.median(F[::step].astype(np.float32),axis=0)\nDI=np.abs(F.astype(np.float32)-bg).max(axis=3)\nMO=np.zeros_like(DI)\nMO[1:]=np.abs(F[1:].astype(np.float32)-F[:-1].astype(np.float32)).max(axis=3)\nMOd=np.stack([cv2.dilate((MO[i]>15).astype(np.uint8),np.ones((7,7),np.uint8)) for i in range(N)])\nfg=((DI>35)&(MOd>0)).astype(np.uint8)\n# morphology\nop=np.ones((3,3),np.uint8); cl=np.ones((15,15),np.uint8)\nfg2=np.stack([cv2.morphologyEx(cv2.morphologyEx(fg[i]*255,cv2.MORPH_OPEN,op),cv2.MORPH_CLOSE,cl) for i in range(N)])\n# get cx per frame from largest comp, track\ncxs={}\nprev=None\nfor t in range(N):\n    n,lab,stats,cent=cv2.connectedComponentsWithStats(fg2[t],8)\n    cands=[(stats[j][4],stats[j][0],stats[j][1],stats[j][2],stats[j][3],cent[j][0]) for j in range(1,n) if stats[j][4]>400 and stats[j][3]>50]\n    if not cands: continue\n    if prev is None: ch=max(cands,key=lambda c:c[0])\n    else:\n        ch=max(cands,key=lambda c:c[0]-0.3*abs(c[5]-prev))\n    prev=ch[5]; cxs[t]=ch\nfor t in range(44,74):\n    if t not in cxs:\n        print(f\"f{t:3d} none\"); continue\n    a,x,y,w,h,cx=cxs[t]\n    x0=max(0,int(cx)-160); x1=min(W,int(cx)+160)\n    sub=fg2[t][:,x0:x1]\n    cnt=sub.sum(axis=1)\n    ys=np.where(cnt>=6)[0]\n    bot=ys.max() if len(ys) else -1\n    top=ys.min() if len(ys) else -1\n    print(f\"f{t:3d} cx{cx:6.1f} bbox y{y}-{y+h} top{top:4d} bot{bot:4d}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 411007,
+     "dur_ms": 10563,
+     "exit": 0,
+     "cpu_ms": 10795.4,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 21304,
+      "mount": 18143,
+      "run": 10377226,
+      "destroy": 163898
+     },
+     "cold": null,
+     "vm": "vm-277"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 421581,
+   "dur_ms": 21015
+  },
+  {
+   "kind": "tool",
+   "at_ms": 442596,
+   "dur_ms": 20049,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap = cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    ret, fr = cap.read()\n    if not ret: break\n    frames.append(fr)\nF=np.stack(frames); N=len(F); H,W=F.shape[1:3]\nfor bgname,bg in [(\"first\",F[0].astype(np.float32)),(\"median\",np.median(F[::max(1,N//50)].astype(np.float32),axis=0))]:\n    DI=np.abs(F.astype(np.float32)-bg).max(axis=3)\n    MO=np.zeros_like(DI); MO[1:]=np.abs(F[1:].astype(np.float32)-F[:-1].astype(np.float32)).max(axis=3)\n    MOd=np.stack([cv2.dilate((MO[i]>15).astype(np.uint8),np.ones((7,7),np.uint8)) for i in range(N)])\n    fg=((DI>35)&(MOd>0)).astype(np.uint8)\n    op=np.ones((3,3),np.uint8); cl=np.ones((15,15),np.uint8)\n    fg2=np.stack([cv2.morphologyEx(cv2.morphologyEx(fg[i]*255,cv2.MORPH_OPEN,op),cv2.MORPH_CLOSE,cl) for i in range(N)])\n    cxs={}; prev=None\n    for t in range(N):\n        n,lab,stats,cent=cv2.connectedComponentsWithStats(fg2[t],8)\n        cands=[(stats[j][4],stats[j][0],stats[j][1],stats[j][2],stats[j][3],cent[j][0]) for j in range(1,n) if stats[j][4]>400 and stats[j][3]>50]\n        if not cands: continue\n        if prev is None: ch=max(cands,key=lambda c:c[0])\n        else: ch=max(cands,key=lambda c:c[0]-0.3*abs(c[5]-prev))\n        prev=ch[5]; cxs[t]=ch\n    print(\"=== bg\",bgname)\n    out=[]\n    for t in range(44,74):\n        if t not in cxs: out.append(f\"{t}:none\"); continue\n        a,x,y,w,h,cx=cxs[t]\n        x0=max(0,int(cx)-160); x1=min(W,int(cx)+160)\n        sub=fg2[t][:,x0:x1]; cnt=sub.sum(axis=1); ys=np.where(cnt>=6)[0]\n        bot=ys.max() if len(ys) else -1\n        out.append(f\"{t}:{bot}\")\n    print(\" \".join(out))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 442651,
+     "dur_ms": 19985,
+     "exit": 0,
+     "cpu_ms": 20300.0,
+     "phases_us": {
+      "acquire": 76,
+      "resume": 21667,
+      "mount": 18970,
+      "run": 19788785,
+      "destroy": 174511
+     },
+     "cold": null,
+     "vm": "vm-282"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 481988,
+   "dur_ms": 24326
+  },
+  {
+   "kind": "tool",
+   "at_ms": 506314,
+   "dur_ms": 2503,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put jump_analyzer.py <<'EOF'\n#!/usr/bin/env python3\n\"\"\"Detect the single hurdle jump in a stationary-camera MP4 video.\n\nThe scene is fixed (same camera, background and hurdle in every clip) and the\nfirst frame is guaranteed to contain no runner, so it can be used as a clean\nbackground reference.  The athlete is isolated with a motion-gated background\ndifference, tracked across frames, and the lowest point of the silhouette is\nfollowed over time.  A hurdle jump is a large, sustained upward excursion of\nthat lowest point away from the ground line.\n\nOutput: /app/output.toml with\n    jump_takeoff_frame_number = <int>   # last frame with ground contact\n    jump_land_frame_number    = <int>   # first frame back on the ground\nFrame numbers are 0-based video frame indices.\n\"\"\"\n\nimport os\nimport sys\n\nimport cv2\nimport numpy as np\n\ntry:  # preferred, but do not depend on it being installed\n    import toml  # type: ignore\nexcept Exception:  # pragma: no cover\n    toml = None\n\n\n# ----------------------------------------------------------------------------\n# helpers\n# ----------------------------------------------------------------------------\n\ndef read_frames(path):\n    cap = cv2.VideoCapture(path)\n    if not cap.isOpened():\n        raise SystemExit(\"cannot open video: %s\" % path)\n    frames = []\n    while True:\n        ok, frame = cap.read()\n        if not ok:\n            break\n        frames.append(frame)\n    cap.release()\n    if not frames:\n        raise SystemExit(\"video has no frames: %s\" % path)\n    return frames\n\n\ndef build_background(frames):\n    \"\"\"Background estimate: first frame blended with a sampled temporal median.\n\n    The first frame is runner-free by task assumption; the median adds\n    robustness against slow lighting/background drift.\n    \"\"\"\n    first = frames[0].astype(np.float32)\n    n = len(frames)\n    step = max(1, n // 40)\n    sample = np.stack([f.astype(np.float32) for f in frames[::step]])\n    median_bg = np.median(sample, axis=0)\n    return 0.5 * first + 0.5 * median_bg\n\n\ndef foreground_masks(frames, bg):\n    \"\"\"Motion-gated background-difference masks, one uint8 mask per frame.\"\"\"\n    n = len(frames)\n    diff = np.empty((n,) + frames[0].shape[:2], np.float32)\n    motion = np.zeros_like(diff)\n    prev = None\n    for i, frame in enumerate(frames):\n        f = frame.astype(np.float32)\n        diff[i] = np.abs(f - bg).max(axis=2)\n        if prev is not None:\n            motion[i] = np.abs(f - prev).max(axis=2)\n        prev = f\n\n    k7 = np.ones((7, 7), np.uint8)\n    motion_gate = np.stack(\n        [cv2.dilate((motion[i] > 15).astype(np.uint8), k7) for i in range(n)]\n    )\n    raw = ((diff > 35) & (motion_gate > 0)).astype(np.uint8)\n\n    open_k = np.ones((3, 3), np.uint8)\n    close_k = np.ones((15, 15), np.uint8)\n    masks = np.stack(\n        [\n            cv2.morphologyEx(\n                cv2.morphologyEx(raw[i] * 255, cv2.MORPH_OPEN, open_k),\n                cv2.MORPH_CLOSE,\n                close_k,\n            )\n            for i in range(n)\n        ]\n    )\n    return masks\n\n\ndef components(mask, min_area, min_height):\n    n, labels, stats, cents = cv2.connectedComponentsWithStats(mask, 8)\n    out = []\n    for j in range(1, n):\n        x, y, w, h, area = stats[j]\n        if area < min_area or h < min_height:\n            continue\n        out.append(\n            {\n                \"x\": int(x),\n                \"y\": int(y),\n                \"w\": int(w),\n                \"h\": int(h),\n                \"area\": int(area),\n                \"cx\": float(cents[j][0]),\n                \"cy\": float(cents[j][1]),\n                \"bottom\": int(y + h),\n            }\n        )\n    return out\n\n\ndef track_athlete(masks, H, W):\n    \"\"\"Pick, per frame, the most athlete-like component by proximity.\n\n    Returns {frame_index: component_dict}.\n    \"\"\"\n    min_area = max(300, int(0.0012 * H * W))\n    min_height = max(24, int(0.06 * H))\n    track = {}\n    prev_cx = None\n    prev_area = None\n    for t, mask in enumerate(masks):\n        cands = components(mask, min_area, min_height)\n        if not cands:\n            continue\n        # prefer large, ground-reachable blobs, close to the previous position\n        def score(c):\n            s = float(c[\"area\"])\n            if prev_cx is not None:\n                s -= 2.0 * abs(c[\"cx\"] - prev_cx)\n            if prev_area is not None:\n                s -= 0.5 * abs(c[\"area\"] - prev_area)\n            return s\n\n        best = max(cands, key=score)\n        if prev_cx is not None and abs(best[\"cx\"] - prev_cx) > 0.45 * W:\n            # implausible jump across the frame; fall back to nearest blob\n            best = min(cands, key=lambda c: abs(c[\"cx\"] - prev_cx))\n        track[t] = best\n        prev_cx = best[\"cx\"]\n        prev_area = best[\"area\"]\n    return track\n\n\ndef active_window(track, H):\n    \"\"\"Contiguous frame range in which an athlete-like blob is on the track.\"\"\"\n    hits = [\n        t\n        for t, c in sorted(track.items())\n        if c[\"bottom\"] > 0.50 * H and c[\"h\"] > 0.06 * H\n    ]\n    if not hits:\n        return None\n    gap_allow = max(4, int(0.08 * len(track)))\n    runs = []\n    start = prev = hits[0]\n    for t in hits[1:]:\n        if t - prev <= gap_allow:\n            prev = t\n            continue\n        runs.append((start, prev))\n        start = prev = t\n    runs.append((start, prev))\n    # longest run wins; tie-break on total tracked area\n    def run_score(r):\n        a, b = r\n        area = sum(track[t][\"area\"] for t in range(a, b + 1) if t in track)\n        return ((b - a), area)\n\n    a, b = max(runs, key=run_score)\n    return max(0, a - 1), min(len(track) - 1, b + 1)\n\n\ndef silhouette_window(track, masks, H, W):\n    \"\"\"Motor: per-frame lowest silhouette row in a horizontal window around the\n    tracked x position.  Also returns the per-frame top row and the mid x used.\"\"\"\n    hw = int(0.30 * H)\n    bottoms = {}\n    tops = {}\n    for t in sorted(track):\n        cx = track[t][\"cx\"]\n        x0 = max(0, int(round(cx)) - hw)\n        x1 = min(W, int(round(cx)) + hw)\n        if x1 - x0 < 10:\n            continue\n        col = masks[t][:, x0:x1]\n        rows = np.where(col.sum(axis=1) >= 6)[0]\n        if rows.size == 0:\n            continue\n        bottoms[t] = int(rows.max())\n        tops[t] = int(rows.min())\n    return bottoms, tops\n\n\ndef detect_jump(track, bottoms, tops, H, W):\n    \"\"\"Return (takeoff_frame, land_frame) using the foot-height trajectory.\"\"\"\n    if len(bottoms) < 4:\n        return None\n\n    # full-visibility frames: tracked blob and window fully inside the image\n    full = []\n    hw = int(0.30 * H)\n    for t, c in track.items():\n        if t not in bottoms:\n            continue\n        if c[\"x\"] <= 1 or c[\"x\"] + c[\"w\"] >= W - 1:\n            continue\n        if c[\"cx\"] - hw < 0 or c[\"cx\"] + hw > W:\n            continue\n        full.append(t)\n    if len(full) < 4:\n        full = [t for t in bottoms]\n\n    b_full = np.array([bottoms[t] for t in full], np.float32)\n    # the ground line is the lower envelope of the foot trajectory (the\n    # athlete's foot is lowest while in contact with the track)\n    ground = float(np.percentile(b_full, 90))\n    body_top = float(np.median([tops[t] for t in full]))\n    body_height = max(20.0, ground - body_top)\n    margin = max(8.0, 0.04 * body_height)\n\n    airborne = sorted(t for t in bottoms if bottoms[t] < ground - margin)\n\n    # contiguous airborne segments (allow a one-frame dropout)\n    segments = []\n    if airborne:\n        start = prev = airborne[0]\n        for t in airborne[1:]:\n            if t - prev <= 2:\n                prev = t\n                continue\n            segments.append((start, prev))\n            start = prev = t\n        segments.append((start, prev))\n\n    def seg_stats(seg):\n        a, b = seg\n        depth = ground - min(bottoms[t] for t in range(a, b + 1) if t in bottoms)\n        length = b - a + 1\n        # horizontal location: jump should be near the hurdle (middle of frame)\n        return depth, length\n\n    # keep segments that look like a real jump, not a running stride\n    min_depth = max(2.5 * margin, 0.06 * body_height)\n    good = [\n        s\n        for s in segments\n        if seg_stats(s)[0] >= min_depth and seg_stats(s)[1] >= 2\n    ]\n    if not good:\n        good = segments or []\n    if not good:\n        return None\n\n    # the hurdle jump is the deepest (and longest) excursion\n    seg = max(good, key=lambda s: (seg_stats(s)[0], seg_stats(s)[1]))\n    a, b = seg\n\n    contact_level = ground - 0.5 * margin\n\n    # takeoff: last ground-contact frame before the airborne segment\n    takeoff = a - 1\n    for t in range(a - 1, max(-1, a - 12), -1):\n        if t in bottoms and bottoms[t] >= contact_level:\n            takeoff = t\n            break\n    else:\n        takeoff = max(0, a - 1)\n\n    # landing: first ground-contact frame after the airborne segment\n    land = b + 1\n    last = max(bottoms) if bottoms else b\n    for t in range(b + 1, min(last + 1, b + 12)):\n        if t in bottoms and bottoms[t] >= contact_level:\n            land = t\n            break\n    else:\n        land = min(last, b + 1)\n\n    takeoff = max(0, min(takeoff, last))\n    land = max(takeoff, min(land, last))\n    return takeoff, land\n\n\ndef write_toml(path, takeoff, land):\n    data = {\n        \"jump_takeoff_frame_number\": int(takeoff),\n        \"jump_land_frame_number\": int(land),\n    }\n    try:\n        with open(path, \"w\") as fh:\n            if toml is not None:\n                toml.dump(data, fh)\n            else:\n                fh.write(\n                    \"jump_takeoff_frame_number = %d\\n\"\n                    \"jump_land_frame_number = %d\\n\" % (takeoff, land)\n                )\n    except OSError:\n        with open(os.path.join(os.getcwd(), \"output.toml\"), \"w\") as fh:\n            fh.write(\n                \"jump_takeoff_frame_number = %d\\n\"\n                \"jump_land_frame_number = %d\\n\" % (takeoff, land)\n            )\n\n\n# ----------------------------------------------------------------------------\n# main\n# ----------------------------------------------------------------------------\n\ndef analyze(video_path):\n    frames = read_frames(video_path)\n    H, W = frames[0].shape[:2]\n    bg = build_background(frames)\n    masks = foreground_masks(frames, bg)\n    track = track_athlete(masks, H, W)\n    win = active_window(track, H)\n    if win is not None:\n        track = {t: c for t, c in track.items() if win[0] <= t <= win[1]}\n    bottoms, tops = silhouette_window(track, masks, H, W)\n    result = detect_jump(track, bottoms, tops, H, W)\n    if result is None:\n        # degenerate fallback: centre of the clip\n        mid = len(frames) // 2\n        result = (max(0, mid - 2), min(len(frames) - 1, mid + 2))\n    return result\n\n\ndef main():\n    video = sys.argv[1] if len(sys.argv) > 1 else \"/app/example_video.mp4\"\n    takeoff, land = analyze(video)\n    write_toml(\"/app/output.toml\", takeoff, land)\n    print(\"jump_takeoff_frame_number = %d\" % takeoff)\n    print(\"jump_land_frame_number = %d\" % land)\n\n\nif __name__ == \"__main__\":\n    main()\nEOF\necho \"written\"",
+   "sandbox": [
+    {
+     "at_ms": 508762,
+     "dur_ms": 46,
+     "exit": 0,
+     "cpu_ms": 43.9,
+     "phases_us": {
+      "acquire": 19,
+      "resume": 22038,
+      "mount": 19469,
+      "run": 7544,
+      "destroy": 16715
+     },
+     "cold": null,
+     "vm": "vm-289"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 508817,
+   "dur_ms": 1162
+  },
+  {
+   "kind": "tool",
+   "at_ms": 509979,
+   "dur_ms": 8407,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 -c \"import toml\" 2>&1 | head -1\ntime python3 jump_analyzer.py example_video.mp4\necho \"--- output.toml ---\"\ncat output.toml\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 510034,
+     "dur_ms": 8344,
+     "exit": 0,
+     "cpu_ms": 8720.6,
+     "phases_us": {
+      "acquire": 85,
+      "resume": 21445,
+      "mount": 18790,
+      "run": 8241545,
+      "destroy": 81103
+     },
+     "cold": null,
+     "vm": "vm-291"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 518386,
+   "dur_ms": 5337
+  },
+  {
+   "kind": "tool",
+   "at_ms": 523723,
+   "dur_ms": 8165,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport jump_analyzer as J, numpy as np, cv2\nframes=J.read_frames('example_video.mp4'); H,W=frames[0].shape[:2]\nbg=J.build_background(frames); masks=J.foreground_masks(frames,bg)\ntrack=J.track_athlete(masks,H,W)\nprint(\"track frames:\",sorted(track))\nfor t in sorted(track):\n    c=track[t]; print(t,c[\"area\"],c[\"h\"],c[\"bottom\"],round(c[\"cx\"],1),c[\"x\"],c[\"w\"])\nprint(\"window:\",J.active_window(track,H))\nwin=J.active_window(track,H)\ntk={t:c for t,c in track.items() if win[0]<=t<=win[1]}\nb,tops=J.silhouette_window(tk,masks,H,W)\nprint(\"bottoms:\",[(t,b[t],tops[t]) for t in sorted(b)])\nprint(\"result:\",J.detect_jump(tk,b,tops,H,W))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 523776,
+     "dur_ms": 8104,
+     "exit": 0,
+     "cpu_ms": 8520.6,
+     "phases_us": {
+      "acquire": 64,
+      "resume": 21745,
+      "mount": 19213,
+      "run": 7983210,
+      "destroy": 98491
+     },
+     "cold": null,
+     "vm": "vm-292"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 531888,
+   "dur_ms": 6143
+  },
+  {
+   "kind": "tool",
+   "at_ms": 538031,
+   "dur_ms": 8414,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport re\np='jump_analyzer.py'\ns=open(p).read()\ns=s.replace('''    gap_allow = max(4, int(0.08 * len(track)))''','''    first_t, last_t = min(track), max(track)\n    gap_allow = max(4, int(0.08 * (last_t - first_t + 1)))''')\ns=s.replace('''    return max(0, a - 1), min(len(track) - 1, b + 1)''','''    return max(first_t, a - 1), min(last_t, b + 1)''')\nopen(p,'w').write(s)\nPY\npython3 jump_analyzer.py example_video.mp4\necho \"---\"\ncat output.toml\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 538083,
+     "dur_ms": 8355,
+     "exit": 0,
+     "cpu_ms": 8777.6,
+     "phases_us": {
+      "acquire": 63,
+      "resume": 22026,
+      "mount": 18915,
+      "run": 8231725,
+      "destroy": 100805
+     },
+     "cold": null,
+     "vm": "vm-294"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 546445,
+   "dur_ms": 5009
+  },
+  {
+   "kind": "tool",
+   "at_ms": 551454,
+   "dur_ms": 46477,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4'); F=[]\nwhile True:\n    ok,fr=cap.read()\n    if not ok: break\n    F.append(fr)\nF=np.stack(F); N,H,W=F.shape[0],F.shape[1],F.shape[2]\nfourcc=cv2.VideoWriter_fourcc(*'mp4v')\ndef save(name,arr):\n    v=cv2.VideoWriter(name,fourcc,30,(W,H))\n    for f in arr: v.write(f)\n    v.release()\n# A: 30 blank lead-in + 30 tail\nsave('var_shift.mp4',np.concatenate([np.repeat(F[0][None],30,0),F,np.repeat(F[0][None],30,0)]))\n# B: trimmed first 10 frames (still begins without runner)\nsave('var_trim.mp4',F[10:])\n# C: brightness + noise\nrng=np.random.default_rng(0)\nC=np.clip(F.astype(np.int16)+25,0,255).astype(np.uint8)\nC=np.clip(C.astype(np.int16)+rng.normal(0,6,C.shape).astype(np.int16),0,255).astype(np.uint8)\nsave('var_noise.mp4',C)\n# D: reversed\nsave('var_rev.mp4',F[::-1])\n# E: temporal subsample to 20fps (drop every 3rd)\nkeep=[i for i in range(N) if i%3!=2]\nsave('var_20fps.mp4',F[keep])\nprint(\"made\", keep[:5], len(keep))\nPY\nfor v in var_shift var_trim var_noise var_rev var_20fps; do\n  echo \"== $v\"\n  python3 jump_analyzer.py $v.mp4\ndone\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 551508,
+     "dur_ms": 46415,
+     "exit": 0,
+     "cpu_ms": 48084.7,
+     "phases_us": {
+      "acquire": 63,
+      "resume": 21959,
+      "mount": 18825,
+      "run": 46211231,
+      "destroy": 181697
+     },
+     "cold": null,
+     "vm": "vm-296"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 597931,
+   "dur_ms": 12798
+  },
+  {
+   "kind": "tool",
+   "at_ms": 610729,
+   "dur_ms": 5830,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport jump_analyzer as J, numpy as np\nframes=J.read_frames('var_20fps.mp4'); H,W=frames[0].shape[:2]\nbg=J.build_background(frames); masks=J.foreground_masks(frames,bg)\ntrack=J.track_athlete(masks,H,W)\nwin=J.active_window(track,H)\nprint(\"N\",len(frames),\"window\",win)\nfor t in sorted(track):\n    if win and win[0]-3<=t<=win[1]+3:\n        c=track[t]; print(t,\"a\",c[\"area\"],\"h\",c[\"h\"],\"bot\",c[\"bottom\"],\"cx\",round(c[\"cx\"],1))\ntk={t:c for t,c in track.items() if win[0]<=t<=win[1]}\nb,top=J.silhouette_window(tk,masks,H,W)\nprint(\"bottoms:\",[(t,b[t],top[t]) for t in sorted(b)])\nprint(\"result\",J.detect_jump(tk,b,top,H,W))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 610782,
+     "dur_ms": 5770,
+     "exit": 0,
+     "cpu_ms": 6016.2,
+     "phases_us": {
+      "acquire": 63,
+      "resume": 21477,
+      "mount": 18199,
+      "run": 5665668,
+      "destroy": 82121
+     },
+     "cold": null,
+     "vm": "vm-297"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 616559,
+   "dur_ms": 23422
+  },
+  {
+   "kind": "tool",
+   "at_ms": 639981,
+   "dur_ms": 44456,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\np='jump_analyzer.py'\ns=open(p).read()\ns=s.replace('    min_area = max(300, int(0.0012 * H * W))',\n            '    min_area = max(1000, int(0.0020 * H * W))')\nold='''    b_full = np.array([bottoms[t] for t in full], np.float32)'''\nnew='''    # Analyse only fully visible frames: partial entries/exits at the image\n    # borders produce spurious blobs that can masquerade as a flight arc.\n    full = [t for t in full if t in bottoms]\n    if len(full) < 4:\n        full = [t for t in bottoms]\n    b_full = np.array([bottoms[t] for t in full], np.float32)'''\ns=s.replace(old,new)\nold2='''    airborne = sorted(t for t in bottoms if bottoms[t] < ground - margin)'''\nnew2='''    full_set = set(full)\n    airborne = sorted(\n        t for t in bottoms if t in full_set and bottoms[t] < ground - margin\n    )'''\ns=s.replace(old2,new2)\nold3='''    # takeoff: last ground-contact frame before the airborne segment\n    takeoff = a - 1\n    for t in range(a - 1, max(-1, a - 12), -1):\n        if t in bottoms and bottoms[t] >= contact_level:\n            takeoff = t\n            break\n    else:\n        takeoff = max(0, a - 1)\n\n    # landing: first ground-contact frame after the airborne segment\n    land = b + 1\n    last = max(bottoms) if bottoms else b\n    for t in range(b + 1, min(last + 1, b + 12)):\n        if t in bottoms and bottoms[t] >= contact_level:\n            land = t\n            break\n    else:\n        land = min(last, b + 1)'''\nnew3='''    # takeoff: last ground-contact frame before the airborne segment\n    takeoff = a - 1\n    for t in range(a - 1, max(-1, a - 12), -1):\n        if t in full_set and bottoms[t] >= contact_level:\n            takeoff = t\n            break\n    else:\n        takeoff = max(0, a - 1)\n\n    # landing: first ground-contact frame after the airborne segment\n    land = b + 1\n    last = max(bottoms) if bottoms else b\n    for t in range(b + 1, min(last + 1, b + 12)):\n        if t in full_set and bottoms[t] >= contact_level:\n            land = t\n            break\n    else:\n        land = min(last, b + 1)'''\ns=s.replace(old3,new3)\nopen(p,'w').write(s)\nprint(\"patched\")\nPY\npython3 jump_analyzer.py example_video.mp4\nfor v in var_shift var_trim var_noise var_rev var_20fps; do\n  echo \"== $v\"; python3 jump_analyzer.py $v.mp4\ndone\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 640035,
+     "dur_ms": 44393,
+     "exit": 0,
+     "cpu_ms": 46354.5,
+     "phases_us": {
+      "acquire": 16,
+      "resume": 22061,
+      "mount": 19577,
+      "run": 44251911,
+      "destroy": 118462
+     },
+     "cold": null,
+     "vm": "vm-299"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 684437,
+   "dur_ms": 23249
+  },
+  {
+   "kind": "tool",
+   "at_ms": 707686,
+   "dur_ms": 8133,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\np='jump_analyzer.py'\ns=open(p).read()\nold='''def main():\n    video = sys.argv[1] if len(sys.argv) > 1 else \"/app/example_video.mp4\"'''\nnew='''def pick_video(argv):\n    if len(argv) > 1:\n        return argv[1]\n    for key in (\"VIDEO_PATH\", \"INPUT_VIDEO\", \"VIDEO\"):\n        if os.environ.get(key):\n            return os.environ[key]\n    app = \"/app\" if os.path.isdir(\"/app\") else os.getcwd()\n    for name in (\"input.mp4\", \"video.mp4\", \"test.mp4\", \"test_video.mp4\"):\n        cand = os.path.join(app, name)\n        if os.path.isfile(cand):\n            return cand\n    mp4s = sorted(\n        os.path.join(app, f) for f in os.listdir(app) if f.lower().endswith(\".mp4\")\n    ) if os.path.isdir(app) else []\n    others = [m for m in mp4s if os.path.basename(m) != \"example_video.mp4\"]\n    if len(others) == 1:\n        return others[0]\n    if mp4s:\n        return os.path.join(app, \"example_video.mp4\") if os.path.isfile(\n            os.path.join(app, \"example_video.mp4\")) else mp4s[0]\n    return os.path.join(app, \"example_video.mp4\")\n\n\ndef main():\n    video = pick_video(sys.argv)'''\ns=s.replace(old,new)\nopen(p,'w').write(s)\nprint(\"ok\")\nPY\npython3 -m py_compile jump_analyzer.py && echo \"compile ok\"\npython3 jump_analyzer.py \"$PWD/example_video.mp4\"\ncat output.toml\n# show final script line count\nwc -l jump_analyzer.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 707739,
+     "dur_ms": 8071,
+     "exit": 0,
+     "cpu_ms": 8420.9,
+     "phases_us": {
+      "acquire": 94,
+      "resume": 21335,
+      "mount": 18101,
+      "run": 7963209,
+      "destroy": 85980
+     },
+     "cold": null,
+     "vm": "vm-301"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 715819,
+   "dur_ms": 1143
+  },
+  {
+   "kind": "tool",
+   "at_ms": 716962,
+   "dur_ms": 137,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nsed -n '1,400p' jump_analyzer.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 717021,
+     "dur_ms": 48,
+     "exit": 0,
+     "cpu_ms": 44.8,
+     "phases_us": {
+      "acquire": 142,
+      "resume": 24737,
+      "mount": 21268,
+      "run": 5026,
+      "destroy": 18432
+     },
+     "cold": null,
+     "vm": "vm-303"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 717099,
+   "dur_ms": 11661
+  },
+  {
+   "kind": "tool",
+   "at_ms": 728760,
+   "dur_ms": 37232,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\np='jump_analyzer.py'\ns=open(p).read()\nold_bg='''def build_background(frames):\n    \"\"\"Background estimate: first frame blended with a sampled temporal median.\n\n    The first frame is runner-free by task assumption; the median adds\n    robustness against slow lighting/background drift.\n    \"\"\"\n    first = frames[0].astype(np.float32)\n    n = len(frames)\n    step = max(1, n // 40)\n    sample = np.stack([f.astype(np.float32) for f in frames[::step]])\n    median_bg = np.median(sample, axis=0)\n    return 0.5 * first + 0.5 * median_bg'''\nnew_bg='''def build_background(frames):\n    \"\"\"Background estimate: first frame blended with a sampled temporal median.\n\n    The first frame is runner-free by task assumption; the median adds\n    robustness against slow lighting/background drift.\n    \"\"\"\n    first = frames[0].astype(np.float32)\n    n = len(frames)\n    step = max(1, n // 16)\n    sample = np.stack([f.astype(np.float32) for f in frames[::step]])\n    median_bg = np.median(sample, axis=0)\n    del sample\n    return 0.5 * first + 0.5 * median_bg'''\nassert old_bg in s\ns=s.replace(old_bg,new_bg)\n\nstart=s.index('def foreground_masks(frames, bg):')\nend=s.index('def components(')\nnew_fg='''def foreground_masks(frames, bg):\n    \"\"\"Motion-gated background-difference masks, one uint8 mask per frame.\n\n    A pixel is foreground when it differs from the background *and* changes\n    between consecutive frames.  The motion gate suppresses slow background\n    drift / generative \"morphing\" in the stands.\n    \"\"\"\n    n = len(frames)\n    H, W = frames[0].shape[:2]\n    masks = np.empty((n, H, W), np.uint8)\n    open_k = np.ones((3, 3), np.uint8)\n    close_k = np.ones((15, 15), np.uint8)\n    k7 = np.ones((7, 7), np.uint8)\n    prev = None\n    for i, frame in enumerate(frames):\n        f = frame.astype(np.float32)\n        diff = np.abs(f - bg).max(axis=2)\n        if prev is None:\n            motion = np.zeros_like(diff)\n        else:\n            motion = np.abs(f - prev).max(axis=2)\n        gate = cv2.dilate((motion > 15).astype(np.uint8), k7)\n        raw = ((diff > 35) & (gate > 0)).astype(np.uint8) * 255\n        masks[i] = cv2.morphologyEx(\n            cv2.morphologyEx(raw, cv2.MORPH_OPEN, open_k),\n            cv2.MORPH_CLOSE,\n            close_k,\n        )\n        prev = f\n    return masks\n\n\n'''\ns=s[:start]+new_fg+s[end:]\nassert 'def foreground_masks' in s\nopen(p,'w').write(s)\nprint(\"refactored\")\nPY\npython3 -m py_compile jump_analyzer.py && echo compile-ok\npython3 jump_analyzer.py example_video.mp4\nfor v in var_shift var_trim var_noise var_rev var_20fps; do echo \"== $v\"; python3 jump_analyzer.py $v.mp4; done\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 728815,
+     "dur_ms": 37168,
+     "exit": 0,
+     "cpu_ms": 39072.6,
+     "phases_us": {
+      "acquire": 16,
+      "resume": 21245,
+      "mount": 18036,
+      "run": 37074853,
+      "destroy": 72191
+     },
+     "cold": null,
+     "vm": "vm-304"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 765992,
+   "dur_ms": 8498
+  },
+  {
+   "kind": "tool",
+   "at_ms": 774490,
+   "dur_ms": 28676,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np, jump_analyzer as J\ncap=cv2.VideoCapture('example_video.mp4'); F=[]\nwhile True:\n    ok,fr=cap.read()\n    if not ok: break\n    F.append(fr)\nF=np.stack(F); N,H,W=F.shape[0],F.shape[1],F.shape[2]\nfourcc=cv2.VideoWriter_fourcc(*'mp4v')\ndef save(name,arr):\n    v=cv2.VideoWriter(name,fourcc,30,(W,H))\n    for f in arr: v.write(f)\n    v.release()\nrng=np.random.default_rng(1)\n# jitter +-1 px per frame\nJf=[]\nfor f in F:\n    dx,dy=rng.integers(-1,2,2)\n    M=np.float32([[1,0,dx],[0,1,dy]])\n    Jf.append(cv2.warpAffine(f,M,(W,H),borderMode=cv2.BORDER_REPLICATE))\nsave('var_jitter.mp4',np.stack(Jf))\n# white-clad athlete: repaint the detected moving pixels white\nbg=J.build_background(F); masks=J.foreground_masks(F,bg)\nd=np.ones((5,5),np.uint8)\nWh=[]\nfor i,f in enumerate(F):\n    m=cv2.dilate(masks[i],d)>0\n    g=f.copy(); g[m]=255\n    Wh.append(g)\nsave('var_white.mp4',np.stack(Wh))\n# early / late segments\nsave('var_early.mp4',F[45:])\nsave('var_late.mp4',F[:66])\nprint('done')\nPY\nfor v in var_jitter var_white var_early var_late; do echo \"== $v\"; python3 jump_analyzer.py $v.mp4; done\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 774544,
+     "dur_ms": 28613,
+     "exit": 0,
+     "cpu_ms": 30218.8,
+     "phases_us": {
+      "acquire": 67,
+      "resume": 22435,
+      "mount": 19328,
+      "run": 28492448,
+      "destroy": 98277
+     },
+     "cold": null,
+     "vm": "vm-310"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 803166,
+   "dur_ms": 6666
+  },
+  {
+   "kind": "tool",
+   "at_ms": 809832,
+   "dur_ms": 6826,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport jump_analyzer as J\nframes=J.read_frames('var_jitter.mp4'); H,W=frames[0].shape[:2]\nbg=J.build_background(frames); masks=J.foreground_masks(frames,bg)\ntrack=J.track_athlete(masks,H,W)\nwin=J.active_window(track,H)\nprint(\"window\",win,\"len\",len(track))\nfor t in sorted(track):\n    if win and win[0]-2<=t<=win[1]+2:\n        c=track[t]; print(t,c[\"area\"],c[\"h\"],c[\"bottom\"],round(c[\"cx\"],1))\ntk={t:c for t,c in track.items() if win[0]<=t<=win[1]}\nb,top=J.silhouette_window(tk,masks,H,W)\nprint(\"bot\",[(t,b[t]) for t in sorted(b)])\n# foreground coverage stats\nprint(\"fg mean per frame\", float(masks.mean()), \"max\", int(masks.max()))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 809888,
+     "dur_ms": 6762,
+     "exit": 0,
+     "cpu_ms": 7094.0,
+     "phases_us": {
+      "acquire": 66,
+      "resume": 21043,
+      "mount": 18616,
+      "run": 6671475,
+      "destroy": 68814
+     },
+     "cold": null,
+     "vm": "vm-314"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 816658,
+   "dur_ms": 23499
+  },
+  {
+   "kind": "tool",
+   "at_ms": 840157,
+   "dur_ms": 54478,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\np='jump_analyzer.py'\ns=open(p).read()\nold='''def silhouette_window(track, masks, H, W):\n    \"\"\"Motor: per-frame lowest silhouette row in a horizontal window around the\n    tracked x position.  Also returns the per-frame top row and the mid x used.\"\"\"\n    hw = int(0.30 * H)\n    bottoms = {}\n    tops = {}\n    for t in sorted(track):\n        cx = track[t][\"cx\"]\n        x0 = max(0, int(round(cx)) - hw)\n        x1 = min(W, int(round(cx)) + hw)\n        if x1 - x0 < 10:\n            continue\n        col = masks[t][:, x0:x1]\n        rows = np.where(col.sum(axis=1) >= 6)[0]\n        if rows.size == 0:\n            continue\n        bottoms[t] = int(rows.max())\n        tops[t] = int(rows.min())\n    return bottoms, tops'''\nnew='''def silhouette_window(track, masks, H, W):\n    \"\"\"Per-frame lowest silhouette row in a horizontal window around the\n    tracked x position.  Also returns the per-frame top row.\n\n    A window union is used because the body can split into separate connected\n    components (e.g. torso and legs).  Stray foreground far below the tracked\n    blob (compression flicker, background morphing) is ignored: the union may\n    extend at most a small distance below the blob's own bounding box.\n    \"\"\"\n    hw = int(0.30 * H)\n    tol = max(8, int(0.06 * H))\n    bottoms = {}\n    tops = {}\n    for t in sorted(track):\n        cx = track[t][\"cx\"]\n        cb = track[t][\"bottom\"]\n        x0 = max(0, int(round(cx)) - hw)\n        x1 = min(W, int(round(cx)) + hw)\n        if x1 - x0 < 10:\n            continue\n        col = masks[t][:, x0:x1]\n        rows = np.where(col.sum(axis=1) >= 6)[0]\n        if rows.size == 0:\n            continue\n        ub = int(rows.max())\n        bottoms[t] = cb if ub < cb else min(ub, cb + tol)\n        tops[t] = int(rows.min())\n    return bottoms, tops'''\nassert old in s\ns=s.replace(old,new)\nopen(p,'w').write(s)\nprint(\"patched\")\nPY\npython3 -m py_compile jump_analyzer.py && echo compile-ok\npython3 jump_analyzer.py example_video.mp4\nfor v in var_shift var_trim var_noise var_rev var_20fps var_jitter var_white var_early var_late; do echo \"== $v\"; python3 jump_analyzer.py $v.mp4; done\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 840211,
+     "dur_ms": 54413,
+     "exit": 0,
+     "cpu_ms": 57194.5,
+     "phases_us": {
+      "acquire": 80,
+      "resume": 21781,
+      "mount": 18278,
+      "run": 54318833,
+      "destroy": 71724
+     },
+     "cold": null,
+     "vm": "vm-315"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 894635,
+   "dur_ms": 11862
+  },
+  {
+   "kind": "tool",
+   "at_ms": 906497,
+   "dur_ms": 6481,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nrm -f var_shift.mp4 var_trim.mp4 var_noise.mp4 var_rev.mp4 var_20fps.mp4 var_jitter.mp4 var_white.mp4 var_early.mp4 var_late.mp4 bg0.png median_bg.png track.npy\nrm -rf __pycache__\nls -la /workspace\necho \"--- /app path check ---\"\nls -la /app/jump_analyzer.py\necho \"--- fresh run ---\"\nrm -f output.toml\npython3 jump_analyzer.py\necho \"--- output bytes ---\"\ncat output.toml | od -c | head\necho \"--- verify integer fields ---\"\npython3 - <<'PY'\nimport re\nt=open('/app/output.toml').read()\nprint(repr(t))\nassert re.fullmatch(r'jump_takeoff_frame_number = \\d+\\njump_land_frame_number = \\d+\\n', t)\nprint(\"format OK\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 906553,
+     "dur_ms": 6416,
+     "exit": 0,
+     "cpu_ms": 6865.3,
+     "phases_us": {
+      "acquire": 102,
+      "resume": 25520,
+      "mount": 21327,
+      "run": 6321644,
+      "destroy": 68805
+     },
+     "cold": null,
+     "vm": "vm-316"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 912978,
+   "dur_ms": 2671
+  },
+  {
+   "kind": "tool",
+   "at_ms": 915649,
+   "dur_ms": 116,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\n/usr/bin/time -v python3 jump_analyzer.py 2>&1 | grep -E \"Maximum resident|Elapsed|jump_\" || true\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 915703,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 41.8,
+     "phases_us": {
+      "acquire": 68,
+      "resume": 24012,
+      "mount": 20577,
+      "run": 4951,
+      "destroy": 26497
+     },
+     "cold": null,
+     "vm": "vm-317"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 915765,
+   "dur_ms": 1470
+  },
+  {
+   "kind": "tool",
+   "at_ms": 917235,
+   "dur_ms": 6791,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport resource, time, jump_analyzer as J\nt0=time.time()\nr=J.analyze('example_video.mp4')\nprint(\"result\",r,\"time %.2fs\"%(time.time()-t0))\nprint(\"peak RSS MB\", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1024.0)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 917294,
+     "dur_ms": 6711,
+     "exit": 0,
+     "cpu_ms": 7069.4,
+     "phases_us": {
+      "acquire": 77,
+      "resume": 21698,
+      "mount": 19059,
+      "run": 6621924,
+      "destroy": 66737
+     },
+     "cold": null,
+     "vm": "vm-318"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 924026,
+   "dur_ms": 15605
+  },
+  {
+   "kind": "tool",
+   "at_ms": 939631,
+   "dur_ms": 124,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ngrep -n \"def read_frames\\|def build_background\\|def foreground_masks\\|def components\\|def analyze\" jump_analyzer.py\nsed -n '25,95p' jump_analyzer.py\nsed -n '/^def analyze/,/^def pick_video/p' jump_analyzer.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 939683,
+     "dur_ms": 58,
+     "exit": 0,
+     "cpu_ms": 42.4,
+     "phases_us": {
+      "acquire": 78,
+      "resume": 21259,
+      "mount": 17952,
+      "run": 7133,
+      "destroy": 29753
+     },
+     "cold": null,
+     "vm": "vm-319"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 939755,
+   "dur_ms": 9230
+  },
+  {
+   "kind": "tool",
+   "at_ms": 948985,
+   "dur_ms": 10914,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\np='jump_analyzer.py'\ns=open(p).read()\nstart=s.index('def read_frames(path):')\nend=s.index('def components(')\nnew='''def scan_video(path, n_samples=16):\n    \"\"\"First pass: frame count, first frame, and a uniform sample of frames.\n\n    Only a handful of frames are kept, so memory stays small even for long\n    clips.  A fixed seed makes the sample deterministic for a given video.\n    \"\"\"\n    cap = cv2.VideoCapture(path)\n    if not cap.isOpened():\n        raise SystemExit(\"cannot open video: %s\" % path)\n    rng = np.random.default_rng(20240501)\n    first = None\n    samples = []\n    n = 0\n    while True:\n        ok, frame = cap.read()\n        if not ok:\n            break\n        if first is None:\n            first = frame.copy()\n        if len(samples) < n_samples:\n            samples.append(frame.copy())\n        else:\n            j = int(rng.integers(0, n + 1))\n            if j < n_samples:\n                samples[j] = frame.copy()\n        n += 1\n    cap.release()\n    if first is None:\n        raise SystemExit(\"video has no frames: %s\" % path)\n    return n, first, samples\n\n\ndef build_background(first, samples):\n    \"\"\"Background = first (runner-free) frame blended with a sampled median.\n\n    The median adds robustness against slow lighting / background drift.  A\n    uint8 partition is used for the median to avoid a large float64 copy.\n    \"\"\"\n    stack = np.stack(samples)\n    k = stack.shape[0] // 2\n    median_bg = np.partition(stack, k, axis=0)[k]\n    return 0.5 * first.astype(np.float32) + 0.5 * median_bg.astype(np.float32)\n\n\ndef foreground_masks(path, bg, n, H, W):\n    \"\"\"Second pass: motion-gated background-difference masks, one per frame.\n\n    A pixel is foreground when it differs from the background *and* changes\n    between consecutive frames.  The motion gate suppresses slow background\n    drift / generative \"morphing\" in the stands.\n    \"\"\"\n    masks = np.empty((n, H, W), np.uint8)\n    open_k = np.ones((3, 3), np.uint8)\n    close_k = np.ones((15, 15), np.uint8)\n    k7 = np.ones((7, 7), np.uint8)\n    cap = cv2.VideoCapture(path)\n    if not cap.isOpened():\n        raise SystemExit(\"cannot open video: %s\" % path)\n    prev = None\n    i = 0\n    while i < n:\n        ok, frame = cap.read()\n        if not ok:\n            break\n        f = frame.astype(np.float32)\n        diff = np.abs(f - bg).max(axis=2)\n        if prev is None:\n            motion = np.zeros_like(diff)\n        else:\n            motion = np.abs(f - prev).max(axis=2)\n        gate = cv2.dilate((motion > 15).astype(np.uint8), k7)\n        raw = ((diff > 35) & (gate > 0)).astype(np.uint8) * 255\n        masks[i] = cv2.morphologyEx(\n            cv2.morphologyEx(raw, cv2.MORPH_OPEN, open_k),\n            cv2.MORPH_CLOSE,\n            close_k,\n        )\n        prev = f\n        i += 1\n    cap.release()\n    return masks[:i] if i < n else masks\n\n\n'''\ns=s[:start]+new+s[end:]\nstart=s.index('def analyze(video_path):')\nend=s.index('def pick_video(')\nnew2='''def analyze(video_path):\n    n, first, samples = scan_video(video_path)\n    H, W = first.shape[:2]\n    bg = build_background(first, samples)\n    del samples\n    masks = foreground_masks(video_path, bg, n, H, W)\n    n = len(masks)\n    track = track_athlete(masks, H, W)\n    win = active_window(track, H)\n    if win is not None:\n        track = {t: c for t, c in track.items() if win[0] <= t <= win[1]}\n    bottoms, tops = silhouette_window(track, masks, H, W)\n    result = detect_jump(track, bottoms, tops, H, W)\n    if result is None:\n        # degenerate fallback: centre of the clip\n        mid = n // 2\n        result = (max(0, mid - 2), min(n - 1, mid + 2))\n    return result\n\n\n'''\ns=s[:start]+new2+s[end:]\nopen(p,'w').write(s)\nprint(\"refactored to two-pass streaming\")\nPY\npython3 -m py_compile jump_analyzer.py && echo compile-ok\npython3 jump_analyzer.py example_video.mp4\npython3 - <<'PY'\nimport resource, time, jump_analyzer as J\nt0=time.time(); r=J.analyze('example_video.mp4')\nprint(\"result\",r,\"time %.2fs\"%(time.time()-t0))\nprint(\"peak RSS MB\", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1024.0)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 949042,
+     "dur_ms": 10836,
+     "exit": 0,
+     "cpu_ms": 11877.2,
+     "phases_us": {
+      "acquire": 61,
+      "resume": 20812,
+      "mount": 17412,
+      "run": 10775822,
+      "destroy": 38616
+     },
+     "cold": null,
+     "vm": "vm-320"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 959899,
+   "dur_ms": 3489
+  },
+  {
+   "kind": "tool",
+   "at_ms": 963388,
+   "dur_ms": 48414,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np, jump_analyzer as J\ncap=cv2.VideoCapture('example_video.mp4'); F=[]\nwhile True:\n    ok,fr=cap.read()\n    if not ok: break\n    F.append(fr)\nF=np.stack(F); N,H,W=F.shape[0],F.shape[1],F.shape[2]\nfourcc=cv2.VideoWriter_fourcc(*'mp4v')\ndef save(name,arr):\n    v=cv2.VideoWriter(name,fourcc,30,(W,H))\n    for f in arr: v.write(f)\n    v.release()\nrng=np.random.default_rng(1)\nsave('var_shift.mp4',np.concatenate([np.repeat(F[0][None],30,0),F,np.repeat(F[0][None],30,0)]))\nsave('var_trim.mp4',F[10:])\nC=np.clip(F.astype(np.int16)+25,0,255).astype(np.uint8)\nC=np.clip(C.astype(np.int16)+rng.normal(0,6,C.shape).astype(np.int16),0,255).astype(np.uint8)\nsave('var_noise.mp4',C)\nsave('var_rev.mp4',F[::-1])\nsave('var_20fps.mp4',F[[i for i in range(N) if i%3!=2]])\nJf=[]\nfor f in F:\n    dx,dy=rng.integers(-1,2,2); M=np.float32([[1,0,dx],[0,1,dy]])\n    Jf.append(cv2.warpAffine(f,M,(W,H),borderMode=cv2.BORDER_REPLICATE))\nsave('var_jitter.mp4',np.stack(Jf))\nn2,first,samp=J.scan_video('example_video.mp4'); bg=J.build_background(first,samp)\nmasks=J.foreground_masks('example_video.mp4',bg,n2,H,W)\nd=np.ones((5,5),np.uint8)\nsave('var_white.mp4',np.stack([np.where(cv2.dilate(masks[i],d)>0,255,f).astype(np.uint8) for i,f in enumerate(F)]))\nsave('var_early.mp4',F[45:]); save('var_late.mp4',F[:66])\nsave('var_long.mp4',np.concatenate([np.repeat(F[0][None],120,0),F,np.repeat(F[0][None],120,0)]))\nprint(\"done\")\nPY\nfor v in var_shift var_trim var_noise var_rev var_20fps var_jitter var_white var_early var_late var_long; do echo \"== $v\"; python3 jump_analyzer.py $v.mp4; done\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 963443,
+     "dur_ms": 48351,
+     "exit": 1,
+     "cpu_ms": 51713.4,
+     "phases_us": {
+      "acquire": 63,
+      "resume": 21200,
+      "mount": 19086,
+      "run": 48141383,
+      "destroy": 188609
+     },
+     "cold": null,
+     "vm": "vm-321"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 1011802,
+   "dur_ms": 2801
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1014603,
+   "dur_ms": 35568,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 <<'PY'\nimport cv2, numpy as np, jump_analyzer as J\ncap=cv2.VideoCapture('example_video.mp4'); F=[]\nwhile True:\n    ok,fr=cap.read()\n    if not ok: break\n    F.append(fr)\nF=np.stack(F); N,H,W=F.shape[0],F.shape[1],F.shape[2]\nfourcc=cv2.VideoWriter_fourcc(*'mp4v')\ndef save(name,arr):\n    v=cv2.VideoWriter(name,fourcc,30,(W,H))\n    for f in arr: v.write(f)\n    v.release()\nn2,first,samp=J.scan_video('example_video.mp4'); bg=J.build_background(first,samp)\nmasks=J.foreground_masks('example_video.mp4',bg,n2,H,W)\nd=np.ones((5,5),np.uint8)\nWh=[]\nfor i,f in enumerate(F):\n    g=f.copy(); g[cv2.dilate(masks[i],d)>0]=255; Wh.append(g)\nsave('var_white.mp4',np.stack(Wh))\nsave('var_early.mp4',F[45:]); save('var_late.mp4',F[:66])\nsave('var_long.mp4',np.concatenate([np.repeat(F[0][None],120,0),F,np.repeat(F[0][None],120,0)]))\nprint(\"done\")\nPY\nfor v in var_white var_early var_late var_long; do echo \"== $v\"; python3 jump_analyzer.py $v.mp4; done\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 1014661,
+     "dur_ms": 35502,
+     "exit": 0,
+     "cpu_ms": 37512.4,
+     "phases_us": {
+      "acquire": 111,
+      "resume": 25582,
+      "mount": 21830,
+      "run": 35350487,
+      "destroy": 125663
+     },
+     "cold": null,
+     "vm": "vm-322"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 1050171,
+   "dur_ms": 13070
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1063241,
+   "dur_ms": 16268,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\necho \"--- references to old API ---\"\ngrep -n \"read_frames\\|build_background(frames\\|foreground_masks(frames\" jump_analyzer.py || echo \"none\"\necho \"--- function list ---\"\ngrep -n \"^def \" jump_analyzer.py\necho \"--- cleanup ---\"\nrm -f var_*.mp4\nrm -rf __pycache__\nls -la\necho \"--- final fresh run ---\"\nrm -f output.toml\npython3 jump_analyzer.py example_video.mp4\ncat output.toml\necho \"--- explicit path + default ---\"\npython3 jump_analyzer.py /app/example_video.mp4\npython3 jump_analyzer.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 1063300,
+     "dur_ms": 16183,
+     "exit": 0,
+     "cpu_ms": 17647.6,
+     "phases_us": {
+      "acquire": 82,
+      "resume": 21478,
+      "mount": 17901,
+      "run": 16125241,
+      "destroy": 36467
+     },
+     "cold": null,
+     "vm": "vm-323"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 1079509,
+   "dur_ms": 3820
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1083329,
+   "dur_ms": 124,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nsed -n '195,335p' jump_analyzer.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 1083381,
+     "dur_ms": 48,
+     "exit": 0,
+     "cpu_ms": 37.0,
+     "phases_us": {
+      "acquire": 73,
+      "resume": 21024,
+      "mount": 18939,
+      "run": 4566,
+      "destroy": 22319
+     },
+     "cold": null,
+     "vm": "vm-324"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 1083453,
+   "dur_ms": 6236
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1089689,
+   "dur_ms": 6005,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\np='jump_analyzer.py'\ns=open(p).read()\ns=s.replace('''    # Analyse only fully visible frames: partial entries/exits at the image\n    # borders produce spurious blobs that can masquerade as a flight arc.\n    full = [t for t in full if t in bottoms]\n    if len(full) < 4:\n        full = [t for t in bottoms]\n    b_full''','''    # Analyse only fully visible frames: partial entries/exits at the image\n    # borders produce spurious blobs that can masquerade as a flight arc.\n    b_full''')\ns=s.replace('''        length = b - a + 1\n        # horizontal location: jump should be near the hurdle (middle of frame)\n        return depth, length''','''        length = b - a + 1\n        return depth, length''')\nopen(p,'w').write(s)\nprint(\"cleaned\")\nPY\nrm -rf __pycache__\npython3 -m py_compile jump_analyzer.py && echo compile-ok\nrm -f output.toml\npython3 jump_analyzer.py example_video.mp4\ncat output.toml\necho \"--- final listing ---\"\nls -la\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 1089742,
+     "dur_ms": 5937,
+     "exit": 0,
+     "cpu_ms": 6538.0,
+     "phases_us": {
+      "acquire": 58,
+      "resume": 21551,
+      "mount": 18533,
+      "run": 5879213,
+      "destroy": 36113
+     },
+     "cold": null,
+     "vm": "vm-325"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 1095694,
+   "dur_ms": 1504
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1097198,
+   "dur_ms": 5889,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nrm -rf __pycache__\npython3 jump_analyzer.py /app/example_video.mp4\nrm -rf __pycache__\nls -la /app\ncat /app/output.toml\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 1097252,
+     "dur_ms": 5823,
+     "exit": 0,
+     "cpu_ms": 6399.3,
+     "phases_us": {
+      "acquire": 63,
+      "resume": 21682,
+      "mount": 19029,
+      "run": 5761210,
+      "destroy": 39649
+     },
+     "cold": null,
+     "vm": "vm-326"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 1103087,
+   "dur_ms": 3591
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 5.545,
+ "calls": 52,
+ "cell": "TB1b"
+}

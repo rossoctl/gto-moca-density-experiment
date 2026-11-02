@@ -1,0 +1,148 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-f",
+ "instance_id": "log-summary-date-ranges",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 7992,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 158,
+  "output": 1008,
+  "cacheRead": 20288,
+  "cacheWrite": 7296,
+  "total": 28750
+ },
+ "totals": {
+  "model_calls": 4,
+  "tool_calls": 3,
+  "model_ms": 5948,
+  "tool_ms": 793,
+  "sandbox_ms": 575
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1134,
+   "dur_ms": 714,
+   "tokens_in": 60,
+   "tokens_out": 116,
+   "cache_read": 1024,
+   "cache_write": 384,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1852,
+   "dur_ms": 166,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -la /workspace/logs 2>/dev/null || ls -la /app/logs\necho '--- samples ---'\nfor f in /workspace/logs/*.log; do echo \"== $f\"; head -3 \"$f\"; done 2>/dev/null | head -80\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 1902,
+     "dur_ms": 72,
+     "exit": 0,
+     "cpu_ms": 65.2,
+     "phases_us": {
+      "acquire": 57,
+      "resume": 20863,
+      "mount": 18849,
+      "run": 24377,
+      "destroy": 26900
+     },
+     "cold": null,
+     "vm": "vm-9"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 2021,
+   "dur_ms": 3565,
+   "tokens_in": 17,
+   "tokens_out": 682,
+   "cache_read": 1536,
+   "cache_write": 6528,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5587,
+   "dur_ms": 429,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport os, re, csv\nfrom datetime import date, timedelta\n\nlogs_dir = 'logs'\nref = date(2025, 8, 12)\nranges = {\n    'today': (ref, ref),\n    'last_7_days': (ref - timedelta(days=6), ref),\n    'last_30_days': (ref - timedelta(days=29), ref),\n    'month_to_date': (ref.replace(day=1), ref),\n}\nseverities = ['ERROR', 'WARNING', 'INFO']\n\ncounts = {p: {s: 0 for s in severities} for p in ranges}\ncounts['total'] = {s: 0 for s in severities}\n\npat = re.compile(r'^\\d{4}-\\d{2}-\\d{2}.*\\[(ERROR|WARNING|INFO)\\]')\nfor name in os.listdir(logs_dir):\n    m = re.match(r'(\\d{4}-\\d{2}-\\d{2})_.*\\.log$', name)\n    if not m:\n        continue\n    d = date.fromisoformat(m.group(1))\n    with open(os.path.join(logs_dir, name), encoding='utf-8', errors='replace') as f:\n        for line in f:\n            sm = pat.search(line)\n            if not sm:\n                continue\n            sev = sm.group(1)\n            counts['total'][sev] += 1\n            for p, (start, end) in ranges.items():\n                if start <= d <= end:\n                    counts[p][sev] += 1\n\nwith open('summary.csv', 'w', newline='') as f:\n    w = csv.writer(f)\n    w.writerow(['period', 'severity', 'count'])\n    for p in ['today','last_7_days','last_30_days','month_to_date','total']:\n        for s in severities:\n            w.writerow([p, s, counts[p][s]])\n\nprint(open('summary.csv').read())\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 5636,
+     "dur_ms": 361,
+     "exit": 0,
+     "cpu_ms": 378.6,
+     "phases_us": {
+      "acquire": 11,
+      "resume": 20814,
+      "mount": 18717,
+      "run": 322491,
+      "destroy": 17836
+     },
+     "cold": null,
+     "vm": "vm-12"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 6018,
+   "dur_ms": 1115,
+   "tokens_in": 18,
+   "tokens_out": 158,
+   "cache_read": 8704,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 7138,
+   "dur_ms": 198,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\necho 'severity bracket values:'\ngrep -ho '\\[[A-Z]\\+\\]' logs/*.log | sort | uniq -c\necho 'total lines:' $(cat logs/*.log | wc -l)\necho 'summary exists:'; cat summary.csv\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 7187,
+     "dur_ms": 142,
+     "exit": 0,
+     "cpu_ms": 160.3,
+     "phases_us": {
+      "acquire": 78,
+      "resume": 25030,
+      "mount": 22529,
+      "run": 93295,
+      "destroy": 22974
+     },
+     "cold": null,
+     "vm": "vm-17"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 7341,
+   "dur_ms": 554,
+   "tokens_in": 63,
+   "tokens_out": 52,
+   "cache_read": 9024,
+   "cache_write": 192,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.192,
+ "calls": 3,
+ "cell": "TB1f"
+}

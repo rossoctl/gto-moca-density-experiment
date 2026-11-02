@@ -1,0 +1,127 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "model-extraction-relu-logits",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 112913,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 141,
+  "output": 11447,
+  "cacheRead": 41152,
+  "cacheWrite": 1728,
+  "total": 54468
+ },
+ "totals": {
+  "model_calls": 5,
+  "tool_calls": 5,
+  "model_ms": 108060,
+  "tool_ms": 3661,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1129,
+   "dur_ms": 2319,
+   "tokens_in": 42,
+   "tokens_out": 116,
+   "cache_read": 1472,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3452,
+   "dur_ms": 13,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app && find /app -maxdepth 2 -type f | head -50"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3452,
+   "dur_ms": 13,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat /app/forward.py 2>/dev/null || find / -name forward.py 2>/dev/null | head"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3468,
+   "dur_ms": 95674,
+   "tokens_in": 17,
+   "tokens_out": 9969,
+   "cache_read": 1728,
+   "cache_write": 384,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 99143,
+   "dur_ms": 2,
+   "tool": "write",
+   "is_error": false,
+   "input": {
+    "path": "/app/steal.py",
+    "content": "\"\"\"Recover the first-layer weight matrix of a one-hidden-layer ReLU network.\n\nOnly the scalar function ``forward.forward`` is queried.  Along any line\nx(t) = x0 + t*v the network output is a continuous piecewise-linear function\nof t.  Its kinks are exactly the intersections of the line with the hidden\nneuron hyperplanes a_i . x + b_i = 0.  The gradient of the output changes by\na scalar multiple of a_i when such a hyperplane is crossed, so the gradient\njump at each kink gives the direction of one row of A1.\n\nThe recovered rows are therefore equal to the rows of A1 up to an arbitrary\npermutation and a (possibly negative) scale factor.\n\"\"\"\n\nimport numpy as np\n\nfrom forward import forward\n\nINPUT_DIM = 10\n\n# Numerical parameters for the line scan and finite-difference gradients.\nT = 80.0          # scan t in [-T, T]\nN = 32001         # number of samples on the line\nH_GRAD = 1e-7     # step for coordinate-wise finite differences\nN_LINES = 40      # maximum number of random lines to probe\nDOT_TOL = 0.999   # cosine similarity for saying two normals are the same\n\n\ndef grad(x):\n    \"\"\"Gradient of forward() at x, using central finite differences.\"\"\"\n    g = np.empty(INPUT_DIM, dtype=float)\n    for j in range(INPUT_DIM):\n        e = np.zeros(INPUT_DIM, dtype=float)\n        e[j] = H_GRAD\n        g[j] = (forward(x + e) - forward(x - e)) / (2.0 * H_GRAD)\n    return g\n\n\ndef canonical_direction(v):\n    \"\"\"Normalize v and remove its sign ambiguity.\"\"\"\n    n = np.linalg.norm(v)\n    if n == 0.0 or not np.isfinite(n):\n        return None\n    v = v / n\n    # The largest-magnitude component is made positive.\n    k = int(np.argmax(np.abs(v)))\n    if v[k] < 0.0:\n        v = -v\n    return v\n\n\ndef line_normals(x0, v, rng):\n    \"\"\"Find the hidden-neuron normal directions crossed by one random line.\"\"\"\n    ts = np.linspace(-T, T, N)\n    dt = ts[1] - ts[0]\n\n    fs = np.array([forward(x0 + t * v) for t in ts], dtype=float)\n    slopes = np.diff(fs) / dt\n\n    # A cell is \"mixed\" if its slope differs from both neighbouring cell\n    # slopes.  Such a cell contains exactly one kink (for a fine enough scan).\n    scale = 1.0 + float(np.max(np.abs(slopes)))\n    tol = 1e-8 * scale\n\n    mixed = set()\n    for k in range(1, len(slopes) - 1):\n        if (abs(slopes[k] - slopes[k - 1]) > tol and\n                abs(slopes[k + 1] - slopes[k]) > tol):\n            mixed.add(k)\n\n    normals = []\n    for k in sorted(mixed):\n        # Use centres of the unmixed cells just before and just after the\n        # mixed cell.  Then no other kink lies between the two test points.\n        if (k - 1) in mixed or (k + 1) in mixed:\n            continue\n\n        t_left = ts[k] - 0.5 * dt\n        t_right = ts[k + 1] + 0.5 * dt\n\n        # Small random perturbation avoids landing exactly on a grid point.\n        jitter = 0.1 * dt * rng.standard_normal()\n        t_left += jitter\n        t_right += jitter\n\n        g_left = grad(x0 + t_left * v)\n        g_right = grad(x0 + t_right * v)\n\n        d = canonical_direction(g_right - g_left)\n        if d is not None:\n            normals.append(d)\n\n    return normals\n\n\ndef main():\n    rng = np.random.default_rng(20240517)\n\n    clusters = []          # representative unit normals\n    counts = []            # how many times each normal was seen\n\n    no_new = 0\n    previous_count = 0\n\n    for line_idx in range(N_LINES):\n        # x0 spread over space makes it likely that all hyperplanes are\n        # crossed inside the scanned interval.\n        x0 = rng.standard_normal(INPUT_DIM)\n        v = rng.standard_normal(INPUT_DIM)\n        v /= np.linalg.norm(v)\n\n        for n in line_normals(x0, v, rng):\n            if not clusters:\n                clusters.append(n.copy())\n                counts.append(1)\n                continue\n\n            dots = np.array([float(np.dot(n, c)) for c in clusters])\n            j = int(np.argmax(np.abs(dots)))\n            # All canonical normals point in the same hemisphere for the same\n            # row, so a positive dot product identifies the cluster.\n            if dots[j] > DOT_TOL:\n                new_count = counts[j] + 1\n                clusters[j] = (clusters[j] * counts[j] + n) / new_count\n                clusters[j] = canonical_direction(clusters[j])\n                counts[j] = new_count\n            else:\n                clusters.append(n.copy())\n                counts.append(1)\n\n        # Stop once the set of directions has been stable for a while.\n        if len(clusters) == previous_count:\n            no_new += 1\n        else:\n            no_new = 0\n            previous_count = len(clusters)\n\n        if len(clusters) > 0 and no_new >= 12:\n            break\n\n    if not clusters:\n        raise RuntimeError(\"No hidden-neuron hyperplanes were detected\")\n\n    # Keep genuine neurons; each is seen on nearly every random line.  The\n    # minimum support of 2 discards rare numerical artifacts.\n    keep = [i for i, c in enumerate(counts) if c >= 2]\n    if not keep:\n        keep = list(range(len(clusters)))\n\n    A1_stolen = np.vstack([clusters[i] for i in keep])\n    A1_stolen = A1_stolen / np.linalg.norm(A1_stolen, axis=1, keepdims=True)\n\n    np.save(\"/app/stolen_A1.npy\", A1_stolen)\n    print(\"Recovered A1 shape:\", A1_stolen.shape)\n    np.set_printoptions(precision=6, suppress=True)\n    print(A1_stolen)\n\n\nif __name__ == \"__main__\":\n    main()\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 99148,
+   "dur_ms": 927,
+   "tokens_in": 27,
+   "tokens_out": 107,
+   "cache_read": 12096,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 100076,
+   "dur_ms": 3389,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && time python steal.py > /tmp/steal_out.txt 2>/tmp/steal_err.txt; echo \"exit=$?\"; cat /tmp/steal_out.txt; cat /tmp/steal_err.txt",
+   "timeout": 300
+  },
+  {
+   "kind": "model",
+   "at_ms": 103465,
+   "dur_ms": 2357,
+   "tokens_in": 39,
+   "tokens_out": 283,
+   "cache_read": 12224,
+   "cache_write": 1088,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 105823,
+   "dur_ms": 244,
+   "tool": "bash",
+   "is_error": true,
+   "command": "cd /app && python - <<'PY'\nimport numpy as np\nimport forward\nS=np.load('stolen_A1.npy')\nA=forward.A1\n# normalized A\nAn=A/np.linalg.norm(A,axis=1,keepdims=True)\nSn=S/np.linalg.norm(S,axis=1,keepdims=True)\nC=np.abs(An@Sn.T)\n# for each stolen row best match\nbest=C.max(axis=0) # for each true row best stolen? \nprint('true rows best match min/mean',C.max(axis=1).min(),C.max(axis=1).mean())\nprint('stolen rows best match',C.max(axis=0))\n# greedy assignment\nfrom scipy.optimize import linear_sum_assignment\nr,c=linear_sum_assignment(-C)\nprint('assignment cosines min',C[r,c].min())\nprint(sorted(C[r,c]))\n# check exact scale: S vs A sign\nfor i,j in zip(r,c):\n    pass\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 106068,
+   "dur_ms": 6783,
+   "tokens_in": 16,
+   "tokens_out": 972,
+   "cache_read": 13632,
+   "cache_write": 128,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.615,
+ "calls": 5,
+ "cell": "TB1e"
+}

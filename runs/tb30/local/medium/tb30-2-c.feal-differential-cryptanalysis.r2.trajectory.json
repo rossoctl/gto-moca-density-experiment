@@ -1,0 +1,172 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "feal-differential-cryptanalysis",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 87414,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 6953,
+  "output": 13817,
+  "cacheRead": 115904,
+  "cacheWrite": 0,
+  "total": 136674
+ },
+ "totals": {
+  "model_calls": 8,
+  "tool_calls": 7,
+  "model_ms": 79757,
+  "tool_ms": 6949,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 107,
+   "dur_ms": 3427,
+   "tokens_in": 51,
+   "tokens_out": 56,
+   "cache_read": 7104,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3534,
+   "dur_ms": 190,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat /app/feal.py; echo \"---LS---\"; ls -la /app"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3766,
+   "dur_ms": 23759,
+   "tokens_in": 815,
+   "tokens_out": 198,
+   "cache_read": 7168,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 27525,
+   "dur_ms": 2294,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport random\nfrom feal import f_function\n\ndef test(d,n=200000):\n    from collections import Counter\n    c=Counter()\n    for _ in range(n):\n        x=random.getrandbits(32)\n        c[f_function(x)^f_function(x^d)]+=1\n    print(hex(d), len(c), c.most_common(5))\nfor d in [0x80800000,0x80000000,0x00008000,0x80808080,0x01000000,0x02000000,0x00000080,0x80008000,0x00800000,0x00008080]:\n    test(d,50000)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 29835,
+   "dur_ms": 13551,
+   "tokens_in": 5375,
+   "tokens_out": 111,
+   "cache_read": 6976,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 43386,
+   "dur_ms": 38,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nfrom feal import f_function\nfor x in [0,1,0x12345678,0xffffffff,0x80000000,0x80]:\n    d=0x80000000\n    print(hex(x), hex(f_function(x)^f_function(x^d)))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 43569,
+   "dur_ms": 8872,
+   "tokens_in": 134,
+   "tokens_out": 176,
+   "cache_read": 14784,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 52441,
+   "dur_ms": 383,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport random\nfrom feal import f_function\n# enumerate high-bit toggles per byte\nfor mask in range(16):\n    d=0\n    for i in range(4):\n        if mask>>i & 1: d|=0x80<<(8*i)\n    vals=set()\n    for _ in range(20000):\n        x=random.getrandbits(32)\n        vals.add(f_function(x)^f_function(x^d))\n        if len(vals)>1: break\n    if len(vals)==1:\n        print(hex(d),hex(next(iter(vals))))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 52841,
+   "dur_ms": 19801,
+   "tokens_in": 109,
+   "tokens_out": 732,
+   "cache_read": 16448,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 72642,
+   "dur_ms": 51,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && cat > /tmp/proto.py <<'PY'\nimport random, time\nimport feal\n\ndef g(a,b,x):\n    t=(a+b+x)&0xff\n    return ((t<<2)|(t>>6))&0xff\n\ndef f(inp):\n    x=[0]*4\n    for i in range(4):\n        x[i]=inp&0xff; inp>>=8\n    y=[0]*4\n    y[2]=g(x[3]^x[2],x[1]^x[0],1)\n    y[3]=g(x[3],y[2],0)\n    y[1]=g(x[1]^x[0],y[2],0)\n    y[0]=g(x[0],y[1],1)\n    return (y[0]|(y[1]<<8)|(y[2]<<16)|(y[3]<<24))&0xffffffff\n\ndef attack(enc):\n    # deterministic differentials:\n    # beta -> gamma = 0x80800000 -> 0x02000000\n    beta=0x80800000; gamma=0x02000000\n    # choose delta = beta, eta = gamma\n    delta=0x80800000; eta=0x02000000\n    alpha=delta^gamma\n    dL=alpha\n    dR=beta^alpha\n    dL3=beta^eta\n    pairs=[]\n    for _ in range(4):\n        p=random.getrandbits(64)\n        # ensure canonical halves\n        q=((p>>32)&0xffffffff, p&0xffffffff)\n        # craft q with XOR diff in L/R\n        p1=p\n        p2=(((q[0]^dL)<<32)|(q[1]^dR))\n        c1=enc(p1); c2=enc(p2)\n        cl1=(c1>>32)&0xffffffff; cr1=c1&0xffffffff\n        cl2=(c2>>32)&0xffffffff; cr2=c2&0xffffffff\n        r31=cl1^cr1; r32=cl2^cr2\n        target=(cl1^cl2)^dL3\n        pairs.append((r31,r32,target))\n    found=[]\n    M=1234567\n    for s in range(0x10000):\n        k=(s*M)&0xffffffff\n        ok=True\n        for a,b,t in pairs:\n            if (f(a^k)^f(b^k))!=t:\n                ok=False; break\n        if ok:\n            found.append(k)\n    return found\n\nif __name__=='__main__':\n    for it in range(5):\n        feal.create_random_keys()\n        t=time.time(); res=attack(feal.encrypt); dt=time.time()-t\n        print('key5',hex(feal.key[5]),'found',[hex(x) for x in res],'time',dt)\nPY\npython3 /tmp/proto.py",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 72878,
+   "dur_ms": 900,
+   "tokens_in": 79,
+   "tokens_out": 72,
+   "cache_read": 20480,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 73778,
+   "dur_ms": 1326,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && PYTHONPATH=/app python3 /tmp/proto.py",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 75119,
+   "dur_ms": 8509,
+   "tokens_in": 208,
+   "tokens_out": 802,
+   "cache_read": 20608,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 83628,
+   "dur_ms": 2667,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && cat > attack.py <<'PY'\ndef _g(a, b, x):\n    t = (a + b + x) & 0xFF\n    return ((t << 2) | (t >> 6)) & 0xFF\n\n\ndef _f(value):\n    x = [0] * 4\n    for i in range(4):\n        x[i] = value & 0xFF\n        value >>= 8\n\n    y = [0] * 4\n    y[2] = _g(x[3] ^ x[2], x[1] ^ x[0], 1)\n    y[3] = _g(x[3], y[2], 0)\n    y[1] = _g(x[1] ^ x[0], y[2], 0)\n    y[0] = _g(x[0], y[1], 1)\n\n    return (y[0] | (y[1] << 8) | (y[2] << 16) | (y[3] << 24)) & 0xFFFFFFFF\n\n\ndef attack(encrypt_fn):\n    import random\n\n    beta = 0x80800000\n    gamma = 0x02000000\n    delta = 0x80800000\n    eta = 0x02000000\n\n    alpha = delta ^ gamma\n    plain_diff_left = alpha\n    plain_diff_right = beta ^ alpha\n    pre_last_diff = beta ^ eta\n\n    pairs = []\n    for _ in range(4):\n        p = random.getrandbits(64)\n        left = (p >> 32) & 0xFFFFFFFF\n        right = p & 0xFFFFFFFF\n        q = (((left ^ plain_diff_left) & 0xFFFFFFFF) << 32) | (\n            (right ^ plain_diff_right) & 0xFFFFFFFF\n        )\n\n        c1 = encrypt_fn(p)\n        c2 = encrypt_fn(q)\n\n        cl1 = (c1 >> 32) & 0xFFFFFFFF\n        cr1 = c1 & 0xFFFFFFFF\n        cl2 = (c2 >> 32) & 0xFFFFFFFF\n        cr2 = c2 & 0xFFFFFFFF\n\n        r3_1 = cl1 ^ cr1\n        r3_2 = cl2 ^ cr2\n        target = (cl1 ^ cl2) ^ pre_last_diff\n        pairs.append((r3_1, r3_2, target))\n\n    multiplier = 1234567\n    answers = []\n    for seed in range(0x10000):\n        candidate = (seed * multiplier) & 0xFFFFFFFF\n        for a, b, target in pairs:\n            if (_f(a ^ candidate) ^ _f(b ^ candidate)) != target:\n                break\n        else:\n            answers.append(candidate)\n            if len(answers) > 1:\n                break\n\n    if not answers:\n        raise ValueError(\"key[5] not found\")\n    return answers[0]\nPY\nPYTHONPATH=/app python3 - <<'PY'\nimport feal, attack, time\nfor _ in range(10):\n    feal.create_random_keys()\n    t=time.time(); got=attack.attack(feal.encrypt); dt=time.time()-t\n    assert got==feal.key[5], (hex(got),hex(feal.key[5]))\n    print(hex(got), round(dt,3))\nPY",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 86311,
+   "dur_ms": 938,
+   "tokens_in": 182,
+   "tokens_out": 53,
+   "cache_read": 22336,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.323,
+ "calls": 7,
+ "cell": "TB1c"
+}

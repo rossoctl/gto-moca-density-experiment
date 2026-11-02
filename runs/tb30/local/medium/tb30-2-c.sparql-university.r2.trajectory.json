@@ -1,0 +1,212 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "sparql-university",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 29524,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 6667,
+  "output": 4486,
+  "cacheRead": 131904,
+  "cacheWrite": 0,
+  "total": 143057
+ },
+ "totals": {
+  "model_calls": 10,
+  "tool_calls": 9,
+  "model_ms": 28603,
+  "tool_ms": 213,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 98,
+   "dur_ms": 3517,
+   "tokens_in": 12,
+   "tokens_out": 58,
+   "cache_read": 7296,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3615,
+   "dur_ms": 94,
+   "tool": "bash",
+   "is_error": false,
+   "command": "wc -l /app/university_graph.ttl && head -100 /app/university_graph.ttl"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3774,
+   "dur_ms": 537,
+   "tokens_in": 964,
+   "tokens_out": 53,
+   "cache_read": 7360,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4311,
+   "dur_ms": 20,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sed -n '100,305p' /app/university_graph.ttl"
+  },
+  {
+   "kind": "model",
+   "at_ms": 4357,
+   "dur_ms": 717,
+   "tokens_in": 3128,
+   "tokens_out": 53,
+   "cache_read": 8320,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5074,
+   "dur_ms": 18,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sed -n '250,305p' /app/university_graph.ttl"
+  },
+  {
+   "kind": "model",
+   "at_ms": 5115,
+   "dur_ms": 11376,
+   "tokens_in": 1611,
+   "tokens_out": 68,
+   "cache_read": 11520,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 16491,
+   "dur_ms": 11,
+   "tool": "bash",
+   "is_error": false,
+   "command": "which arq sparql riot; python3 -c \"import rdflib; print(rdflib.__version__)\" 2>/dev/null"
+  },
+  {
+   "kind": "model",
+   "at_ms": 16638,
+   "dur_ms": 2693,
+   "tokens_in": 48,
+   "tokens_out": 577,
+   "cache_read": 15360,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 19331,
+   "dur_ms": 8,
+   "tool": "write",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/solution.sparql",
+    "content": "PREFIX uni: <http://university.org/ontology/>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n\nSELECT ?professorName\n       (GROUP_CONCAT(DISTINCT ?country; separator=\", \") AS ?countries)\nWHERE {\n  # Full professors (exclude \"Assistant Professor ...\")\n  ?professor a uni:Person ;\n             uni:hasName ?professorName ;\n             uni:role ?role .\n  FILTER(STRSTARTS(STR(?role), \"Professor\"))\n\n  # The professor works in at least one department of a university\n  # located in an EU member state (as of 2025-08-16).\n  ?professor uni:worksIn ?euDepartment .\n  ?euDepartment uni:belongsTo ?euUniversity .\n  ?euUniversity uni:locatedInCountry ?euCountry .\n  FILTER(?euCountry IN (\n    \"AT\", \"BE\", \"BG\", \"HR\", \"CY\", \"CZ\", \"DK\", \"EE\", \"FI\", \"FR\",\n    \"DE\", \"GR\", \"HU\", \"IE\", \"IT\", \"LV\", \"LT\", \"LU\", \"MT\", \"NL\",\n    \"PL\", \"PT\", \"RO\", \"SK\", \"SI\", \"ES\", \"SE\"\n  ))\n\n  # At least one department the professor works in has more than 10\n  # students currently enrolled in classes taught in that department.\n  {\n    SELECT ?department\n    WHERE {\n      ?student uni:isEnrolledIn ?course .\n      ?course uni:isTaughtIn ?department .\n      ?student uni:hasEnrollmentDate ?enrollmentDate .\n      FILTER(?enrollmentDate <= \"2025-08-16\"^^xsd:date)\n      OPTIONAL { ?student uni:hasGraduationDate ?graduationDate }\n      FILTER(!BOUND(?graduationDate) ||\n             ?graduationDate > \"2025-08-16\"^^xsd:date)\n    }\n    GROUP BY ?department\n    HAVING (COUNT(DISTINCT ?student) > 10)\n  }\n  ?professor uni:worksIn ?department .\n\n  # All countries where the professor works.\n  ?professor uni:worksIn ?anyDepartment .\n  ?anyDepartment uni:belongsTo ?anyUniversity .\n  ?anyUniversity uni:locatedInCountry ?country .\n}\nGROUP BY ?professorName\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 19365,
+   "dur_ms": 1006,
+   "tokens_in": 33,
+   "tokens_out": 70,
+   "cache_read": 16000,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 20371,
+   "dur_ms": 15,
+   "tool": "bash",
+   "is_error": false,
+   "command": "pip install rdflib -q 2>&1 | tail -3",
+   "timeout": 60000
+  },
+  {
+   "kind": "model",
+   "at_ms": 20447,
+   "dur_ms": 772,
+   "tokens_in": 47,
+   "tokens_out": 74,
+   "cache_read": 16128,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 21219,
+   "dur_ms": 15,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 -m pip install rdflib -q 2>&1 | tail -3",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 21262,
+   "dur_ms": 2291,
+   "tokens_in": 83,
+   "tokens_out": 75,
+   "cache_read": 16192,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 23553,
+   "dur_ms": 16,
+   "tool": "bash",
+   "is_error": false,
+   "command": "which node ruby perl java 2>/dev/null; ls /usr/bin | grep -i -E 'sparql|arq|rdf|python|node' | head"
+  },
+  {
+   "kind": "model",
+   "at_ms": 23615,
+   "dur_ms": 3450,
+   "tokens_in": 53,
+   "tokens_out": 45,
+   "cache_read": 16576,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 27065,
+   "dur_ms": 16,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/solution.sparql"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 27143,
+   "dur_ms": 2244,
+   "tokens_in": 688,
+   "tokens_out": 69,
+   "cache_read": 17152,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.219,
+ "calls": 9,
+ "cell": "TB1c"
+}

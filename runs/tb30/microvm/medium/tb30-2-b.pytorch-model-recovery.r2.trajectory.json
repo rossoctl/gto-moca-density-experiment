@@ -1,0 +1,318 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "pytorch-model-recovery",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 107118,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 301,
+  "output": 14803,
+  "cacheRead": 206720,
+  "cacheWrite": 6720,
+  "total": 228544
+ },
+ "totals": {
+  "model_calls": 9,
+  "tool_calls": 9,
+  "model_ms": 78456,
+  "tool_ms": 30856,
+  "sandbox_ms": 28115
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 491,
+   "dur_ms": 2021
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1730,
+   "dur_ms": 2807,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nls -la\npython3 -c \"\nimport torch\nw = torch.load('/app/weights.pt', map_location='cpu')\nprint(type(w))\nprint('--- weights ---')\ntry:\n    for k,v in w.items():\n        print(k, tuple(v.shape), v.dtype)\nexcept Exception as e:\n    print('not dict', e)\n    print(w)\n\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 1808,
+     "dur_ms": 2706,
+     "exit": 0,
+     "cpu_ms": 3325.6,
+     "phases_us": {
+      "acquire": 68,
+      "resume": 20344,
+      "mount": 18084,
+      "run": 2625658,
+      "destroy": 59268
+     },
+     "cold": null,
+     "vm": "vm-71"
+    }
+   ]
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2512,
+   "dur_ms": 4789,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 -c \"\nimport torch\nd = torch.load('/app/dataset.pt', map_location='cpu')\nprint(type(d))\nif isinstance(d, dict):\n    for k,v in d.items():\n        print(k, type(v), getattr(v,'shape',None), getattr(v,'dtype',None))\nelse:\n    print(len(d))\n    for i,x in enumerate(d):\n        print(i, type(x), getattr(x,'shape',None), getattr(x,'dtype',None))\n\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 4587,
+     "dur_ms": 2703,
+     "exit": 0,
+     "cpu_ms": 3082.3,
+     "phases_us": {
+      "acquire": 76,
+      "resume": 23706,
+      "mount": 21208,
+      "run": 2612560,
+      "destroy": 66843
+     },
+     "cold": null,
+     "vm": "vm-70"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 7301,
+   "dur_ms": 12563
+  },
+  {
+   "kind": "tool",
+   "at_ms": 19864,
+   "dur_ms": 2794,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport torch\nprint('torch', torch.__version__)\nd = torch.load('/app/dataset.pt', map_location='cpu')\nsrc = d['src_sequences']; tgt = d['tgt_sequences']\nprint('src', src.shape, src.min().item(), src.max().item(), src.mean().item(), src.std().item())\nprint('tgt', tgt.shape, tgt.min().item(), tgt.max().item(), tgt.mean().item(), tgt.std().item())\nprint('src[0,:3,:6]'); print(src[0,:3,:6])\nprint('tgt[0,:3,:6]'); print(tgt[0,:3,:6])\nprint('dist src-tgt', (src-tgt).abs().mean().item())\n# check if tgt is shifted src\nfor s in range(-3,4):\n    if s>=0:\n        a=src[:, :src.shape[1]-s]; b=tgt[:, s:]\n    else:\n        a=src[:, -s:]; b=tgt[:, :tgt.shape[1]+s]\n    print('shift',s,(a-b).abs().mean().item())\nprint('norm src rows', src.norm(dim=-1)[0])\nprint('norm tgt rows', tgt.norm(dim=-1)[0])\nw = torch.load('/app/weights.pt', map_location='cpu')\nprint('pe stats', w['pos_encoder.pe'].abs().max().item(), w['pos_encoder.pe'][0,0,:8])\nprint('pos rows equal?', torch.allclose(w['pos_encoder.pe'][0,:5,:8], w['pos_encoder.pe'][0,:5,:8]))\n# inspect sinusoidal pattern\npe=w['pos_encoder.pe'][0]\nprint(pe[0,:10])\nprint(pe[1,:10])\nprint(pe[2,:10])\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 19926,
+     "dur_ms": 2720,
+     "exit": 0,
+     "cpu_ms": 3145.1,
+     "phases_us": {
+      "acquire": 25,
+      "resume": 20135,
+      "mount": 17515,
+      "run": 2641040,
+      "destroy": 59055
+     },
+     "cold": null,
+     "vm": "vm-79"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 22658,
+   "dur_ms": 8777
+  },
+  {
+   "kind": "tool",
+   "at_ms": 31435,
+   "dur_ms": 2918,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport torch, torch.nn as nn, itertools\nw = torch.load('/app/weights.pt', map_location='cpu')\nd = torch.load('/app/dataset.pt', map_location='cpu')\nsrc, tgt = d['src_sequences'], d['tgt_sequences']\n\nclass Emb(nn.Module):\n    def __init__(self, i, o):\n        super().__init__()\n        self.weight = nn.Parameter(torch.empty(o,i))\n        self.bias = nn.Parameter(torch.empty(o))\n    def forward(self,x): return x @ self.weight.t() + self.bias\n\nclass Pos(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.register_buffer('pe', torch.zeros(1,5000,128))\n    def forward(self,x): return x + self.pe[:, :x.size(1)]\n\nclass M(nn.Module):\n    def __init__(self, nhead, batch_first=True):\n        super().__init__()\n        self.embedding=Emb(64,128); self.pos_encoder=Pos()\n        self.transformer_encoder=nn.TransformerEncoder(nn.TransformerEncoderLayer(128,nhead,256,batch_first=batch_first),3)\n        self.transformer_decoder=nn.TransformerDecoder(nn.TransformerDecoderLayer(128,nhead,256,batch_first=batch_first),1)\n        self.output_layer=nn.Linear(128,64)\n    def forward(self,s,t):\n        m=self.transformer_encoder(self.pos_encoder(self.embedding(s)))\n        y=self.transformer_decoder(self.pos_encoder(self.embedding(t)), m)\n        return self.output_layer(y)\n\nfor bf in [True, False]:\n    for nh in [1,2,4,8,16]:\n        m=M(nh,bf)\n        try:\n            m.load_state_dict(w, strict=True)\n        except Exception as e:\n            print('load fail', bf, nh, e); continue\n        m.eval()\n        with torch.no_grad():\n            p=m(src,tgt)\n            mse=nn.functional.mse_loss(p,tgt).item()\n            mse_src=nn.functional.mse_loss(p,src).item()\n        print(f'bf={bf} nh={nh} mse_vs_tgt={mse:.5f} mse_vs_src={mse_src:.5f}')\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 31494,
+     "dur_ms": 2849,
+     "exit": 0,
+     "cpu_ms": 3638.4,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 19904,
+      "mount": 17293,
+      "run": 2767121,
+      "destroy": 61740
+     },
+     "cold": null,
+     "vm": "vm-86"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 34353,
+   "dur_ms": 10307
+  },
+  {
+   "kind": "tool",
+   "at_ms": 44660,
+   "dur_ms": 2827,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport torch, torch.nn as nn\nw = torch.load('/app/weights.pt', map_location='cpu')\nd = torch.load('/app/dataset.pt', map_location='cpu')\nsrc, tgt = d['src_sequences'], d['tgt_sequences']\nfor k in ['embedding.weight','embedding.bias','output_layer.weight','output_layer.bias','transformer_encoder.layers.0.norm1.weight','transformer_encoder.layers.0.self_attn.in_proj_weight']:\n    v=w[k]; print(k, 'min',v.min().item(),'max',v.max().item(),'std',v.std().item(),'mean',v.mean().item())\n# xavier bound\nimport math\nprint('xavier bound linear1/2', math.sqrt(6/(128+256)), 'attn', math.sqrt(6/(128+128)), 'emb', math.sqrt(6/(128+64)))\n# pos encoder check against formula\npe = w['pos_encoder.pe'][0]\nimport torch as T\nmaxdiff=0\nfor p in range(0,50):\n    for i in range(0,128,2):\n        val = math.sin(p/(10000**(i/128)))\n        maxdiff=max(maxdiff, abs(pe[p,i].item()-val))\nprint('PE sin maxdiff', maxdiff)\n# Check correlation tgt with shifted src over features\ns=src; t=tgt\nprint('autocorr src shift1', (s[:,:-1]-s[:,1:]).abs().mean().item())\nprint('autocorr tgt shift1', (t[:,:-1]-t[:,1:]).abs().mean().item())\n# per-position correlation between src[t] and tgt[t+1], flattened\na=s[:,:-1].reshape(-1,64); b=t[:,1:].reshape(-1,64)\nprint('corr src_t vs tgt_t+1 per dim mean', torch.corrcoef(torch.stack([a.flatten(),b.flatten()]))[0,1].item())\na=s.reshape(-1,64); b=t.reshape(-1,64)\nprint('corr src vs tgt per dim mean', torch.corrcoef(torch.stack([a.flatten(),b.flatten()]))[0,1].item())\n# per-dim correlation vector\ncs=[]\nfor i in range(64):\n    cs.append(torch.corrcoef(torch.stack([a[:,i],b[:,i]]))[0,1].item())\nprint('dim corr src tgt', torch.tensor(cs).abs().mean().item())\na=s[:,:-1].reshape(-1,64); b=t[:,1:].reshape(-1,64)\ncs=[]\nfor i in range(64):\n    cs.append(torch.corrcoef(torch.stack([a[:,i],b[:,i]]))[0,1].item())\nprint('dim corr src_t tgt_t+1', torch.tensor(cs).abs().mean().item())\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 44716,
+     "dur_ms": 2762,
+     "exit": 0,
+     "cpu_ms": 3392.5,
+     "phases_us": {
+      "acquire": 65,
+      "resume": 20853,
+      "mount": 18006,
+      "run": 2664098,
+      "destroy": 77051
+     },
+     "cold": null,
+     "vm": "vm-89"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 47487,
+   "dur_ms": 20093
+  },
+  {
+   "kind": "tool",
+   "at_ms": 67580,
+   "dur_ms": 2905,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport torch, torch.nn as nn, math\nw = torch.load('/app/weights.pt', map_location='cpu')\nd = torch.load('/app/dataset.pt', map_location='cpu')\nsrc, tgt = d['src_sequences'], d['tgt_sequences']\n\nclass PositionalEncoding(nn.Module):\n    def __init__(self, d_model=128, max_len=5000):\n        super().__init__()\n        pe = torch.zeros(max_len, d_model)\n        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)\n        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))\n        pe[:, 0::2] = torch.sin(position * div_term)\n        pe[:, 1::2] = torch.cos(position * div_term)\n        self.register_buffer('pe', pe.unsqueeze(0))\n    def forward(self, x):\n        return x + self.pe[:, :x.size(1)]\n\nclass RecoveredModel(nn.Module):\n    def __init__(self, nhead=8, num_enc=3, num_dec=1, d_model=128, ff=256, in_dim=64, out_dim=64):\n        super().__init__()\n        self.embedding = nn.Linear(in_dim, d_model)\n        self.pos_encoder = PositionalEncoding(d_model)\n        enc_layer = nn.TransformerEncoderLayer(d_model, nhead, ff, batch_first=True)\n        self.transformer_encoder = nn.TransformerEncoder(enc_layer, num_enc)\n        dec_layer = nn.TransformerDecoderLayer(d_model, nhead, ff, batch_first=True)\n        self.transformer_decoder = nn.TransformerDecoder(dec_layer, num_dec)\n        self.output_layer = nn.Linear(d_model, out_dim)\n    def forward(self, src, tgt):\n        memory = self.transformer_encoder(self.pos_encoder(self.embedding(src)))\n        out = self.transformer_decoder(self.pos_encoder(self.embedding(tgt)), memory)\n        return self.output_layer(out)\n\nfor nh in [4,8,16]:\n    m = RecoveredModel(nhead=nh)\n    m.load_state_dict(w, strict=True)\n    m.eval()\n    with torch.no_grad():\n        base = nn.functional.mse_loss(m(src,tgt), tgt).item()\n        h = m.transformer_decoder(m.pos_encoder(m.embedding(tgt)), m.transformer_encoder(m.pos_encoder(m.embedding(src))))\n    H = h.reshape(-1,128).double(); Y=tgt.reshape(-1,64).double()\n    Ha = torch.cat([H, torch.ones(H.shape[0],1,dtype=torch.double)],1)\n    sol = torch.linalg.lstsq(Ha, Y).solution\n    pred = (Ha@sol).float().reshape(tgt.shape)\n    tuned = nn.functional.mse_loss(pred,tgt).item()\n    print(f'nhead={nh} base={base:.6f} tuned={tuned:.6f} cond={torch.linalg.cond(Ha).item():.1f}')\n    # target src alternative\n    Ys=src.reshape(-1,64).double(); sols=torch.linalg.lstsq(Ha,Ys).solution\n    ts=nn.functional.mse_loss((Ha@sols).float().reshape(src.shape),src).item()\n    print('   tuned_to_src', ts)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 67642,
+     "dur_ms": 2832,
+     "exit": 0,
+     "cpu_ms": 3353.8,
+     "phases_us": {
+      "acquire": 64,
+      "resume": 20548,
+      "mount": 18085,
+      "run": 2737088,
+      "destroy": 74508
+     },
+     "cold": null,
+     "vm": "vm-95"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 70485,
+   "dur_ms": 5714
+  },
+  {
+   "kind": "tool",
+   "at_ms": 76199,
+   "dur_ms": 4069,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY' 2>&1 | tail -40\nimport torch, torch.nn as nn, math\nclass PositionalEncoding(nn.Module):\n    def __init__(self, d_model=128, max_len=5000):\n        super().__init__()\n        pe = torch.zeros(max_len, d_model)\n        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)\n        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))\n        pe[:, 0::2] = torch.sin(position * div_term)\n        pe[:, 1::2] = torch.cos(position * div_term)\n        self.register_buffer('pe', pe.unsqueeze(0))\n    def forward(self, x: torch.Tensor) -> torch.Tensor:\n        return x + self.pe[:, :x.size(1)]\n\nclass RecoveredModel(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.embedding = nn.Linear(64,128)\n        self.pos_encoder = PositionalEncoding(128)\n        self.transformer_encoder = nn.TransformerEncoder(nn.TransformerEncoderLayer(128,8,256,batch_first=True),3)\n        self.transformer_decoder = nn.TransformerDecoder(nn.TransformerDecoderLayer(128,8,256,batch_first=True),1)\n        self.output_layer = nn.Linear(128,64)\n    def forward(self, src: torch.Tensor, tgt: torch.Tensor) -> torch.Tensor:\n        memory = self.transformer_encoder(self.pos_encoder(self.embedding(src)))\n        out = self.transformer_decoder(self.pos_encoder(self.embedding(tgt)), memory)\n        return self.output_layer(out)\n\nw=torch.load('/app/weights.pt',map_location='cpu')\nm=RecoveredModel(); m.load_state_dict(w); m.eval()\nprint('orig keys', len(w), 'model keys', len(m.state_dict()))\nsrc=torch.randn(2,20,64); tgt=torch.randn(2,20,64)\n# try script\ntry:\n    sm = torch.jit.script(m)\n    print('script OK')\n    sd = sm.state_dict()\n    print('script keys equal?', list(sd.keys())==list(w.keys()), len(sd))\n    sm2 = torch.jit.load('/tmp/x.pt') if False else None\n    torch.jit.save(sm, '/tmp/scripted.pt')\n    lm = torch.jit.load('/tmp/scripted.pt')\n    lm.load_state_dict(w)\n    print('script reload+load_state_dict OK')\n    with torch.no_grad(): print('script out', lm(src,tgt).shape)\nexcept Exception as e:\n    print('script FAIL', type(e).__name__, str(e)[:500])\n# trace\ntry:\n    tm = torch.jit.trace(m, (src,tgt))\n    td = tm.state_dict()\n    print('trace keys equal?', list(td.keys())==list(w.keys()), len(td))\n    torch.jit.save(tm,'/tmp/traced.pt')\n    lm=torch.jit.load('/tmp/traced.pt'); lm.load_state_dict(w)\n    print('trace reload+load_state_dict OK')\nexcept Exception as e:\n    print('trace FAIL', type(e).__name__, str(e)[:500])\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 76255,
+     "dur_ms": 3980,
+     "exit": 0,
+     "cpu_ms": 4320.2,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 19890,
+      "mount": 17285,
+      "run": 3901830,
+      "destroy": 57462
+     },
+     "cold": null,
+     "vm": "vm-102"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 80268,
+   "dur_ms": 11561
+  },
+  {
+   "kind": "tool",
+   "at_ms": 91829,
+   "dur_ms": 4362,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put solution.py <<'EOF'\nimport math\nimport torch\nimport torch.nn as nn\n\nWEIGHTS_PATH = \"/app/weights.pt\"\nDATASET_PATH = \"/app/dataset.pt\"\nMODEL_PATH = \"/app/model.pt\"\n\nD_MODEL = 128\nNHEAD = 8\nNUM_ENCODER_LAYERS = 3\nNUM_DECODER_LAYERS = 1\nDIM_FEEDFORWARD = 256\nIN_DIM = 64\nOUT_DIM = 64\n\n\nclass PositionalEncoding(nn.Module):\n    def __init__(self, d_model: int = D_MODEL, max_len: int = 5000) -> None:\n        super().__init__()\n        pe = torch.zeros(max_len, d_model)\n        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)\n        div_term = torch.exp(\n            torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model)\n        )\n        pe[:, 0::2] = torch.sin(position * div_term)\n        pe[:, 1::2] = torch.cos(position * div_term)\n        self.register_buffer(\"pe\", pe.unsqueeze(0))  # (1, max_len, d_model)\n\n    def forward(self, x: torch.Tensor) -> torch.Tensor:\n        return x + self.pe[:, : x.size(1)]\n\n\nclass RecoveredModel(nn.Module):\n    def __init__(self) -> None:\n        super().__init__()\n        self.embedding = nn.Linear(IN_DIM, D_MODEL)\n        self.pos_encoder = PositionalEncoding(D_MODEL)\n        self.transformer_encoder = nn.TransformerEncoder(\n            nn.TransformerEncoderLayer(\n                d_model=D_MODEL,\n                nhead=NHEAD,\n                dim_feedforward=DIM_FEEDFORWARD,\n                batch_first=True,\n            ),\n            num_layers=NUM_ENCODER_LAYERS,\n        )\n        self.transformer_decoder = nn.TransformerDecoder(\n            nn.TransformerDecoderLayer(\n                d_model=D_MODEL,\n                nhead=NHEAD,\n                dim_feedforward=DIM_FEEDFORWARD,\n                batch_first=True,\n            ),\n            num_layers=NUM_DECODER_LAYERS,\n        )\n        self.output_layer = nn.Linear(D_MODEL, OUT_DIM)\n\n    def forward(self, src: torch.Tensor, tgt: torch.Tensor) -> torch.Tensor:\n        memory = self.transformer_encoder(self.pos_encoder(self.embedding(src)))\n        decoded = self.transformer_decoder(\n            self.pos_encoder(self.embedding(tgt)), memory\n        )\n        return self.output_layer(decoded)\n\n\ndef decoder_features(model: RecoveredModel, src: torch.Tensor, tgt: torch.Tensor) -> torch.Tensor:\n    \"\"\"Frozen features feeding into output_layer (no dependence on its weights).\"\"\"\n    with torch.no_grad():\n        memory = model.transformer_encoder(model.pos_encoder(model.embedding(src)))\n        decoded = model.transformer_decoder(\n            model.pos_encoder(model.embedding(tgt)), memory\n        )\n    return decoded\n\n\ndef main() -> None:\n    torch.manual_seed(0)\n    weights = torch.load(WEIGHTS_PATH, map_location=\"cpu\")\n    data = torch.load(DATASET_PATH, map_location=\"cpu\")\n    src = data[\"src_sequences\"].float()\n    tgt = data[\"tgt_sequences\"].float()\n\n    model = RecoveredModel()\n    model.load_state_dict(weights, strict=True)\n    model.eval()\n\n    with torch.no_grad():\n        base_pred = model(src, tgt)\n        base_mse = nn.functional.mse_loss(base_pred, tgt).item()\n    print(f\"Original MSE: {base_mse:.8f}\")\n\n    # Only output_layer may change.  Its input features are independent of it,\n    # so the optimal affine map can be obtained in closed form by least squares.\n    feats = decoder_features(model, src, tgt)\n    H = feats.reshape(-1, D_MODEL).double()\n    Y = tgt.reshape(-1, OUT_DIM).double()\n    H_aug = torch.cat([H, torch.ones(H.shape[0], 1, dtype=torch.double)], dim=1)\n    solution = torch.linalg.lstsq(H_aug, Y).solution\n\n    with torch.no_grad():\n        model.output_layer.weight.copy_(solution[:D_MODEL].t().float())\n        model.output_layer.bias.copy_(solution[D_MODEL].float())\n\n    model.eval()\n    with torch.no_grad():\n        tuned_pred = model(src, tgt)\n        tuned_mse = nn.functional.mse_loss(tuned_pred, tgt).item()\n    print(f\"Tuned MSE:    {tuned_mse:.8f}\")\n    assert tuned_mse < base_mse, (tuned_mse, base_mse)\n\n    # Freeze everything (documentation of intent; no further training happens).\n    for name, param in model.named_parameters():\n        param.requires_grad_(name.startswith(\"output_layer.\"))\n\n    scripted = torch.jit.script(model)\n    # Persist via a ScriptModule so parameters keep their original names.\n    torch.jit.save(scripted, MODEL_PATH)\n    print(f\"Saved TorchScript model to {MODEL_PATH}\")\n\n    # ---------------- verification ----------------\n    loaded = torch.jit.load(MODEL_PATH)\n    loaded.eval()\n\n    # 1) The saved model must accept the original state dict without errors.\n    fresh = torch.jit.load(MODEL_PATH)\n    fresh.load_state_dict(torch.load(WEIGHTS_PATH, map_location=\"cpu\"))\n    print(\"load_state_dict(original weights) on TorchScript model: OK\")\n\n    # 2) State dicts must match key/shape-wise, differing only in output_layer.\n    tuned_sd = loaded.state_dict()\n    assert set(tuned_sd.keys()) == set(weights.keys()), \"state dict key mismatch\"\n    differing = []\n    for k in weights:\n        if not torch.equal(tuned_sd[k], weights[k]):\n            differing.append(k)\n    print(\"Keys differing from original:\", sorted(differing))\n    assert all(k.startswith(\"output_layer.\") for k in differing)\n    for k in weights:\n        assert tuple(tuned_sd[k].shape) == tuple(weights[k].shape), k\n\n    # 3) Recheck the tuned loss through a freshly reloaded TorchScript model.\n    with torch.no_grad():\n        reloaded_mse = nn.functional.mse_loss(loaded(src, tgt), tgt).item()\n    print(f\"Reloaded TorchScript MSE: {reloaded_mse:.8f}\")\n\n    # 4) Baseline through the TorchScript model with original weights loaded.\n    with torch.no_grad():\n        fresh_base = nn.functional.mse_loss(fresh(src, tgt), tgt).item()\n    print(f\"TorchScript baseline MSE (original weights): {fresh_base:.8f}\")\n    assert reloaded_mse < fresh_base, (reloaded_mse, fresh_base)\n    print(\"ALL CHECKS PASSED\")\n\n\nif __name__ == \"__main__\":\n    main()\nEOF\nsbx run <<'EOF'\ncd /workspace && python3 solution.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 91891,
+     "dur_ms": 49,
+     "exit": 0,
+     "cpu_ms": 44.3,
+     "phases_us": {
+      "acquire": 84,
+      "resume": 21563,
+      "mount": 18202,
+      "run": 7487,
+      "destroy": 19747
+     },
+     "cold": null,
+     "vm": "vm-106"
+    },
+    {
+     "at_ms": 91986,
+     "dur_ms": 4194,
+     "exit": 0,
+     "cpu_ms": 4912.4,
+     "phases_us": {
+      "acquire": 35,
+      "resume": 20864,
+      "mount": 18153,
+      "run": 4095317,
+      "destroy": 77123
+     },
+     "cold": null,
+     "vm": "vm-78"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 96191,
+   "dur_ms": 4170
+  },
+  {
+   "kind": "tool",
+   "at_ms": 100361,
+   "dur_ms": 3385,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nls -la /app/model.pt /app/weights.pt /app/dataset.pt\npython3 - <<'PY'\nimport torch, hashlib\n# fresh-process verification\nm = torch.jit.load('/app/model.pt'); m.eval()\nd = torch.load('/app/dataset.pt', map_location='cpu')\nsrc, tgt = d['src_sequences'], d['tgt_sequences']\nwith torch.no_grad():\n    p = m(src, tgt)\nprint('forward ok', p.shape, 'finite', torch.isfinite(p).all().item())\nsd_new = m.state_dict(); sd_old = torch.load('/app/weights.pt', map_location='cpu')\ndiff = [k for k in sd_old if not torch.equal(sd_old[k], sd_new[k])]\nprint('keys', len(sd_new), len(sd_old), 'diff', diff)\nprint('new mse', torch.nn.functional.mse_loss(p, tgt).item())\nprint('weights.pt sha256', hashlib.sha256(open('/app/weights.pt','rb').read()).hexdigest())\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 100418,
+     "dur_ms": 3320,
+     "exit": 0,
+     "cpu_ms": 3674.8,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 24733,
+      "mount": 21372,
+      "run": 3219063,
+      "destroy": 75396
+     },
+     "cold": null,
+     "vm": "vm-110"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 103746,
+   "dur_ms": 3250
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 2.67,
+ "calls": 9,
+ "cell": "TB1b"
+}

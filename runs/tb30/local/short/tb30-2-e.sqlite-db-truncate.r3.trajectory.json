@@ -1,0 +1,183 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "sqlite-db-truncate",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 104822,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 214,
+  "output": 18525,
+  "cacheRead": 70720,
+  "cacheWrite": 6144,
+  "total": 95603
+ },
+ "totals": {
+  "model_calls": 7,
+  "tool_calls": 10,
+  "model_ms": 103330,
+  "tool_ms": 407,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1086,
+   "dur_ms": 826,
+   "tokens_in": 40,
+   "tokens_out": 122,
+   "cache_read": 1536,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1915,
+   "dur_ms": 10,
+   "tool": "bash",
+   "is_error": true,
+   "command": "ls -la /app/ && file /app/trunc.db && sqlite3 /app/trunc.db \".tables\" 2>&1 | head -50"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1915,
+   "dur_ms": 10,
+   "tool": "bash",
+   "is_error": false,
+   "command": "xxd /app/trunc.db | head -60"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1928,
+   "dur_ms": 1387,
+   "tokens_in": 25,
+   "tokens_out": 178,
+   "cache_read": 1600,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3316,
+   "dur_ms": 38,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 -c \"\nd=open('trunc.db','rb').read()\nprint(len(d))\nprint(d[:100])\nprint(d.hex())\n\""
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3316,
+   "dur_ms": 72,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 -c \"\nimport sqlite3\ncon=sqlite3.connect('trunc.db')\ntry:\n    cur=con.execute('select name,sql from sqlite_master')\n    print(cur.fetchall())\nexcept Exception as e:\n    print('ERR',e)\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 3391,
+   "dur_ms": 10742,
+   "tokens_in": 16,
+   "tokens_out": 1915,
+   "cache_read": 1984,
+   "cache_write": 3008,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14134,
+   "dur_ms": 21,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 -c \"\nd=open('trunc.db','rb').read()\nfor off in range(0,len(d),16):\n    chunk=d[off:off+16]\n    if any(chunk):\n        print(f'{off:04x}', chunk.hex(' '), ''.join(chr(c) if 32<=c<127 else '.' for c in chunk))\n\" | tail -40"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14134,
+   "dur_ms": 26,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 -c \"\nd=open('trunc.db','rb').read()\nprint('len',len(d))\n# header interpret\nimport struct\nprint('type',d[0],'freeblock',struct.unpack('>H',d[1:3])[0],'ncells',struct.unpack('>H',d[3:5])[0],'content',struct.unpack('>H',d[5:7])[0],'frag',d[7])\nn=struct.unpack('>H',d[3:5])[0]\nptrs=[struct.unpack('>H',d[8+2*i:10+2*i])[0] for i in range(n)]\nprint(ptrs)\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 14163,
+   "dur_ms": 47691,
+   "tokens_in": 63,
+   "tokens_out": 9103,
+   "cache_read": 6912,
+   "cache_write": 640,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 61854,
+   "dur_ms": 78,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nimport struct, json\n\nd=open('trunc.db','rb').read()\n\ndef varint(buf, pos):\n    v=0\n    for i in range(9):\n        b=buf[pos+i]\n        if i==8:\n            v=(v<<8)|b\n            return v,pos+9\n        v=(v<<7)|(b&0x7f)\n        if not (b&0x80):\n            return v,pos+i+1\n    raise ValueError\n\ndef decode_record(payload):\n    hlen,pos=varint(payload,0)\n    types=[]\n    hpos=pos\n    while hpos<hlen:\n        t,hpos=varint(payload,hpos)\n        types.append(t)\n    vals=[]\n    body=hlen\n    for t in types:\n        if t==0: vals.append(None)\n        elif t<=6:\n            n=[0,1,2,3,4,6,8][t]\n            v=int.from_bytes(payload[body:body+n],'big',signed=True)\n            body+=n; vals.append(v)\n        elif t==7:\n            v=struct.unpack('>d',payload[body:body+8])[0]; body+=8; vals.append(v)\n        elif t==8: vals.append(0)\n        elif t==9: vals.append(1)\n        elif t>=12:\n            n=(t-12)//2\n            if t%2==0:\n                vals.append(payload[body:body+n]); body+=n\n            else:\n                vals.append(payload[body:body+n].decode('utf-8','replace')); body+=n\n        else:\n            raise ValueError('serial %d'%t)\n    return vals\n\nncells=struct.unpack('>H',d[3:5])[0]\nptrs=[struct.unpack('>H',d[8+2*i:10+2*i])[0] for i in range(ncells)]\nprint('ncells',ncells,'ptrs',ptrs)\nrows=[]\nfor p in ptrs:\n    plen,pos=varint(d,p)\n    rowid,pos=varint(d,pos)\n    payload=d[pos:pos+plen]\n    vals=decode_record(payload)\n    print('cell@',p,'plen',plen,'rowid',rowid,'vals',vals)\n    rows.append((rowid,vals))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 61936,
+   "dur_ms": 21780,
+   "tokens_in": 5,
+   "tokens_out": 3672,
+   "cache_read": 16128,
+   "cache_write": 896,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 83716,
+   "dur_ms": 27,
+   "tool": "bash",
+   "is_error": false,
+   "command": "which sqlite3 sqlite3_analyzer strings 2>/dev/null; python3 -c \"import sqlite3; print(sqlite3.sqlite_version)\""
+  },
+  {
+   "kind": "tool",
+   "at_ms": 83717,
+   "dur_ms": 87,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nd=open('trunc.db','rb').read()\n# reconstruct a valid-looking DB: page1 = 4096-byte file header+schema page, page2 = our page\nimport struct, sqlite3, os, tempfile\n# Make page 2 our page\npage2=d\n# Build page1 minimal: header + btree leaf page with schema entry for table words(id INTEGER PRIMARY KEY, word TEXT, value)\n# Easier: create empty DB with page_size 4096, create table, then overwrite page2, adjust page count header.\ntmp='/tmp/rebuilt.db'\nif os.path.exists(tmp): os.remove(tmp)\ncon=sqlite3.connect(tmp)\ncon.execute('pragma page_size=4096')\ncon.execute('create table words(id integer primary key, word text, value)')\ncon.commit(); con.close()\ndb=bytearray(open(tmp,'rb').read())\nprint('orig rebuilt size',len(db))\n# create two pages: keep page1 (header+schema leaf) and append our page as page2\np1=db[:4096]\np2=bytearray(page2)\nnew=p1+p2\n# set page count = 2 in header offset 28\nnew[28:32]=(2).to_bytes(4,'big')\n# set version valid for rollback journal, change counter increment, freelist 0 (already)\nopen(tmp,'wb').write(new)\ncon=sqlite3.connect(tmp)\ntry:\n    print('integrity:',con.execute('pragma integrity_check').fetchall())\n    print('rows:',con.execute('select * from words').fetchall())\nexcept Exception as e:\n    print('ERR',e)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 83807,
+   "dur_ms": 11953,
+   "tokens_in": 57,
+   "tokens_out": 2077,
+   "cache_read": 20224,
+   "cache_write": 576,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 95761,
+   "dur_ms": 38,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nimport struct, json\n\nd=open('trunc.db','rb').read()\n\ndef varint(buf,pos):\n    v=0\n    for i in range(9):\n        b=buf[pos+i]\n        if i==8:\n            return (v<<8)|b, pos+9\n        v=(v<<7)|(b&0x7f)\n        if not b&0x80:\n            return v,pos+i+1\n\ndef decode(payload):\n    hlen,p=varint(payload,0)\n    types=[]\n    while p<hlen:\n        t,p=varint(payload,p); types.append(t)\n    vals=[]; body=hlen\n    for t in types:\n        if t==0: vals.append(None)\n        elif t<=6:\n            n=[0,1,2,3,4,6,8][t]\n            vals.append(int.from_bytes(payload[body:body+n],'big',signed=True)); body+=n\n        elif t==7:\n            vals.append(struct.unpack('>d',payload[body:body+8])[0]); body+=8\n        elif t==8: vals.append(0)\n        elif t==9: vals.append(1)\n        elif t>=12:\n            n=(t-12)//2\n            b=payload[body:body+n]; body+=n\n            vals.append(b.decode('utf-8') if t&1 else b)\n        else: raise ValueError(t)\n    return vals\n\nn=struct.unpack('>H',d[3:5])[0]\nptrs=[struct.unpack('>H',d[8+2*i:10+2*i])[0] for i in range(n)]\nrows=[]\nfor ptr in ptrs:\n    plen,p=varint(d,ptr)\n    rowid,p=varint(d,p)\n    vals=decode(d[p:p+plen])\n    rows.append((rowid, vals[1], vals[2]))\n\nrows.sort()\nout=[{\"word\":w,\"value\":v} for _,w,v in rows]\nwith open('recover.json','w') as f:\n    json.dump(out,f,indent=2)\nprint(json.dumps(out,indent=2))\nEOF\nls -l /app/recover.json"
+  },
+  {
+   "kind": "model",
+   "at_ms": 95799,
+   "dur_ms": 8951,
+   "tokens_in": 8,
+   "tokens_out": 1458,
+   "cache_read": 22336,
+   "cache_write": 832,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.107,
+ "calls": 10,
+ "cell": "TB1e"
+}

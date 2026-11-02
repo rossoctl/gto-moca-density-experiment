@@ -1,0 +1,733 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "chess-best-move",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 362535,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 27900,
+  "output": 28553,
+  "cacheRead": 1070016,
+  "cacheWrite": 0,
+  "total": 1126469
+ },
+ "totals": {
+  "model_calls": 36,
+  "tool_calls": 41,
+  "model_ms": 169754,
+  "tool_ms": 190519,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 103,
+   "dur_ms": 3763,
+   "tokens_in": 56,
+   "tokens_out": 53,
+   "cache_read": 7040,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3866,
+   "dur_ms": 84,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/chess_board.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 3974,
+   "dur_ms": 1196,
+   "tokens_in": 84,
+   "tokens_out": 185,
+   "cache_read": 7104,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5170,
+   "dur_ms": 90,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app && file /app/chess_board.png && python3 -c \"import PIL; print(PIL.__version__)\""
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5659,
+   "dur_ms": 51,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport importlib\nfor m in ['cv2','numpy','pytesseract','torch','onnxruntime']:\n    try:\n        mod=importlib.import_module(m); print(m,'OK',getattr(mod,'__version__',''))\n    except Exception as e: print(m,'NO',e)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 5748,
+   "dur_ms": 2579,
+   "tokens_in": 391,
+   "tokens_out": 153,
+   "cache_read": 7232,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 8327,
+   "dur_ms": 1758,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 -c \"import PIL; print('PIL',PIL.__version__)\"; python3 -m pip --version; which python3; ls /usr/lib/python3*/dist-packages 2>/dev/null | head"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 8340,
+   "dur_ms": 1739,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat /app/opencode.json; python3 - <<'EOF'\nfrom PIL import Image\nim=Image.open('/app/chess_board.png')\nprint(im.size, im.mode)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 10119,
+   "dur_ms": 1828,
+   "tokens_in": 226,
+   "tokens_out": 263,
+   "cache_read": 7744,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 11947,
+   "dur_ms": 155,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nfrom PIL import Image\nfrom collections import Counter\nim=Image.open('/app/chess_board.png').convert('RGB')\nprint(im.size)\nc=Counter(im.getdata())\nfor col,n in c.most_common(20): print(col,n)\n# sample grid-ish points\nfor y in range(0,640,40):\n    row=[]\n    for x in range(0,640,40):\n        row.append(im.getpixel((x,y)))\n   # print(y, row)\nEOF"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 12701,
+   "dur_ms": 83,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nfrom PIL import Image\nim=Image.open('/app/chess_board.png').convert('RGB')\n# detect rows/cols that are uniform-ish, scan color changes along middle\ny=320\nprev=None\nfor x in range(640):\n    p=im.getpixel((x,y))\n    if p!=prev:\n        print('x',x,p)\n        prev=p\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 12799,
+   "dur_ms": 3373,
+   "tokens_in": 426,
+   "tokens_out": 217,
+   "cache_read": 8320,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 16172,
+   "dur_ms": 149,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nfrom PIL import Image\nfrom collections import Counter\nim=Image.open('/app/chess_board.png').convert('RGB')\nfor r in range(8):\n    line=[]\n    for f in range(8):\n        box=(f*80,r*80,(f+1)*80,(r+1)*80)\n        t=im.crop(box)\n        c=Counter(t.getdata())\n        # count pure black, pure white, bg colors\n        blk=c.get((0,0,0),0); wht=c.get((255,255,255),0)\n        light=c.get((240,217,181),0); dark=c.get((181,136,99),0)\n        line.append(f\"{blk:4d}/{wht:4d}\")\n    print(r, ' '.join(line))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 16336,
+   "dur_ms": 5792,
+   "tokens_in": 378,
+   "tokens_out": 436,
+   "cache_read": 9216,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 22128,
+   "dur_ms": 86,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nfrom PIL import Image\nfrom collections import Counter\nim=Image.open('/app/chess_board.png').convert('RGB')\nfor (r,f,name) in [(0,1,'b8'),(0,2,'c8'),(0,4,'e8'),(0,0,'a8'),(3,4,'e5'),(4,4,'e4')]:\n    box=(f*80,r*80,(f+1)*80,(r+1)*80)\n    t=im.crop(box)\n    c=Counter(t.getdata())\n    print('\\n',name)\n    for col,n in c.most_common(8): print(col,n)\nEOF"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 23574,
+   "dur_ms": 91,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nfrom PIL import Image\nim=Image.open('/app/chess_board.png').convert('RGB')\n# Print ascii for row0 all files, 80x80 downsample 20x20 using darkness and whiteness\nchars=' .:-=+*#%@'\nfor r in range(8):\n  for f in range(8):\n    t=im.crop((f*80,r*80,(f+1)*80,(r+1)*80)).resize((16,8))\n    print(f'--- file {chr(97+f)} rank {8-r} ---')\n    for y in range(8):\n      s=''\n      for x in range(16):\n        p=t.getpixel((x,y))\n        lum=sum(p)/3\n        # background approx 180-240, piece black 0 or white 255\n        if lum<80: ch='#'\n        elif lum>250: ch='O'\n        else: ch='.'\n        s+=ch\n      print(s)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 23685,
+   "dur_ms": 10715,
+   "tokens_in": 1978,
+   "tokens_out": 293,
+   "cache_read": 10496,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 34400,
+   "dur_ms": 468,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nfrom PIL import Image\nfrom collections import Counter\nim=Image.open('/app/chess_board.png').convert('RGB')\nfor r in range(8):\n    line=[]\n    for f in range(8):\n        t=im.crop((f*80,r*80,(f+1)*80,(r+1)*80))\n        c=Counter(t.getdata())\n        bg=c.most_common(1)[0][0]\n        # non-bg significant\n        pix=list(t.getdata())\n        non=[p for p in pix if max(abs(p[i]-bg[i]) for i in range(3))>25]\n        if not non:\n            line.append('  .  '); continue\n        lum=sum(sum(p)/3 for p in non)/len(non)\n        # count very dark and very bright among non\n        dk=sum(1 for p in non if sum(p)/3<60)\n        br=sum(1 for p in non if sum(p)/3>245)\n        line.append(f\"{'W' if br>dk else 'B'}{len(non):4d}\")\n    print(8-r, ' '.join(line))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 34891,
+   "dur_ms": 6591,
+   "tokens_in": 205,
+   "tokens_out": 429,
+   "cache_read": 14144,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 41482,
+   "dur_ms": 472,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nfrom PIL import Image\nfrom collections import Counter\nim=Image.open('/app/chess_board.png').convert('RGB')\nocc={}\nfor r in range(8):\n    for f in range(8):\n        t=im.crop((f*80,r*80,(f+1)*80,(r+1)*80))\n        c=Counter(t.getdata()); bg=c.most_common(1)[0][0]\n        non=[p for p in t.getdata() if max(abs(p[i]-bg[i]) for i in range(3))>25]\n        if len(non)>100:\n            occ[(r,f)]=bg\nfor r in range(8):\n    files=[f for f in range(8) if (r,f) in occ]\n    if not files: continue\n    print('\\n===== RANK',8-r,'=====')\n    # headers\n    print('  '.join(f'{chr(97+f):^24}' for f in files))\n    tiles=[]\n    for f in files:\n        bg=occ[(r,f)]\n        t=im.crop((f*80,r*80,(f+1)*80,(r+1)*80)).resize((24,24))\n        grid=[]\n        for y in range(24):\n            row=''\n            for x in range(24):\n                p=t.getpixel((x,y))\n                if max(abs(p[i]-bg[i]) for i in range(3))<=18: row+='.'\n                elif sum(p)/3<70: row+='#'\n                elif sum(p)/3>240: row+='O'\n                else: row+='+'\n            grid.append(row)\n        tiles.append(grid)\n    for y in range(24):\n        print('  '.join(t[y] for t in tiles))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 41974,
+   "dur_ms": 5083,
+   "tokens_in": 3027,
+   "tokens_out": 379,
+   "cache_read": 15296,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 47057,
+   "dur_ms": 864,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport importlib.util\nfor m in ['chess','chess.engine','cairosvg','svgwrite','wand','aggdraw']:\n print(m, importlib.util.find_spec(m))\nEOF\nfind / -iname '*.svg' 2>/dev/null | head -50"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 48555,
+   "dur_ms": 684,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nfrom PIL import Image\nim=Image.open('/app/chess_board.png').convert('RGB')\n# save upscaled crops of rank8 and rank5 for our own ascii detailed binary; print bounding boxes\nfrom collections import Counter\nfor r in range(8):\n  for f in range(8):\n    t=im.crop((f*80,r*80,(f+1)*80,(r+1)*80))\n    c=Counter(t.getdata()); bg=c.most_common(1)[0][0]\n    xs=[];ys=[]\n    for y in range(80):\n      for x in range(80):\n        p=t.getpixel((x,y))\n        if max(abs(p[i]-bg[i]) for i in range(3))>25:\n          xs.append(x);ys.append(y)\n    if len(xs)>100:\n      print(chr(97+f)+str(8-r), 'bbox',min(xs),min(ys),max(xs),max(ys),'size',max(xs)-min(xs)+1,max(ys)-min(ys)+1,'n',len(xs))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 49256,
+   "dur_ms": 3734,
+   "tokens_in": 641,
+   "tokens_out": 130,
+   "cache_read": 19328,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 52990,
+   "dur_ms": 346,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 -m pip install --quiet numpy opencv-python-headless python-chess cairosvg 2>&1 | tail -20; python3 - <<'EOF'\nimport importlib.util\nfor m in ['numpy','cv2','chess','cairosvg']:\n print(m, bool(importlib.util.find_spec(m)))\nEOF",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 53355,
+   "dur_ms": 3091,
+   "tokens_in": 318,
+   "tokens_out": 141,
+   "cache_read": 20480,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 56446,
+   "dur_ms": 88,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 -m venv /tmp/venv && /tmp/venv/bin/pip install --quiet numpy python-chess cairosvg 2>&1 | tail -20; /tmp/venv/bin/python - <<'EOF'\nimport importlib.util\nfor m in ['numpy','chess','cairosvg']:\n print(m, bool(importlib.util.find_spec(m)))\nEOF",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 56551,
+   "dur_ms": 1374,
+   "tokens_in": 150,
+   "tokens_out": 138,
+   "cache_read": 20928,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 57925,
+   "dur_ms": 5774,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 -m pip install --break-system-packages --target /tmp/libs --quiet numpy python-chess cairosvg 2>&1 | tail -30; PYTHONPATH=/tmp/libs python3 - <<'EOF'\nimport importlib.util\nfor m in ['numpy','chess','cairosvg']:\n print(m, bool(importlib.util.find_spec(m)))\nEOF",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 63716,
+   "dur_ms": 2229,
+   "tokens_in": 121,
+   "tokens_out": 162,
+   "cache_read": 21184,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 65945,
+   "dur_ms": 91,
+   "tool": "bash",
+   "is_error": false,
+   "command": "PYTHONPATH=/tmp/libs python3 - <<'EOF'\nimport chess, chess.svg\nprint(chess.__version__)\nprint(hasattr(chess.svg,'PIECES'), len(chess.svg.PIECES) if hasattr(chess.svg,'PIECES') else None)\nprint(type(chess.svg.PIECES.get(chess.PAWN)))\nprint(list(chess.svg.PIECES.keys())[:12])\nEOF\nls /tmp/libs/chess/svg* 2>/dev/null; find /tmp/libs/chess -iname '*svg*' | head"
+  },
+  {
+   "kind": "model",
+   "at_ms": 66051,
+   "dur_ms": 1360,
+   "tokens_in": 138,
+   "tokens_out": 89,
+   "cache_read": 21568,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 67411,
+   "dur_ms": 90,
+   "tool": "bash",
+   "is_error": false,
+   "command": "PYTHONPATH=/tmp/libs python3 - <<'EOF'\nimport chess.svg as s\nfor k,v in s.PIECES.items():\n print(repr(k), type(v), str(v)[:200].replace('\\n',' '))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 67515,
+   "dur_ms": 3383,
+   "tokens_in": 1169,
+   "tokens_out": 69,
+   "cache_read": 21824,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 70898,
+   "dur_ms": 23,
+   "tool": "bash",
+   "is_error": false,
+   "command": "grep -n \"def piece\\|scale\\|squares\\|SQUARE_SIZE\\|size=\" /tmp/libs/chess/svg.py | head -60"
+  },
+  {
+   "kind": "model",
+   "at_ms": 70965,
+   "dur_ms": 785,
+   "tokens_in": 1002,
+   "tokens_out": 54,
+   "cache_read": 23424,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 71750,
+   "dur_ms": 20,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sed -n '280,440p' /tmp/libs/chess/svg.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 71809,
+   "dur_ms": 8210,
+   "tokens_in": 1781,
+   "tokens_out": 227,
+   "cache_read": 24448,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 80019,
+   "dur_ms": 310,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && PYTHONPATH=/tmp/libs python3 - <<'EOF'\nimport chess, chess.svg, cairosvg, io\nfrom PIL import Image\nimport numpy as np\nfor sym in 'PNBRQKpnbrqk':\n    p=chess.Piece.from_symbol(sym)\n    svg=chess.svg.piece(p,size=45)\n    png=cairosvg.svg2png(bytestring=svg.encode(),output_width=45,output_height=45)\n    im=Image.open(io.BytesIO(png)).convert('RGBA')\n    a=np.array(im)\n    alpha=a[:,:,3]\n    ys,xs=np.where(alpha>10)\n    print(sym,'bbox',xs.min(),ys.min(),xs.max(),ys.max(),'alpha>10',len(xs),'opaque',np.sum(alpha>250))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 80346,
+   "dur_ms": 1728,
+   "tokens_in": 440,
+   "tokens_out": 106,
+   "cache_read": 27392,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 82074,
+   "dur_ms": 10087,
+   "tool": "bash",
+   "is_error": false,
+   "command": "apt-get update -qq 2>&1 | tail -3; apt-get install -y -qq libcairo2 2>&1 | tail -5; ldconfig -p 2>/dev/null | grep -i cairo | head",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 92177,
+   "dur_ms": 1552,
+   "tokens_in": 218,
+   "tokens_out": 227,
+   "cache_read": 27968,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 93729,
+   "dur_ms": 501,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && PYTHONPATH=/tmp/libs python3 - <<'EOF'\nimport chess, chess.svg, cairosvg, io\nfrom PIL import Image\nimport numpy as np\nfor sym in 'PNBRQKpnbrqk':\n    p=chess.Piece.from_symbol(sym)\n    svg=chess.svg.piece(p,size=45)\n    png=cairosvg.svg2png(bytestring=svg.encode(),output_width=45,output_height=45)\n    im=Image.open(io.BytesIO(png)).convert('RGBA')\n    a=np.array(im); alpha=a[:,:,3]\n    ys,xs=np.where(alpha>10)\n    print(sym,'bbox',xs.min(),ys.min(),xs.max(),ys.max(),'n>10',len(xs),'opaque',int(np.sum(alpha>250)))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 94245,
+   "dur_ms": 6011,
+   "tokens_in": 312,
+   "tokens_out": 359,
+   "cache_read": 28352,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 100256,
+   "dur_ms": 157,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nfrom PIL import Image\nfrom collections import Counter\nim=Image.open('/app/chess_board.png').convert('RGB')\ndef show(f,r,step=2):\n    t=im.crop((f*80,r*80,(f+1)*80,(r+1)*80))\n    bg=Counter(t.getdata()).most_common(1)[0][0]\n    print('---',chr(97+f)+str(8-r),'bg',bg)\n    for y in range(0,80,step):\n      s=''\n      for x in range(0,80,step):\n        # average block\n        vals=[]\n        for yy in range(y,min(y+step,80)):\n          for xx in range(x,min(x+step,80)):\n            p=t.getpixel((xx,yy))\n            vals.append(p)\n        # determine max diff and lum\n        md=max(max(abs(p[i]-bg[i]) for i in range(3)) for p in vals)\n        lum=sum(sum(p)/3 for p in vals)/len(vals)\n        if md<=20: ch=' '\n        elif lum<80: ch='#'\n        elif lum>240: ch='O'\n        elif lum>180: ch='o'\n        else: ch='+'\n        s+=ch\n      print(s)\nfor sq in [(1,1),(2,0),(3,0),(5,0),(4,3),(7,3)]:\n    show(*sq)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 100434,
+   "dur_ms": 5420,
+   "tokens_in": 1341,
+   "tokens_out": 84,
+   "cache_read": 29760,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 105854,
+   "dur_ms": 18,
+   "tool": "bash",
+   "is_error": false,
+   "command": "fc-list 2>/dev/null | head -30; ls /usr/share/fonts/truetype/* 2>/dev/null | head -50; find /usr/share/fonts -type f | head -50"
+  },
+  {
+   "kind": "model",
+   "at_ms": 105935,
+   "dur_ms": 3048,
+   "tokens_in": 296,
+   "tokens_out": 373,
+   "cache_read": 31936,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 108983,
+   "dur_ms": 72,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nfrom PIL import Image, ImageDraw, ImageFont\nimport numpy as np\nfontpath='/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'\nfor sym,name in [('\\u265f','black pawn'),('\\u265d','black bishop'),('\\u265b','black queen'),('\\u265c','black rook'),('\\u2659','white pawn'),('\\u2654','white king')]:\n    for size in [50,60,64]:\n      im=Image.new('L',(100,100),255); d=ImageDraw.Draw(im)\n      f=ImageFont.truetype(fontpath,size)\n      d.text((10,10),sym,font=f,fill=0)\n      a=np.array(im); ys,xs=np.where(a<200)\n      print(name,size,'bbox',xs.min(),ys.min(),xs.max(),ys.max(),'wh',xs.max()-xs.min()+1,ys.max()-ys.min()+1)\n    if size==60:\n      im=Image.new('L',(100,100),255); d=ImageDraw.Draw(im); d.text((10,10),sym,font=ImageFont.truetype(fontpath,60),fill=0)\n      a=np.array(im)\n      for y in range(10,80,2):\n        print(''.join('#' if a[y,x]<100 else ('+' if a[y,x]<230 else ' ') for x in range(10,80,2)))\n    print()\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 109083,
+   "dur_ms": 1942,
+   "tokens_in": 73,
+   "tokens_out": 382,
+   "cache_read": 32704,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 111025,
+   "dur_ms": 329,
+   "tool": "bash",
+   "is_error": false,
+   "command": "PYTHONPATH=/tmp/libs python3 - <<'EOF'\nfrom PIL import Image, ImageDraw, ImageFont\nimport numpy as np\nfontpath='/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'\nfor sym,name in [('\\u265f','black pawn'),('\\u265d','black bishop'),('\\u265b','black queen'),('\\u265c','black rook'),('\\u2659','white pawn'),('\\u2654','white king')]:\n    for size in [50,60,64]:\n      im=Image.new('L',(120,120),255); d=ImageDraw.Draw(im)\n      f=ImageFont.truetype(fontpath,size)\n      d.text((10,10),sym,font=f,fill=0)\n      a=np.array(im); ys,xs=np.where(a<200)\n      print(name,size,'bbox',xs.min(),ys.min(),xs.max(),ys.max(),'wh',xs.max()-xs.min()+1,ys.max()-ys.min()+1)\n    # ascii size 60\n    im=Image.new('L',(120,120),255); d=ImageDraw.Draw(im); d.text((10,10),sym,font=ImageFont.truetype(fontpath,60),fill=0)\n    a=np.array(im)\n    for y in range(10,80,2):\n      print(''.join('#' if a[y,x]<100 else ('+' if a[y,x]<230 else ' ') for x in range(10,80,2)))\n    print()\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 111372,
+   "dur_ms": 3031,
+   "tokens_in": 1402,
+   "tokens_out": 477,
+   "cache_read": 33152,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 114403,
+   "dur_ms": 612,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && PYTHONPATH=/tmp/libs python3 - <<'EOF'\nimport chess, chess.svg, cairosvg, io\nfrom PIL import Image\nimport numpy as np\nfor sym,name in [('p','black pawn'),('b','black bishop'),('q','black queen'),('r','black rook'),('P','white pawn'),('K','white king'),('N','black knight')]:\n  for size in [60,64,80]:\n    p=chess.Piece.from_symbol(sym)\n    svg=chess.svg.piece(p,size=size)\n    png=cairosvg.svg2png(bytestring=svg.encode(),output_width=size,output_height=size)\n    im=Image.open(io.BytesIO(png)).convert('RGBA')\n    a=np.array(im); al=a[:,:,3]\n    ys,xs=np.where(al>10)\n    print(name,size,'bbox',xs.min(),ys.min(),xs.max(),ys.max(),'wh',xs.max()-xs.min()+1,ys.max()-ys.min()+1)\n  # ascii at 64, print alpha and fill\n  p=chess.Piece.from_symbol(sym); svg=chess.svg.piece(p,size=64)\n  im=Image.open(io.BytesIO(cairosvg.svg2png(bytestring=svg.encode(),output_width=64,output_height=64))).convert('RGBA')\n  a=np.array(im)\n  print(name)\n  for y in range(0,64,2):\n    s=''\n    for x in range(0,64,2):\n      block=a[y:y+2,x:x+2]\n      if block[:,:,3].max()<30: s+=' '\n      else:\n        # lum of rgb where alpha\n        rgb=block[:,:,:3][block[:,:,3]>30]\n        lum=rgb.mean()\n        s+= 'O' if lum>220 else ('#' if lum<80 else '+')\n    print(s)\n  print()\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 115030,
+   "dur_ms": 9993,
+   "tokens_in": 1766,
+   "tokens_out": 764,
+   "cache_read": 35136,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 125023,
+   "dur_ms": 3441,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && PYTHONPATH=/tmp/libs python3 - <<'EOF'\nimport chess, chess.svg, cairosvg, io, math\nfrom PIL import Image, ImageDraw\nimport numpy as np\nsrc=Image.open('/app/chess_board.png').convert('RGB')\ndef target_mask(f,r):\n    t=src.crop((f*80,r*80,(f+1)*80,(r+1)*80))\n    a=np.array(t).astype(int)\n    bg=np.array(t.getpixel((0,0)))\n    # use bg at corner; for dark squares corner is bg, pieces not at corner\n    diff=np.max(np.abs(a-bg),axis=2)\n    return diff>25, a, bg\n# cache templates at high res 160 then resize\ndef render(sym,size):\n    p=chess.Piece.from_symbol(sym)\n    svg=chess.svg.piece(p,size=180)\n    png=cairosvg.svg2png(bytestring=svg.encode(),output_width=180,output_height=180)\n    im=Image.open(io.BytesIO(png)).convert('RGBA')\n    return im\ntemps={s:render(s,180) for s in 'PNBRQKpnbrqk'}\ndef score(tm,sym,size,tmask):\n    im=tm.resize((size,size),Image.LANCZOS)\n    al=np.array(im)[:,:,3]>40\n    ys,xs=np.where(al)\n    if len(xs)==0: return -1\n    sub=al[ys.min():ys.max()+1, xs.min():xs.max()+1]\n    tys,txs=np.where(tmask)\n    if len(txs)==0: return -1\n    tsub=tmask[tys.min():tys.max()+1, txs.min():txs.max()+1]\n    # resize sub to target bbox size\n    pi=Image.fromarray((sub*255).astype(np.uint8)).resize((tsub.shape[1],tsub.shape[0]),Image.LANCZOS)\n    ps=np.array(pi)>127\n    inter=np.logical_and(ps,tsub).sum(); union=np.logical_or(ps,tsub).sum()\n    return inter/union\ndef classify(f,r,verbose=False):\n    tmask,a,bg=target_mask(f,r)\n    res=[]\n    for sym,tm in temps.items():\n        best=(-1,None)\n        for size in range(40,81,2):\n            sc=score(tm,sym,size,tmask)\n            if sc>best[0]: best=(sc,size)\n        res.append((best[0],sym,best[1]))\n    res.sort(reverse=True)\n    if verbose:\n        print(chr(97+f)+str(8-r), [(round(s,3),sym,sz) for s,sym,sz in res[:5]])\n    return res\nfor f,r in [(1,1),(2,0),(3,0),(5,0),(4,3),(7,3),(2,2),(3,5),(4,1),(4,2),(5,2),(6,2),(0,7),(2,7),(4,7)]:\n    classify(f,r,True)\nEOF",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 128483,
+   "dur_ms": 19293,
+   "tokens_in": 2485,
+   "tokens_out": 850,
+   "cache_read": 37376,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 147776,
+   "dur_ms": 7975,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && PYTHONPATH=/tmp/libs python3 - <<'EOF'\nimport chess, chess.svg, cairosvg, io\nfrom PIL import Image\nimport numpy as np\nsrc=Image.open('/app/chess_board.png').convert('RGB')\narr=np.array(src).astype(int)\ndef get_target(f,r):\n    a=arr[r*80:(r+1)*80, f*80:(f+1)*80]\n    bg=arr[r*80, f*80]  # top-left corner mostly bg except a8 coordinate? for a-file top-left has coord, avoid\n    diff=np.max(np.abs(a-bg),axis=2)\n    return diff>25,a,bg\n# render hi-res templates\ndef render(sym):\n    svg=chess.svg.piece(chess.Piece.from_symbol(sym),size=240)\n    png=cairosvg.svg2png(bytestring=svg.encode(),output_width=240,output_height=240)\n    return Image.open(io.BytesIO(png)).convert('RGBA')\ntemps={s:render(s) for s in 'PNBRQKpnbrqk'}\ndef match(f,r):\n    tm,a,bg=get_target(f,r)\n    # restrict region excluding coordinate margins (left 12, bottom 10) to reduce artifacts, but keep piece\n    tm2=tm.copy(); tm2[:, :12]=False; tm2[70:, :]=False\n    # target color: mean lum of masked pixels\n    lum=a[tm2].mean() if tm2.any() else 128\n    color='w' if lum>140 else 'b'\n    syms='PNBRQK' if color=='w' else 'pnbrqk'\n    results=[]\n    for sym in syms:\n        im=temps[sym]\n        best=(-1,None,None)\n        for size in range(42,79,2):\n            t=im.resize((size,size),Image.LANCZOS)\n            al=np.array(t)[:,:,3]>40\n            ys,xs=np.where(al)\n            if not len(xs): continue\n            sub=al[ys.min():ys.max()+1, xs.min():xs.max()+1]\n            H,W=sub.shape\n            for cy in range(25,56,2):\n              for cx in range(22,58,2):\n                x0=cx-W//2; y0=cy-H//2\n                if x0<0 or y0<0 or x0+W>80 or y0+H>80: continue\n                canvas=np.zeros((80,80),bool); canvas[y0:y0+H,x0:x0+W]=sub\n                inter=np.logical_and(canvas,tm2).sum(); union=np.logical_or(canvas,tm2).sum()\n                sc=inter/union if union else 0\n                if sc>best[0]: best=(sc,size,(x0,y0))\n        results.append((best[0],sym,best[1],best[2]))\n    results.sort(reverse=True)\n    return color,results\nfor f,r in [(1,1),(2,0),(3,0),(5,0),(4,3),(7,3),(2,2),(3,5),(4,1),(5,1),(6,1),(2,2),(0,2),(7,1),(5,2),(3,1)]:\n    color,res=match(f,r)\n    print(chr(97+f)+str(8-r),color,[(round(s,3),sym,sz,pos) for s,sym,sz,pos in res[:4]])\nEOF",
+   "timeout": 240000
+  },
+  {
+   "kind": "model",
+   "at_ms": 155773,
+   "dur_ms": 4582,
+   "tokens_in": 1434,
+   "tokens_out": 244,
+   "cache_read": 43520,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 160355,
+   "dur_ms": 90,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nfrom PIL import Image\nfrom collections import Counter\nim=Image.open('/app/chess_board.png').convert('RGB')\nfor name,f,r in [('e5',4,3),('h5',7,3),('b7',1,1),('c8',2,0),('a1',0,7),('c1',2,7),('e1',4,7),('h1',7,7),('c3',2,5),('e2',4,6)]:\n t=im.crop((f*80,r*80,(f+1)*80,(r+1)*80))\n print(name,'center',t.getpixel((40,40)),'corners',t.getpixel((0,0)),t.getpixel((79,79)))\n c=Counter(t.getdata())\n # colors near white fill\n print('  top:',c.most_common(5))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 160462,
+   "dur_ms": 7241,
+   "tokens_in": 992,
+   "tokens_out": 129,
+   "cache_read": 45824,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 167703,
+   "dur_ms": 28,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && mkdir -p pieces && curl -sL -o /tmp/pieces/cburnett_wP.svg https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/wP.svg && head -c 300 /tmp/pieces/cburnett_wP.svg; echo; ls -l /tmp/pieces",
+   "timeout": 60000
+  },
+  {
+   "kind": "model",
+   "at_ms": 167826,
+   "dur_ms": 1163,
+   "tokens_in": 18,
+   "tokens_out": 99,
+   "cache_read": 48256,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 168989,
+   "dur_ms": 22,
+   "tool": "bash",
+   "is_error": false,
+   "command": "which curl wget git; curl -IL --max-time 15 https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/wP.svg 2>&1 | head -20",
+   "timeout": 30000
+  },
+  {
+   "kind": "model",
+   "at_ms": 169038,
+   "dur_ms": 3576,
+   "tokens_in": 172,
+   "tokens_out": 354,
+   "cache_read": 48384,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 172614,
+   "dur_ms": 200,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nfrom PIL import Image\nfrom collections import Counter\nim=Image.open('/app/chess_board.png').convert('RGB')\ndef show(f,r,step=2):\n    t=im.crop((f*80,r*80,(f+1)*80,(r+1)*80))\n    bg=Counter(t.getdata()).most_common(1)[0][0]\n    print('=====',chr(97+f)+str(8-r),'bg',bg)\n    for y in range(0,80,step):\n      s=''\n      for x in range(0,80,step):\n        vals=[]\n        for yy in range(y,min(y+step,80)):\n          for xx in range(x,min(x+step,80)):\n            vals.append(t.getpixel((xx,yy)))\n        md=max(max(abs(p[i]-bg[i]) for i in range(3)) for p in vals)\n        lum=sum(sum(p)/3 for p in vals)/len(vals)\n        if md<=20: ch=' '\n        elif lum<80: ch='#'\n        elif lum>245: ch='O'\n        elif lum>180: ch='o'\n        else: ch='+'\n        s+=ch\n      print(s)\nfor sq in [(0,7),(2,7),(4,7),(7,7),(2,5),(4,6),(0,0),(5,3),(6,3)]:\n    show(*sq)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 172834,
+   "dur_ms": 19649,
+   "tokens_in": 2251,
+   "tokens_out": 273,
+   "cache_read": 49152,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 192483,
+   "dur_ms": 3184,
+   "tool": "bash",
+   "is_error": false,
+   "command": "apt-get install -y -qq stockfish 2>&1 | tail -5; which stockfish; stockfish --help 2>/dev/null | head -3",
+   "timeout": 180000
+  },
+  {
+   "kind": "tool",
+   "at_ms": 193321,
+   "dur_ms": 102,
+   "tool": "bash",
+   "is_error": false,
+   "command": "PYTHONPATH=/tmp/libs python3 - <<'EOF'\nimport chess\nfen='r1bq1r2/1p3pp1/p1n1p3/3nPkbP/8/P1N5/1P2QPP1/R1B1K2R w - - 0 1'\nb=chess.Board(fen)\nprint(b)\nprint('valid',b.is_valid())\nprint('check',b.is_check(), 'white king',b.king(chess.WHITE),'black king',b.king(chess.BLACK))\nprint('white legal moves',len(list(b.legal_moves)))\nfor m in b.legal_moves: print(m, end=' ')\nprint()\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 195687,
+   "dur_ms": 5267,
+   "tokens_in": 557,
+   "tokens_out": 269,
+   "cache_read": 55552,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 200954,
+   "dur_ms": 149927,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && PYTHONPATH=/tmp/libs python3 - <<'EOF'\nimport chess, chess.engine, os\nfen='r1bq1r2/1p3pp1/p1n1p3/3nPkbP/8/P1N5/1P2QPP1/R1B1K2R w - - 0 1'\neng=chess.engine.SimpleEngine.popen_uci('/usr/games/stockfish')\ntry:\n    for depth in [12,18,24,30]:\n        infos=eng.analyse(chess.Board(fen), chess.engine.Limit(depth=depth), multipv=10)\n        print('DEPTH',depth)\n        for info in infos:\n            pv=info.get('pv',[])\n            print(info.get('multipv'), info['score'].pov(chess.WHITE), ' '.join(str(m) for m in pv[:8]))\nfinally:\n    eng.quit()\nEOF",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 350902,
+   "dur_ms": 3967,
+   "tokens_in": 1279,
+   "tokens_out": 250,
+   "cache_read": 56896,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 354869,
+   "dur_ms": 81,
+   "tool": "bash",
+   "is_error": false,
+   "command": "PYTHONPATH=/tmp/libs python3 - <<'EOF'\nimport chess\nfen='r1bq1r2/1p3pp1/p1n1p3/3nPkbP/8/P1N5/1P2QPP1/R1B1K2R w - - 0 1'\nb=chess.Board(fen)\nmates=[]\nchecks=[]\nfor m in b.legal_moves:\n    b.push(m)\n    if b.is_check():\n        checks.append((str(m), b.is_checkmate()))\n    if b.is_checkmate(): mates.append(str(m))\n    b.pop()\nprint('mating moves:',mates)\nprint('all checking moves:',checks)\n# show lines for each mate\nfor m in mates:\n    b2=chess.Board(fen); b2.push_uci(m)\n    print('\\nMOVE',m)\n    print(b2)\n    print('black legal replies', [str(x) for x in b2.legal_moves])\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 354967,
+   "dur_ms": 4645,
+   "tokens_in": 298,
+   "tokens_out": 214,
+   "cache_read": 58816,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 359612,
+   "dur_ms": 86,
+   "tool": "bash",
+   "is_error": false,
+   "command": "PYTHONPATH=/tmp/libs python3 - <<'EOF'\nimport chess\nfen='r1bq1r2/1p3pp1/p1n1p3/3nPkbP/8/P1N5/1P2QPP1/R1B1K2R w - - 0 1'\nb=chess.Board(fen)\nmates=[str(m) for m in b.legal_moves if (b.push(m) or b.is_checkmate()) and not b.pop()]\nprint(mates)\nwith open('/app/move.txt','w') as f:\n    f.write('\\n'.join(mates)+'\\n')\nprint(open('/app/move.txt').read())\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 359713,
+   "dur_ms": 1783,
+   "tokens_in": 410,
+   "tokens_out": 203,
+   "cache_read": 59712,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 361496,
+   "dur_ms": 91,
+   "tool": "bash",
+   "is_error": false,
+   "command": "PYTHONPATH=/tmp/libs python3 - <<'EOF'\nimport chess\nfen='r1bq1r2/1p3pp1/p1n1p3/3nPkbP/8/P1N5/1P2QPP1/R1B1K2R w - - 0 1'\nb=chess.Board(fen)\nmates=[]\nfor m in b.legal_moves:\n    b.push(m)\n    if b.is_checkmate():\n        mates.append(str(m))\n    b.pop()\nprint('mates:',mates)\nwith open('/app/move.txt','w') as f:\n    f.write('\\n'.join(mates)+'\\n')\nprint('file contents:')\nprint(open('/app/move.txt').read(), end='')\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 361604,
+   "dur_ms": 777,
+   "tokens_in": 65,
+   "tokens_out": 30,
+   "cache_read": 60352,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.703,
+ "calls": 41,
+ "cell": "TB1c"
+}

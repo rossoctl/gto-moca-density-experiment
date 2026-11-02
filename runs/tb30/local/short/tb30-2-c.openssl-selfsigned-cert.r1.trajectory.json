@@ -1,0 +1,147 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "openssl-selfsigned-cert",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 18545,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 1377,
+  "output": 1434,
+  "cacheRead": 49024,
+  "cacheWrite": 0,
+  "total": 51835
+ },
+ "totals": {
+  "model_calls": 6,
+  "tool_calls": 6,
+  "model_ms": 13283,
+  "tool_ms": 2207,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 97,
+   "dur_ms": 3958,
+   "tokens_in": 374,
+   "tokens_out": 114,
+   "cache_read": 6976,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4055,
+   "dur_ms": 404,
+   "tool": "bash",
+   "is_error": false,
+   "command": "mkdir -p /app/ssl && openssl version && python3 --version && openssl req -x509 -newkey rsa:2048 -nodes -keyout /app/ssl/server.key -out /app/ssl/server.crt -days 365 -subj \"/O=DevOps Team/CN=dev-internal.company.local\" 2>&1"
+  },
+  {
+   "kind": "model",
+   "at_ms": 4481,
+   "dur_ms": 1381,
+   "tokens_in": 448,
+   "tokens_out": 116,
+   "cache_read": 7424,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5862,
+   "dur_ms": 64,
+   "tool": "bash",
+   "is_error": false,
+   "command": "chmod 600 /app/ssl/server.key && cat /app/ssl/server.key /app/ssl/server.crt > /app/ssl/server.pem && chmod 644 /app/ssl/server.crt /app/ssl/server.pem && openssl x509 -in /app/ssl/server.crt -noout -subject -dates -fingerprint -sha256"
+  },
+  {
+   "kind": "model",
+   "at_ms": 5940,
+   "dur_ms": 3179,
+   "tokens_in": 177,
+   "tokens_out": 57,
+   "cache_read": 8000,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 9119,
+   "dur_ms": 1536,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 -c \"import cryptography; print(cryptography.__version__)\" 2>&1"
+  },
+  {
+   "kind": "model",
+   "at_ms": 10678,
+   "dur_ms": 2009,
+   "tokens_in": 118,
+   "tokens_out": 652,
+   "cache_read": 8320,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 12687,
+   "dur_ms": 12,
+   "tool": "write",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/ssl/verification.txt",
+    "content": "Certificate Subject:\nsubject=O = DevOps Team, CN = dev-internal.company.local\n\nCertificate Validity:\nnotBefore=Nov  1 16:27:57 2026 GMT\nnotAfter=Nov  1 16:27:57 2027 GMT\n\nSHA-256 Fingerprint:\n78:C6:02:0C:02:27:C5:01:7E:DF:AF:74:CF:43:F1:6B:6B:2B:47:6D:5D:8B:35:0B:B5:0A:19:F5:44:3C:B6:9E\n"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 15392,
+   "dur_ms": 13,
+   "tool": "write",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/check_cert.py",
+    "content": "#!/usr/bin/env python3\nimport os\nimport subprocess\nimport sys\n\nCERT_PATH = \"/app/ssl/server.crt\"\n\n\ndef openssl(*args):\n    return subprocess.check_output(\n        [\"openssl\", \"x509\", \"-in\", CERT_PATH, \"-noout\", *args],\n        stderr=subprocess.STDOUT,\n        text=True,\n    ).strip()\n\n\ndef main():\n    if not os.path.isfile(CERT_PATH):\n        print(f\"Certificate not found: {CERT_PATH}\")\n        return 1\n\n    try:\n        subject = openssl(\"-subject\")\n        end_date = openssl(\"-enddate\").split(\"=\", 1)[1]\n        der = subprocess.check_output(\n            [\"openssl\", \"x509\", \"-in\", CERT_PATH, \"-outform\", \"DER\"],\n            stderr=subprocess.STDOUT,\n        )\n        if not der:\n            raise ValueError(\"Certificate could not be parsed\")\n    except (subprocess.CalledProcessError, IndexError, ValueError) as exc:\n        print(f\"Certificate verification failed: {exc}\")\n        return 1\n\n    common_name = \"\"\n    for part in subject.replace(\"subject=\", \"\").split(\",\"):\n        part = part.strip()\n        if part.startswith(\"CN\"):\n            common_name = part.split(\"=\", 1)[1].strip()\n            break\n\n    from datetime import datetime\n\n    expiry = datetime.strptime(end_date, \"%b %d %H:%M:%S %Y %Z\")\n\n    print(f\"Common Name: {common_name}\")\n    print(f\"Expiration Date: {expiry.strftime('%Y-%m-%d')}\")\n\n    if not common_name or expiry < datetime.now():\n        print(\"Certificate verification failed\")\n        return 1\n\n    print(\"Certificate verification successful\")\n    return 0\n\n\nif __name__ == \"__main__\":\n    sys.exit(main())\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 15451,
+   "dur_ms": 1051,
+   "tokens_in": 64,
+   "tokens_out": 87,
+   "cache_read": 9088,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 16502,
+   "dur_ms": 178,
+   "tool": "bash",
+   "is_error": false,
+   "command": "chmod 755 /app/check_cert.py && python3 /app/check_cert.py && ls -l /app/ssl && openssl verify -CAfile /app/ssl/server.crt /app/ssl/server.crt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 16693,
+   "dur_ms": 1705,
+   "tokens_in": 196,
+   "tokens_out": 127,
+   "cache_read": 9216,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.232,
+ "calls": 6,
+ "cell": "TB1c"
+}

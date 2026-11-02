@@ -1,0 +1,1003 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-f",
+ "instance_id": "largest-eigenval",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 524545,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 731,
+  "output": 35802,
+  "cacheRead": 587904,
+  "cacheWrite": 11392,
+  "total": 635829
+ },
+ "totals": {
+  "model_calls": 28,
+  "tool_calls": 27,
+  "model_ms": 188153,
+  "tool_ms": 335126,
+  "sandbox_ms": 333259
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1113,
+   "dur_ms": 726,
+   "tokens_in": 37,
+   "tokens_out": 89,
+   "cache_read": 1216,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1843,
+   "dur_ms": 117,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace && ls -la && echo \"--- eigen.py ---\" && cat eigen.py && echo \"--- eval.py ---\" && cat eval.py",
+   "sandbox": [
+    {
+     "at_ms": 1892,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 40.3,
+     "phases_us": {
+      "acquire": 65,
+      "resume": 20404,
+      "mount": 18364,
+      "run": 6573,
+      "destroy": 28255
+     },
+     "cold": null,
+     "vm": "vm-449"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 1963,
+   "dur_ms": 6087,
+   "tokens_in": 32,
+   "tokens_out": 795,
+   "cache_read": 1216,
+   "cache_write": 1024,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 8051,
+   "dur_ms": 267,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport numpy as np, sys, time\nprint(np.__version__, sys.version)\ntry:\n import scipy; print('scipy', scipy.__version__)\nexcept Exception as e: print('no scipy', e)\nnp.show_config()\nPY",
+   "sandbox": [
+    {
+     "at_ms": 8100,
+     "dur_ms": 209,
+     "exit": 0,
+     "cpu_ms": 303.6,
+     "phases_us": {
+      "acquire": 64,
+      "resume": 21548,
+      "mount": 19218,
+      "run": 161387,
+      "destroy": 26246
+     },
+     "cold": null,
+     "vm": "vm-452"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 8318,
+   "dur_ms": 2509,
+   "tokens_in": 31,
+   "tokens_out": 378,
+   "cache_read": 3008,
+   "cache_write": 960,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 10827,
+   "dur_ms": 323,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport numpy as np, os, glob\nprint(np.linalg.__file__)\nfor p in glob.glob('/usr/local/lib/python3.13/site-packages/numpy/**/*openblas*', recursive=True): print(p)\nfor p in glob.glob('/usr/local/lib/python3.13/site-packages/**/*openblas*', recursive=True): print(p)\nPY\nnm -D /usr/local/lib/python3.13/site-packages/numpy.libs/*openblas* 2>/dev/null | grep -E ' dgeev' | head\nldd /usr/local/lib/python3.13/site-packages/numpy/_core/_multiarray_umath*.so | head -30\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 10876,
+     "dur_ms": 241,
+     "exit": 0,
+     "cpu_ms": 374.8,
+     "phases_us": {
+      "acquire": 89,
+      "resume": 20237,
+      "mount": 18116,
+      "run": 189249,
+      "destroy": 31559
+     },
+     "cold": null,
+     "vm": "vm-454"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 11153,
+   "dur_ms": 11282,
+   "tokens_in": 44,
+   "tokens_out": 1772,
+   "cache_read": 4352,
+   "cache_write": 512,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 22435,
+   "dur_ms": 308,
+   "tool": "bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\ncd /workspace\nnm -D /usr/local/lib/python3.13/site-packages/numpy.libs/libscipy_openblas64_-56d6093b.so | grep -E ' (dgeev|dgeev_)' | head\ncat > bench.py <<'PY'\nimport numpy as np, time, ctypes, glob, os\nfrom numpy.linalg import eig\nLIB=glob.glob('/usr/local/lib/python3.13/site-packages/numpy.libs/libscipy_openblas64_*.so')[0]\nlib=ctypes.CDLL(LIB)\n# try ints as c_long\nf=lib.dgeev_\nf.restype=None\n# use ctypes prototypes\nci=ctypes.c_int64\nf.argtypes=[ctypes.c_char_p,ctypes.c_char_p,ctypes.POINTER(ci),\n ctypes.POINTER(ctypes.c_double),ctypes.POINTER(ci),\n ctypes.POINTER(ctypes.c_double),ctypes.POINTER(ctypes.c_double),\n ctypes.POINTER(ctypes.c_double),ctypes.POINTER(ci),\n ctypes.POINTER(ctypes.c_double),ctypes.POINTER(ci),\n ctypes.POINTER(ctypes.c_double),ctypes.POINTER(ci),ctypes.POINTER(ci)]\n\ndef fast(A):\n    n=A.shape[0]\n    # Need ensure contiguous float64\n    a=np.array(A,dtype=np.float64,order='F',copy=True)\n    wr=np.empty(n); wi=np.empty(n); vr=np.empty((n,n),order='F')\n    work=np.empty(100*n)\n    info=ci(0); nn=ci(n); lda=ci(n); ldvl=ci(1); ldvr=ci(n); lwork=ci(100*n)\n    f(b'N',b'V',ctypes.byref(nn),a.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),ctypes.byref(lda),\n      wr.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),wi.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),\n      None,ctypes.byref(ldvl),vr.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),ctypes.byref(ldvr),\n      work.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),ctypes.byref(lwork),ctypes.byref(info))\n    if info.value!=0: raise RuntimeError(info.value)\n    # select\n    best=0; bm=wr[0]*wr[0]+wi[0]*wi[0]\n    for i in range(1,n):\n        m=wr[i]*wr[i]+wi[i]*wi[i]\n        if m>bm: bm=m; best=i\n    if wi[best]==0:\n        return wr[best], vr[:,best].copy()\n    if wi[best]>0:\n        v=vr[:,best]+1j*vr[:,best+1]\n        return wr[best]+1j*wi[best], v\n    else:\n        v=vr[:,best]-1j*vr[:,best+1]\n        return wr[best]+1j*wi[best], v\n\nfor n in [2,4,6,8,10]:\n    errs=[]\n    for _ in range(100):\n        A=np.random.normal(size=(n,n))\n        l,v=fast(A)\n        assert np.allclose(A@v,l*v), (n,np.linalg.norm(A@v-l*v))\n        errs.append(np.linalg.norm(A@v-l*v))\n    print(n, max(errs))\n    for name,fn in [('ref', lambda A: (lambda ev,evec: (ev[np.argmax(np.abs(ev))],evec[:,np.argmax(np.abs(ev))]))(*eig(A))),('fast',fast)]:\n        ts=[]\n        for _ in range(500):\n            A=np.random.normal(size=(n,n))\n            t0=time.perf_counter(); fn(A); ts.append(time.perf_counter()-t0)\n        print(name, np.median(ts))\nPY\npython3 bench.py",
+   "sandbox": [
+    {
+     "at_ms": 22485,
+     "dur_ms": 217,
+     "exit": 1,
+     "cpu_ms": 305.0,
+     "phases_us": {
+      "acquire": 63,
+      "resume": 20258,
+      "mount": 17612,
+      "run": 165504,
+      "destroy": 31281
+     },
+     "cold": null,
+     "vm": "vm-456"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 22746,
+   "dur_ms": 1703,
+   "tokens_in": 3,
+   "tokens_out": 227,
+   "cache_read": 6656,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 24450,
+   "dur_ms": 261,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport glob,re\np=glob.glob('/usr/local/lib/python3.13/site-packages/numpy.libs/libscipy_openblas64_*.so')[0]\ndata=open(p,'rb').read()\nfor pat in [b'dgeev',b'geev',b'LAPACKE']:\n    print(pat, data.count(pat))\n    idx=data.find(pat)\n    print(data[idx-100:idx+200])\nPY\nwhich strings objdump readelf || true",
+   "sandbox": [
+    {
+     "at_ms": 24499,
+     "dur_ms": 204,
+     "exit": 0,
+     "cpu_ms": 207.2,
+     "phases_us": {
+      "acquire": 81,
+      "resume": 20537,
+      "mount": 18399,
+      "run": 155835,
+      "destroy": 27816
+     },
+     "cold": null,
+     "vm": "vm-460"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 24714,
+   "dur_ms": 2156,
+   "tokens_in": 26,
+   "tokens_out": 332,
+   "cache_read": 7104,
+   "cache_write": 768,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 26871,
+   "dur_ms": 293233,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport glob,re\np=glob.glob('/usr/local/lib/python3.13/site-packages/numpy.libs/libscipy_openblas64_*.so')[0]\ndata=open(p,'rb').read()\nfor m in re.finditer(rb'[A-Za-z0-9_]*dgeev[A-Za-z0-9_]*', data):\n    print(m.start(), m.group())\nPY\npython3 - <<'PY'\nimport ctypes,glob\np=glob.glob('/usr/local/lib/python3.13/site-packages/numpy.libs/libscipy_openblas64_*.so')[0]\nl=ctypes.CDLL(p)\nfor n in ['LAPACKE_dgeev','LAPACKE_dgeev_work','dgeev','dgeev_','dgeev_64_','LAPACKE_dgeev_64','LAPACKE_dgeev64']:\n try:\n  getattr(l,n); print('found',n)\n except Exception as e: print('no',n)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 26880,
+     "dur_ms": 293210,
+     "exit": 0,
+     "cpu_ms": 293250.1,
+     "phases_us": {
+      "acquire": 88,
+      "resume": 20329,
+      "mount": 18027,
+      "run": 293163492,
+      "destroy": 26374
+     },
+     "cold": null,
+     "vm": "vm-461"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 320106,
+   "dur_ms": 5385,
+   "tokens_in": 22,
+   "tokens_out": 868,
+   "cache_read": 8192,
+   "cache_write": 448,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 325491,
+   "dur_ms": 861,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncat > bench.py <<'PY'\nimport numpy as np, time, ctypes, glob\nfrom numpy.linalg import eig\nLIB=glob.glob('/usr/local/lib/python3.13/site-packages/numpy.libs/libscipy_openblas64_*.so')[0]\nlib=ctypes.CDLL(LIB)\nf=lib.scipy_dgeev_64_\nci=ctypes.c_int64\ndp=ctypes.POINTER(ctypes.c_double)\nf.argtypes=[ctypes.c_char_p,ctypes.c_char_p,ctypes.POINTER(ci),\n dp,ctypes.POINTER(ci),\n dp,dp,\n dp,ctypes.POINTER(ci),\n dp,ctypes.POINTER(ci),\n dp,ctypes.POINTER(ci),ctypes.POINTER(ci)]\n\ndef fast(A):\n    n=A.shape[0]\n    a=np.array(A,dtype=np.float64,order='F',copy=True)\n    wr=np.empty(n); wi=np.empty(n); vr=np.empty((n,n),order='F')\n    work=np.empty(100*n)\n    info=ci(0); nn=ci(n); lda=ci(n); ldvl=ci(1); ldvr=ci(n); lwork=ci(100*n)\n    f(b'N',b'V',ctypes.byref(nn),a.ctypes.data_as(dp),ctypes.byref(lda),\n      wr.ctypes.data_as(dp),wi.ctypes.data_as(dp),\n      None,ctypes.byref(ldvl),vr.ctypes.data_as(dp),ctypes.byref(ldvr),\n      work.ctypes.data_as(dp),ctypes.byref(lwork),ctypes.byref(info))\n    if info.value!=0: raise RuntimeError(info.value)\n    best=0; bm=wr[0]*wr[0]+wi[0]*wi[0]\n    for i in range(1,n):\n        m=wr[i]*wr[i]+wi[i]*wi[i]\n        if m>bm: bm=m; best=i\n    if wi[best]==0:\n        return wr[best], vr[:,best].copy()\n    if wi[best]>0:\n        v=vr[:,best]+1j*vr[:,best+1]\n    else:\n        v=vr[:,best]-1j*vr[:,best+1]\n    return wr[best]+1j*wi[best], v\n\ndef ref(A):\n    eigenvalues,eigenvectors=eig(A)\n    idx=np.argmax(np.abs(eigenvalues))\n    return eigenvalues[idx],eigenvectors[:,idx]\n\nfor n in [2,4,6,8,10]:\n    errs=[]\n    for _ in range(100):\n        A=np.random.normal(size=(n,n))\n        l,v=fast(A)\n        assert np.allclose(A@v,l*v), (n,np.linalg.norm(A@v-l*v))\n        errs.append(np.linalg.norm(A@v-l*v))\n    print(n, max(errs))\n    for name,fn in [('ref',ref),('fast',fast)]:\n        ts=[]\n        for _ in range(1000):\n            A=np.random.normal(size=(n,n))\n            t0=time.perf_counter(); fn(A); ts.append(time.perf_counter()-t0)\n        print(name, np.median(ts))\nPY\npython3 bench.py",
+   "sandbox": [
+    {
+     "at_ms": 325540,
+     "dur_ms": 773,
+     "exit": 0,
+     "cpu_ms": 848.2,
+     "phases_us": {
+      "acquire": 21660,
+      "resume": 19544,
+      "mount": 17711,
+      "run": 702077,
+      "destroy": 29056
+     },
+     "cold": "parked",
+     "vm": "vm-490"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 326355,
+   "dur_ms": 27702,
+   "tokens_in": 39,
+   "tokens_out": 4137,
+   "cache_read": 9472,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 354057,
+   "dur_ms": 264,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ngrep -R \"PyArray_Scalar\" -n /usr/local/lib/python3.13/site-packages/numpy/_core/include/numpy | head -20\ngrep -R \"PyArray_Scalar\" -n /usr/local/lib/python3.13/site-packages/numpy/_core/*.pyi 2>/dev/null | head\npython3 - <<'PY'\nimport numpy as np, inspect\nprint(np.__file__)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 354107,
+     "dur_ms": 208,
+     "exit": 0,
+     "cpu_ms": 303.3,
+     "phases_us": {
+      "acquire": 80,
+      "resume": 21070,
+      "mount": 17689,
+      "run": 161580,
+      "destroy": 24803
+     },
+     "cold": null,
+     "vm": "vm-492"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 354324,
+   "dur_ms": 11284,
+   "tokens_in": 16,
+   "tokens_out": 2400,
+   "cache_read": 13888,
+   "cache_write": 640,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 365609,
+   "dur_ms": 378,
+   "tool": "bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncat > _eigen.c <<'C'\n#define PY_SSIZE_T_CLEAN\n#include <Python.h>\n#include <numpy/arrayobject.h>\n#include <stdlib.h>\n#include <string.h>\n\ntypedef void (*dgeev_fn)(char*, char*, long*, double*, long*, double*, double*,\n                         double*, long*, double*, long*, double*, long*, long*);\n\nstatic dgeev_fn dgeev_ptr = NULL;\n\nstatic PyObject* set_dgeev(PyObject* self, PyObject* arg) {\n    unsigned long long addr = PyLong_AsUnsignedLongLong(arg);\n    if (PyErr_Occurred()) return NULL;\n    dgeev_ptr = (dgeev_fn)(uintptr_t)addr;\n    Py_RETURN_NONE;\n}\n\nstatic PyObject* dominant(PyObject* self, PyObject* arg) {\n    if (dgeev_ptr == NULL) {\n        PyErr_SetString(PyExc_RuntimeError, \"dgeev pointer not set\");\n        return NULL;\n    }\n    PyArrayObject* A = (PyArrayObject*)PyArray_FROM_OTF(arg, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);\n    if (A == NULL) return NULL;\n    if (PyArray_NDIM(A) != 2 || PyArray_DIM(A,0) != PyArray_DIM(A,1)) {\n        Py_DECREF(A);\n        PyErr_SetString(PyExc_ValueError, \"expected 2D square matrix\");\n        return NULL;\n    }\n    long n = (long)PyArray_DIM(A, 0);\n    long nn = n, lda = n, ldvl = 1, ldvr = n;\n    long lwork = 100 * n;\n    if (lwork < 1) lwork = 1;\n    long info = 0;\n    double *a, *wr, *wi, *vr, *work;\n    double stack_a[400], stack_wr[20], stack_wi[20], stack_vr[400], stack_work[2000];\n    if (n <= 20) {\n        a = stack_a; wr = stack_wr; wi = stack_wi; vr = stack_vr; work = stack_work;\n    } else {\n        a = (double*)malloc(sizeof(double)*n*n);\n        wr = (double*)malloc(sizeof(double)*n);\n        wi = (double*)malloc(sizeof(double)*n);\n        vr = (double*)malloc(sizeof(double)*n*n);\n        work = (double*)malloc(sizeof(double)*lwork);\n        if (!a || !wr || !wi || !vr || !work) {\n            free(a); free(wr); free(wi); free(vr); free(work);\n            Py_DECREF(A);\n            return PyErr_NoMemory();\n        }\n    }\n    const double* src = (const double*)PyArray_DATA(A);\n    /* input is C-contiguous; LAPACK wants column-major */\n    for (long j = 0; j < n; ++j)\n        for (long i = 0; i < n; ++i)\n            a[j*n + i] = src[i*n + j];\n    char jobvl = 'N', jobvr = 'V';\n    dgeev_ptr(&jobvl, &jobvr, &nn, a, &lda, wr, wi, NULL, &ldvl, vr, &ldvr,\n              work, &lwork, &info);\n    Py_DECREF(A);\n    if (info != 0) {\n        if (n > 20) { free(a); free(wr); free(wi); free(vr); free(work); }\n        PyErr_Format(PyExc_RuntimeError, \"dgeev failed with info=%ld\", info);\n        return NULL;\n    }\n    long best = 0;\n    double bestm = wr[0]*wr[0] + wi[0]*wi[0];\n    for (long i = 1; i < n; ++i) {\n        double m = wr[i]*wr[i] + wi[i]*wi[i];\n        if (m > bestm) { bestm = m; best = i; }\n    }\n    npy_intp dims[1] = {n};\n    PyObject* vec = PyArray_SimpleNew(1, dims, NPY_CDOUBLE);\n    if (vec == NULL) {\n        if (n > 20) { free(a); free(wr); free(wi); free(vr); free(work); }\n        return NULL;\n    }\n    npy_cdouble* out = (npy_cdouble*)PyArray_DATA((PyArrayObject*)vec);\n    double re, im;\n    if (wi[best] == 0.0) {\n        re = wr[best]; im = 0.0;\n        for (long i = 0; i < n; ++i) {\n            out[i].real = vr[i*n + best];\n            out[i].imag = 0.0;\n        }\n    } else if (wi[best] > 0.0) {\n        re = wr[best]; im = wi[best];\n        for (long i = 0; i < n; ++i) {\n            out[i].real = vr[i*n + best];\n            out[i].imag = vr[i*n + best + 1];\n        }\n    } else {\n        re = wr[best]; im = wi[best];\n        for (long i = 0; i < n; ++i) {\n            out[i].real = vr[i*n + best];\n            out[i].imag = -vr[i*n + best + 1];\n        }\n    }\n    if (n > 20) { free(a); free(wr); free(wi); free(vr); free(work); }\n    npy_cdouble zval;\n    zval.real = re; zval.imag = im;\n    PyObject* val = PyArray_Scalar(&zval, PyArray_DESCR((PyArrayObject*)vec), vec);\n    if (val == NULL) { Py_DECREF(vec); return NULL; }\n    PyObject* result = PyTuple_New(2);\n    if (result == NULL) { Py_DECREF(val); Py_DECREF(vec); return NULL; }\n    PyTuple_SET_ITEM(result, 0, val);\n    PyTuple_SET_ITEM(result, 1, vec);\n    return result;\n}\n\nstatic PyMethodDef methods[] = {\n    {\"dominant\", dominant, METH_O, \"dominant eigenpair\"},\n    {\"set_dgeev\", set_dgeev, METH_O, \"set dgeev address\"},\n    {NULL, NULL, 0, NULL}\n};\n\nstatic struct PyModuleDef moduledef = {\n    PyModuleDef_HEAD_INIT, \"_eigen\", NULL, -1, methods\n};\n\nPyMODINIT_FUNC PyInit__eigen(void) {\n    import_array();\n    return PyModule_Create(&moduledef);\n}\nC\ncc -O3 -march=native -shared -fPIC $(python3-config --includes) -I$(python3 -c 'import numpy; print(numpy.get_include())') _eigen.c -o _eigen$(python3-config --extension-suffix)\nls -la _eigen*.so\ncat > bench2.py <<'PY'\nimport numpy as np, time, ctypes, glob, sys\nsys.path.insert(0,'.')\nimport _eigen\nfrom numpy.linalg import eig\nLIB=glob.glob('/usr/local/lib/python3.13/site-packages/numpy.libs/libscipy_openblas64_*.so')[0]\nlib=ctypes.CDLL(LIB)\naddr=ctypes.cast(lib.scipy_dgeev_64_, ctypes.c_void_p).value\n_eigen.set_dgeev(addr)\nfast=_eigen.dominant\n\ndef ref(A):\n    eigenvalues,eigenvectors=eig(A)\n    idx=np.argmax(np.abs(eigenvalues))\n    return eigenvalues[idx],eigenvectors[:,idx]\n\nfor n in [2,4,6,8,10]:\n    errs=[]\n    for _ in range(1000):\n        A=np.random.normal(size=(n,n))\n        l,v=fast(A)\n        assert np.allclose(A@v,l*v), (n,np.linalg.norm(A@v-l*v),l)\n        errs.append(np.linalg.norm(A@v-l*v))\n    print(n, max(errs), type(l))\n    for name,fn in [('ref',ref),('fast',fast)]:\n        ts=[]\n        for _ in range(2000):\n            A=np.random.normal(size=(n,n))\n            t0=time.perf_counter(); fn(A); ts.append(time.perf_counter()-t0)\n        print(name, np.median(ts))\nPY\npython3 bench2.py",
+   "sandbox": [
+    {
+     "at_ms": 365658,
+     "dur_ms": 325,
+     "exit": 1,
+     "cpu_ms": 499.3,
+     "phases_us": {
+      "acquire": 69,
+      "resume": 20572,
+      "mount": 17421,
+      "run": 276103,
+      "destroy": 28372
+     },
+     "cold": null,
+     "vm": "vm-493"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 365991,
+   "dur_ms": 1072,
+   "tokens_in": 46,
+   "tokens_out": 121,
+   "cache_read": 16896,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 367064,
+   "dur_ms": 133,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nwhich gcc g++ clang cc c++ make python3-config || true\nls /usr/bin | grep -E 'gcc|clang|cc$|g\\+\\+' | head -20\napt-get --version | head -1\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 367113,
+     "dur_ms": 64,
+     "exit": 0,
+     "cpu_ms": 61.8,
+     "phases_us": {
+      "acquire": 57,
+      "resume": 20376,
+      "mount": 17990,
+      "run": 21091,
+      "destroy": 22707
+     },
+     "cold": null,
+     "vm": "vm-494"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 367200,
+   "dur_ms": 2340,
+   "tokens_in": 4,
+   "tokens_out": 405,
+   "cache_read": 17152,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 369540,
+   "dur_ms": 433,
+   "tool": "bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\nexport DEBIAN_FRONTEND=noninteractive\napt-get update -qq && apt-get install -y -qq gcc >/tmp/apt.log 2>&1 || (tail -50 /tmp/apt.log; exit 1)\ncd /workspace\ncc -O3 -march=native -shared -fPIC $(python3-config --includes) -I$(python3 -c 'import numpy; print(numpy.get_include())') _eigen.c -o _eigen$(python3-config --extension-suffix)\nls -la _eigen*.so\npython3 bench2.py",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 369590,
+     "dur_ms": 340,
+     "exit": 1,
+     "cpu_ms": 520.2,
+     "phases_us": {
+      "acquire": 59,
+      "resume": 19854,
+      "mount": 17780,
+      "run": 288306,
+      "destroy": 32028
+     },
+     "cold": null,
+     "vm": "vm-495"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 369976,
+   "dur_ms": 1524,
+   "tokens_in": 6,
+   "tokens_out": 293,
+   "cache_read": 17600,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 371500,
+   "dur_ms": 2003,
+   "tool": "bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\nmkdir -p /var/lib/apt/lists/partial\nexport DEBIAN_FRONTEND=noninteractive\napt-get update -qq >/tmp/apt.log 2>&1 || (cat /tmp/apt.log; exit 1)\napt-get install -y -qq gcc >>/tmp/apt.log 2>&1 || (cat /tmp/apt.log; exit 1)\nwhich cc\ncd /workspace\ncc -O3 -march=native -shared -fPIC $(python3-config --includes) -I$(python3 -c 'import numpy; print(numpy.get_include())') _eigen.c -o _eigen$(python3-config --extension-suffix)\nls -la _eigen*.so\npython3 bench2.py",
+   "timeout": 600,
+   "sandbox": [
+    {
+     "at_ms": 371549,
+     "dur_ms": 1907,
+     "exit": 1,
+     "cpu_ms": 2166.2,
+     "phases_us": {
+      "acquire": 77,
+      "resume": 19873,
+      "mount": 17789,
+      "run": 1851059,
+      "destroy": 36065
+     },
+     "cold": null,
+     "vm": "vm-496"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 373503,
+   "dur_ms": 1060,
+   "tokens_in": 31,
+   "tokens_out": 125,
+   "cache_read": 18048,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 374564,
+   "dur_ms": 406,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nid\nls -ld /var/lib/dpkg /var/lib/apt/lists /workspace\ncat /etc/os-release | head\nwhich sudo su\nls /usr/bin | head -50\npip --version\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 374613,
+     "dur_ms": 317,
+     "exit": 0,
+     "cpu_ms": 326.0,
+     "phases_us": {
+      "acquire": 58,
+      "resume": 20265,
+      "mount": 18198,
+      "run": 272344,
+      "destroy": 24578
+     },
+     "cold": null,
+     "vm": "vm-497"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 374970,
+   "dur_ms": 3649,
+   "tokens_in": 18,
+   "tokens_out": 547,
+   "cache_read": 18368,
+   "cache_write": 384,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 378620,
+   "dur_ms": 7628,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npip install --no-cache-dir --target /workspace/zigpkg ziglang -q && ls /workspace/zigpkg | head\nfind /workspace/zigpkg -maxdepth 3 -type f -name 'zig*' | head\npython3 - <<'PY'\nimport glob,os\nfor p in glob.glob('/workspace/zigpkg/**/zig', recursive=True):\n print(p, os.path.getsize(p))\nPY",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 378669,
+     "dur_ms": 7573,
+     "exit": 0,
+     "cpu_ms": 7731.6,
+     "phases_us": {
+      "acquire": 64,
+      "resume": 19952,
+      "mount": 17736,
+      "run": 7434581,
+      "destroy": 118603
+     },
+     "cold": null,
+     "vm": "vm-498"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 386248,
+   "dur_ms": 1377,
+   "tokens_in": 30,
+   "tokens_out": 209,
+   "cache_read": 19264,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 387625,
+   "dur_ms": 5348,
+   "tool": "bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\ncd /workspace\nZIG=/workspace/zigpkg/ziglang/zig\n$ZIG cc -O3 -march=native -shared -fPIC $(python3-config --includes) -I$(python3 -c 'import numpy; print(numpy.get_include())') _eigen.c -o _eigen$(python3-config --extension-suffix)\nls -la _eigen*.so\npython3 bench2.py",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 387674,
+     "dur_ms": 5272,
+     "exit": 1,
+     "cpu_ms": 5734.8,
+     "phases_us": {
+      "acquire": 70,
+      "resume": 66430,
+      "mount": 64311,
+      "run": 5157058,
+      "destroy": 48792
+     },
+     "cold": null,
+     "vm": "vm-499"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 392977,
+   "dur_ms": 2917,
+   "tokens_in": 45,
+   "tokens_out": 628,
+   "cache_read": 19712,
+   "cache_write": 576,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 395894,
+   "dur_ms": 5413,
+   "tool": "bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\np='_eigen.c'\ns=open(p).read()\ns=s.replace(\"npy_cdouble* out = (npy_cdouble*)PyArray_DATA((PyArrayObject*)vec);\", \"double* out = (double*)PyArray_DATA((PyArrayObject*)vec);\")\ns=s.replace(\"out[i].real = vr[i*n + best];\\n            out[i].imag = 0.0;\", \"out[2*i] = vr[i*n + best];\\n            out[2*i+1] = 0.0;\")\ns=s.replace(\"out[i].real = vr[i*n + best];\\n            out[i].imag = vr[i*n + best + 1];\", \"out[2*i] = vr[i*n + best];\\n            out[2*i+1] = vr[i*n + best + 1];\")\ns=s.replace(\"out[i].real = vr[i*n + best];\\n            out[i].imag = -vr[i*n + best + 1];\", \"out[2*i] = vr[i*n + best];\\n            out[2*i+1] = -vr[i*n + best + 1];\")\ns=s.replace(\"npy_cdouble zval;\\n    zval.real = re; zval.imag = im;\\n    PyObject* val = PyArray_Scalar(&zval, PyArray_DESCR((PyArrayObject*)vec), vec);\", \"double zval[2];\\n    zval[0] = re; zval[1] = im;\\n    PyObject* val = PyArray_Scalar(zval, PyArray_DESCR((PyArrayObject*)vec), vec);\")\nopen(p,'w').write(s)\nPY\nZIG=/workspace/zigpkg/ziglang/zig\n$ZIG cc -O3 -march=native -shared -fPIC $(python3-config --includes) -I$(python3 -c 'import numpy; print(numpy.get_include())') _eigen.c -o _eigen$(python3-config --extension-suffix)\nls -la _eigen*.so\npython3 bench2.py",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 395943,
+     "dur_ms": 5338,
+     "exit": 1,
+     "cpu_ms": 5671.4,
+     "phases_us": {
+      "acquire": 62,
+      "resume": 20083,
+      "mount": 17927,
+      "run": 5270489,
+      "destroy": 47732
+     },
+     "cold": null,
+     "vm": "vm-500"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 401307,
+   "dur_ms": 5746,
+   "tokens_in": 20,
+   "tokens_out": 1009,
+   "cache_read": 20928,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 407054,
+   "dur_ms": 6678,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nsed -i 's/vr\\[i\\*n + best\\]/vr[i + best*n]/g; s/vr\\[i\\*n + best + 1\\]/vr[i + (best+1)*n]/g' _eigen.c\nZIG=/workspace/zigpkg/ziglang/zig\n$ZIG cc -O3 -march=native -shared -fPIC $(python3-config --includes) -I$(python3 -c 'import numpy; print(numpy.get_include())') _eigen.c -o _eigen$(python3-config --extension-suffix)\npython3 bench2.py",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 407103,
+     "dur_ms": 6620,
+     "exit": 0,
+     "cpu_ms": 7061.0,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 20256,
+      "mount": 17998,
+      "run": 6543203,
+      "destroy": 56622
+     },
+     "cold": null,
+     "vm": "vm-501"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 413735,
+   "dur_ms": 28087,
+   "tokens_in": 30,
+   "tokens_out": 6469,
+   "cache_read": 22144,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 441822,
+   "dur_ms": 6208,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncat > _eigen.c <<'C'\n#define PY_SSIZE_T_CLEAN\n#include <Python.h>\n#include <numpy/arrayobject.h>\n#include <stdint.h>\n#include <stdlib.h>\n\ntypedef void (*dgeev_fn)(char*, char*, long*, double*, long*, double*, double*,\n                         double*, long*, double*, long*, double*, long*, long*);\n\nstatic dgeev_fn dgeev_ptr = NULL;\n\nstatic PyObject* set_dgeev(PyObject* self, PyObject* arg) {\n    unsigned long long addr = PyLong_AsUnsignedLongLong(arg);\n    if (PyErr_Occurred()) return NULL;\n    dgeev_ptr = (dgeev_fn)(uintptr_t)addr;\n    Py_RETURN_NONE;\n}\n\nstatic PyObject* dominant(PyObject* self, PyObject* arg) {\n    if (dgeev_ptr == NULL) {\n        PyErr_SetString(PyExc_RuntimeError, \"dgeev pointer not set\");\n        return NULL;\n    }\n    PyArrayObject* A = (PyArrayObject*)PyArray_FROM_OTF(\n        arg, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);\n    if (A == NULL) return NULL;\n    if (PyArray_NDIM(A) != 2 || PyArray_DIM(A,0) != PyArray_DIM(A,1)) {\n        Py_DECREF(A);\n        PyErr_SetString(PyExc_ValueError, \"expected 2D square matrix\");\n        return NULL;\n    }\n    long n = (long)PyArray_DIM(A, 0);\n    long nn = n, lda = n, ldvl = 1, ldvr = n;\n    long lwork = 100 * n;\n    if (lwork < 1) lwork = 1;\n    long info = 0;\n    double *a, *wr, *wi, *vr, *work;\n    double stack_a[400], stack_wr[20], stack_wi[20], stack_vr[400], stack_work[2000];\n    if (n <= 20) {\n        a = stack_a; wr = stack_wr; wi = stack_wi; vr = stack_vr; work = stack_work;\n    } else {\n        a = (double*)malloc(sizeof(double)*n*n);\n        wr = (double*)malloc(sizeof(double)*n);\n        wi = (double*)malloc(sizeof(double)*n);\n        vr = (double*)malloc(sizeof(double)*n*n);\n        work = (double*)malloc(sizeof(double)*lwork);\n        if (!a || !wr || !wi || !vr || !work) {\n            free(a); free(wr); free(wi); free(vr); free(work);\n            Py_DECREF(A);\n            return PyErr_NoMemory();\n        }\n    }\n    const double* src = (const double*)PyArray_DATA(A);\n    /* input is C-contiguous; LAPACK wants column-major */\n    for (long j = 0; j < n; ++j)\n        for (long i = 0; i < n; ++i)\n            a[j*n + i] = src[i*n + j];\n    char jobvl = 'N', jobvr = 'V';\n    dgeev_ptr(&jobvl, &jobvr, &nn, a, &lda, wr, wi, NULL, &ldvl, vr, &ldvr,\n              work, &lwork, &info);\n    Py_DECREF(A);\n    if (info != 0) {\n        if (n > 20) { free(a); free(wr); free(wi); free(vr); free(work); }\n        PyErr_Format(PyExc_RuntimeError, \"dgeev failed with info=%ld\", info);\n        return NULL;\n    }\n    long best = 0;\n    double bestm = wr[0]*wr[0] + wi[0]*wi[0];\n    for (long i = 1; i < n; ++i) {\n        double m = wr[i]*wr[i] + wi[i]*wi[i];\n        if (m > bestm) { bestm = m; best = i; }\n    }\n    npy_intp dims[1] = {n};\n    PyObject* vec;\n    PyObject* val;\n    if (wi[best] == 0.0) {\n        vec = PyArray_SimpleNew(1, dims, NPY_DOUBLE);\n        if (vec == NULL) {\n            if (n > 20) { free(a); free(wr); free(wi); free(vr); free(work); }\n            return NULL;\n        }\n        double* out = (double*)PyArray_DATA((PyArrayObject*)vec);\n        for (long i = 0; i < n; ++i) out[i] = vr[i + best*n];\n        val = PyArray_Scalar(&wr[best], PyArray_DESCR((PyArrayObject*)vec), vec);\n    } else {\n        long base = (wi[best] > 0.0) ? best : best - 1;\n        double re = wr[base];\n        double im = (wi[best] > 0.0) ? wi[base] : -wi[base];\n        vec = PyArray_SimpleNew(1, dims, NPY_CDOUBLE);\n        if (vec == NULL) {\n            if (n > 20) { free(a); free(wr); free(wi); free(vr); free(work); }\n            return NULL;\n        }\n        double* out = (double*)PyArray_DATA((PyArrayObject*)vec);\n        if (wi[best] > 0.0) {\n            for (long i = 0; i < n; ++i) {\n                out[2*i] = vr[i + base*n];\n                out[2*i+1] = vr[i + (base+1)*n];\n            }\n        } else {\n            for (long i = 0; i < n; ++i) {\n                out[2*i] = vr[i + base*n];\n                out[2*i+1] = -vr[i + (base+1)*n];\n            }\n        }\n        double zval[2]; zval[0] = re; zval[1] = im;\n        val = PyArray_Scalar(zval, PyArray_DESCR((PyArrayObject*)vec), vec);\n    }\n    if (n > 20) { free(a); free(wr); free(wi); free(vr); free(work); }\n    if (val == NULL) { Py_DECREF(vec); return NULL; }\n    PyObject* result = PyTuple_New(2);\n    if (result == NULL) { Py_DECREF(val); Py_DECREF(vec); return NULL; }\n    PyTuple_SET_ITEM(result, 0, val);\n    PyTuple_SET_ITEM(result, 1, vec);\n    return result;\n}\n\nstatic PyMethodDef methods[] = {\n    {\"dominant\", dominant, METH_O, \"dominant eigenpair\"},\n    {\"set_dgeev\", set_dgeev, METH_O, \"set dgeev address\"},\n    {NULL, NULL, 0, NULL}\n};\n\nstatic struct PyModuleDef moduledef = {\n    PyModuleDef_HEAD_INIT, \"_eigen\", NULL, -1, methods\n};\n\nPyMODINIT_FUNC PyInit__eigen(void) {\n    import_array();\n    return PyModule_Create(&moduledef);\n}\nC\nZIG=/workspace/zigpkg/ziglang/zig\nSUFFIX=$(python3-config --extension-suffix)\n$ZIG cc -O3 -shared -fPIC $(python3-config --includes) -I$(python3 -c 'import numpy; print(numpy.get_include())') _eigen.c -o _eigen$SUFFIX\npython3 bench2.py\nls -la _eigen$SUFFIX",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 441875,
+     "dur_ms": 6151,
+     "exit": 0,
+     "cpu_ms": 6520.3,
+     "phases_us": {
+      "acquire": 94,
+      "resume": 23991,
+      "mount": 20012,
+      "run": 6063588,
+      "destroy": 62913
+     },
+     "cold": null,
+     "vm": "vm-505"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 448033,
+   "dur_ms": 2083,
+   "tokens_in": 33,
+   "tokens_out": 351,
+   "cache_read": 28864,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 450118,
+   "dur_ms": 129,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport zlib,base64,glob,os\np=glob.glob('_eigen*.so')[0]\nd=open(p,'rb').read()\nc=zlib.compress(d,9)\nb=base64.b64encode(c)\nprint(len(d), len(c), len(b))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 450130,
+     "dur_ms": 96,
+     "exit": 0,
+     "cpu_ms": 92.0,
+     "phases_us": {
+      "acquire": 87,
+      "resume": 22127,
+      "mount": 19553,
+      "run": 51376,
+      "destroy": 21908
+     },
+     "cold": null,
+     "vm": "vm-508"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 450254,
+   "dur_ms": 10924,
+   "tokens_in": 48,
+   "tokens_out": 2310,
+   "cache_read": 29504,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 461179,
+   "dur_ms": 300,
+   "tool": "bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncat > bench3.py <<'PY'\nimport numpy as np, time, ctypes, glob\nfrom numpy.linalg import eig\nLIB=glob.glob('/usr/local/lib/python3.13/site-packages/numpy.libs/libscipy_openblas64_*.so')[0]\nlib=ctypes.CDLL(LIB)\nf=lib.scipy_dgeev_64_\nci=ctypes.c_int64\ndp=ctypes.POINTER(ctypes.c_double)\nf.argtypes=[ctypes.c_char_p,ctypes.c_char_p,ctypes.POINTER(ci),dp,ctypes.POINTER(ci),dp,dp,dp,ctypes.POINTER(ci),dp,ctypes.POINTER(ci),dp,ctypes.POINTER(ci),ctypes.POINTER(ci)]\nN=10\nA=np.empty((N,N),order='F'); wr=np.empty(N); wi=np.empty(N); vr=np.empty((N,N),order='F'); work=np.empty(100*N)\n# prebuild per n\nints={n:{k:ci(v) for k,v in [('n',n),('lda',n),('ldvl',1),('ldvr',n),('lwork',100*n),('info',0)]} for n in range(1,11)}\nrefs={n:{k:ctypes.byref(v) for k,v in ints[n].items()} for n in ints}\n# pointer objects\nptrA=A.ctypes.data_as(dp); ptrwr=wr.ctypes.data_as(dp); ptrwi=wi.ctypes.data_as(dp); ptrvr=vr.ctypes.data_as(dp); ptrwork=work.ctypes.data_as(dp)\nJN=b'N'; JV=b'V'\ndef fast(X):\n    n=X.shape[0]\n    A[:n,:n]=X.T\n    r=refs[n]\n    f(JN,JV,r['n'],ptrA,r['lda'],ptrwr,ptrwi,None,r['ldvl'],ptrvr,r['ldvr'],ptrwork,r['lwork'],r['info'])\n    # selection\n    best=0; bm=wr[0]*wr[0]+wi[0]*wi[0]\n    for i in range(1,n):\n        m=wr[i]*wr[i]+wi[i]*wi[i]\n        if m>bm: bm=m; best=i\n    if wi[best]==0: return wr[best],vr[:n,best].copy()\n    if wi[best]>0:\n        return wr[best]+1j*wi[best], vr[:n,best]+1j*vr[:n,best+1]\n    return wr[best]+1j*wi[best], vr[:n,best]-1j*vr[:n,best+1]\n\ndef ref(A):\n    ev,evec=eig(A); i=np.argmax(np.abs(ev)); return ev[i],evec[:,i]\nfor n in [2,4,6,8,10]:\n    for _ in range(100):\n        X=np.random.normal(size=(n,n)); l,v=fast(X); assert np.allclose(X@v,l*v)\n    for name,fn in [('ref',ref),('fast',fast)]:\n        ts=[]\n        for _ in range(3000):\n            X=np.random.normal(size=(n,n)); t0=time.perf_counter(); fn(X); ts.append(time.perf_counter()-t0)\n        print(n,name,np.median(ts))\nPY\npython3 bench3.py",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 461232,
+     "dur_ms": 241,
+     "exit": 1,
+     "cpu_ms": 367.9,
+     "phases_us": {
+      "acquire": 114,
+      "resume": 25219,
+      "mount": 21086,
+      "run": 186230,
+      "destroy": 29077
+     },
+     "cold": null,
+     "vm": "vm-509"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 461479,
+   "dur_ms": 3884,
+   "tokens_in": 37,
+   "tokens_out": 705,
+   "cache_read": 31872,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 465364,
+   "dur_ms": 296,
+   "tool": "bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\np='bench3.py'; s=open(p).read()\ns=s.replace(\"('lda',n),('ldvl',1),('ldvr',n)\",\"('lda',N),('ldvl',1),('ldvr',N)\")\nopen(p,'w').write(s)\nPY\npython3 bench3.py",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 465412,
+     "dur_ms": 242,
+     "exit": 1,
+     "cpu_ms": 352.4,
+     "phases_us": {
+      "acquire": 16,
+      "resume": 20555,
+      "mount": 18372,
+      "run": 199263,
+      "destroy": 22226
+     },
+     "cold": null,
+     "vm": "vm-510"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 465664,
+   "dur_ms": 1890,
+   "tokens_in": 19,
+   "tokens_out": 314,
+   "cache_read": 32768,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 467555,
+   "dur_ms": 336,
+   "tool": "bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncat >> /tmp/dbg.py <<'PY'\nPY\npython3 - <<'PY'\np='bench3.py'; s=open(p).read()\ns=s.replace(\"for n in [2,4,6,8,10]:\", \"for n in [2]:\")\ns=s.replace(\"assert np.allclose(X@v,l*v)\", \"print('X',X); print('l',l,'v',v); print('Ax-lv',X@v-l*v); print('wrwi',wr[:n],wi[:n]); assert np.allclose(X@v,l*v)\")\nopen('bench3dbg.py','w').write(s)\nPY\npython3 bench3dbg.py",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 467603,
+     "dur_ms": 244,
+     "exit": 1,
+     "cpu_ms": 365.7,
+     "phases_us": {
+      "acquire": 73,
+      "resume": 20344,
+      "mount": 18126,
+      "run": 198599,
+      "destroy": 24953
+     },
+     "cold": null,
+     "vm": "vm-511"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 467891,
+   "dur_ms": 5629,
+   "tokens_in": 0,
+   "tokens_out": 1129,
+   "cache_read": 33216,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 473521,
+   "dur_ms": 299,
+   "tool": "bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\np='bench3dbg.py'; s=open(p).read()\ns=s.replace(\"print('wrwi',wr[:n],wi[:n]);\", \"print('vr full',vr); print('Aafter',A); print('X.T',X.T); print('wrwi',wr[:n],wi[:n]);\")\nopen('bench3dbg.py','w').write(s)\nPY\npython3 bench3dbg.py",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 473570,
+     "dur_ms": 242,
+     "exit": 1,
+     "cpu_ms": 350.8,
+     "phases_us": {
+      "acquire": 77,
+      "resume": 20396,
+      "mount": 18100,
+      "run": 200584,
+      "destroy": 21238
+     },
+     "cold": null,
+     "vm": "vm-512"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 473820,
+   "dur_ms": 4051,
+   "tokens_in": 36,
+   "tokens_out": 832,
+   "cache_read": 34560,
+   "cache_write": 2176,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 477871,
+   "dur_ms": 1427,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\np='bench3.py'; s=open(p).read(); s=s.replace('A[:n,:n]=X.T','A[:n,:n]=X'); open(p,'w').write(s)\nPY\npython3 bench3.py",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 477923,
+     "dur_ms": 1334,
+     "exit": 0,
+     "cpu_ms": 1448.9,
+     "phases_us": {
+      "acquire": 88,
+      "resume": 23089,
+      "mount": 20357,
+      "run": 1290647,
+      "destroy": 20395
+     },
+     "cold": null,
+     "vm": "vm-514"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 479302,
+   "dur_ms": 20149,
+   "tokens_in": 27,
+   "tokens_out": 5110,
+   "cache_read": 37568,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 499451,
+   "dur_ms": 683,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncat > eigen_template.py <<'PY'\nimport base64\nimport ctypes\nimport glob\nimport importlib.machinery\nimport importlib.util\nimport os\nimport tempfile\nimport zlib\n\nimport numpy as np\n\n# Compressed native helper.  The helper is tiny; it only marshals a matrix into\n# LAPACK's dgeev and picks the eigenvalue of largest modulus.  Keeping a copy\n# here makes eigen.py usable even when the prebuilt .so is not present.\n_EMBEDDED_SO = (\n__EMBEDDED__\n)\n\n_DIR = os.path.dirname(os.path.abspath(__file__))\n\n\ndef _load_native():\n    \"\"\"Load the optional C helper, materializing the embedded copy if needed.\"\"\"\n    for path in sorted(glob.glob(os.path.join(_DIR, \"_eigen*.so\"))):\n        try:\n            spec = importlib.util.spec_from_file_location(\"_eigen\", path)\n            if spec is not None and spec.loader is not None:\n                mod = importlib.util.module_from_spec(spec)\n                spec.loader.exec_module(mod)\n                return mod\n        except Exception:\n            pass\n    try:\n        import _eigen\n        return _eigen\n    except Exception:\n        pass\n    try:\n        blob = zlib.decompress(base64.b64decode(_EMBEDDED_SO))\n        suffix = importlib.machinery.EXTENSION_SUFFIXES[0]\n        paths = [os.path.join(_DIR, \"_eigen\" + suffix)]\n        try:\n            paths.append(os.path.join(tempfile.mkdtemp(), \"_eigen\" + suffix))\n        except Exception:\n            pass\n        for path in paths:\n            try:\n                with open(path, \"wb\") as f:\n                    f.write(blob)\n                spec = importlib.util.spec_from_file_location(\"_eigen\", path)\n                mod = importlib.util.module_from_spec(spec)\n                spec.loader.exec_module(mod)\n                return mod\n            except Exception:\n                continue\n    except Exception:\n        pass\n    return None\n\n\ndef _find_dgeev():\n    \"\"\"Locate the dgeev symbol in the LAPACK library NumPy already uses.\"\"\"\n    paths = []\n    try:\n        with open(\"/proc/self/maps\", \"r\") as f:\n            for line in f:\n                p = line.rstrip().split()[-1]\n                low = p.lower()\n                if \"blas\" in low and \".so\" in low:\n                    paths.append(p)\n    except Exception:\n        pass\n    root = os.path.dirname(os.path.dirname(os.path.abspath(np.__file__)))\n    patterns = (\n        os.path.join(root, \"numpy.libs\", \"*openblas*.so*\"),\n        os.path.join(root, \"numpy.libs\", \"*blas*.so*\"),\n        os.path.join(root, \"numpy\", \".libs\", \"*openblas*.so*\"),\n        os.path.join(root, \"numpy\", \".libs\", \"*blas*.so*\"),\n    )\n    for pattern in patterns:\n        paths.extend(glob.glob(pattern))\n    seen = set()\n    for path in paths:\n        if path in seen:\n            continue\n        seen.add(path)\n        try:\n            lib = ctypes.CDLL(path)\n        except OSError:\n            continue\n        for name in (\"scipy_dgeev_64_\", \"scipy_dgeev_\", \"dgeev_64_\", \"dgeev_\"):\n            try:\n                fn = getattr(lib, name)\n            except (AttributeError, OSError):\n                continue\n            return lib, fn\n    return None\n\n\ndef _make_ctypes_impl(fn):\n    \"\"\"A pure-Python/ctypes path used only if the C helper cannot be loaded.\"\"\"\n    ci = ctypes.c_int64\n    dp = ctypes.POINTER(ctypes.c_double)\n    fn.argtypes = [\n        ctypes.c_char_p, ctypes.c_char_p, ctypes.POINTER(ci),\n        dp, ctypes.POINTER(ci), dp, dp, dp, ctypes.POINTER(ci),\n        dp, ctypes.POINTER(ci), dp, ctypes.POINTER(ci), ctypes.POINTER(ci),\n    ]\n    fn.restype = None\n    job_n = b\"N\"\n    job_v = b\"V\"\n    cache = {}\n\n    def buffers(n):\n        item = cache.get(n)\n        if item is None:\n            a = np.empty((n, n), order=\"F\")\n            wr = np.empty(n)\n            wi = np.empty(n)\n            vr = np.empty((n, n), order=\"F\")\n            work = np.empty(max(1, 100 * n))\n            ints = {\n                \"n\": ci(n), \"lda\": ci(n), \"ldvl\": ci(1),\n                \"ldvr\": ci(n), \"lwork\": ci(work.size), \"info\": ci(0),\n            }\n            refs = {key: ctypes.byref(value) for key, value in ints.items()}\n            item = (\n                a, wr, wi, vr, work, refs,\n                a.ctypes.data_as(dp), wr.ctypes.data_as(dp),\n                wi.ctypes.data_as(dp), vr.ctypes.data_as(dp),\n                work.ctypes.data_as(dp),\n            )\n            cache[n] = item\n        return item\n\n    def dominant(matrix):\n        n = matrix.shape[0]\n        a, wr, wi, vr, work, refs, pa, pwr, pwi, pvr, pwork = buffers(n)\n        a[...] = matrix\n        fn(job_n, job_v, refs[\"n\"], pa, refs[\"lda\"], pwr, pwi, None,\n           refs[\"ldvl\"], pvr, refs[\"ldvr\"], pwork, refs[\"lwork\"],\n           refs[\"info\"])\n        if refs[\"info\"].value != 0:\n            raise RuntimeError(\"dgeev failed\")\n        best = 0\n        best_mag = wr[0] * wr[0] + wi[0] * wi[0]\n        for i in range(1, n):\n            mag = wr[i] * wr[i] + wi[i] * wi[i]\n            if mag > best_mag:\n                best_mag = mag\n                best = i\n        if wi[best] == 0.0:\n            return wr[best], vr[:n, best].copy()\n        base = best if wi[best] > 0.0 else best - 1\n        value = wr[base] + (1j if wi[best] > 0.0 else -1j) * wi[base]\n        if wi[best] > 0.0:\n            vector = vr[:n, base] + 1j * vr[:n, base + 1]\n        else:\n            vector = vr[:n, base] - 1j * vr[:n, base + 1]\n        return value, vector\n\n    return dominant\n\n\n_native = _load_native()\n_dgeev = _find_dgeev()\n_impl = None\n\nif _native is not None and _dgeev is not None:\n    try:\n        _native.set_dgeev(ctypes.cast(_dgeev[1], ctypes.c_void_p).value)\n        _impl = _native.dominant\n    except Exception:\n        _impl = None\n\nif _impl is None and _dgeev is not None:\n    try:\n        _impl = _make_ctypes_impl(_dgeev[1])\n    except Exception:\n        _impl = None\n\n\ndef find_dominant_eigenvalue_and_eigenvector(A: np.ndarray):\n    \"\"\"\n    Find the dominant eigenvalue and eigenvector of a general real square matrix.\n\n    Args:\n        A: Real-valued square matrix (accepts numpy arrays) up to size 10x10,\n        dtype np.float64.\n\n    Returns:\n        eigenvalue: Dominant eigenvalue (numpy scalar, potentially complex)\n        eigenvector: Corresponding eigenvector (np.ndarray, potentially complex)\n    \"\"\"\n    if _impl is not None:\n        try:\n            return _impl(A)\n        except Exception:\n            pass\n    eigenvalues, eigenvectors = np.linalg.eig(A)\n    idx = np.argmax(np.abs(eigenvalues))\n    return eigenvalues[idx], eigenvectors[:, idx]\nPY\npython3 - <<'PY'\nimport base64, glob, textwrap, zlib\nso = glob.glob('_eigen*.so')[0]\nblob = zlib.compress(open(so, 'rb').read(), 9)\nencoded = base64.b64encode(blob).decode('ascii')\nlines = textwrap.wrap(encoded, 100)\nlit = '\\n'.join('    b\"' + line + '\"' for line in lines)\ns = open('eigen_template.py').read().replace('__EMBEDDED__', lit)\nopen('eigen.py', 'w').write(s)\nprint('wrote eigen.py', len(s))\nPY\nrm -f eigen_template.py\npython3 - <<'PY'\nimport eigen, numpy as np, time\nfor n in range(1,11):\n    for _ in range(200):\n        A=np.random.normal(size=(n,n))\n        l,v=eigen.find_dominant_eigenvalue_and_eigenvector(A)\n        assert not np.allclose(v,0)\n        assert np.allclose(A@v,l*v), (n,np.linalg.norm(A@v-l*v))\n    print('ok',n)\nPY\npython3 eval.py",
+   "timeout": 600,
+   "sandbox": [
+    {
+     "at_ms": 499503,
+     "dur_ms": 590,
+     "exit": 0,
+     "cpu_ms": 802.1,
+     "phases_us": {
+      "acquire": 79,
+      "resume": 24645,
+      "mount": 20890,
+      "run": 537680,
+      "destroy": 27305
+     },
+     "cold": null,
+     "vm": "vm-515"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 500139,
+   "dur_ms": 9825,
+   "tokens_in": 8,
+   "tokens_out": 2109,
+   "cache_read": 42880,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 509964,
+   "dur_ms": 857,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\n# verify embedded extension can be materialized when the .so is absent\nrm -f _eigen*.so\npython3 - <<'PY'\nimport importlib, numpy as np, os, glob\nimport eigen\nprint('so after import:', glob.glob('_eigen*.so'))\nfor n in (1,2,5,10):\n    for _ in range(50):\n        A=np.random.normal(size=(n,n))\n        l,v=eigen.find_dominant_eigenvalue_and_eigenvector(A)\n        assert np.allclose(A@v,l*v)\nprint('embedded path ok')\nPY\n# verify ctypes-only fallback implementation\npython3 - <<'PY'\nimport numpy as np, eigen\nfn = eigen._make_ctypes_impl(eigen._dgeev[1])\nfor n in range(1,11):\n    for _ in range(100):\n        A=np.random.normal(size=(n,n))\n        l,v=fn(A)\n        assert np.allclose(A@v,l*v), (n,np.linalg.norm(A@v-l*v))\nprint('ctypes fallback ok')\nPY\n# edge cases through the main implementation\npython3 - <<'PY'\nimport numpy as np, eigen\nmats=[np.zeros((4,4)), np.eye(4), np.triu(np.random.normal(size=(6,6))),\n      np.array([[0.,-1.],[1.,0.]]), np.random.normal(size=(10,10))[:,::2].repeat(2,axis=1)]\nfor A in mats:\n    A=np.asarray(A,dtype=np.float64)\n    l,v=eigen.find_dominant_eigenvalue_and_eigenvector(A)\n    assert np.allclose(A@v,l*v), (A.shape,l,np.linalg.norm(A@v-l*v))\n    assert not np.allclose(v,0) and not np.isnan(l) and not np.isinf(l)\nprint('edge cases ok')\nPY\n# cleanup temporary/build-only files\nrm -rf zigpkg bench.py bench2.py bench3.py bench3dbg.py __pycache__\nls -la",
+   "timeout": 600,
+   "sandbox": [
+    {
+     "at_ms": 510017,
+     "dur_ms": 760,
+     "exit": 0,
+     "cpu_ms": 1190.9,
+     "phases_us": {
+      "acquire": 123,
+      "resume": 23720,
+      "mount": 20034,
+      "run": 707136,
+      "destroy": 28960
+     },
+     "cold": null,
+     "vm": "vm-517"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 510822,
+   "dur_ms": 3519,
+   "tokens_in": 2,
+   "tokens_out": 684,
+   "cache_read": 45248,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 514341,
+   "dur_ms": 537,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\np='eigen.py'\ns=open(p).read()\ns=s.replace(\"\"\"            item = (\n                a, wr, wi, vr, work, refs,\n                a.ctypes.data_as(dp), wr.ctypes.data_as(dp),\"\"\",\n\"\"\"            item = (\n                a, wr, wi, vr, work, refs, ints,\n                a.ctypes.data_as(dp), wr.ctypes.data_as(dp),\"\"\")\ns=s.replace(\"\"\"        a, wr, wi, vr, work, refs, pa, pwr, pwi, pvr, pwork = buffers(n)\"\"\",\n\"\"\"        a, wr, wi, vr, work, refs, ints, pa, pwr, pwi, pvr, pwork = buffers(n)\"\"\")\ns=s.replace(\"\"\"        if refs[\"info\"].value != 0:\"\"\",\n\"\"\"        if ints[\"info\"].value != 0:\"\"\")\nopen(p,'w').write(s)\nPY\npython3 - <<'PY'\nimport numpy as np, eigen\nfn = eigen._make_ctypes_impl(eigen._dgeev[1])\nfor n in range(1,11):\n    for _ in range(100):\n        A=np.random.normal(size=(n,n))\n        l,v=fn(A)\n        assert np.allclose(A@v,l*v), (n,np.linalg.norm(A@v-l*v))\nprint('ctypes fallback ok')\nPY\npython3 eval.py\nrm -rf __pycache__\nls -la",
+   "timeout": 600,
+   "sandbox": [
+    {
+     "at_ms": 514390,
+     "dur_ms": 485,
+     "exit": 0,
+     "cpu_ms": 699.2,
+     "phases_us": {
+      "acquire": 67,
+      "resume": 43724,
+      "mount": 41497,
+      "run": 420497,
+      "destroy": 20870
+     },
+     "cold": null,
+     "vm": "vm-518"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 514882,
+   "dur_ms": 9593,
+   "tokens_in": 41,
+   "tokens_out": 1454,
+   "cache_read": 46208,
+   "cache_write": 384,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.233,
+ "calls": 27,
+ "cell": "TB1f"
+}

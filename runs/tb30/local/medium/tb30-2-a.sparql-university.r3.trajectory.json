@@ -1,0 +1,108 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "sparql-university",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 36152,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 270,
+  "output": 7060,
+  "cacheRead": 130624,
+  "cacheWrite": 5696,
+  "total": 143650
+ },
+ "totals": {
+  "model_calls": 6,
+  "tool_calls": 5,
+  "model_ms": 35271,
+  "tool_ms": 172,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 544,
+   "dur_ms": 817
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1361,
+   "dur_ms": 61,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "wc -l /app/university_graph.ttl && head -100 /app/university_graph.ttl"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1422,
+   "dur_ms": 670
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2092,
+   "dur_ms": 19,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/university_graph.ttl"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 2111,
+   "dur_ms": 13594
+  },
+  {
+   "kind": "tool",
+   "at_ms": 15705,
+   "dur_ms": 43,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /app; python3 -c \"import rdflib; print(rdflib.__version__)\" 2>&1 | tail -1"
+  },
+  {
+   "kind": "model",
+   "at_ms": 15748,
+   "dur_ms": 1512
+  },
+  {
+   "kind": "tool",
+   "at_ms": 17260,
+   "dur_ms": 29,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "for c in arq sparql node npm java raptor rapper; do command -v $c >/dev/null 2>&1 && echo \"$c: $(command -v $c)\"; done; ls /usr/bin | grep -iE 'sparql|rdf|jena|python' | head"
+  },
+  {
+   "kind": "model",
+   "at_ms": 17289,
+   "dur_ms": 10397
+  },
+  {
+   "kind": "tool",
+   "at_ms": 27686,
+   "dur_ms": 20,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/solution.sparql",
+    "content": "PREFIX uni: <http://university.org/ontology/>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n\nSELECT ?professorName (GROUP_CONCAT(DISTINCT ?country; separator=\", \") AS ?countries)\nWHERE {\n  # 1. Full professors only.\n  #    Their role starts with \"Professor\"; Assistant/Associate professors do not.\n  ?professor a uni:Person ;\n             uni:hasName ?professorName ;\n             uni:role ?role .\n  FILTER(STRSTARTS(?role, \"Professor\"))\n\n  # 2. They work in at least one department of a university located in an\n  #    EU member state (ISO 3166-1 alpha-2 codes as of 2025-08-16).\n  {\n    SELECT DISTINCT ?professor\n    WHERE {\n      ?professor uni:worksIn ?euDept .\n      ?euDept uni:belongsTo ?euUniversity .\n      ?euUniversity uni:locatedInCountry ?euCountry .\n      FILTER(?euCountry IN (\n        \"AT\", \"BE\", \"BG\", \"HR\", \"CY\", \"CZ\", \"DK\", \"EE\", \"FI\", \"FR\",\n        \"DE\", \"GR\", \"HU\", \"IE\", \"IT\", \"LV\", \"LT\", \"LU\", \"MT\", \"NL\",\n        \"PL\", \"PT\", \"RO\", \"SK\", \"SI\", \"ES\", \"SE\"\n      ))\n    }\n  }\n\n  # 3. At least one department they work in has more than 10 students\n  #    currently enrolled in classes taught in that department.\n  #    \"Currently enrolled\" = enrolled on or before 2025-08-16 and not yet\n  #    graduated (no graduation date, or a graduation date after 2025-08-16).\n  {\n    SELECT ?professor\n    WHERE {\n      ?professor uni:worksIn ?dept .\n      ?course uni:isTaughtIn ?dept .\n      ?student uni:isEnrolledIn ?course ;\n               uni:hasEnrollmentDate ?enrollmentDate .\n      FILTER(?enrollmentDate <= \"2025-08-16\"^^xsd:date)\n      OPTIONAL { ?student uni:hasGraduationDate ?graduationDate . }\n      FILTER(!BOUND(?graduationDate) || ?graduationDate > \"2025-08-16\"^^xsd:date)\n    }\n    GROUP BY ?professor ?dept\n    HAVING (COUNT(DISTINCT ?student) > 10)\n  }\n\n  # Collect all countries where the professor works (not only EU ones).\n  ?professor uni:worksIn ?anyDept .\n  ?anyDept uni:belongsTo ?anyUniversity .\n  ?anyUniversity uni:locatedInCountry ?country .\n}\nGROUP BY ?professorName\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 27706,
+   "dur_ms": 8281
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.219,
+ "calls": 5,
+ "cell": "TB1a"
+}

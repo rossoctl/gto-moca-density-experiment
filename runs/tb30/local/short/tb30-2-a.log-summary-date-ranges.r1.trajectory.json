@@ -1,0 +1,119 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "log-summary-date-ranges",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 15393,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 165,
+  "output": 2078,
+  "cacheRead": 116800,
+  "cacheWrite": 2944,
+  "total": 121987
+ },
+ "totals": {
+  "model_calls": 6,
+  "tool_calls": 7,
+  "model_ms": 12064,
+  "tool_ms": 2741,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 576,
+   "dur_ms": 1200
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1427,
+   "dur_ms": 68,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /app/logs/ | head -50; echo \"---count---\"; ls /app/logs/ | wc -l"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1776,
+   "dur_ms": 31,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "for f in $(ls /app/logs/ | head -3); do echo \"=== $f ===\"; head -5 /app/logs/$f; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1807,
+   "dur_ms": 1813
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3192,
+   "dur_ms": 45,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls /app/logs/ | sed 's/_.*//' | sort -u | tail -20; echo \"--- first/last ---\"; ls /app/logs/ | sed 's/_.*//' | sort -u | head -3"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3620,
+   "dur_ms": 64,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat /app/logs/*.log | grep -oE '\\[[A-Z]+\\]' | sort | uniq -c | sort -rn"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3684,
+   "dur_ms": 2705
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6389,
+   "dur_ms": 2359,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app/logs; total=0; bad=0; mismatch=0;\nfor f in *.log; do fd=${f%%_*};\n  while IFS= read -r line; do\n    total=$((total+1));\n    case \"$line\" in\n      [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]\\ [0-9][0-9]:[0-9][0-9]:[0-9][0-9]\\ \\[*) ;;\n      *) bad=$((bad+1)); if [ $bad -le 10 ]; then echo \"BAD: $f: $line\"; fi;;\n    esac\n    ld=${line%% *};\n    if [ \"$ld\" != \"$fd\" ]; then mismatch=$((mismatch+1)); if [ $mismatch -le 5 ]; then echo \"MISMATCH $f vs $ld\"; fi; fi\n  done < \"$f\";\ndone; echo \"total=$total bad=$bad mismatch=$mismatch\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 8748,
+   "dur_ms": 2680
+  },
+  {
+   "kind": "tool",
+   "at_ms": 11428,
+   "dur_ms": 121,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "awk '\nBEGIN{ split(\"2025-08-12 2025-08-06 2025-07-14 2025-08-01 0000-00-00\", s, \" \") }\n{\n  d=$1; sev=$3; gsub(/[\\[\\]]/,\"\",sev)\n  if (sev!=\"ERROR\" && sev!=\"WARNING\" && sev!=\"INFO\") next\n  if (d==s[1]) {t[sev]++; }\n  if (d>=s[2] && d<=s[1]) {w[sev]++}\n  if (d>=s[3] && d<=s[1]) {m[sev]++}\n  if (d>=s[4] && d<=s[1]) {mt[sev]++}\n  a[sev]++\n}\nEND{\n  split(\"ERROR WARNING INFO\", o, \" \")\n  print \"period,severity,count\"\n  for(i=1;i<=3;i++) print \"today,\" o[i] \",\" t[o[i]]+0\n  for(i=1;i<=3;i++) print \"last_7_days,\" o[i] \",\" w[o[i]]+0\n  for(i=1;i<=3;i++) print \"last_30_days,\" o[i] \",\" m[o[i]]+0\n  for(i=1;i<=3;i++) print \"month_to_date,\" o[i] \",\" mt[o[i]]+0\n  for(i=1;i<=3;i++) print \"total,\" o[i] \",\" a[o[i]]+0\n}' *.log > /app/summary.csv; cat /app/summary.csv"
+  },
+  {
+   "kind": "model",
+   "at_ms": 11549,
+   "dur_ms": 1893
+  },
+  {
+   "kind": "tool",
+   "at_ms": 13442,
+   "dur_ms": 53,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app/logs; echo \"today files:\"; ls 2025-08-12_*.log | wc -l; grep -h '\\[' 2025-08-12_*.log | grep -oE '\\[(ERROR|WARNING|INFO)\\]' | sort | uniq -c\necho \"--- 30d file count:\"; ls 2025-0[78]-*.log | awk -F_ '$1>=\"2025-07-14\" && $1<=\"2025-08-12\"' | wc -l\necho \"--- mtd:\"; ls 2025-08-*.log | awk -F_ '$1>=\"2025-08-01\"' | wc -l"
+  },
+  {
+   "kind": "model",
+   "at_ms": 13495,
+   "dur_ms": 1773
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.192,
+ "calls": 7,
+ "cell": "TB1a"
+}

@@ -1,0 +1,133 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "regex-log",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 76699,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 111,
+  "output": 12043,
+  "cacheRead": 55296,
+  "cacheWrite": 1152,
+  "total": 68602
+ },
+ "totals": {
+  "model_calls": 6,
+  "tool_calls": 5,
+  "model_ms": 75376,
+  "tool_ms": 55,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1170,
+   "dur_ms": 42945,
+   "tokens_in": 9,
+   "tokens_out": 7086,
+   "cache_read": 1728,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 44119,
+   "dur_ms": 11,
+   "tool": "bash",
+   "is_error": true,
+   "command": "cat > /app/regex.txt <<'EOF'\n^(?=[^\\n]*(?<![A-Za-z0-9])(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])(?![A-Za-z0-9]))[^\\n]*(?<![A-Za-z0-9])([0-9]{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-9])))(?![A-Za-z0-9])\nEOF\npython3 - <<'PY'\nimport re\np=open('/app/regex.txt').read().strip()\ntests = [\n    (\"2024-01-01 192.168.0.1 then 2024-02-29\", \"last date\"),\n    (\"2024-01-01 no ip\", \"no ip\"),\n    (\"192.168.0.1 2024-01-01 2024-02-30\", \"invalid last => earlier?\"),\n    (\"192.168.0.1 2024-01-01 2024-02-28 2024-02-29\", \"last valid\"),\n    (\"192.168.0.1 user 1134-12-1234\", \"fake date\"),\n    (\"192.168.0.1 2024-04-31\", \"invalid april\"),\n    (\"192.168.0.1 2024-04-30\", \"valid april\"),\n    (\"192.168.0.1 256.1.1.1 2024-01-01\", \"invalid ip no line\"),\n    (\"192.168.0.1 2024-01-01 2024-01-011\", \"trailing alnum\"),\n    (\"x192.168.0.1 2024-01-01\", \"preceded alnum no line\"),\n    (\"ip=192.168.0.1. 2024-01-01\", \"trailing dot sentence\"),\n    (\"192.168.0.1.5 2024-01-01\", \"extra dot\"),\n    (\"192.168.0.01 2024-01-01\", \"leading zero ip no line\"),\n]\nfor line,name in tests:\n    print(name, re.findall(p, line, re.MULTILINE))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 44135,
+   "dur_ms": 1025,
+   "tokens_in": 22,
+   "tokens_out": 82,
+   "cache_read": 8768,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 45160,
+   "dur_ms": 12,
+   "tool": "bash",
+   "is_error": false,
+   "command": "command -v python python3 pypy3 node perl ruby || true; ls /usr/bin | grep -E 'python|node|perl' | head -20"
+  },
+  {
+   "kind": "model",
+   "at_ms": 45172,
+   "dur_ms": 2610,
+   "tokens_in": 3,
+   "tokens_out": 452,
+   "cache_read": 8896,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 47783,
+   "dur_ms": 15,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat /app/regex.txt; echo; perl -ne '\nBEGIN { $p = do { local $/; open my $f, \"<\", \"/app/regex.txt\" or die $!; <$f> }; chomp $p; }\nwhile ($_ =~ /$p/g) { print \"match: $1\\n\"; }\n' <<'EOF'\n2024-01-01 192.168.0.1 then 2024-02-29\n2024-01-01 no ip\n192.168.0.1 2024-01-01 2024-02-30\n192.168.0.1 2024-01-01 2024-02-28 2024-02-29\n192.168.0.1 user 1134-12-1234\n192.168.0.1 2024-04-31\n192.168.0.1 2024-04-30\n192.168.0.1 256.1.1.1 2024-01-01\n192.168.0.1 2024-01-01 2024-01-011\nx192.168.0.1 2024-01-01\nip=192.168.0.1. 2024-01-01\n192.168.0.1.5 2024-01-01\n192.168.0.01 2024-01-01\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 47798,
+   "dur_ms": 14508,
+   "tokens_in": 8,
+   "tokens_out": 2324,
+   "cache_read": 9408,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 62306,
+   "dur_ms": 7,
+   "tool": "bash",
+   "is_error": false,
+   "command": "perl -e '\nmy $p = do { local $/; open my $f, \"<\", \"/app/regex.txt\" or die $!; <$f> }; chomp $p;\nfor my $line (\n\"2024-01-01 0.0.0.0\", \"2024-01-01 255.255.255.255\", \"2024-01-01 256.1.1.1\",\n\"2024-01-01 1.1.1.01\", \"2024-01-01 1.1.1.00\", \"2024-01-01 01.1.1.1\",\n\"2024-01-01 1.1.1.1a\", \"a1.1.1.1 2024-01-01\", \"2024-01-01 (1.1.1.1)\",\n\"2024-02-29 1.1.1.1\", \"2023-02-29 1.1.1.1\", \"2024-02-30 1.1.1.1\",\n\"2024-04-30 1.1.1.1\", \"2024-04-31 1.1.1.1\", \"2024-11-31 1.1.1.1\",\n\"2024-12-31 1.1.1.1\", \"2024-01-00 1.1.1.1\", \"2024-13-01 1.1.1.1\",\n\"2024-00-01 1.1.1.1\", \"2024-01-01 1.1.1.1 2024-02-29\",\n\"2024-01-01_ 1.1.1.1\", \"_2024-01-01 1.1.1.1\",\n) {\n  my @m = ($line =~ /$p/g);\n  print \"$line => [@m]\\n\";\n}'"
+  },
+  {
+   "kind": "model",
+   "at_ms": 62316,
+   "dur_ms": 13064,
+   "tokens_in": 25,
+   "tokens_out": 2011,
+   "cache_read": 12032,
+   "cache_write": 448,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 75380,
+   "dur_ms": 10,
+   "tool": "bash",
+   "is_error": false,
+   "command": "wc -c /app/regex.txt && sed -n '1p' /app/regex.txt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 75390,
+   "dur_ms": 1224,
+   "tokens_in": 44,
+   "tokens_out": 88,
+   "cache_read": 14464,
+   "cache_write": 256,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.078,
+ "calls": 5,
+ "cell": "TB1e"
+}

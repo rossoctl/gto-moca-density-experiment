@@ -1,0 +1,115 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "log-summary-date-ranges",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 8993,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 89,
+  "output": 1022,
+  "cacheRead": 66688,
+  "cacheWrite": 19648,
+  "total": 87447
+ },
+ "totals": {
+  "model_calls": 5,
+  "tool_calls": 4,
+  "model_ms": 7220,
+  "tool_ms": 543,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1150,
+   "dur_ms": 611,
+   "tokens_in": 22,
+   "tokens_out": 78,
+   "cache_read": 1472,
+   "cache_write": 384,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1765,
+   "dur_ms": 217,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app/logs && echo '---' && for f in /app/logs/*.log; do echo \"== $f\"; cat \"$f\"; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1984,
+   "dur_ms": 1555,
+   "tokens_in": 2,
+   "tokens_out": 182,
+   "cache_read": 1920,
+   "cache_write": 17984,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3540,
+   "dur_ms": 14,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls /app/logs | sed 's/_.*//' | sort | uniq -c; echo 'files:'; ls /app/logs | wc -l; ls /app/logs | head -50"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3555,
+   "dur_ms": 2725,
+   "tokens_in": 47,
+   "tokens_out": 517,
+   "cache_read": 20032,
+   "cache_write": 896,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6281,
+   "dur_ms": 180,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport os, re, csv\nfrom datetime import date, timedelta\nfrom collections import Counter, defaultdict\n\nlogdir='/app/logs'\ntoday=date(2025,8,12)\nperiods={\n 'today': (today,today),\n 'last_7_days': (today-timedelta(days=6),today),\n 'last_30_days': (today-timedelta(days=29),today),\n 'month_to_date': (today.replace(day=1),today),\n 'total': (None,None),\n}\ncounts={p:Counter() for p in periods}\nsev_re=re.compile(r'\\[(ERROR|WARNING|INFO)\\]')\nfor fn in os.listdir(logdir):\n    if not fn.endswith('.log'): continue\n    m=re.match(r'^(\\d{4}-\\d{2}-\\d{2})_.*\\.log$',fn)\n    if not m: continue\n    d=date.fromisoformat(m.group(1))\n    c=Counter()\n    with open(os.path.join(logdir,fn), errors='replace') as f:\n        for line in f:\n            mm=sev_re.search(line)\n            if mm: c[mm.group(1)]+=1\n    for p,(start,end) in periods.items():\n        if start is None or start<=d<=end:\n            counts[p].update(c)\n\nwith open('/app/summary.csv','w',newline='') as f:\n    w=csv.writer(f)\n    w.writerow(['period','severity','count'])\n    for p in periods:\n        for s in ['ERROR','WARNING','INFO']:\n            w.writerow([p,s,counts[p][s]])\nprint(open('/app/summary.csv').read())\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 6464,
+   "dur_ms": 1315,
+   "tokens_in": 11,
+   "tokens_out": 193,
+   "cache_read": 21440,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 7780,
+   "dur_ms": 132,
+   "tool": "bash",
+   "is_error": false,
+   "command": "grep -rhoE '\\[(ERROR|WARNING|INFO)\\]' /app/logs/*.log | sort | uniq -c; echo '---'; cat /app/summary.csv"
+  },
+  {
+   "kind": "model",
+   "at_ms": 7912,
+   "dur_ms": 1014,
+   "tokens_in": 7,
+   "tokens_out": 52,
+   "cache_read": 21824,
+   "cache_write": 192,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.192,
+ "calls": 4,
+ "cell": "TB1e"
+}

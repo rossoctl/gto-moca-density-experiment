@@ -1,0 +1,207 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-f",
+ "instance_id": "regex-log",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 126383,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 180,
+  "output": 20641,
+  "cacheRead": 60352,
+  "cacheWrite": 1856,
+  "total": 83029
+ },
+ "totals": {
+  "model_calls": 5,
+  "tool_calls": 4,
+  "model_ms": 124498,
+  "tool_ms": 672,
+  "sandbox_ms": 391
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1125,
+   "dur_ms": 39595,
+   "tokens_in": 47,
+   "tokens_out": 6117,
+   "cache_read": 1280,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 40724,
+   "dur_ms": 77,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /workspace\nfind /workspace -maxdepth 2 -type f -printf '%p\\n' | sort | head -50",
+   "timeout": 30,
+   "sandbox": [
+    {
+     "at_ms": 40733,
+     "dur_ms": 52,
+     "exit": 0,
+     "cpu_ms": 43.9,
+     "phases_us": {
+      "acquire": 65,
+      "resume": 20679,
+      "mount": 18124,
+      "run": 9868,
+      "destroy": 21053
+     },
+     "cold": null,
+     "vm": "vm-48"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 40805,
+   "dur_ms": 24599,
+   "tokens_in": 33,
+   "tokens_out": 4322,
+   "cache_read": 7424,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 65405,
+   "dur_ms": 152,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncat > /tmp/test_regex.py <<'PY'\nimport re\n\nD = r'[0-9]{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-9]))'\nO = r'(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])'\nIP = rf'(?<![A-Za-z0-9])(?<![0-9]\\.){O}(?:\\.{O}){{3}}(?![A-Za-z0-9])(?!\\.[0-9])'\nPAT = rf'(?m)^(?=[^\\n]*{IP})[^\\n]*(?<![A-Za-z0-9])(?P<date>{D})(?![A-Za-z0-9])(?![^\\n]*(?<![A-Za-z0-9]){D}(?![A-Za-z0-9]))[^\\n]*$'\n\nprint(PAT)\nprint('---')\n\ntests = [\n    # (line, expected)\n    ('2024-01-01 INFO 192.168.1.1', ['2024-01-01']),\n    ('192.168.1.1 INFO 2024-01-01', ['2024-01-01']),\n    ('192.168.1.1 2024-01-01 then 2024-02-29', ['2024-02-29']),\n    ('2024-02-29 then 2024-01-01 192.168.1.1', ['2024-01-01']),\n    ('2024-02-30 192.168.1.1', []),\n    ('2024-13-01 192.168.1.1', []),\n    ('2024-00-01 192.168.1.1', []),\n    ('2024-01-00 192.168.1.1', []),\n    ('2024-04-31 192.168.1.1', []),\n    ('2024-04-30 192.168.1.1', ['2024-04-30']),\n    ('2024-01-01 999.1.1.1', []),\n    ('2024-01-01 256.1.1.1', []),\n    ('2024-01-01 1.2.3.256', []),\n    ('2024-01-01 01.2.3.4', []),\n    ('2024-01-01 1.2.3.04', []),\n    ('2024-01-01 1.2.3.4.5', []),\n    ('2024-01-01 5.1.2.3.4', []),\n    ('2024-01-01 1.2.3.4.', ['2024-01-01']),\n    ('2024-01-01 1.2.3.4:80', ['2024-01-01']),\n    ('2024-01-01T12:00:00 1.2.3.4', []),\n    ('x2024-01-01 1.2.3.4', []),\n    ('2024-01-01x 1.2.3.4', []),\n    ('user 1134-12-1234 1.2.3.4', []),\n    ('user 1134-12-1234 2024-01-01 1.2.3.4', ['2024-01-01']),\n    ('2024-01-01 1.2.3.4\\n2024-01-02 no ip\\n2024-01-03 5.6.7.8', ['2024-01-01','2024-01-03']),\n    ('no date 1.2.3.4', []),\n    ('2024-01-01 2024-02-29 2024-03-01 1.2.3.4 extra 2024-04-31', ['2024-03-01']),\n    ('2024-01-01 2024-02-29 2024-03-01 1.2.3.4 extra 2024-04-30', ['2024-04-30']),\n    ('2024-01-01 1.2.3.4 2024-01-02', ['2024-01-02']),\n    ('2024-01-01 1.2.3.4 2024-01-02 2024-02-30', ['2024-01-02']),\n]\nfor line, exp in tests:\n    got = re.findall(PAT, line, re.MULTILINE)\n    status = 'OK' if got == exp else 'FAIL'\n    print(status, repr(line), '->', got, 'expected', exp)\nPY\npython3 /tmp/test_regex.py",
+   "timeout": 30,
+   "sandbox": [
+    {
+     "at_ms": 65453,
+     "dur_ms": 91,
+     "exit": 0,
+     "cpu_ms": 81.1,
+     "phases_us": {
+      "acquire": 60,
+      "resume": 20615,
+      "mount": 17971,
+      "run": 43403,
+      "destroy": 26329
+     },
+     "cold": null,
+     "vm": "vm-54"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 65559,
+   "dur_ms": 28938,
+   "tokens_in": 33,
+   "tokens_out": 5208,
+   "cache_read": 11840,
+   "cache_write": 1344,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 94498,
+   "dur_ms": 248,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put regex.txt <<'EOF'\n(?m)^(?=[^\\n]*(?<![A-Za-z0-9])(?<![0-9]\\.)(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])(?:\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}(?![A-Za-z0-9])(?!\\.[0-9]))[^\\n]*(?<![A-Za-z0-9])(?P<date>[0-9]{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-9])))(?![A-Za-z0-9])(?![^\\n]*(?<![A-Za-z0-9])[0-9]{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-9]))(?![A-Za-z0-9]))[^\\n]*$\nEOF\nsbx run <<'EOF'\ncd /workspace\nwc -c regex.txt\npython3 - <<'PY'\nimport re\nwith open('/workspace/regex.txt') as f:\n    pattern = f.read().strip()\nprint(pattern)\nlog_text = '''2024-01-01 192.168.0.1 start\n2024-01-02 no ip here 2024-01-03\n2024-01-04 10.0.0.1 2024-01-05 2024-02-29\nuser 1134-12-1234 2024-02-30 255.255.255.255\n2024-01-06 192.168.001.1\n'''\nprint(re.findall(pattern, log_text, re.MULTILINE))\nPY\nEOF",
+   "timeout": 30,
+   "sandbox": [
+    {
+     "at_ms": 94546,
+     "dur_ms": 51,
+     "exit": 0,
+     "cpu_ms": 44.0,
+     "phases_us": {
+      "acquire": 89,
+      "resume": 20694,
+      "mount": 17937,
+      "run": 7765,
+      "destroy": 22056
+     },
+     "cold": null,
+     "vm": "vm-58"
+    },
+    {
+     "at_ms": 94643,
+     "dur_ms": 95,
+     "exit": 0,
+     "cpu_ms": 91.7,
+     "phases_us": {
+      "acquire": 12,
+      "resume": 20315,
+      "mount": 17134,
+      "run": 42995,
+      "destroy": 31382
+     },
+     "cold": null,
+     "vm": "vm-45"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 94748,
+   "dur_ms": 16466,
+   "tokens_in": 16,
+   "tokens_out": 2622,
+   "cache_read": 18368,
+   "cache_write": 448,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 111214,
+   "dur_ms": 195,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport re\np = open('/workspace/regex.txt').read().strip()\nc = re.compile(p, re.MULTILINE)\nprint('groups:', c.groups, c.groupindex)\nlog = '2024-01-01 192.168.1.1 2024-01-02\\n2024-01-03 10.0.0.1\\n'\nprint(re.findall(p, log, re.MULTILINE))\nPY",
+   "timeout": 30,
+   "sandbox": [
+    {
+     "at_ms": 111265,
+     "dur_ms": 102,
+     "exit": 0,
+     "cpu_ms": 89.9,
+     "phases_us": {
+      "acquire": 68,
+      "resume": 20593,
+      "mount": 17931,
+      "run": 42201,
+      "destroy": 39428
+     },
+     "cold": null,
+     "vm": "vm-67"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 111412,
+   "dur_ms": 14900,
+   "tokens_in": 51,
+   "tokens_out": 2372,
+   "cache_read": 21440,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.078,
+ "calls": 4,
+ "cell": "TB1f",
+ "removed": []
+}

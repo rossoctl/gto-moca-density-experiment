@@ -1,0 +1,605 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-d",
+ "instance_id": "llm-inference-batching-scheduler",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 319478,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 17464,
+  "output": 29893,
+  "cacheRead": 453248,
+  "cacheWrite": 0,
+  "total": 500605
+ },
+ "totals": {
+  "model_calls": 17,
+  "tool_calls": 16,
+  "model_ms": 162024,
+  "tool_ms": 156841,
+  "sandbox_ms": 35416
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 105,
+   "dur_ms": 3596,
+   "tokens_in": 151,
+   "tokens_out": 91,
+   "cache_read": 6656,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3701,
+   "dur_ms": 202,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -la /workspace\nls -la /workspace/task_file 2>/dev/null || find / -maxdepth 3 -name 'requests_bucket_1.jsonl' 2>/dev/null\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 3812,
+     "dur_ms": 49,
+     "exit": 0,
+     "cpu_ms": 39.6,
+     "phases_us": {
+      "acquire": 87,
+      "resume": 20945,
+      "mount": 18224,
+      "run": 5945,
+      "destroy": 21937
+     },
+     "cold": null,
+     "vm": "vm-8"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 3981,
+   "dur_ms": 1186,
+   "tokens_in": 245,
+   "tokens_out": 127,
+   "cache_read": 6848,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5167,
+   "dur_ms": 129,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -la /workspace/task_file/input_data /workspace/task_file/scripts\nwc -l /workspace/task_file/input_data/*.jsonl\necho '---cost_model---'\ncat /workspace/task_file/scripts/cost_model.py\necho '---baseline---'\ncat /workspace/task_file/scripts/baseline_packer.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 5220,
+     "dur_ms": 46,
+     "exit": 0,
+     "cpu_ms": 40.9,
+     "phases_us": {
+      "acquire": 13,
+      "resume": 19581,
+      "mount": 17248,
+      "run": 8184,
+      "destroy": 17919
+     },
+     "cold": null,
+     "vm": "vm-15"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 5315,
+   "dur_ms": 8828,
+   "tokens_in": 3914,
+   "tokens_out": 280,
+   "cache_read": 7168,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14143,
+   "dur_ms": 269,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace/task_file\npython3 - <<'PY'\nimport json,statistics as st\nfor b in [1,2]:\n    reqs=[json.loads(l) for l in open(f'input_data/requests_bucket_{b}.jsonl')]\n    ps=[r['prompt_len'] for r in reqs]; gs=[r['gen_len'] for r in reqs]\n    print('bucket',b,'n',len(reqs))\n    for name,a in [('prompt',ps),('gen',gs)]:\n        print(' ',name,'min',min(a),'max',max(a),'mean',round(st.mean(a),1),'median',st.median(a),\n              'p90',sorted(a)[int(.9*len(a))],'p99',sorted(a)[int(.99*len(a))])\n    print('  prompt aligned uniques',len(set(((x+63)//64)*64 for x in ps)))\n    print('  gen uniques',len(set(gs)))\n    print('  sample',reqs[:3])\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 14199,
+     "dur_ms": 193,
+     "exit": 0,
+     "cpu_ms": 188.7,
+     "phases_us": {
+      "acquire": 78,
+      "resume": 22190,
+      "mount": 19476,
+      "run": 149138,
+      "destroy": 21662
+     },
+     "cold": null,
+     "vm": "vm-17"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 14429,
+   "dur_ms": 9461,
+   "tokens_in": 376,
+   "tokens_out": 297,
+   "cache_read": 12480,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 23890,
+   "dur_ms": 348,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace/task_file/scripts\npython3 - <<'PY'\nimport json, math\nfrom cost_model import CostModel, align, HEADS, HIDDEN\ncm=CostModel(64)\nfor b in [1,2]:\n    reqs=[json.loads(l) for l in open(f'../input_data/requests_bucket_{b}.jsonl')]\n    lats=[]\n    for r in reqs:\n        m=cm.batch_metrics([r])\n        lats.append(m['latencies'][0])\n    lats.sort()\n    n=len(lats)\n    p95=cm.pxx_latency(lats,0.95)\n    print('bucket',b,'individual p95',p95,'min',lats[0],'max',lats[-1])\n    print('  p50',lats[n//2],'p90',lats[int(.9*n)],'p97',lats[int(.97*n)])\n    # how many exceed thresholds\n    for th in [2.1e6,2.1e5]:\n        print('   >',th,sum(x>th for x in lats))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 23942,
+     "dur_ms": 277,
+     "exit": 0,
+     "cpu_ms": 273.4,
+     "phases_us": {
+      "acquire": 81,
+      "resume": 21181,
+      "mount": 18127,
+      "run": 232602,
+      "destroy": 23235
+     },
+     "cold": null,
+     "vm": "vm-19"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 24257,
+   "dur_ms": 3343,
+   "tokens_in": 239,
+   "tokens_out": 266,
+   "cache_read": 14336,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 27600,
+   "dur_ms": 356,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace/task_file/scripts\npython3 - <<'PY'\nimport json\nfrom cost_model import CostModel, HEADS, HIDDEN, align\ncm=CostModel(64)\nfor b in [1,2]:\n    reqs=[json.loads(l) for l in open(f'../input_data/requests_bucket_{b}.jsonl')]\n    reqmap={r['request_id']:r for r in reqs}\n    plan=[]\n    for i,r in enumerate(reqs):\n        s=align(r['prompt_len'],64)\n        plan.append({'request_id':r['request_id'],'batch_id':f'b-{i:04d}',\n                     'shape':{'seq_align':s,'heads_align':32,'hidden_align':4096}})\n    m=cm.plan_metrics(reqmap,plan)\n    print('bucket',b,{k:m[k] for k in ['cost','pad_ratio','p95_latency_ms','sequential_timecost']})\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 27656,
+     "dur_ms": 287,
+     "exit": 0,
+     "cpu_ms": 277.0,
+     "phases_us": {
+      "acquire": 152,
+      "resume": 22379,
+      "mount": 19532,
+      "run": 237052,
+      "destroy": 27482
+     },
+     "cold": null,
+     "vm": "vm-21"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 27971,
+   "dur_ms": 12603,
+   "tokens_in": 192,
+   "tokens_out": 263,
+   "cache_read": 15040,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 40574,
+   "dur_ms": 330,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace/task_file/scripts\npython3 - <<'PY'\nimport json\nfrom cost_model import align\nfor b in [1,2]:\n    reqs=[json.loads(l) for l in open(f'../input_data/requests_bucket_{b}.jsonl')]\n    rp=sum(r['prompt_len'] for r in reqs); rg=sum(r['gen_len'] for r in reqs)\n    pref_pad=sum(align(r['prompt_len'],64)-r['prompt_len'] for r in reqs)\n    print(b,'prompt_sum',rp,'gen_sum',rg,'real',rp+rg,'pref_pad',pref_pad,'pref_pad_ratio',pref_pad/(rp+rg))\n    for th in ([0.055] if b==1 else [0.15]):\n        allowed=th*(rp+rg)\n        print('  allowed pad',allowed,'room beyond pref',allowed-pref_pad)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 40626,
+     "dur_ms": 257,
+     "exit": 0,
+     "cpu_ms": 253.4,
+     "phases_us": {
+      "acquire": 141,
+      "resume": 20569,
+      "mount": 17794,
+      "run": 215842,
+      "destroy": 20407
+     },
+     "cold": null,
+     "vm": "vm-22"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 40930,
+   "dur_ms": 17201,
+   "tokens_in": 184,
+   "tokens_out": 1366,
+   "cache_read": 17280,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 58131,
+   "dur_ms": 412,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put /workspace/opt.py <<'EOF'\nimport json, math, sys\nfrom collections import defaultdict\nsys.path.insert(0,'/workspace/task_file/scripts')\nfrom cost_model import CostModel, align, HEADS, HIDDEN, CostConsts\n\ncm=CostModel(64)\n\ndef load(b):\n    return [json.loads(l) for l in open(f'/workspace/task_file/input_data/requests_bucket_{b}.jsonl')]\n\ndef eval_plan(reqs, batches):\n    # batches: list of list of request dicts\n    reqmap={r['request_id']:r for r in reqs}\n    plan=[]\n    # declared shape = max aligned S per batch, then remap shapes to <=8 reps\n    smaxs=[max(align(r['prompt_len'],64) for r in b) for b in batches]\n    reps=choose_reps(smaxs,8)\n    for bi,b in enumerate(batches):\n        s=next(rep for rep in reps if rep>=smaxs[bi])\n        for r in b:\n            plan.append({'request_id':r['request_id'],'batch_id':f'b-{bi:05d}',\n                         'shape':{'seq_align':s,'heads_align':32,'hidden_align':4096}})\n    m=cm.plan_metrics(reqmap,plan)\n    return {k:m[k] for k in ['cost','pad_ratio','p95_latency_ms','sequential_timecost']}\n\ndef choose_reps(vals,K):\n    u=sorted(set(vals))\n    if len(u)<=K: return u\n    # choose K reps to minimize total compile cost plus overage; simple DP over sorted unique\n    # cost of rep r for all vals assigned to it = (500*r^2+2*r*4096)*count\n    # assignment: each val -> smallest rep>=val, last rep covers all above.\n    n=len(u)\n    # DP choose K indices; cost for group (i..j): all mapped to u[j], but only vals i..j (with vals between)\n    # prefix counts\n    INF=float('inf')\n    import functools\n    cnt=defaultdict(int)\n    for v in vals: cnt[v]+=1\n    # dp[k][j] min cost assigning u[0..j] using k reps with u[j] as last rep\n    def groupcost(i,j):\n        s=sum(cnt[u[t]] for t in range(i,j+1))\n        r=u[j]\n        return (500*r*r+2*r*4096)*s\n    dp=[[INF]*n for _ in range(K+1)]\n    par=[[-1]*n for _ in range(K+1)]\n    for j in range(n):\n        dp[1][j]=groupcost(0,j)\n    for k in range(2,K+1):\n        for j in range(n):\n            best=INF;bp=-1\n            for i in range(1,j+1):\n                if dp[k-1][i-1]<INF:\n                    c=dp[k-1][i-1]+groupcost(i,j)\n                    if c<best: best=c;bp=i-1\n            dp[k][j]=best;par[k][j]=bp\n    # choose k<=K with min cost\n    bk=min(range(1,K+1),key=lambda k:dp[k][n-1])\n    reps=[];j=n-1;k=bk\n    while k>=1:\n        reps.append(u[j]); j=par[k][j]; k-=1\n    return sorted(reps)\n\ndef report(name,reqs,batches,th):\n    m=eval_plan(reqs,batches)\n    ok=all(m[k]<=th[k] for k in th)\n    print(f'{name}: nbat={len(batches)} cost={m[\"cost\"]:.4g} pad={m[\"pad_ratio\"]:.4f} p95={m[\"p95_latency_ms\"]:.4g} seq={m[\"sequential_timecost\"]:.4g} OK={ok}')\n    return m\n\ndef strategy_exact_gen(reqs):\n    g=defaultdict(list)\n    for r in reqs: g[r['gen_len']].append(r)\n    return [g[k] for k in sorted(g)]\n\ndef strategy_exact_gen_scluster(reqs, ratio=None, absdiff=None, maxper=None):\n    g=defaultdict(list)\n    for r in reqs: g[r['gen_len']].append(r)\n    batches=[]\n    for gv in sorted(g):\n        rs=sorted(g[gv], key=lambda r: align(r['prompt_len'],64))\n        cur=[]; curmax=0\n        for r in rs:\n            s=align(r['prompt_len'],64)\n            ok=True\n            if cur:\n                nm=max(curmax,s)\n                if ratio and nm>cur[0]*ratio: ok=False\n                if absdiff and nm-cur[0]>absdiff: ok=False\n                if maxper and len(cur)>=maxper: ok=False\n            if ok:\n                cur.append(s); curmax=max(curmax,s)\n            else:\n                batches.append(cur); cur=[s];curmax=s\n        if cur: batches.append(cur)\n    # convert s lists back? bug; use dicts\n    return batches\n\nif __name__=='__main__':\n    ths={1:{'cost':3.0e11,'pad_ratio':0.055,'p95_latency_ms':2.1e6,'sequential_timecost':2.7e8},\n         2:{'cost':4.8e10,'pad_ratio':0.15,'p95_latency_ms':2.1e5,'sequential_timecost':3.2e7}}\n    for b in [1,2]:\n        reqs=load(b)\n        print('=== bucket',b)\n        report('exact_gen',reqs,strategy_exact_gen(reqs),ths[b])\nEOF\nsbx run <<'EOF'\ncd /workspace && python3 opt.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 58146,
+     "dur_ms": 58,
+     "exit": 0,
+     "cpu_ms": 47.4,
+     "phases_us": {
+      "acquire": 109,
+      "resume": 22156,
+      "mount": 19191,
+      "run": 7914,
+      "destroy": 28048
+     },
+     "cold": null,
+     "vm": "vm-23"
+    },
+    {
+     "at_ms": 58251,
+     "dur_ms": 279,
+     "exit": 0,
+     "cpu_ms": 268.8,
+     "phases_us": {
+      "acquire": 22,
+      "resume": 21556,
+      "mount": 18380,
+      "run": 230233,
+      "destroy": 26609
+     },
+     "cold": null,
+     "vm": "vm-5"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 58561,
+   "dur_ms": 5383,
+   "tokens_in": 132,
+   "tokens_out": 506,
+   "cache_read": 20480,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 63944,
+   "dur_ms": 593,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncat > exp.py <<'PY'\nfrom opt import *\nimport itertools\n\ndef scluster(reqs, ratio=None, absdiff=None, maxper=None, mode='ratio'):\n    g=defaultdict(list)\n    for r in reqs: g[r['gen_len']].append(r)\n    batches=[]\n    for gv in sorted(g):\n        rs=sorted(g[gv], key=lambda r: align(r['prompt_len'],64))\n        cur=[]; curmin=None\n        for r in rs:\n            s=align(r['prompt_len'],64)\n            ok=True\n            if cur:\n                nm=max(align(x['prompt_len'],64) for x in cur+[r])\n                if ratio and nm>curmin*ratio: ok=False\n                if absdiff and nm-curmin>absdiff: ok=False\n                if maxper and len(cur)>=maxper: ok=False\n            if ok:\n                cur.append(r); curmin=align(cur[0]['prompt_len'],64)\n            else:\n                batches.append(cur); cur=[r]; curmin=s\n        if cur: batches.append(cur)\n    return batches\n\nths={1:{'cost':3.0e11,'pad_ratio':0.055,'p95_latency_ms':2.1e6,'sequential_timecost':2.7e8},\n     2:{'cost':4.8e10,'pad_ratio':0.15,'p95_latency_ms':2.1e5,'sequential_timecost':3.2e7}}\nfor b in [1,2]:\n    reqs=load(b)\n    print('=== bucket',b)\n    for ratio in [1.0,1.25,1.5,1.75,2.0,2.5,3.0,4.0]:\n        report(f'ratio{ratio}',reqs,scluster(reqs,ratio=ratio),ths[b])\n    for ad in [0,64,128,256,512]:\n        report(f'abs{ad}',reqs,scluster(reqs,absdiff=ad),ths[b])\nPY\npython3 exp.py",
+   "sandbox": [
+    {
+     "at_ms": 63998,
+     "dur_ms": 515,
+     "exit": 0,
+     "cpu_ms": 524.1,
+     "phases_us": {
+      "acquire": 92,
+      "resume": 20809,
+      "mount": 17980,
+      "run": 476640,
+      "destroy": 17557
+     },
+     "cold": null,
+     "vm": "vm-28"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 64556,
+   "dur_ms": 24245,
+   "tokens_in": 1207,
+   "tokens_out": 1664,
+   "cache_read": 21504,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 88801,
+   "dur_ms": 625,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncat > opt2.py <<'PY'\nimport json, math, sys\nfrom collections import defaultdict\nsys.path.insert(0,'/workspace/task_file/scripts')\nfrom cost_model import CostModel, align, HEADS, HIDDEN, CostConsts\ncm=CostModel(64)\nC=cm.c\n\ndef load(b):\n    return [json.loads(l) for l in open(f'/workspace/task_file/input_data/requests_bucket_{b}.jsonl')]\n\ndef fc(S,g):\n    ss=cm._sum_sq_arith(S,g); sl=g*S+g*(g-1)/2\n    return C.Kd_attn*ss + C.Kd_mlp*HIDDEN*sl\ndef fl(S,g):\n    ss=cm._sum_sq_arith(S,g); sl=g*S+g*(g-1)/2\n    return C.Td_attn*ss + C.Td_mlp*HIDDEN*sl\ndef prefcost(p):\n    S=align(p,64); return C.Kp_attn*S*S + C.Kp_mlp*S*HIDDEN\ndef preflat(p):\n    S=align(p,64); return C.Tp_attn*S*S + C.Tp_mlp*S*HIDDEN\n\ndef build_groups(reqs):\n    g=defaultdict(list)\n    for r in reqs: g[r['gen_len']].append(r)\n    groups={}\n    for gv,rs in g.items():\n        byS=defaultdict(list)\n        for r in rs: byS[align(r['prompt_len'],64)].append(r)\n        groups[gv]=[ (S,byS[S]) for S in sorted(byS) ]\n    return groups\n\ndef gen_options(gv, sg, lam):\n    # sg list (S, list reqs) sorted\n    m=len(sg)\n    # prefix counts\n    pref=[0]\n    for S,rs in sg: pref.append(pref[-1]+len(rs))\n    INF=float('inf')\n    dp=[INF]*(m+1); par=[-1]*(m+1); dc=[0.0]*(m+1); ds=[0.0]*(m+1)\n    dp[0]=0\n    for j in range(1,m+1):\n        Sj=sg[j-1][0]\n        for i in range(1,j+1):\n            n=pref[j]-pref[i-1]\n            cc=n*fc(Sj,gv)+C.Kbatch_overhead_cost\n            cs=preflat(Sj)+fl(Sj,gv)+C.Tbatch_overhead_ms\n            val=dp[i-1]+cc+lam*cs\n            if val<dp[j]:\n                dp[j]=val; par[j]=i-1; dc[j]=dc[i-1]+cc; ds[j]=ds[i-1]+cs\n    # reconstruct clusters as (i,j)\n    clusters=[]; j=m\n    while j>0:\n        i=par[j]; clusters.append((i+1,j)); j=i\n    clusters.reverse()\n    return dc[m],ds[m],clusters\n\ndef make_batches(groups, lam):\n    batches=[]\n    for gv in sorted(groups):\n        sg=groups[gv]\n        c,s,clusters=gen_options(gv,sg,lam)\n        for i,j in clusters:\n            reqs=[]\n            for t in range(i-1,j): reqs+=sg[t][1]\n            batches.append(reqs)\n    return batches\n\ndef eval_batches(reqs,batches,reps=None):\n    reqmap={r['request_id']:r for r in reqs}\n    smaxs=[max(align(r['prompt_len'],64) for r in b) for b in batches]\n    if reps is None:\n        reps=choose_reps(smaxs,8)\n    plan=[]\n    for bi,b in enumerate(batches):\n        s=next(rep for rep in reps if rep>=smaxs[bi])\n        for r in b:\n            plan.append({'request_id':r['request_id'],'batch_id':f'b-{bi:05d}',\n                         'shape':{'seq_align':s,'heads_align':32,'hidden_align':4096}})\n    m=cm.plan_metrics(reqmap,plan)\n    return {k:m[k] for k in ['cost','pad_ratio','p95_latency_ms','sequential_timecost']},reps\n\ndef choose_reps(vals,K):\n    u=sorted(set(vals))\n    if len(u)<=K: return u\n    cnt=defaultdict(int)\n    for v in vals: cnt[v]+=1\n    import functools\n    n=len(u); INF=float('inf')\n    def groupcost(i,j):\n        s=sum(cnt[u[t]] for t in range(i,j+1)); r=u[j]\n        return (C.Kshape_attn*r*r+C.Kshape_mlp*r*HIDDEN)*s\n    dp=[[INF]*n for _ in range(K+1)]; par=[[-1]*n for _ in range(K+1)]\n    for j in range(n): dp[1][j]=groupcost(0,j)\n    for k in range(2,K+1):\n        for j in range(n):\n            for i in range(1,j+1):\n                if dp[k-1][i-1]<INF:\n                    c=dp[k-1][i-1]+groupcost(i,j)\n                    if c<dp[k][j]: dp[k][j]=c;par[k][j]=i-1\n    bk=min(range(1,K+1),key=lambda k:dp[k][n-1])\n    reps=[];j=n-1;k=bk\n    while k>=1:\n        reps.append(u[j]);j=par[k][j];k-=1\n    return sorted(reps)\n\nths={1:{'cost':3.0e11,'pad_ratio':0.055,'p95_latency_ms':2.1e6,'sequential_timecost':2.7e8},\n     2:{'cost':4.8e10,'pad_ratio':0.15,'p95_latency_ms':2.1e5,'sequential_timecost':3.2e7}}\nif __name__=='__main__':\n    for b in [1,2]:\n        reqs=load(b); groups=build_groups(reqs)\n        print('=== bucket',b,'gens',len(groups))\n        for lam in [0,0.01,0.02,0.05,0.1,0.2,0.5,1,2,5,10,20,50,100]:\n            batches=make_batches(groups,lam)\n            m,reps=eval_batches(reqs,batches)\n            ok=all(m[k]<=ths[b][k] for k in ths[b])\n            print(f'lam={lam:<6} nbat={len(batches):4d} cost={m[\"cost\"]:.4g} pad={m[\"pad_ratio\"]:.4f} p95={m[\"p95_latency_ms\"]:.4g} seq={m[\"sequential_timecost\"]:.4g} OK={ok} reps={reps}')\nPY\npython3 opt2.py",
+   "sandbox": [
+    {
+     "at_ms": 88855,
+     "dur_ms": 562,
+     "exit": 0,
+     "cpu_ms": 558.9,
+     "phases_us": {
+      "acquire": 87,
+      "resume": 21359,
+      "mount": 18231,
+      "run": 509544,
+      "destroy": 31130
+     },
+     "cold": null,
+     "vm": "vm-30"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 89447,
+   "dur_ms": 9911,
+   "tokens_in": 2075,
+   "tokens_out": 249,
+   "cache_read": 27200,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 99358,
+   "dur_ms": 646,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace && python3 - <<'PY'\nfrom opt2 import *\nfor b in [1,2]:\n    reqs=load(b); groups=build_groups(reqs)\n    print('=== bucket',b)\n    for lam in [200,500,1000,2000,5000,1e4,2e4,5e4,1e5,2e5,5e5,1e6,2e6,5e6,1e7]:\n        batches=make_batches(groups,lam)\n        m,reps=eval_batches(reqs,batches)\n        print(f'lam={lam:<9.0f} nbat={len(batches):4d} cost={m[\"cost\"]:.5g} pad={m[\"pad_ratio\"]:.5f} p95={m[\"p95_latency_ms\"]:.5g} seq={m[\"sequential_timecost\"]:.5g}')\nPY",
+   "sandbox": [
+    {
+     "at_ms": 99414,
+     "dur_ms": 540,
+     "exit": 0,
+     "cpu_ms": 536.1,
+     "phases_us": {
+      "acquire": 147,
+      "resume": 21918,
+      "mount": 18827,
+      "run": 485426,
+      "destroy": 32566
+     },
+     "cold": null,
+     "vm": "vm-33"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 100022,
+   "dur_ms": 29670,
+   "tokens_in": 1446,
+   "tokens_out": 1135,
+   "cache_read": 30976,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 129692,
+   "dur_ms": 120127,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncat > opt3.py <<'PY'\nimport json, math, sys, time\nfrom collections import defaultdict\nsys.path.insert(0,'/workspace/task_file/scripts')\nfrom cost_model import CostModel, align, HEADS, HIDDEN\nfrom opt2 import load, build_groups, make_batches, eval_batches, choose_reps, fc, fl, preflat, prefcost, C, cm\n\nclass B:\n    __slots__=('reqs','S','G','n','sumg','dec','seq','pad')\n    def __init__(self,reqs):\n        self.reqs=reqs; self.n=len(reqs)\n        self.S=max(align(r['prompt_len'],64) for r in reqs)\n        self.G=max(r['gen_len'] for r in reqs)\n        self.sumg=sum(r['gen_len'] for r in reqs)\n        self.dec=self.n*fc(self.S,self.G)\n        self.seq=preflat(self.S)+fl(self.S,self.G)+C.Tbatch_overhead_ms\n        self.pad=self.n*self.G-self.sumg\n\ndef merge_attrs(A,bb):\n    S=max(A.S,bb.S); G=max(A.G,bb.G); n=A.n+bb.n\n    dec=n*fc(S,G)\n    seq=preflat(S)+fl(S,G)+C.Tbatch_overhead_ms\n    sumg=A.sumg+bb.sumg\n    pad=n*G-sumg\n    return S,G,n,sumg,dec,seq,pad\n\ndef greedy(init_batches, lam, padbudget, costbudget=None, maxiter=1000):\n    bs=[B(r) for r in init_batches]\n    pad=sum(b.pad for b in bs)\n    # prefill const not included; costbudget compare on dec+overhead\n    while len(bs)>1:\n        best=None; bi=bj=None; bd=None\n        N=len(bs)\n        for i in range(N):\n            A=bs[i]\n            for j in range(i+1,N):\n                bb=bs[j]\n                S,G,n,sumg,dec,seq,pd=merge_attrs(A,bb)\n                dpad=pd-A.pad-bb.pad\n                if pad+dpad>padbudget: continue\n                dcost=dec-A.dec-bb.dec-C.Kbatch_overhead_cost\n                dseq=seq-A.seq-bb.seq\n                dJ=dcost+lam*dseq\n                if best is None or dJ<best:\n                    best=dJ;bi=i;bj=j;bd=(S,G,n,sumg,dec,seq,pd,dpad,dcost,dseq)\n        if best is None or best>=0: break\n        S,G,n,sumg,dec,seq,pd,dpad,dcost,dseq=bd\n        A=bs[bi];bb=bs[bj]\n        nb=B.__new__(B)\n        nb.reqs=A.reqs+bb.reqs; nb.S=S;nb.G=G;nb.n=n;nb.sumg=sumg;nb.dec=dec;nb.seq=seq;nb.pad=pd\n        bs[bi]=nb; bs.pop(bj); pad+=dpad\n    return [b.reqs for b in bs]\n\ndef rep_budget(reqs, padbudget, lam):\n    groups=build_groups(reqs)\n    init=make_batches(groups,0)  # finest-ish\n    return greedy(init,lam,padbudget)\n\nif __name__=='__main__':\n    ths={1:{'cost':3.0e11,'pad_ratio':0.055,'p95_latency_ms':2.1e6,'sequential_timecost':2.7e8,'padbudget':2838},\n         2:{'cost':4.8e10,'pad_ratio':0.15,'p95_latency_ms':2.1e5,'sequential_timecost':3.2e7,'padbudget':3224}}\n    for b in [1,2]:\n        reqs=load(b)\n        print('=== bucket',b,flush=True)\n        for lam in [0,50,100,200,500,1000,2000,5000,1e4,2e4,5e4,1e5]:\n            t=time.time()\n            batches=rep_budget(reqs,ths[b]['padbudget'],lam)\n            m,reps=eval_batches(reqs,batches)\n            print(f'lam={lam:<7} nb={len(batches):4d} cost={m[\"cost\"]:.5g} pad={m[\"pad_ratio\"]:.5f} p95={m[\"p95_latency_ms\"]:.5g} seq={m[\"sequential_timecost\"]:.5g} t={time.time()-t:.1f}s',flush=True)\nPY\npython3 opt3.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 249851,
+   "dur_ms": 8853,
+   "tokens_in": 127,
+   "tokens_out": 1322,
+   "cache_read": 38080,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 258704,
+   "dur_ms": 17315,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncat > opt4.py <<'PY'\nimport json, math, sys, time, heapq\nfrom collections import defaultdict\nsys.path.insert(0,'/workspace/task_file/scripts')\nfrom cost_model import CostModel, align, HEADS, HIDDEN\nfrom opt2 import load, build_groups, make_batches, eval_batches, choose_reps, fc, fl, preflat, prefcost, C, cm\n\nclass B:\n    __slots__=('reqs','S','G','n','sumg','dec','seq','pad','ver')\n    def __init__(self,reqs,ver=0):\n        self.reqs=reqs; self.n=len(reqs); self.ver=ver\n        self.S=max(align(r['prompt_len'],64) for r in reqs)\n        self.G=max(r['gen_len'] for r in reqs)\n        self.sumg=sum(r['gen_len'] for r in reqs)\n        self.dec=self.n*fc(self.S,self.G)\n        self.seq=preflat(self.S)+fl(self.S,self.G)+C.Tbatch_overhead_ms\n        self.pad=self.n*self.G-self.sumg\n\ndef pair_delta(A,bb):\n    S=A.S if A.S>=bb.S else bb.S\n    G=A.G if A.G>=bb.G else bb.G\n    n=A.n+bb.n; sumg=A.sumg+bb.sumg\n    dec=n*fc(S,G); seq=preflat(S)+fl(S,G)+C.Tbatch_overhead_ms\n    pad=n*G-sumg\n    dpad=pad-A.pad-bb.pad\n    dcost=dec-A.dec-bb.dec-C.Kbatch_overhead_cost\n    dseq=seq-A.seq-bb.seq\n    return dcost+dseq*0.0, dcost, dseq, dpad, (S,G,n,sumg,dec,seq,pad)\n\ndef greedy(init_batches, lam, padbudget):\n    batches={}; alive=set(); ctr=0\n    for r in init_batches:\n        batches[ctr]=B(r,0); alive.add(ctr); ctr+=1\n    pad=sum(batches[i].pad for i in alive)\n    heap=[]\n    def push_pair(i,j):\n        A=batches[i]; bb=batches[j]\n        _,dcost,dseq,dpad,attr=pair_delta(A,bb)\n        dJ=dcost+lam*dseq\n        heapq.heappush(heap,(dJ,i,j,A.ver,bb.ver,dcost,dseq,dpad,attr))\n    ids=list(alive)\n    L=len(ids)\n    for a in range(L):\n        for c in range(a+1,L): push_pair(ids[a],ids[c])\n    while heap:\n        dJ,i,j,vi,vj,dcost,dseq,dpad,attr=heapq.heappop(heap)\n        if i not in alive or j not in alive: continue\n        A=batches[i]; bb=batches[j]\n        if A.ver!=vi or bb.ver!=vj: continue\n        if dJ>=0: break\n        if pad+dpad>padbudget: continue\n        S,G,n,sumg,dec,seq,pd=attr\n        nb=B.__new__(B); nb.reqs=A.reqs+bb.reqs; nb.S=S;nb.G=G;nb.n=n;nb.sumg=sumg\n        nb.dec=dec;nb.seq=seq;nb.pad=pd;nb.ver=0\n        del batches[i]; del batches[j]; alive.discard(i);alive.discard(j)\n        nid=ctr;ctr+=1;batches[nid]=nb;alive.add(nid)\n        pad+=dpad\n        for k in list(alive):\n            if k==nid: continue\n            if k<nid: push_pair(k,nid)\n            else: push_pair(nid,k)\n    return [batches[i].reqs for i in alive]\n\ndef run(reqs,padbudget,lam):\n    groups=build_groups(reqs)\n    init=make_batches(groups,0)\n    return greedy(init,lam,padbudget)\n\nif __name__=='__main__':\n    ths={1:{'cost':3.0e11,'pad_ratio':0.055,'p95_latency_ms':2.1e6,'sequential_timecost':2.7e8,'padbudget':2830},\n         2:{'cost':4.8e10,'pad_ratio':0.15,'p95_latency_ms':2.1e5,'sequential_timecost':3.2e7,'padbudget':3215}}\n    for b in [1,2]:\n        reqs=load(b)\n        print('=== bucket',b,flush=True)\n        for lam in [0,20,50,100,200,500,1000,2000,5000,1e4,2e4,5e4,1e5,1e6]:\n            t=time.time()\n            batches=run(reqs,ths[b]['padbudget'],lam)\n            m,reps=eval_batches(reqs,batches)\n            print(f'lam={lam:<8} nb={len(batches):4d} cost={m[\"cost\"]:.5g} pad={m[\"pad_ratio\"]:.5f} p95={m[\"p95_latency_ms\"]:.5g} seq={m[\"sequential_timecost\"]:.5g} t={time.time()-t:.1f}s',flush=True)\nPY\ntimeout 280 python3 opt4.py",
+   "timeout": 300000,
+   "sandbox": [
+    {
+     "at_ms": 258756,
+     "dur_ms": 17222,
+     "exit": 0,
+     "cpu_ms": 17213.6,
+     "phases_us": {
+      "acquire": 21926,
+      "resume": 20279,
+      "mount": 18317,
+      "run": 17145473,
+      "destroy": 34389
+     },
+     "cold": "parked",
+     "vm": "vm-41"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 276036,
+   "dur_ms": 7195,
+   "tokens_in": 1506,
+   "tokens_out": 690,
+   "cache_read": 40192,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 283231,
+   "dur_ms": 7801,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nfrom opt4 import *\nfrom opt2 import choose_reps\nimport pickle\nths={1:{'cost':3.0e11,'pad_ratio':0.055,'p95_latency_ms':2.1e6,'sequential_timecost':2.7e8,'padbudget':2830},\n     2:{'cost':4.8e10,'pad_ratio':0.15,'p95_latency_ms':2.1e5,'sequential_timecost':3.2e7,'padbudget':3215}}\nreqs={b:load(b) for b in [1,2]}\ncache={}\nfor b,lams in [(1,[60,80,100,120,150,180]),(2,[300,400,500,600,700,800])]:\n    for lam in lams:\n        cache[(b,lam)]=run(reqs[b],ths[b]['padbudget'],lam)\n\ndef batches_smax(bs): return [max(align(r['prompt_len'],64) for r in x) for x in bs]\n\n# Evaluate combos with global reps chosen from union\ndef evaluate(b1,b2):\n    bs=batches_smax(cache[(1,b1)])+batches_smax(cache[(2,b2)])\n    reps=choose_reps(bs,8)\n    out={}\n    for b,lam in [(1,b1),(2,b2)]:\n        out[b],_=eval_batches(reqs[b],cache[(b,lam)],reps)\n    return reps,out\n\nfor b1 in [60,80,100,120,150,180]:\n    for b2 in [300,400,500,600,700,800]:\n        reps,out=evaluate(b1,b2)\n        ok1=all(out[1][k]<=ths[1][k] for k in ths[1] if k!='padbudget')\n        ok2=all(out[2][k]<=ths[2][k] for k in ths[2] if k!='padbudget')\n        if ok1 and ok2:\n            m1,m2=out[1],out[2]\n            print(f'OK b1={b1} b2={b2} reps={reps}')\n            print(f'  B1 cost={m1[\"cost\"]:.4g} pad={m1[\"pad_ratio\"]:.5f} p95={m1[\"p95_latency_ms\"]:.5g} seq={m1[\"sequential_timecost\"]:.5g}')\n            print(f'  B2 cost={m2[\"cost\"]:.4g} pad={m2[\"pad_ratio\"]:.5f} p95={m2[\"p95_latency_ms\"]:.5g} seq={m2[\"sequential_timecost\"]:.5g}')\nPY",
+   "timeout": 180000,
+   "sandbox": [
+    {
+     "at_ms": 283284,
+     "dur_ms": 7718,
+     "exit": 0,
+     "cpu_ms": 7720.2,
+     "phases_us": {
+      "acquire": 91,
+      "resume": 20499,
+      "mount": 17726,
+      "run": 7664000,
+      "destroy": 33573
+     },
+     "cold": null,
+     "vm": "vm-43"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 291051,
+   "dur_ms": 8420,
+   "tokens_in": 2338,
+   "tokens_out": 710,
+   "cache_read": 43200,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 299471,
+   "dur_ms": 5753,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nfrom opt4 import *\nfrom opt2 import choose_reps\nths={1:{'cost':3.0e11,'pad_ratio':0.055,'p95_latency_ms':2.1e6,'sequential_timecost':2.7e8,'padbudget':2830},\n     2:{'cost':4.8e10,'pad_ratio':0.15,'p95_latency_ms':2.1e5,'sequential_timecost':3.2e7,'padbudget':3215}}\nreqs={b:load(b) for b in [1,2]}\nb1l=[50,55,60,65,70]\nb2l=[150,200,250,300]\ncache={}\nfor b,lams in [(1,b1l),(2,b2l)]:\n    for lam in lams: cache[(b,lam)]=run(reqs[b],ths[b]['padbudget'],lam)\ndef smaxs(bs): return [max(align(r['prompt_len'],64) for r in x) for x in bs]\nfor b1 in b1l:\n    for b2 in b2l:\n        reps=choose_reps(smaxs(cache[(1,b1)])+smaxs(cache[(2,b2)]),8)\n        o={}\n        for b,lam in [(1,b1),(2,b2)]: o[b],_=eval_batches(reqs[b],cache[(b,lam)],reps)\n        m1,m2=o[1],o[2]\n        ok1=all(m1[k]<=ths[1][k] for k in ['cost','pad_ratio','p95_latency_ms','sequential_timecost'])\n        ok2=all(m2[k]<=ths[2][k] for k in ['cost','pad_ratio','p95_latency_ms','sequential_timecost'])\n        def margin(m,th): return min(th[k]/m[k] if m[k]>0 else 9 for k in ['cost','pad_ratio','p95_latency_ms','sequential_timecost'])\n        print(f'b1={b1} b2={b2} ok={ok1 and ok2} reps={reps} m1={margin(m1,ths[1]):.3f} m2={margin(m2,ths[2]):.3f}')\n        print(f'   B1 c={m1[\"cost\"]:.4g} p={m1[\"pad_ratio\"]:.5f} l={m1[\"p95_latency_ms\"]:.5g} s={m1[\"sequential_timecost\"]:.5g}')\n        print(f'   B2 c={m2[\"cost\"]:.4g} p={m2[\"pad_ratio\"]:.5f} l={m2[\"p95_latency_ms\"]:.5g} s={m2[\"sequential_timecost\"]:.5g}')\nPY",
+   "timeout": 180000,
+   "sandbox": [
+    {
+     "at_ms": 299523,
+     "dur_ms": 5659,
+     "exit": 0,
+     "cpu_ms": 5655.0,
+     "phases_us": {
+      "acquire": 74,
+      "resume": 20731,
+      "mount": 17882,
+      "run": 5605349,
+      "destroy": 32291
+     },
+     "cold": null,
+     "vm": "vm-47"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 305246,
+   "dur_ms": 7867,
+   "tokens_in": 2593,
+   "tokens_out": 1031,
+   "cache_read": 47424,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 313113,
+   "dur_ms": 1809,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncat > generate_final.py <<'PY'\nimport json, os, sys\nsys.path.insert(0,'/workspace/task_file/scripts')\nfrom cost_model import align, HEADS, HIDDEN\nfrom opt4 import run\nfrom opt2 import load, choose_reps\n\nROOT='/workspace/task_file'\nLAM={1:50,2:150}\nPADBUDGET={1:2830,2:3215}\nreqs={b:load(b) for b in (1,2)}\nbatches={b:run(reqs[b],PADBUDGET[b],LAM[b]) for b in (1,2)}\ndef smaxs(bs):\n    return [max(align(r['prompt_len'],64) for r in x) for x in bs]\nallvals=smaxs(batches[1])+smaxs(batches[2])\nreps=choose_reps(allvals,8)\nprint('reps',reps)\nos.makedirs(f'{ROOT}/output_data',exist_ok=True)\nfor b in (1,2):\n    recs=[]\n    for bi,bt in enumerate(batches[b]):\n        s0=max(align(r['prompt_len'],64) for r in bt)\n        s=next(rp for rp in reps if rp>=s0)\n        bid=f'b-{bi:04d}'\n        for r in bt:\n            recs.append({'request_id':r['request_id'],'batch_id':bid,\n                         'shape':{'seq_align':s,'heads_align':HEADS,'hidden_align':HIDDEN}})\n    path=f'{ROOT}/output_data/plan_b{b}.jsonl'\n    with open(path,'w') as f:\n        for r in recs: f.write(json.dumps(r)+'\\n')\n    print('wrote',path,'batches',len(batches[b]),'records',len(recs))\nPY\npython3 generate_final.py\necho '--- validation ---'\npython3 - <<'PY'\nimport json,sys\nsys.path.insert(0,'/workspace/task_file/scripts')\nfrom cost_model import CostModel, align, HEADS, HIDDEN\ncm=CostModel(64)\nths={1:{'cost':3.0e11,'pad_ratio':0.055,'p95_latency_ms':2.1e6,'sequential_timecost':2.7e8},\n     2:{'cost':4.8e10,'pad_ratio':0.15,'p95_latency_ms':2.1e5,'sequential_timecost':3.2e7}}\nallshapes=set()\nfor b in (1,2):\n    reqs=[json.loads(l) for l in open(f'/workspace/task_file/input_data/requests_bucket_{b}.jsonl')]\n    reqmap={r['request_id']:r for r in reqs}\n    plan=[json.loads(l) for l in open(f'/workspace/task_file/output_data/plan_b{b}.jsonl')]\n    ids=[p['request_id'] for p in plan]\n    assert len(ids)==len(set(ids))==len(reqs), 'id count/dup'\n    assert set(ids)==set(reqmap), 'missing ids'\n    bshape={}\n    for p in plan:\n        sh=p['shape']; S=sh['seq_align']; allshapes.add((S,sh['heads_align'],sh['hidden_align']))\n        assert sh['heads_align']==32 and sh['hidden_align']==4096\n        assert S%64==0 and S>=align(reqmap[p['request_id']]['prompt_len'],64)\n        bs=bshape.setdefault(p['batch_id'],(S,sh['heads_align'],sh['hidden_align']))\n        assert bs==(S,sh['heads_align'],sh['hidden_align']), 'shape mismatch in batch'\n    m=cm.plan_metrics(reqmap,plan)\n    ok=all(m[k]<=ths[b][k] for k in ths[b])\n    print('bucket',b,'batches',len(set(p['batch_id'] for p in plan)),{k:m[k] for k in ths[b]},'OK',ok)\n    assert ok\nprint('total unique shapes',len(allshapes),allshapes)\nassert len(allshapes)<=8\nPY",
+   "timeout": 180000,
+   "sandbox": [
+    {
+     "at_ms": 313165,
+     "dur_ms": 1709,
+     "exit": 0,
+     "cpu_ms": 1710.6,
+     "phases_us": {
+      "acquire": 325,
+      "resume": 20868,
+      "mount": 17746,
+      "run": 1656085,
+      "destroy": 31819
+     },
+     "cold": null,
+     "vm": "vm-49"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 314940,
+   "dur_ms": 2215,
+   "tokens_in": 365,
+   "tokens_out": 133,
+   "cache_read": 51840,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 317155,
+   "dur_ms": 126,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nfind /workspace -maxdepth 3 -type f | sort\necho '--- line counts ---'\nwc -l /workspace/task_file/output_data/*.jsonl\necho '--- input heads ---'\nhead -n 1 /workspace/task_file/input_data/requests_bucket_1.jsonl\nhead -n 1 /workspace/task_file/output_data/plan_b1.jsonl\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 317207,
+     "dur_ms": 45,
+     "exit": 0,
+     "cpu_ms": 45.3,
+     "phases_us": {
+      "acquire": 77,
+      "resume": 20877,
+      "mount": 18238,
+      "run": 8872,
+      "destroy": 15455
+     },
+     "cold": null,
+     "vm": "vm-50"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 317298,
+   "dur_ms": 2047,
+   "tokens_in": 374,
+   "tokens_out": 198,
+   "cache_read": 52544,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 6.676,
+ "calls": 16,
+ "cell": "TB1d"
+}

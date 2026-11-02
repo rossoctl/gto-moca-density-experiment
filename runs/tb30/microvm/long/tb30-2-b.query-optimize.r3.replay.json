@@ -1,0 +1,823 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "query-optimize",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 606915,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 34918,
+  "output": 39194,
+  "cacheRead": 1196032,
+  "cacheWrite": 17216,
+  "total": 1287360
+ },
+ "totals": {
+  "model_calls": 31,
+  "tool_calls": 27,
+  "model_ms": 173328,
+  "tool_ms": 432152,
+  "sandbox_ms": 68972
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 523,
+   "dur_ms": 908
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1431,
+   "dur_ms": 158,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat /app/my-sql-query.sql\necho \"-----SCHEMA-----\"\nsqlite3 /app/oewn.sqlite \".schema\"",
+   "sandbox": [
+    {
+     "at_ms": 1511,
+     "dur_ms": 64,
+     "exit": 0,
+     "cpu_ms": 52.3,
+     "phases_us": {
+      "acquire": 85,
+      "resume": 21823,
+      "mount": 19434,
+      "run": 11093,
+      "destroy": 31110
+     },
+     "cold": null,
+     "vm": "vm-217"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1589,
+   "dur_ms": 3132
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4721,
+   "dur_ms": 342,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\nsqlite3 oewn.sqlite \"SELECT name,sql FROM sqlite_master WHERE type='index';\"\necho \"--- counts ---\"\nsqlite3 oewn.sqlite \"SELECT 'words',count(*) FROM words UNION ALL SELECT 'senses',count(*) FROM senses UNION ALL SELECT 'synsets',count(*) FROM synsets;\"\necho \"--- dup checks ---\"\nsqlite3 oewn.sqlite \"SELECT count(*) FROM (SELECT synsetid FROM synsets GROUP BY synsetid HAVING count(*)>1);\"\nsqlite3 oewn.sqlite \"SELECT count(*) FROM (SELECT wordid FROM words GROUP BY wordid HAVING count(*)>1);\"\necho \"--- sense dup word/synset ---\"\nsqlite3 oewn.sqlite \"SELECT count(*) FROM (SELECT wordid,synsetid FROM senses GROUP BY wordid,synsetid HAVING count(*)>1);\"\necho \"--- version ---\"\nsqlite3 oewn.sqlite \"select sqlite_version();\"",
+   "sandbox": [
+    {
+     "at_ms": 4778,
+     "dur_ms": 263,
+     "exit": 0,
+     "cpu_ms": 295.8,
+     "phases_us": {
+      "acquire": 88,
+      "resume": 21161,
+      "mount": 18976,
+      "run": 216639,
+      "destroy": 25210
+     },
+     "cold": null,
+     "vm": "vm-219"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 5063,
+   "dur_ms": 6868
+  },
+  {
+   "kind": "tool",
+   "at_ms": 11931,
+   "dur_ms": 393,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\necho \"--- all senses have synset? ---\"\nsqlite3 oewn.sqlite \"SELECT count(*) FROM senses s LEFT JOIN synsets sy ON s.synsetid=sy.synsetid WHERE sy.synsetid IS NULL;\"\necho \"--- all senses have word? ---\"\nsqlite3 oewn.sqlite \"SELECT count(*) FROM senses s LEFT JOIN words w ON s.wordid=w.wordid WHERE w.wordid IS NULL;\"\necho \"--- orig plan ---\"\nsqlite3 oewn.sqlite \"EXPLAIN QUERY PLAN $(cat my-sql-query.sql)\"",
+   "sandbox": [
+    {
+     "at_ms": 11985,
+     "dur_ms": 313,
+     "exit": 0,
+     "cpu_ms": 337.8,
+     "phases_us": {
+      "acquire": 79,
+      "resume": 21584,
+      "mount": 19063,
+      "run": 273240,
+      "destroy": 18162
+     },
+     "cold": null,
+     "vm": "vm-223"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 12324,
+   "dur_ms": 4773
+  },
+  {
+   "kind": "tool",
+   "at_ms": 17097,
+   "dur_ms": 1169,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\nsqlite3 oewn.sqlite \"SELECT count(*) FROM (SELECT DISTINCT wordid,synsetid FROM senses);\"\ncat > /tmp/cand.sql <<'SQL'\nWITH sense_cnt AS MATERIALIZED (\n  SELECT wordid, synsetid, COUNT(*) AS cnt\n  FROM senses\n  GROUP BY wordid, synsetid\n),\nword_stats AS (\n  SELECT sc.wordid,\n         SUM(sc.cnt) AS total_senses,\n         COUNT(*) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains,\n         COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM sense_cnt sc\n  JOIN synsets sy ON sc.synsetid = sy.synsetid\n  GROUP BY sc.wordid\n),\nranked AS (\n  SELECT wordid, synsetid, cnt,\n         ROW_NUMBER() OVER (PARTITION BY wordid ORDER BY cnt DESC, synsetid ASC) AS rn\n  FROM sense_cnt\n)\nSELECT ws.wordid AS word_id,\n       w.word AS word,\n       ws.total_synsets,\n       ws.total_senses,\n       ws.distinct_domains,\n       ws.distinct_posids,\n       r.synsetid AS top_synsetid,\n       r.cnt AS top_synset_sense_count\nFROM word_stats ws\nJOIN words w ON w.wordid = ws.wordid\nJOIN ranked r ON r.wordid = ws.wordid AND r.rn = 1\nWHERE ws.total_synsets >= 2\n  AND ws.distinct_domains >= 2\n  AND ws.total_senses >= 2\nORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC\nLIMIT 500;\nSQL\necho \"--- plan ---\"\nsqlite3 oewn.sqlite \"EXPLAIN QUERY PLAN $(cat /tmp/cand.sql)\"\necho \"--- time cand ---\"\ntime sqlite3 oewn.sqlite \".timer on\" \"$(cat /tmp/cand.sql)\" > /tmp/cand.out\nwc -l /tmp/cand.out\nhead -5 /tmp/cand.out",
+   "sandbox": [
+    {
+     "at_ms": 17153,
+     "dur_ms": 1092,
+     "exit": 0,
+     "cpu_ms": 1108.4,
+     "phases_us": {
+      "acquire": 90,
+      "resume": 21938,
+      "mount": 19419,
+      "run": 1043490,
+      "destroy": 26498
+     },
+     "cold": null,
+     "vm": "vm-225"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 18266,
+   "dur_ms": 1086
+  },
+  {
+   "kind": "tool",
+   "at_ms": 19352,
+   "dur_ms": 120127,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\necho \"--- time orig ---\"\ntime sqlite3 oewn.sqlite \"$(cat my-sql-query.sql)\" > /tmp/orig.out\nwc -l /tmp/orig.out\necho \"--- diff ---\"\ndiff /tmp/orig.out /tmp/cand.out && echo \"IDENTICAL\"",
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 139479,
+   "dur_ms": 4243
+  },
+  {
+   "kind": "tool",
+   "at_ms": 143722,
+   "dur_ms": 120087,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\ncut -d'|' -f1 /tmp/cand.out > /tmp/ids.txt\nIDS=$(paste -sd, /tmp/ids.txt)\ncat > /tmp/verify.sql <<SQL\nSELECT\n  w.wordid AS word_id, w.word AS word, total_synsets, total_senses, distinct_domains, distinct_posids,\n  (SELECT s.synsetid FROM senses s WHERE s.wordid = w.wordid GROUP BY s.synsetid ORDER BY COUNT(*) DESC, s.synsetid ASC LIMIT 1) AS top_synsetid,\n  (SELECT COUNT(*) FROM senses s WHERE s.wordid = w.wordid AND s.synsetid = (SELECT s2.synsetid FROM senses s2 WHERE s2.wordid = w.wordid GROUP BY s2.synsetid ORDER BY COUNT(*) DESC, s2.synsetid ASC LIMIT 1)) AS top_synset_sense_count\nFROM (\n  SELECT w.wordid, w.word,\n    COUNT(DISTINCT s.synsetid) AS total_synsets,\n    COUNT(*) AS total_senses,\n    COUNT(DISTINCT syn.domainid) AS distinct_domains,\n    COUNT(DISTINCT syn.posid) AS distinct_posids\n  FROM words w\n  JOIN senses s ON w.wordid = s.wordid\n  JOIN synsets syn ON s.synsetid = syn.synsetid\n  WHERE w.wordid IN ($IDS)\n  GROUP BY w.wordid, w.word\n  HAVING total_synsets >= 2 AND distinct_domains >= 2 AND total_senses >= 2\n) w\nORDER BY total_senses DESC, total_synsets DESC, distinct_domains DESC, word_id ASC\nLIMIT 500;\nSQL\nsqlite3 oewn.sqlite \"$(cat /tmp/verify.sql)\" > /tmp/verify.out\nwc -l /tmp/verify.out\ndiff /tmp/verify.out /tmp/cand.out && echo \"IDENTICAL-TO-ORIGINAL-SEMANTICS\"",
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 263809,
+   "dur_ms": 3867
+  },
+  {
+   "kind": "tool",
+   "at_ms": 267676,
+   "dur_ms": 12,
+   "tool": "TaskStop",
+   "is_error": false,
+   "command_form": "no command"
+  },
+  {
+   "kind": "model",
+   "at_ms": 267688,
+   "dur_ms": 643
+  },
+  {
+   "kind": "model",
+   "at_ms": 268335,
+   "dur_ms": 798
+  },
+  {
+   "kind": "model",
+   "at_ms": 269133,
+   "dur_ms": 2553
+  },
+  {
+   "kind": "model",
+   "at_ms": 272482,
+   "dur_ms": 4431
+  },
+  {
+   "kind": "tool",
+   "at_ms": 276913,
+   "dur_ms": 2637,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\ncat > _cand.sql <<'SQL'\nWITH sense_cnt AS MATERIALIZED (\n  SELECT wordid, synsetid, COUNT(*) AS cnt\n  FROM senses\n  GROUP BY wordid, synsetid\n),\nword_stats AS (\n  SELECT sc.wordid,\n         SUM(sc.cnt) AS total_senses,\n         COUNT(*) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains,\n         COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM sense_cnt sc\n  JOIN synsets sy ON sc.synsetid = sy.synsetid\n  GROUP BY sc.wordid\n),\nranked AS (\n  SELECT wordid, synsetid, cnt,\n         ROW_NUMBER() OVER (PARTITION BY wordid ORDER BY cnt DESC, synsetid ASC) AS rn\n  FROM sense_cnt\n)\nSELECT ws.wordid AS word_id,\n       w.word AS word,\n       ws.total_synsets,\n       ws.total_senses,\n       ws.distinct_domains,\n       ws.distinct_posids,\n       r.synsetid AS top_synsetid,\n       r.cnt AS top_synset_sense_count\nFROM word_stats ws\nJOIN words w ON w.wordid = ws.wordid\nJOIN ranked r ON r.wordid = ws.wordid AND r.rn = 1\nWHERE ws.total_synsets >= 2\n  AND ws.distinct_domains >= 2\n  AND ws.total_senses >= 2\nORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC\nLIMIT 500;\nSQL\ncp oewn.sqlite /tmp/idx.sqlite\nsqlite3 /tmp/idx.sqlite \"CREATE INDEX ix_senses_word ON senses(wordid, synsetid); CREATE INDEX ix_synsets ON synsets(synsetid, domainid, posid); CREATE INDEX ix_words ON words(wordid);\"\nsqlite3 /tmp/idx.sqlite \"$(cat my-sql-query.sql)\" > /tmp/orig.out\nsqlite3 oewn.sqlite \"$(cat _cand.sql)\" > /tmp/cand.out\necho \"orig $(wc -l < /tmp/orig.out) cand $(wc -l < /tmp/cand.out)\"\ndiff /tmp/orig.out /tmp/cand.out && echo IDENTICAL\necho \"--- timing candidate on original (no indexes) ---\"\ntime sqlite3 oewn.sqlite \"$(cat _cand.sql)\" > /dev/null\nrm -f _cand.sql",
+   "sandbox": [
+    {
+     "at_ms": 276968,
+     "dur_ms": 2564,
+     "exit": 0,
+     "cpu_ms": 2603.1,
+     "phases_us": {
+      "acquire": 62,
+      "resume": 21321,
+      "mount": 19002,
+      "run": 2513335,
+      "destroy": 29616
+     },
+     "cold": null,
+     "vm": "vm-259"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 279550,
+   "dur_ms": 5689
+  },
+  {
+   "kind": "tool",
+   "at_ms": 285239,
+   "dur_ms": 457,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\nsqlite3 oewn.sqlite \"SELECT COUNT(*) FROM (SELECT s.wordid FROM senses s JOIN synsets sy ON s.synsetid=sy.synsetid GROUP BY s.wordid HAVING COUNT(DISTINCT s.synsetid)>=2 AND COUNT(DISTINCT sy.domainid)>=2 AND COUNT(*)>=2);\"\nsqlite3 oewn.sqlite \"SELECT COUNT(*) FROM senses;\"",
+   "sandbox": [
+    {
+     "at_ms": 285293,
+     "dur_ms": 377,
+     "exit": 0,
+     "cpu_ms": 392.6,
+     "phases_us": {
+      "acquire": 90,
+      "resume": 21514,
+      "mount": 19100,
+      "run": 331098,
+      "destroy": 24442
+     },
+     "cold": null,
+     "vm": "vm-260"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 285696,
+   "dur_ms": 9323
+  },
+  {
+   "kind": "tool",
+   "at_ms": 295019,
+   "dur_ms": 2433,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\n# Variant A: current\ncat > /tmp/A.sql <<'SQL'\nWITH sense_cnt AS MATERIALIZED (\n  SELECT wordid, synsetid, COUNT(*) AS cnt FROM senses GROUP BY wordid, synsetid\n),\nword_stats AS (\n  SELECT sc.wordid, SUM(sc.cnt) AS total_senses, COUNT(*) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains, COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM sense_cnt sc JOIN synsets sy ON sc.synsetid = sy.synsetid\n  GROUP BY sc.wordid\n),\nranked AS (\n  SELECT wordid, synsetid, cnt,\n         ROW_NUMBER() OVER (PARTITION BY wordid ORDER BY cnt DESC, synsetid ASC) AS rn\n  FROM sense_cnt\n)\nSELECT ws.wordid AS word_id, w.word AS word, ws.total_synsets, ws.total_senses,\n       ws.distinct_domains, ws.distinct_posids, r.synsetid AS top_synsetid, r.cnt AS top_synset_sense_count\nFROM word_stats ws JOIN words w ON w.wordid = ws.wordid\nJOIN ranked r ON r.wordid = ws.wordid AND r.rn = 1\nWHERE ws.total_synsets >= 2 AND ws.distinct_domains >= 2 AND ws.total_senses >= 2\nORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC LIMIT 500;\nSQL\n# Variant B: filter before ranking\ncat > /tmp/B.sql <<'SQL'\nWITH sense_cnt AS MATERIALIZED (\n  SELECT wordid, synsetid, COUNT(*) AS cnt FROM senses GROUP BY wordid, synsetid\n),\nword_stats AS MATERIALIZED (\n  SELECT sc.wordid, SUM(sc.cnt) AS total_senses, COUNT(*) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains, COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM sense_cnt sc JOIN synsets sy ON sc.synsetid = sy.synsetid\n  GROUP BY sc.wordid\n  HAVING SUM(sc.cnt) >= 2 AND COUNT(*) >= 2 AND COUNT(DISTINCT sy.domainid) >= 2\n),\nranked AS (\n  SELECT sc.wordid, sc.synsetid, sc.cnt,\n         ROW_NUMBER() OVER (PARTITION BY sc.wordid ORDER BY sc.cnt DESC, sc.synsetid ASC) AS rn\n  FROM sense_cnt sc JOIN word_stats ws ON ws.wordid = sc.wordid\n)\nSELECT ws.wordid AS word_id, w.word AS word, ws.total_synsets, ws.total_senses,\n       ws.distinct_domains, ws.distinct_posids, r.synsetid AS top_synsetid, r.cnt AS top_synset_sense_count\nFROM word_stats ws JOIN words w ON w.wordid = ws.wordid\nJOIN ranked r ON r.wordid = ws.wordid AND r.rn = 1\nORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC LIMIT 500;\nSQL\n# Variant C: stats first, senses only for qualifying words, group+window in one\ncat > /tmp/C.sql <<'SQL'\nWITH word_stats AS MATERIALIZED (\n  SELECT s.wordid, COUNT(*) AS total_senses, COUNT(DISTINCT s.synsetid) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains, COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM senses s JOIN synsets sy ON s.synsetid = sy.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(*) >= 2 AND COUNT(DISTINCT s.synsetid) >= 2 AND COUNT(DISTINCT sy.domainid) >= 2\n),\nranked AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt,\n         ROW_NUMBER() OVER (PARTITION BY s.wordid ORDER BY COUNT(*) DESC, s.synsetid ASC) AS rn\n  FROM senses s JOIN word_stats ws ON ws.wordid = s.wordid\n  GROUP BY s.wordid, s.synsetid\n)\nSELECT ws.wordid AS word_id, w.word AS word, ws.total_synsets, ws.total_senses,\n       ws.distinct_domains, ws.distinct_posids, r.synsetid AS top_synsetid, r.cnt AS top_synset_sense_count\nFROM word_stats ws JOIN words w ON w.wordid = ws.wordid\nJOIN ranked r ON r.wordid = ws.wordid AND r.rn = 1\nORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC LIMIT 500;\nSQL\nfor v in A B C; do\n  echo \"=== $v ===\"\n  sqlite3 oewn.sqlite \"$(cat /tmp/$v.sql)\" > /tmp/$v.out\n  /usr/bin/time -f \"%e s\" sqlite3 oewn.sqlite \"$(cat /tmp/$v.sql)\" > /dev/null\n  diff -q /tmp/A.out /tmp/$v.out && echo \"matches A\"\ndone\necho \"--- plans B and C ---\"\nsqlite3 oewn.sqlite \"EXPLAIN QUERY PLAN $(cat /tmp/B.sql)\"\necho\nsqlite3 oewn.sqlite \"EXPLAIN QUERY PLAN $(cat /tmp/C.sql)\"",
+   "sandbox": [
+    {
+     "at_ms": 295076,
+     "dur_ms": 2358,
+     "exit": 0,
+     "cpu_ms": 2386.0,
+     "phases_us": {
+      "acquire": 70,
+      "resume": 21774,
+      "mount": 18374,
+      "run": 2311161,
+      "destroy": 25077
+     },
+     "cold": null,
+     "vm": "vm-261"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 297452,
+   "dur_ms": 2050
+  },
+  {
+   "kind": "tool",
+   "at_ms": 299502,
+   "dur_ms": 170,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\nfor v in A B C; do\n  echo \"=== $v ===\"\n  for i in 1 2 3; do\n    s=$(date +%s%N)\n    sqlite3 oewn.sqlite \"$(cat /tmp/$v.sql)\" > /dev/null\n    e=$(date +%s%N)\n    echo \"$(( (e-s)/1000000 )) ms\"\n  done\ndone",
+   "sandbox": [
+    {
+     "at_ms": 299556,
+     "dur_ms": 96,
+     "exit": 0,
+     "cpu_ms": 92.3,
+     "phases_us": {
+      "acquire": 98,
+      "resume": 21407,
+      "mount": 19063,
+      "run": 40796,
+      "destroy": 33728
+     },
+     "cold": null,
+     "vm": "vm-262"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 299672,
+   "dur_ms": 5506
+  },
+  {
+   "kind": "tool",
+   "at_ms": 305178,
+   "dur_ms": 13338,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\ncat > _vA.sql <<'SQL'\nWITH sense_cnt AS MATERIALIZED (\n  SELECT wordid, synsetid, COUNT(*) AS cnt FROM senses GROUP BY wordid, synsetid\n),\nword_stats AS (\n  SELECT sc.wordid, SUM(sc.cnt) AS total_senses, COUNT(*) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains, COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM sense_cnt sc JOIN synsets sy ON sc.synsetid = sy.synsetid\n  GROUP BY sc.wordid\n),\nranked AS (\n  SELECT wordid, synsetid, cnt,\n         ROW_NUMBER() OVER (PARTITION BY wordid ORDER BY cnt DESC, synsetid ASC) AS rn\n  FROM sense_cnt\n)\nSELECT ws.wordid AS word_id, w.word AS word, ws.total_synsets, ws.total_senses,\n       ws.distinct_domains, ws.distinct_posids, r.synsetid AS top_synsetid, r.cnt AS top_synset_sense_count\nFROM word_stats ws JOIN words w ON w.wordid = ws.wordid\nJOIN ranked r ON r.wordid = ws.wordid AND r.rn = 1\nWHERE ws.total_synsets >= 2 AND ws.distinct_domains >= 2 AND ws.total_senses >= 2\nORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC LIMIT 500;\nSQL\ncat > _vB.sql <<'SQL'\nWITH sense_cnt AS MATERIALIZED (\n  SELECT wordid, synsetid, COUNT(*) AS cnt FROM senses GROUP BY wordid, synsetid\n),\nword_stats AS MATERIALIZED (\n  SELECT sc.wordid, SUM(sc.cnt) AS total_senses, COUNT(*) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains, COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM sense_cnt sc JOIN synsets sy ON sc.synsetid = sy.synsetid\n  GROUP BY sc.wordid\n  HAVING SUM(sc.cnt) >= 2 AND COUNT(*) >= 2 AND COUNT(DISTINCT sy.domainid) >= 2\n),\nranked AS (\n  SELECT sc.wordid, sc.synsetid, sc.cnt,\n         ROW_NUMBER() OVER (PARTITION BY sc.wordid ORDER BY sc.cnt DESC, sc.synsetid ASC) AS rn\n  FROM sense_cnt sc JOIN word_stats ws ON ws.wordid = sc.wordid\n)\nSELECT ws.wordid AS word_id, w.word AS word, ws.total_synsets, ws.total_senses,\n       ws.distinct_domains, ws.distinct_posids, r.synsetid AS top_synsetid, r.cnt AS top_synset_sense_count\nFROM word_stats ws JOIN words w ON w.wordid = ws.wordid\nJOIN ranked r ON r.wordid = ws.wordid AND r.rn = 1\nORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC LIMIT 500;\nSQL\ncat > _vC.sql <<'SQL'\nWITH word_stats AS MATERIALIZED (\n  SELECT s.wordid, COUNT(*) AS total_senses, COUNT(DISTINCT s.synsetid) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains, COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM senses s JOIN synsets sy ON s.synsetid = sy.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(*) >= 2 AND COUNT(DISTINCT s.synsetid) >= 2 AND COUNT(DISTINCT sy.domainid) >= 2\n),\nranked AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt,\n         ROW_NUMBER() OVER (PARTITION BY s.wordid ORDER BY COUNT(*) DESC, s.synsetid ASC) AS rn\n  FROM senses s JOIN word_stats ws ON ws.wordid = s.wordid\n  GROUP BY s.wordid, s.synsetid\n)\nSELECT ws.wordid AS word_id, w.word AS word, ws.total_synsets, ws.total_senses,\n       ws.distinct_domains, ws.distinct_posids, r.synsetid AS top_synsetid, r.cnt AS top_synset_sense_count\nFROM word_stats ws JOIN words w ON w.wordid = ws.wordid\nJOIN ranked r ON r.wordid = ws.wordid AND r.rn = 1\nORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC LIMIT 500;\nSQL\nfor v in A B C; do\n  sqlite3 oewn.sqlite \"$(cat _v$v.sql)\" > /tmp/out$v.txt\n  echo \"=== $v ===\"\n  for i in 1 2 3 4 5; do\n    s=$(date +%s%N); sqlite3 oewn.sqlite \"$(cat _v$v.sql)\" > /dev/null; e=$(date +%s%N)\n    echo \"$(( (e-s)/1000000 )) ms\"\n  done\ndone\ndiff -q /tmp/outA.txt /tmp/outB.txt && diff -q /tmp/outA.txt /tmp/outC.txt && echo ALL_MATCH\nrm -f _vA.sql _vB.sql _vC.sql",
+   "sandbox": [
+    {
+     "at_ms": 305237,
+     "dur_ms": 13266,
+     "exit": 0,
+     "cpu_ms": 13329.5,
+     "phases_us": {
+      "acquire": 83,
+      "resume": 21322,
+      "mount": 18817,
+      "run": 13210859,
+      "destroy": 33793
+     },
+     "cold": null,
+     "vm": "vm-263"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 318516,
+   "dur_ms": 21265
+  },
+  {
+   "kind": "tool",
+   "at_ms": 339781,
+   "dur_ms": 120070,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\nsqlite3 oewn.sqlite \"SELECT max(synsetid), max(cnt) FROM (SELECT synsetid FROM synsets UNION ALL SELECT 0), (SELECT COUNT(*) cnt FROM senses GROUP BY wordid,synsetid);\" 2>/dev/null || true\nsqlite3 oewn.sqlite \"SELECT (SELECT max(synsetid) FROM synsets), (SELECT max(c) FROM (SELECT COUNT(*) c FROM senses GROUP BY wordid,synsetid));\"\ncat > _vC.sql <<'SQL'\nWITH word_stats AS MATERIALIZED (\n  SELECT s.wordid, COUNT(*) AS total_senses, COUNT(DISTINCT s.synsetid) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains, COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM senses s JOIN synsets sy ON s.synsetid = sy.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(*) >= 2 AND COUNT(DISTINCT s.synsetid) >= 2 AND COUNT(DISTINCT sy.domainid) >= 2\n),\nranked AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt,\n         ROW_NUMBER() OVER (PARTITION BY s.wordid ORDER BY COUNT(*) DESC, s.synsetid ASC) AS rn\n  FROM senses s JOIN word_stats ws ON ws.wordid = s.wordid\n  GROUP BY s.wordid, s.synsetid\n)\nSELECT ws.wordid AS word_id, w.word AS word, ws.total_synsets, ws.total_senses,\n       ws.distinct_domains, ws.distinct_posids, r.synsetid AS top_synsetid, r.cnt AS top_synset_sense_count\nFROM word_stats ws JOIN words w ON w.wordid = ws.wordid\nJOIN ranked r ON r.wordid = ws.wordid AND r.rn = 1\nORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC LIMIT 500;\nSQL\ncat > _vI.sql <<'SQL'\nWITH word_stats AS MATERIALIZED (\n  SELECT s.wordid, COUNT(*) AS total_senses, COUNT(DISTINCT s.synsetid) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains, COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM senses s JOIN synsets sy ON s.synsetid = sy.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(*) >= 2 AND COUNT(DISTINCT s.synsetid) >= 2 AND COUNT(DISTINCT sy.domainid) >= 2\n),\ntop_words AS MATERIALIZED (\n  SELECT ws.wordid, w.word, ws.total_synsets, ws.total_senses, ws.distinct_domains, ws.distinct_posids\n  FROM word_stats ws JOIN words w ON w.wordid = ws.wordid\n  ORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC\n  LIMIT 500\n),\nranked AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt,\n         ROW_NUMBER() OVER (PARTITION BY s.wordid ORDER BY COUNT(*) DESC, s.synsetid ASC) AS rn\n  FROM senses s JOIN top_words tw ON tw.wordid = s.wordid\n  GROUP BY s.wordid, s.synsetid\n)\nSELECT tw.wordid AS word_id, tw.word AS word, tw.total_synsets, tw.total_senses,\n       tw.distinct_domains, tw.distinct_posids, r.synsetid AS top_synsetid, r.cnt AS top_synset_sense_count\nFROM top_words tw JOIN ranked r ON r.wordid = tw.wordid AND r.rn = 1\nORDER BY tw.total_senses DESC, tw.total_synsets DESC, tw.distinct_domains DESC, tw.wordid ASC LIMIT 500;\nSQL\ncat > _vJ.sql <<'SQL'\nWITH stats AS MATERIALIZED (\n  SELECT s.wordid, COUNT(*) AS total_senses, COUNT(DISTINCT s.synsetid) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains\n  FROM senses s JOIN synsets sy ON s.synsetid = sy.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(*) >= 2 AND COUNT(DISTINCT s.synsetid) >= 2 AND COUNT(DISTINCT sy.domainid) >= 2\n),\ntop_words AS MATERIALIZED (\n  SELECT ws.wordid, w.word, ws.total_synsets, ws.total_senses, ws.distinct_domains\n  FROM stats ws JOIN words w ON w.wordid = ws.wordid\n  ORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC\n  LIMIT 500\n),\ndp AS (\n  SELECT s.wordid, COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM senses s JOIN synsets sy ON s.synsetid = sy.synsetid\n  JOIN top_words tw ON tw.wordid = s.wordid\n  GROUP BY s.wordid\n),\nranked AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt,\n         ROW_NUMBER() OVER (PARTITION BY s.wordid ORDER BY COUNT(*) DESC, s.synsetid ASC) AS rn\n  FROM senses s JOIN top_words tw ON tw.wordid = s.wordid\n  GROUP BY s.wordid, s.synsetid\n)\nSELECT tw.wordid AS word_id, tw.word AS word, tw.total_synsets, tw.total_senses,\n       tw.distinct_domains, dp.distinct_posids, r.synsetid AS top_synsetid, r.cnt AS top_synset_sense_count\nFROM top_words tw JOIN dp ON dp.wordid = tw.wordid\nJOIN ranked r ON r.wordid = tw.wordid AND r.rn = 1\nORDER BY tw.total_senses DESC, tw.total_synsets DESC, tw.distinct_domains DESC, tw.wordid ASC LIMIT 500;\nSQL\nfor v in C I J; do\n  sqlite3 oewn.sqlite \"$(cat _v$v.sql)\" > /tmp/out$v.txt\n  echo \"=== $v ===\"\n  for i in 1 2 3 4 5; do\n    s=$(date +%s%N); sqlite3 oewn.sqlite \"$(cat _v$v.sql)\" > /dev/null; e=$(date +%s%N)\n    echo \"$(( (e-s)/1000000 )) ms\"\n  done\ndone\ndiff -q /tmp/outC.txt /tmp/outI.txt && diff -q /tmp/outC.txt /tmp/outJ.txt && echo ALL_MATCH\nrm -f _vC.sql _vI.sql _vJ.sql",
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 459851,
+   "dur_ms": 1278
+  },
+  {
+   "kind": "tool",
+   "at_ms": 461129,
+   "dur_ms": 7,
+   "tool": "TaskStop",
+   "is_error": false,
+   "command_form": "no command"
+  },
+  {
+   "kind": "model",
+   "at_ms": 461136,
+   "dur_ms": 1576
+  },
+  {
+   "kind": "tool",
+   "at_ms": 462712,
+   "dur_ms": 268,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\nsqlite3 oewn.sqlite \"SELECT max(synsetid) FROM synsets;\"\nsqlite3 oewn.sqlite \"SELECT max(c) FROM (SELECT COUNT(*) c FROM senses GROUP BY wordid,synsetid);\"\nls _v*.sql 2>/dev/null || echo \"no variant files left\"\nrm -f _v*.sql",
+   "sandbox": [
+    {
+     "at_ms": 462768,
+     "dur_ms": 179,
+     "exit": 0,
+     "cpu_ms": 188.2,
+     "phases_us": {
+      "acquire": 15973,
+      "resume": 21008,
+      "mount": 18906,
+      "run": 125747,
+      "destroy": 16183
+     },
+     "cold": "parked",
+     "vm": "vm-268"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 462980,
+   "dur_ms": 10596
+  },
+  {
+   "kind": "tool",
+   "at_ms": 473576,
+   "dur_ms": 10146,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\ncat > _vI.sql <<'SQL'\nWITH word_stats AS MATERIALIZED (\n  SELECT s.wordid, COUNT(*) AS total_senses, COUNT(DISTINCT s.synsetid) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains, COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM senses s JOIN synsets sy ON s.synsetid = sy.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(*) >= 2 AND COUNT(DISTINCT s.synsetid) >= 2 AND COUNT(DISTINCT sy.domainid) >= 2\n),\ntop_words AS MATERIALIZED (\n  SELECT ws.wordid, w.word, ws.total_synsets, ws.total_senses, ws.distinct_domains, ws.distinct_posids\n  FROM word_stats ws JOIN words w ON w.wordid = ws.wordid\n  ORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC\n  LIMIT 500\n),\nranked AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt,\n         ROW_NUMBER() OVER (PARTITION BY s.wordid ORDER BY COUNT(*) DESC, s.synsetid ASC) AS rn\n  FROM senses s JOIN top_words tw ON tw.wordid = s.wordid\n  GROUP BY s.wordid, s.synsetid\n)\nSELECT tw.wordid AS word_id, tw.word AS word, tw.total_synsets, tw.total_senses,\n       tw.distinct_domains, tw.distinct_posids, r.synsetid AS top_synsetid, r.cnt AS top_synset_sense_count\nFROM top_words tw JOIN ranked r ON r.wordid = tw.wordid AND r.rn = 1\nORDER BY tw.total_senses DESC, tw.total_synsets DESC, tw.distinct_domains DESC, tw.wordid ASC LIMIT 500;\nSQL\ncat > _vJ.sql <<'SQL'\nWITH stats AS MATERIALIZED (\n  SELECT s.wordid, COUNT(*) AS total_senses, COUNT(DISTINCT s.synsetid) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains\n  FROM senses s JOIN synsets sy ON s.synsetid = sy.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(*) >= 2 AND COUNT(DISTINCT s.synsetid) >= 2 AND COUNT(DISTINCT sy.domainid) >= 2\n),\ntop_words AS MATERIALIZED (\n  SELECT ws.wordid, w.word, ws.total_synsets, ws.total_senses, ws.distinct_domains\n  FROM stats ws JOIN words w ON w.wordid = ws.wordid\n  ORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC\n  LIMIT 500\n),\ndp AS (\n  SELECT s.wordid, COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM senses s JOIN synsets sy ON s.synsetid = sy.synsetid\n  JOIN top_words tw ON tw.wordid = s.wordid\n  GROUP BY s.wordid\n),\nranked AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt,\n         ROW_NUMBER() OVER (PARTITION BY s.wordid ORDER BY COUNT(*) DESC, s.synsetid ASC) AS rn\n  FROM senses s JOIN top_words tw ON tw.wordid = s.wordid\n  GROUP BY s.wordid, s.synsetid\n)\nSELECT tw.wordid AS word_id, tw.word AS word, tw.total_synsets, tw.total_senses,\n       tw.distinct_domains, dp.distinct_posids, r.synsetid AS top_synsetid, r.cnt AS top_synset_sense_count\nFROM top_words tw JOIN dp ON dp.wordid = tw.wordid\nJOIN ranked r ON r.wordid = tw.wordid AND r.rn = 1\nORDER BY tw.total_senses DESC, tw.total_synsets DESC, tw.distinct_domains DESC, tw.wordid ASC LIMIT 500;\nSQL\ncat > _vP.sql <<'SQL'\nWITH pairs AS MATERIALIZED (\n  SELECT wordid, synsetid, COUNT(*) AS cnt FROM senses GROUP BY wordid, synsetid\n),\nstats AS MATERIALIZED (\n  SELECT p.wordid, SUM(p.cnt) AS total_senses, COUNT(*) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains\n  FROM pairs p JOIN synsets sy ON p.synsetid = sy.synsetid\n  GROUP BY p.wordid\n  HAVING SUM(p.cnt) >= 2 AND COUNT(*) >= 2 AND COUNT(DISTINCT sy.domainid) >= 2\n),\ntop_words AS MATERIALIZED (\n  SELECT ws.wordid, w.word, ws.total_synsets, ws.total_senses, ws.distinct_domains\n  FROM stats ws JOIN words w ON w.wordid = ws.wordid\n  ORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC\n  LIMIT 500\n),\ndp AS (\n  SELECT p.wordid, COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM pairs p JOIN synsets sy ON p.synsetid = sy.synsetid\n  JOIN top_words tw ON tw.wordid = p.wordid\n  GROUP BY p.wordid\n),\nranked AS (\n  SELECT p.wordid, p.synsetid, p.cnt,\n         ROW_NUMBER() OVER (PARTITION BY p.wordid ORDER BY p.cnt DESC, p.synsetid ASC) AS rn\n  FROM pairs p JOIN top_words tw ON tw.wordid = p.wordid\n)\nSELECT tw.wordid AS word_id, tw.word AS word, tw.total_synsets, tw.total_senses,\n       tw.distinct_domains, dp.distinct_posids, r.synsetid AS top_synsetid, r.cnt AS top_synset_sense_count\nFROM top_words tw JOIN dp ON dp.wordid = tw.wordid\nJOIN ranked r ON r.wordid = tw.wordid AND r.rn = 1\nORDER BY tw.total_senses DESC, tw.total_synsets DESC, tw.distinct_domains DESC, tw.wordid ASC LIMIT 500;\nSQL\nfor v in I J P; do\n  sqlite3 oewn.sqlite \"$(cat _v$v.sql)\" > /tmp/out$v.txt\n  echo \"=== $v ===\"\n  for i in 1 2 3 4 5; do\n    s=$(date +%s%N); sqlite3 oewn.sqlite \"$(cat _v$v.sql)\" > /dev/null; e=$(date +%s%N)\n    echo \"$(( (e-s)/1000000 )) ms\"\n  done\ndone\ndiff -q /tmp/outI.txt /tmp/outJ.txt && diff -q /tmp/outI.txt /tmp/outP.txt && echo ALL_MATCH\nrm -f _v*.sql",
+   "sandbox": [
+    {
+     "at_ms": 473633,
+     "dur_ms": 10070,
+     "exit": 0,
+     "cpu_ms": 10133.4,
+     "phases_us": {
+      "acquire": 85,
+      "resume": 21400,
+      "mount": 18478,
+      "run": 10020870,
+      "destroy": 27581
+     },
+     "cold": null,
+     "vm": "vm-270"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 483722,
+   "dur_ms": 5107
+  },
+  {
+   "kind": "tool",
+   "at_ms": 488829,
+   "dur_ms": 3626,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\ncat > _s1.sql <<'SQL'\nWITH word_stats AS MATERIALIZED (\n  SELECT s.wordid, COUNT(*) AS total_senses, COUNT(DISTINCT s.synsetid) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains, COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM senses s JOIN synsets sy ON s.synsetid = sy.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(*) >= 2 AND COUNT(DISTINCT s.synsetid) >= 2 AND COUNT(DISTINCT sy.domainid) >= 2\n)\nSELECT COUNT(*) FROM word_stats;\nSQL\ncat > _s2.sql <<'SQL'\nWITH word_stats AS MATERIALIZED (\n  SELECT s.wordid, COUNT(*) AS total_senses, COUNT(DISTINCT s.synsetid) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains, COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM senses s JOIN synsets sy ON s.synsetid = sy.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(*) >= 2 AND COUNT(DISTINCT s.synsetid) >= 2 AND COUNT(DISTINCT sy.domainid) >= 2\n),\ntop_words AS MATERIALIZED (\n  SELECT ws.wordid, w.word, ws.total_synsets, ws.total_senses, ws.distinct_domains, ws.distinct_posids\n  FROM word_stats ws JOIN words w ON w.wordid = ws.wordid\n  ORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC\n  LIMIT 500\n)\nSELECT COUNT(*) FROM top_words;\nSQL\ncat > _s3.sql <<'SQL'\nWITH word_stats AS MATERIALIZED (\n  SELECT s.wordid, COUNT(*) AS total_senses, COUNT(DISTINCT s.synsetid) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains, COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM senses s JOIN synsets sy ON s.synsetid = sy.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(*) >= 2 AND COUNT(DISTINCT s.synsetid) >= 2 AND COUNT(DISTINCT sy.domainid) >= 2\n),\ntop_words AS MATERIALIZED (\n  SELECT ws.wordid, w.word, ws.total_synsets, ws.total_senses, ws.distinct_domains, ws.distinct_posids\n  FROM word_stats ws JOIN words w ON w.wordid = ws.wordid\n  ORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC\n  LIMIT 500\n),\nranked AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt,\n         ROW_NUMBER() OVER (PARTITION BY s.wordid ORDER BY COUNT(*) DESC, s.synsetid ASC) AS rn\n  FROM senses s JOIN top_words tw ON tw.wordid = s.wordid\n  GROUP BY s.wordid, s.synsetid\n)\nSELECT COUNT(*) FROM ranked WHERE rn=1;\nSQL\nfor f in s1 s2 s3; do\n  echo \"=== $f ===\"\n  for i in 1 2 3; do\n    s=$(date +%s%N); sqlite3 oewn.sqlite \"$(cat _$f.sql)\" > /dev/null; e=$(date +%s%N)\n    echo \"$(( (e-s)/1000000 )) ms\"\n  done\ndone\nrm -f _s1.sql _s2.sql _s3.sql",
+   "sandbox": [
+    {
+     "at_ms": 488890,
+     "dur_ms": 3539,
+     "exit": 0,
+     "cpu_ms": 3580.2,
+     "phases_us": {
+      "acquire": 79,
+      "resume": 21712,
+      "mount": 19282,
+      "run": 3496483,
+      "destroy": 20732
+     },
+     "cold": null,
+     "vm": "vm-271"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 492455,
+   "dur_ms": 6717
+  },
+  {
+   "kind": "tool",
+   "at_ms": 499172,
+   "dur_ms": 549,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\nsqlite3 oewn.sqlite \"SELECT COUNT(*) FROM (SELECT wordid FROM senses GROUP BY wordid HAVING COUNT(*)>=2 AND COUNT(DISTINCT synsetid)>=2);\"\nsqlite3 oewn.sqlite \"SELECT SUM(c) FROM (SELECT wordid, COUNT(*) c FROM senses GROUP BY wordid HAVING COUNT(*)>=2 AND COUNT(DISTINCT synsetid)>=2);\"\nsqlite3 oewn.sqlite \"SELECT COUNT(*) FROM (SELECT wordid FROM senses GROUP BY wordid HAVING COUNT(*)>=2);\"\nsqlite3 oewn.sqlite \"SELECT SUM(c) FROM (SELECT wordid, COUNT(*) c FROM senses GROUP BY wordid HAVING COUNT(*)>=2);\"\nsqlite3 oewn.sqlite \"SELECT COUNT(DISTINCT domainid), COUNT(DISTINCT posid), max(domainid) FROM synsets;\"",
+   "sandbox": [
+    {
+     "at_ms": 499226,
+     "dur_ms": 474,
+     "exit": 0,
+     "cpu_ms": 486.5,
+     "phases_us": {
+      "acquire": 85,
+      "resume": 21280,
+      "mount": 18967,
+      "run": 422899,
+      "destroy": 29635
+     },
+     "cold": null,
+     "vm": "vm-272"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 499721,
+   "dur_ms": 8950
+  },
+  {
+   "kind": "tool",
+   "at_ms": 508671,
+   "dur_ms": 8140,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\ncat > _vT.sql <<'SQL'\nWITH simple AS MATERIALIZED (\n  SELECT wordid, COUNT(*) AS total_senses, COUNT(DISTINCT synsetid) AS total_synsets\n  FROM senses\n  GROUP BY wordid\n  HAVING COUNT(*) >= 2 AND COUNT(DISTINCT synsetid) >= 2\n),\nstats AS MATERIALIZED (\n  SELECT s.wordid, sm.total_senses, sm.total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains,\n         COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM senses s\n  JOIN simple sm ON sm.wordid = s.wordid\n  JOIN synsets sy ON s.synsetid = sy.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(DISTINCT sy.domainid) >= 2\n),\ntop_words AS MATERIALIZED (\n  SELECT ws.wordid, w.word, ws.total_synsets, ws.total_senses, ws.distinct_domains, ws.distinct_posids\n  FROM stats ws JOIN words w ON w.wordid = ws.wordid\n  ORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC\n  LIMIT 500\n),\nranked AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt,\n         ROW_NUMBER() OVER (PARTITION BY s.wordid ORDER BY COUNT(*) DESC, s.synsetid ASC) AS rn\n  FROM senses s JOIN top_words tw ON tw.wordid = s.wordid\n  GROUP BY s.wordid, s.synsetid\n)\nSELECT tw.wordid AS word_id, tw.word AS word, tw.total_synsets, tw.total_senses,\n       tw.distinct_domains, tw.distinct_posids, r.synsetid AS top_synsetid, r.cnt AS top_synset_sense_count\nFROM top_words tw JOIN ranked r ON r.wordid = tw.wordid AND r.rn = 1\nORDER BY tw.total_senses DESC, tw.total_synsets DESC, tw.distinct_domains DESC, tw.wordid ASC LIMIT 500;\nSQL\ncat > _vU.sql <<'SQL'\nWITH simple AS MATERIALIZED (\n  SELECT wordid, COUNT(*) AS total_senses, COUNT(DISTINCT synsetid) AS total_synsets\n  FROM senses\n  GROUP BY wordid\n  HAVING COUNT(*) >= 2 AND COUNT(DISTINCT synsetid) >= 2\n),\nstats AS MATERIALIZED (\n  SELECT s.wordid, sm.total_senses, sm.total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains\n  FROM senses s\n  JOIN simple sm ON sm.wordid = s.wordid\n  JOIN synsets sy ON s.synsetid = sy.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(DISTINCT sy.domainid) >= 2\n),\ntop_words AS MATERIALIZED (\n  SELECT ws.wordid, w.word, ws.total_synsets, ws.total_senses, ws.distinct_domains\n  FROM stats ws JOIN words w ON w.wordid = ws.wordid\n  ORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC\n  LIMIT 500\n),\ndp AS (\n  SELECT s.wordid, COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM senses s JOIN synsets sy ON s.synsetid = sy.synsetid\n  JOIN top_words tw ON tw.wordid = s.wordid\n  GROUP BY s.wordid\n),\nranked AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt,\n         ROW_NUMBER() OVER (PARTITION BY s.wordid ORDER BY COUNT(*) DESC, s.synsetid ASC) AS rn\n  FROM senses s JOIN top_words tw ON tw.wordid = s.wordid\n  GROUP BY s.wordid, s.synsetid\n)\nSELECT tw.wordid AS word_id, tw.word AS word, tw.total_synsets, tw.total_senses,\n       tw.distinct_domains, dp.distinct_posids, r.synsetid AS top_synsetid, r.cnt AS top_synset_sense_count\nFROM top_words tw JOIN dp ON dp.wordid = tw.wordid\nJOIN ranked r ON r.wordid = tw.wordid AND r.rn = 1\nORDER BY tw.total_senses DESC, tw.total_synsets DESC, tw.distinct_domains DESC, tw.wordid ASC LIMIT 500;\nSQL\ncat > _vI.sql <<'SQL'\nWITH word_stats AS MATERIALIZED (\n  SELECT s.wordid, COUNT(*) AS total_senses, COUNT(DISTINCT s.synsetid) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains, COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM senses s JOIN synsets sy ON s.synsetid = sy.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(*) >= 2 AND COUNT(DISTINCT s.synsetid) >= 2 AND COUNT(DISTINCT sy.domainid) >= 2\n),\ntop_words AS MATERIALIZED (\n  SELECT ws.wordid, w.word, ws.total_synsets, ws.total_senses, ws.distinct_domains, ws.distinct_posids\n  FROM word_stats ws JOIN words w ON w.wordid = ws.wordid\n  ORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC\n  LIMIT 500\n),\nranked AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt,\n         ROW_NUMBER() OVER (PARTITION BY s.wordid ORDER BY COUNT(*) DESC, s.synsetid ASC) AS rn\n  FROM senses s JOIN top_words tw ON tw.wordid = s.wordid\n  GROUP BY s.wordid, s.synsetid\n)\nSELECT tw.wordid AS word_id, tw.word AS word, tw.total_synsets, tw.total_senses,\n       tw.distinct_domains, tw.distinct_posids, r.synsetid AS top_synsetid, r.cnt AS top_synset_sense_count\nFROM top_words tw JOIN ranked r ON r.wordid = tw.wordid AND r.rn = 1\nORDER BY tw.total_senses DESC, tw.total_synsets DESC, tw.distinct_domains DESC, tw.wordid ASC LIMIT 500;\nSQL\nfor v in I T U; do\n  sqlite3 oewn.sqlite \"$(cat _v$v.sql)\" > /tmp/out$v.txt\n  echo \"=== $v ===\"\n  for i in 1 2 3 4 5; do\n    s=$(date +%s%N); sqlite3 oewn.sqlite \"$(cat _v$v.sql)\" > /dev/null; e=$(date +%s%N)\n    echo \"$(( (e-s)/1000000 )) ms\"\n  done\ndone\ndiff -q /tmp/outI.txt /tmp/outT.txt && diff -q /tmp/outI.txt /tmp/outU.txt && echo ALL_MATCH\nrm -f _v*.sql",
+   "sandbox": [
+    {
+     "at_ms": 508727,
+     "dur_ms": 8059,
+     "exit": 0,
+     "cpu_ms": 8129.0,
+     "phases_us": {
+      "acquire": 72,
+      "resume": 21605,
+      "mount": 19259,
+      "run": 8017550,
+      "destroy": 19798
+     },
+     "cold": null,
+     "vm": "vm-273"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 516811,
+   "dur_ms": 8981
+  },
+  {
+   "kind": "tool",
+   "at_ms": 525792,
+   "dur_ms": 4983,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\ncat > _vV.sql <<'SQL'\nWITH simple AS MATERIALIZED (\n  SELECT wordid, COUNT(*) AS total_senses, MIN(synsetid) AS mn, MAX(synsetid) AS mx\n  FROM senses\n  GROUP BY wordid\n  HAVING COUNT(*) >= 2 AND MIN(synsetid) <> MAX(synsetid)\n),\nstats AS MATERIALIZED (\n  SELECT s.wordid, sm.total_senses,\n         COUNT(DISTINCT s.synsetid) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains,\n         COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM senses s\n  JOIN simple sm ON sm.wordid = s.wordid\n  JOIN synsets sy ON s.synsetid = sy.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(DISTINCT sy.domainid) >= 2\n),\ntop_words AS MATERIALIZED (\n  SELECT ws.wordid, w.word, ws.total_synsets, ws.total_senses, ws.distinct_domains, ws.distinct_posids\n  FROM stats ws JOIN words w ON w.wordid = ws.wordid\n  ORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC\n  LIMIT 500\n),\nranked AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt,\n         ROW_NUMBER() OVER (PARTITION BY s.wordid ORDER BY COUNT(*) DESC, s.synsetid ASC) AS rn\n  FROM senses s JOIN top_words tw ON tw.wordid = s.wordid\n  GROUP BY s.wordid, s.synsetid\n)\nSELECT tw.wordid AS word_id, tw.word AS word, tw.total_synsets, tw.total_senses,\n       tw.distinct_domains, tw.distinct_posids, r.synsetid AS top_synsetid, r.cnt AS top_synset_sense_count\nFROM top_words tw JOIN ranked r ON r.wordid = tw.wordid AND r.rn = 1\nORDER BY tw.total_senses DESC, tw.total_synsets DESC, tw.distinct_domains DESC, tw.wordid ASC LIMIT 500;\nSQL\ncat > _vT.sql <<'SQL'\nWITH simple AS MATERIALIZED (\n  SELECT wordid, COUNT(*) AS total_senses, COUNT(DISTINCT synsetid) AS total_synsets\n  FROM senses\n  GROUP BY wordid\n  HAVING COUNT(*) >= 2 AND COUNT(DISTINCT synsetid) >= 2\n),\nstats AS MATERIALIZED (\n  SELECT s.wordid, sm.total_senses, sm.total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains,\n         COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM senses s\n  JOIN simple sm ON sm.wordid = s.wordid\n  JOIN synsets sy ON s.synsetid = sy.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(DISTINCT sy.domainid) >= 2\n),\ntop_words AS MATERIALIZED (\n  SELECT ws.wordid, w.word, ws.total_synsets, ws.total_senses, ws.distinct_domains, ws.distinct_posids\n  FROM stats ws JOIN words w ON w.wordid = ws.wordid\n  ORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC\n  LIMIT 500\n),\nranked AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt,\n         ROW_NUMBER() OVER (PARTITION BY s.wordid ORDER BY COUNT(*) DESC, s.synsetid ASC) AS rn\n  FROM senses s JOIN top_words tw ON tw.wordid = s.wordid\n  GROUP BY s.wordid, s.synsetid\n)\nSELECT tw.wordid AS word_id, tw.word AS word, tw.total_synsets, tw.total_senses,\n       tw.distinct_domains, tw.distinct_posids, r.synsetid AS top_synsetid, r.cnt AS top_synset_sense_count\nFROM top_words tw JOIN ranked r ON r.wordid = tw.wordid AND r.rn = 1\nORDER BY tw.total_senses DESC, tw.total_synsets DESC, tw.distinct_domains DESC, tw.wordid ASC LIMIT 500;\nSQL\nfor v in T V; do\n  sqlite3 oewn.sqlite \"$(cat _v$v.sql)\" > /tmp/out$v.txt\n  echo \"=== $v ===\"\n  for i in 1 2 3 4 5; do\n    s=$(date +%s%N); sqlite3 oewn.sqlite \"$(cat _v$v.sql)\" > /dev/null; e=$(date +%s%N)\n    echo \"$(( (e-s)/1000000 )) ms\"\n  done\ndone\ndiff -q /tmp/outT.txt /tmp/outV.txt && echo MATCH\nrm -f _v*.sql",
+   "sandbox": [
+    {
+     "at_ms": 525851,
+     "dur_ms": 4897,
+     "exit": 0,
+     "cpu_ms": 4939.3,
+     "phases_us": {
+      "acquire": 58,
+      "resume": 21694,
+      "mount": 19320,
+      "run": 4854454,
+      "destroy": 20976
+     },
+     "cold": null,
+     "vm": "vm-274"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 530775,
+   "dur_ms": 2845
+  },
+  {
+   "kind": "tool",
+   "at_ms": 533620,
+   "dur_ms": 1576,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\ncat > _a.sql <<'SQL'\nWITH simple AS MATERIALIZED (\n  SELECT wordid, COUNT(*) AS total_senses, MIN(synsetid) AS mn, MAX(synsetid) AS mx\n  FROM senses GROUP BY wordid\n  HAVING COUNT(*) >= 2 AND MIN(synsetid) <> MAX(synsetid)\n) SELECT COUNT(*) FROM simple;\nSQL\ncat > _b.sql <<'SQL'\nWITH simple AS MATERIALIZED (\n  SELECT wordid, COUNT(*) AS total_senses, MIN(synsetid) AS mn, MAX(synsetid) AS mx\n  FROM senses GROUP BY wordid\n  HAVING COUNT(*) >= 2 AND MIN(synsetid) <> MAX(synsetid)\n),\nstats AS MATERIALIZED (\n  SELECT s.wordid, sm.total_senses, COUNT(DISTINCT s.synsetid) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains, COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM senses s JOIN simple sm ON sm.wordid = s.wordid\n  JOIN synsets sy ON s.synsetid = sy.synsetid\n  GROUP BY s.wordid HAVING COUNT(DISTINCT sy.domainid) >= 2\n) SELECT COUNT(*) FROM stats;\nSQL\ncat > _c.sql <<'SQL'\nSELECT COUNT(*) FROM senses;\nSQL\nfor f in a b c; do echo \"=== $f ===\"; for i in 1 2 3; do s=$(date +%s%N); sqlite3 oewn.sqlite \"$(cat _$f.sql)\" >/dev/null; e=$(date +%s%N); echo \"$(( (e-s)/1000000 )) ms\"; done; done\nrm -f _a.sql _b.sql _c.sql",
+   "sandbox": [
+    {
+     "at_ms": 533678,
+     "dur_ms": 1474,
+     "exit": 0,
+     "cpu_ms": 1498.9,
+     "phases_us": {
+      "acquire": 65,
+      "resume": 21322,
+      "mount": 19182,
+      "run": 1426655,
+      "destroy": 26140
+     },
+     "cold": null,
+     "vm": "vm-275"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 535196,
+   "dur_ms": 6784
+  },
+  {
+   "kind": "tool",
+   "at_ms": 541980,
+   "dur_ms": 4933,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\nmk() {\ncat > _$1.sql <<SQL\nWITH simple AS MATERIALIZED (\n  SELECT wordid, COUNT(*) AS total_senses, MIN(synsetid) AS mn, MAX(synsetid) AS mx\n  FROM senses GROUP BY wordid\n  HAVING COUNT(*) >= 2 AND MIN(synsetid) <> MAX(synsetid)\n),\nstats AS MATERIALIZED (\n  SELECT s.wordid, sm.total_senses $2\n  FROM $3\n  JOIN synsets sy ON s.synsetid = sy.synsetid\n  GROUP BY s.wordid\n) SELECT COUNT(*) FROM stats;\nSQL\n}\nmk b0 \"\" \"senses s JOIN simple sm ON sm.wordid = s.wordid\"\nmk b1 \", COUNT(DISTINCT sy.domainid) AS dd\" \"senses s JOIN simple sm ON sm.wordid = s.wordid\"\nmk b2 \", COUNT(DISTINCT sy.domainid) AS dd, COUNT(DISTINCT sy.posid) AS dp\" \"senses s JOIN simple sm ON sm.wordid = s.wordid\"\nmk b3 \", COUNT(DISTINCT s.synsetid) AS ts, COUNT(DISTINCT sy.domainid) AS dd, COUNT(DISTINCT sy.posid) AS dp\" \"senses s JOIN simple sm ON sm.wordid = s.wordid\"\nmk b4 \", COUNT(DISTINCT sy.domainid) AS dd, COUNT(DISTINCT sy.posid) AS dp\" \"simple sm JOIN senses s ON s.wordid = sm.wordid\"\nfor f in b0 b1 b2 b3 b4; do\n  echo \"=== $f ===\"\n  for i in 1 2 3; do s=$(date +%s%N); sqlite3 oewn.sqlite \"$(cat _$f.sql)\" >/dev/null; e=$(date +%s%N); echo \"$(( (e-s)/1000000 )) ms\"; done\ndone\necho \"--- plan b2 ---\"; sqlite3 oewn.sqlite \"EXPLAIN QUERY PLAN $(cat _b2.sql)\"\necho \"--- plan b4 ---\"; sqlite3 oewn.sqlite \"EXPLAIN QUERY PLAN $(cat _b4.sql)\"\nrm -f _b*.sql",
+   "sandbox": [
+    {
+     "at_ms": 542036,
+     "dur_ms": 4861,
+     "exit": 0,
+     "cpu_ms": 4907.8,
+     "phases_us": {
+      "acquire": 72,
+      "resume": 21137,
+      "mount": 18820,
+      "run": 4814540,
+      "destroy": 25365
+     },
+     "cold": null,
+     "vm": "vm-276"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 546913,
+   "dur_ms": 16591
+  },
+  {
+   "kind": "tool",
+   "at_ms": 563504,
+   "dur_ms": 2320,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\n# variant forcing scan of senses first\ncat > _x1.sql <<'SQL'\nWITH simple AS MATERIALIZED (\n  SELECT wordid, COUNT(*) AS total_senses, MIN(synsetid) AS mn, MAX(synsetid) AS mx\n  FROM senses GROUP BY wordid\n  HAVING COUNT(*) >= 2 AND MIN(synsetid) <> MAX(synsetid)\n),\nstats AS MATERIALIZED (\n  SELECT s.wordid, sm.total_senses,\n         COUNT(DISTINCT s.synsetid) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains,\n         COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM senses s CROSS JOIN simple sm\n  JOIN synsets sy ON s.synsetid = sy.synsetid\n  WHERE sm.wordid = s.wordid\n  GROUP BY s.wordid HAVING COUNT(DISTINCT sy.domainid) >= 2\n) SELECT COUNT(*) FROM stats;\nSQL\n# baseline\ncat > _x2.sql <<'SQL'\nWITH simple AS MATERIALIZED (\n  SELECT wordid, COUNT(*) AS total_senses, MIN(synsetid) AS mn, MAX(synsetid) AS mx\n  FROM senses GROUP BY wordid\n  HAVING COUNT(*) >= 2 AND MIN(synsetid) <> MAX(synsetid)\n),\nstats AS MATERIALIZED (\n  SELECT s.wordid, sm.total_senses,\n         COUNT(DISTINCT s.synsetid) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains,\n         COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM senses s JOIN simple sm ON sm.wordid = s.wordid\n  JOIN synsets sy ON s.synsetid = sy.synsetid\n  GROUP BY s.wordid HAVING COUNT(DISTINCT sy.domainid) >= 2\n) SELECT COUNT(*) FROM stats;\nSQL\nfor f in x1 x2; do echo \"=== $f ===\"; for i in 1 2 3; do s=$(date +%s%N); sqlite3 oewn.sqlite \"$(cat _$f.sql)\" >/dev/null; e=$(date +%s%N); echo \"$(( (e-s)/1000000 )) ms\"; done; echo \"--plan--\"; sqlite3 oewn.sqlite \"EXPLAIN QUERY PLAN $(cat _$f.sql)\" | head -20; done\nrm -f _x*.sql",
+   "sandbox": [
+    {
+     "at_ms": 563560,
+     "dur_ms": 2248,
+     "exit": 0,
+     "cpu_ms": 2272.8,
+     "phases_us": {
+      "acquire": 85,
+      "resume": 21423,
+      "mount": 18130,
+      "run": 2197957,
+      "destroy": 28389
+     },
+     "cold": null,
+     "vm": "vm-277"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 565824,
+   "dur_ms": 12270
+  },
+  {
+   "kind": "tool",
+   "at_ms": 578094,
+   "dur_ms": 4390,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\ncat > _final.sql <<'SQL'\nWITH simple AS MATERIALIZED (\n  SELECT wordid, COUNT(*) AS total_senses, MIN(synsetid) AS mn, MAX(synsetid) AS mx\n  FROM senses\n  GROUP BY wordid\n  HAVING COUNT(*) >= 2 AND MIN(synsetid) <> MAX(synsetid)\n),\nstats AS MATERIALIZED (\n  SELECT s.wordid, sm.total_senses,\n         COUNT(DISTINCT s.synsetid) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains,\n         COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM senses s\n  JOIN simple sm ON sm.wordid = s.wordid\n  JOIN synsets sy ON s.synsetid = sy.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(DISTINCT sy.domainid) >= 2\n),\ntop_words AS MATERIALIZED (\n  SELECT ws.wordid, w.word, ws.total_synsets, ws.total_senses, ws.distinct_domains, ws.distinct_posids\n  FROM stats ws JOIN words w ON w.wordid = ws.wordid\n  ORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC\n  LIMIT 500\n),\nranked AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt,\n         ROW_NUMBER() OVER (PARTITION BY s.wordid ORDER BY COUNT(*) DESC, s.synsetid ASC) AS rn\n  FROM senses s JOIN top_words tw ON tw.wordid = s.wordid\n  GROUP BY s.wordid, s.synsetid\n)\nSELECT tw.wordid AS word_id, tw.word AS word, tw.total_synsets, tw.total_senses,\n       tw.distinct_domains, tw.distinct_posids, r.synsetid AS top_synsetid, r.cnt AS top_synset_sense_count\nFROM top_words tw JOIN ranked r ON r.wordid = tw.wordid AND r.rn = 1\nORDER BY tw.total_senses DESC, tw.total_synsets DESC, tw.distinct_domains DESC, tw.wordid ASC\nLIMIT 500;\nSQL\n# correctness vs original on indexed copy\ncp oewn.sqlite /tmp/idx.sqlite\nsqlite3 /tmp/idx.sqlite \"CREATE INDEX ix_senses_word ON senses(wordid, synsetid); CREATE INDEX ix_synsets ON synsets(synsetid, domainid, posid); CREATE INDEX ix_words ON words(wordid);\"\nsqlite3 /tmp/idx.sqlite \"$(cat my-sql-query.sql)\" > /tmp/orig.out\nsqlite3 oewn.sqlite \"$(cat _final.sql)\" > /tmp/final.out\necho \"orig=$(wc -l < /tmp/orig.out) final=$(wc -l < /tmp/final.out)\"\ndiff /tmp/orig.out /tmp/final.out && echo IDENTICAL\necho \"--- timing final (no indexes, 8 runs) ---\"\nfor i in 1 2 3 4 5 6 7 8; do s=$(date +%s%N); sqlite3 oewn.sqlite \"$(cat _final.sql)\" >/dev/null; e=$(date +%s%N); echo \"$(( (e-s)/1000000 )) ms\"; done\necho \"--- plan ---\"\nsqlite3 oewn.sqlite \"EXPLAIN QUERY PLAN $(cat _final.sql)\"",
+   "sandbox": [
+    {
+     "at_ms": 578150,
+     "dur_ms": 4321,
+     "exit": 0,
+     "cpu_ms": 4368.1,
+     "phases_us": {
+      "acquire": 89,
+      "resume": 21661,
+      "mount": 18373,
+      "run": 4265709,
+      "destroy": 33613
+     },
+     "cold": null,
+     "vm": "vm-278"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 582484,
+   "dur_ms": 7011
+  },
+  {
+   "kind": "tool",
+   "at_ms": 589495,
+   "dur_ms": 7355,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\ngen() {\ncat > _$1.sql <<SQL\nWITH simple AS $2 (\n  SELECT wordid, COUNT(*) AS total_senses, MIN(synsetid) AS mn, MAX(synsetid) AS mx\n  FROM senses\n  GROUP BY wordid\n  HAVING COUNT(*) >= 2 AND MIN(synsetid) <> MAX(synsetid)\n),\nstats AS $3 (\n  SELECT s.wordid, sm.total_senses,\n         COUNT(DISTINCT s.synsetid) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains,\n         COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM senses s\n  JOIN simple sm ON sm.wordid = s.wordid\n  JOIN synsets sy ON s.synsetid = sy.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(DISTINCT sy.domainid) >= 2\n),\ntop_words AS MATERIALIZED (\n  SELECT ws.wordid, w.word, ws.total_synsets, ws.total_senses, ws.distinct_domains, ws.distinct_posids\n  FROM stats ws JOIN words w ON w.wordid = ws.wordid\n  ORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC\n  LIMIT 500\n),\nranked AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt,\n         ROW_NUMBER() OVER (PARTITION BY s.wordid ORDER BY COUNT(*) DESC, s.synsetid ASC) AS rn\n  FROM senses s JOIN top_words tw ON tw.wordid = s.wordid\n  GROUP BY s.wordid, s.synsetid\n)\nSELECT tw.wordid AS word_id, tw.word AS word, tw.total_synsets, tw.total_senses,\n       tw.distinct_domains, tw.distinct_posids, r.synsetid AS top_synsetid, r.cnt AS top_synset_sense_count\nFROM top_words tw JOIN ranked r ON r.wordid = tw.wordid AND r.rn = 1\nORDER BY tw.total_senses DESC, tw.total_synsets DESC, tw.distinct_domains DESC, tw.wordid ASC\nLIMIT 500;\nSQL\n}\ngen f1 \"MATERIALIZED\" \"MATERIALIZED\"\ngen f2 \"\" \"MATERIALIZED\"\ngen f3 \"\" \"\"\nfor v in f1 f2 f3; do\n  sqlite3 oewn.sqlite \"$(cat _$v.sql)\" > /tmp/$v.out\n  echo \"=== $v ===\"\n  for i in 1 2 3 4 5; do s=$(date +%s%N); sqlite3 oewn.sqlite \"$(cat _$v.sql)\" >/dev/null; e=$(date +%s%N); echo \"$(( (e-s)/1000000 )) ms\"; done\ndone\ndiff -q /tmp/f1.out /tmp/f2.out && diff -q /tmp/f1.out /tmp/f3.out && echo ALL_MATCH\nrm -f _f*.sql",
+   "sandbox": [
+    {
+     "at_ms": 589556,
+     "dur_ms": 7273,
+     "exit": 0,
+     "cpu_ms": 7337.0,
+     "phases_us": {
+      "acquire": 66,
+      "resume": 21137,
+      "mount": 18798,
+      "run": 7227289,
+      "destroy": 23935
+     },
+     "cold": null,
+     "vm": "vm-279"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 596850,
+   "dur_ms": 3202
+  },
+  {
+   "kind": "tool",
+   "at_ms": 600052,
+   "dur_ms": 1256,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put /app/sol.sql <<'EOF'\nWITH simple AS MATERIALIZED (\n  SELECT wordid, COUNT(*) AS total_senses, MIN(synsetid) AS mn, MAX(synsetid) AS mx\n  FROM senses\n  GROUP BY wordid\n  HAVING COUNT(*) >= 2 AND MIN(synsetid) <> MAX(synsetid)\n),\nstats AS MATERIALIZED (\n  SELECT s.wordid, sm.total_senses,\n         COUNT(DISTINCT s.synsetid) AS total_synsets,\n         COUNT(DISTINCT sy.domainid) AS distinct_domains,\n         COUNT(DISTINCT sy.posid) AS distinct_posids\n  FROM senses s\n  JOIN simple sm ON sm.wordid = s.wordid\n  JOIN synsets sy ON s.synsetid = sy.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(DISTINCT sy.domainid) >= 2\n),\ntop_words AS MATERIALIZED (\n  SELECT ws.wordid, w.word, ws.total_synsets, ws.total_senses, ws.distinct_domains, ws.distinct_posids\n  FROM stats ws JOIN words w ON w.wordid = ws.wordid\n  ORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, ws.wordid ASC\n  LIMIT 500\n),\nranked AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt,\n         ROW_NUMBER() OVER (PARTITION BY s.wordid ORDER BY COUNT(*) DESC, s.synsetid ASC) AS rn\n  FROM senses s JOIN top_words tw ON tw.wordid = s.wordid\n  GROUP BY s.wordid, s.synsetid\n)\nSELECT tw.wordid AS word_id, tw.word AS word, tw.total_synsets, tw.total_senses,\n       tw.distinct_domains, tw.distinct_posids, r.synsetid AS top_synsetid, r.cnt AS top_synset_sense_count\nFROM top_words tw JOIN ranked r ON r.wordid = tw.wordid AND r.rn = 1\nORDER BY tw.total_senses DESC, tw.total_synsets DESC, tw.distinct_domains DESC, tw.wordid ASC\nLIMIT 500;\nEOF\necho \"PUT_EXIT=$?\"",
+   "sandbox": [
+    {
+     "at_ms": 601254,
+     "dur_ms": 45,
+     "exit": 0,
+     "cpu_ms": 46.2,
+     "phases_us": {
+      "acquire": 84,
+      "resume": 21459,
+      "mount": 18931,
+      "run": 7847,
+      "destroy": 15604
+     },
+     "cold": null,
+     "vm": "vm-280"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 601308,
+   "dur_ms": 2160
+  },
+  {
+   "kind": "tool",
+   "at_ms": 603468,
+   "dur_ms": 1210,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\necho \"--- file ---\"\ncat sol.sql\necho \"--- checks ---\"\necho \"semicolons: $(grep -o ';' sol.sql | wc -l)\"\necho \"comments: $(grep -c -- '--' sol.sql || true)\"\necho \"--- run sol.sql on original db ---\"\ntime sqlite3 oewn.sqlite < sol.sql > /tmp/sol.out\nwc -l /tmp/sol.out\necho \"--- compare with original query on indexed copy ---\"\ncp oewn.sqlite /tmp/idx.sqlite\nsqlite3 /tmp/idx.sqlite \"CREATE INDEX ix1 ON senses(wordid, synsetid); CREATE INDEX ix2 ON synsets(synsetid, domainid, posid); CREATE INDEX ix3 ON words(wordid);\"\nsqlite3 /tmp/idx.sqlite < my-sql-query.sql > /tmp/orig.out\ndiff /tmp/orig.out /tmp/sol.out && echo IDENTICAL",
+   "sandbox": [
+    {
+     "at_ms": 603523,
+     "dur_ms": 1139,
+     "exit": 0,
+     "cpu_ms": 1178.1,
+     "phases_us": {
+      "acquire": 74,
+      "resume": 25816,
+      "mount": 23184,
+      "run": 1081476,
+      "destroy": 31725
+     },
+     "cold": null,
+     "vm": "vm-286"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 604678,
+   "dur_ms": 2125
+  }
+ ],
+ "class": "long",
+ "weight_s_per_command": 42.177,
+ "calls": 30,
+ "cell": "TB1b",
+ "removed": [
+  {
+   "at_ms": 268331,
+   "dur_ms": 4,
+   "tool": "TaskStop",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 269133,
+   "dur_ms": 0,
+   "tool": "Read",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 271686,
+   "dur_ms": 796,
+   "tool": "Bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  }
+ ]
+}

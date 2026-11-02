@@ -1,0 +1,218 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-d",
+ "instance_id": "db-wal-recovery",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 14540,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 4787,
+  "output": 1775,
+  "cacheRead": 50944,
+  "cacheWrite": 0,
+  "total": 57506
+ },
+ "totals": {
+  "model_calls": 6,
+  "tool_calls": 5,
+  "model_ms": 13287,
+  "tool_ms": 868,
+  "sandbox_ms": 417
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 101,
+   "dur_ms": 3572,
+   "tokens_in": 20,
+   "tokens_out": 62,
+   "cache_read": 5760,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3673,
+   "dur_ms": 208,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace && ls -la && file * 2>/dev/null\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 3791,
+     "dur_ms": 60,
+     "exit": 0,
+     "cpu_ms": 52.3,
+     "phases_us": {
+      "acquire": 64,
+      "resume": 20836,
+      "mount": 18484,
+      "run": 14505,
+      "destroy": 23968
+     },
+     "cold": null,
+     "vm": "vm-49"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 3966,
+   "dur_ms": 693,
+   "tokens_in": 230,
+   "tokens_out": 78,
+   "cache_read": 5824,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4659,
+   "dur_ms": 126,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nxxd main.db-wal | head -60\necho \"===== DB =====\"\nxxd main.db | head -40\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 4711,
+     "dur_ms": 48,
+     "exit": 0,
+     "cpu_ms": 36.3,
+     "phases_us": {
+      "acquire": 82,
+      "resume": 20574,
+      "mount": 18355,
+      "run": 5384,
+      "destroy": 22057
+     },
+     "cold": null,
+     "vm": "vm-54"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 4802,
+   "dur_ms": 3705,
+   "tokens_in": 3646,
+   "tokens_out": 212,
+   "cache_read": 6080,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 8507,
+   "dur_ms": 192,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\ndata=open('main.db-wal','rb').read()\ndec=bytes(b^0x42 for b in data)\nopen('main.db-wal.fixed','wb').write(dec)\nprint(dec[:64].hex())\nPY\nmkdir -p /tmp/t && cp main.db /tmp/t/main.db && cp main.db-wal.fixed /tmp/t/main.db-wal\npython3 - <<'PY'\nimport sqlite3\nc=sqlite3.connect('/tmp/t/main.db')\nfor r in c.execute(\"select name,type from sqlite_master\"): print(r)\ntry:\n    for r in c.execute(\"select * from items\"): print(r)\nexcept Exception as e: print(\"ERR\",e)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 8560,
+     "dur_ms": 101,
+     "exit": 0,
+     "cpu_ms": 99.2,
+     "phases_us": {
+      "acquire": 95,
+      "resume": 20168,
+      "mount": 17770,
+      "run": 57946,
+      "destroy": 23035
+     },
+     "cold": null,
+     "vm": "vm-56"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 8714,
+   "dur_ms": 1692,
+   "tokens_in": 229,
+   "tokens_out": 209,
+   "cache_read": 10432,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 10406,
+   "dur_ms": 172,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport sqlite3, json, shutil, os\ndata=open('main.db-wal','rb').read()\nopen('main.db-wal','wb').write(bytes(b^0x42 for b in data))\nc=sqlite3.connect('main.db')\nc.execute(\"PRAGMA wal_checkpoint(FULL)\")\nrows=c.execute(\"select id,name,value from items order by id\").fetchall()\nout=[{\"id\":r[0],\"name\":r[1],\"value\":r[2]} for r in rows]\njson.dump(out,open('recovered.json','w'),indent=2)\nprint(len(out), out)\nc.close()\nPY\nls -l main.db* recovered.json && cat recovered.json",
+   "sandbox": [
+    {
+     "at_ms": 10458,
+     "dur_ms": 111,
+     "exit": 0,
+     "cpu_ms": 104.2,
+     "phases_us": {
+      "acquire": 112,
+      "resume": 20400,
+      "mount": 18113,
+      "run": 59859,
+      "destroy": 30535
+     },
+     "cold": null,
+     "vm": "vm-57"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 10593,
+   "dur_ms": 2154,
+   "tokens_in": 627,
+   "tokens_out": 116,
+   "cache_read": 10944,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 12747,
+   "dur_ms": 170,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nxxd -l 16 main.db-wal\nrm -f main.db-wal.fixed\npython3 -c \"import sqlite3;c=sqlite3.connect('main.db');print(c.execute('select count(*) from items').fetchone());print(c.execute('pragma integrity_check').fetchone())\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 12799,
+     "dur_ms": 97,
+     "exit": 0,
+     "cpu_ms": 102.0,
+     "phases_us": {
+      "acquire": 123,
+      "resume": 20556,
+      "mount": 18112,
+      "run": 45251,
+      "destroy": 30392
+     },
+     "cold": null,
+     "vm": "vm-59"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 12937,
+   "dur_ms": 1471,
+   "tokens_in": 35,
+   "tokens_out": 206,
+   "cache_read": 11904,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.096,
+ "calls": 5,
+ "cell": "TB1d"
+}

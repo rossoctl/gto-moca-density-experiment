@@ -1,0 +1,97 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "log-summary-date-ranges",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 11358,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 10164,
+  "output": 701,
+  "cacheRead": 49792,
+  "cacheWrite": 0,
+  "total": 60657
+ },
+ "totals": {
+  "model_calls": 4,
+  "tool_calls": 3,
+  "model_ms": 8313,
+  "tool_ms": 2234,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 104,
+   "dur_ms": 3533,
+   "tokens_in": 45,
+   "tokens_out": 55,
+   "cache_read": 7360,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3637,
+   "dur_ms": 151,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app/logs && head -20 /app/logs/*.log"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3829,
+   "dur_ms": 1154,
+   "tokens_in": 9625,
+   "tokens_out": 55,
+   "cache_read": 7424,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4983,
+   "dur_ms": 20,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls /app/logs | sed 's/_.*//' | sort -u"
+  },
+  {
+   "kind": "model",
+   "at_ms": 5026,
+   "dur_ms": 1880,
+   "tokens_in": 333,
+   "tokens_out": 381,
+   "cache_read": 17152,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6906,
+   "dur_ms": 2063,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport glob, os, re\nfrom datetime import date, timedelta\nfrom collections import Counter\n\nref = date(2025,8,12)\nranges = {\n 'today': (ref, ref),\n 'last_7_days': (ref-timedelta(days=6), ref),\n 'last_30_days': (ref-timedelta(days=29), ref),\n 'month_to_date': (ref.replace(day=1), ref),\n}\nsev = ['ERROR','WARNING','INFO']\ncounts = {k:{s:0 for s in sev} for k in list(ranges)+['total']}\npat = re.compile(r'\\[(ERROR|WARNING|INFO)\\]')\nfor f in glob.glob('/app/logs/*.log'):\n    fd = date.fromisoformat(os.path.basename(f)[:10])\n    for line in open(f):\n        m = pat.search(line)\n        if not m: continue\n        s = m.group(1)\n        counts['total'][s]+=1\n        for name,(a,b) in ranges.items():\n            if a<=fd<=b:\n                counts[name][s]+=1\nwith open('/app/summary.csv','w') as out:\n    out.write('period,severity,count\\n')\n    for p in ['today','last_7_days','last_30_days','month_to_date','total']:\n        for s in sev:\n            out.write(f'{p},{s},{counts[p][s]}\\n')\nprint(open('/app/summary.csv').read())\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 9039,
+   "dur_ms": 1746,
+   "tokens_in": 161,
+   "tokens_out": 20,
+   "cache_read": 17856,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.192,
+ "calls": 3,
+ "cell": "TB1c"
+}

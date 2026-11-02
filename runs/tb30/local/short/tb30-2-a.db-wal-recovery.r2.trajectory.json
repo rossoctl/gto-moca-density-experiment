@@ -1,0 +1,129 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "db-wal-recovery",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 26709,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 276,
+  "output": 4700,
+  "cacheRead": 159808,
+  "cacheWrite": 3008,
+  "total": 167792
+ },
+ "totals": {
+  "model_calls": 8,
+  "tool_calls": 7,
+  "model_ms": 25625,
+  "tool_ms": 463,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 521,
+   "dur_ms": 846
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1367,
+   "dur_ms": 63,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /app/"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1430,
+   "dur_ms": 1353
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2783,
+   "dur_ms": 35,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "xxd main.db | head -20 && echo \"---WAL HEADER---\" && xxd main.db-wal | head -8 && echo \"---FILES---\" && file main.db main.db-wal"
+  },
+  {
+   "kind": "model",
+   "at_ms": 2818,
+   "dur_ms": 7213
+  },
+  {
+   "kind": "tool",
+   "at_ms": 10031,
+   "dur_ms": 53,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\ndata = open('main.db-wal','rb').read()\ndec = bytes(b ^ 0x42 for b in data)\nprint('len', len(data))\nprint('header:', dec[:32].hex())\nprint('magic: %08x' % int.from_bytes(dec[0:4],'big'))\nprint('version:', int.from_bytes(dec[4:8],'big'))\nprint('pagesize:', int.from_bytes(dec[8:12],'big'))\nprint('frames check: (len-32)/(24+pagesize) =', (len(data)-32)/(24+int.from_bytes(dec[8:12],'big')))\nprint('first frame header:', dec[32:56].hex())\nopen('main.db-wal.dec','wb').write(dec)\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 10084,
+   "dur_ms": 4158
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14242,
+   "dur_ms": 35,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport struct\nd=open('main.db-wal.dec','rb').read()\nps=4096\nfor i in range(4):\n    off=32+i*(24+ps)\n    h=d[off:off+24]\n    pgno=struct.unpack('>I',h[0:4])[0]\n    dbsz=struct.unpack('>I',h[4:8])[0]\n    print('frame',i+1,'pgno',pgno,'dbsize',dbsz,'salt',h[8:16].hex())\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 14277,
+   "dur_ms": 2928
+  },
+  {
+   "kind": "tool",
+   "at_ms": 17205,
+   "dur_ms": 87,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "mkdir -p /tmp/rec && cp /app/main.db /tmp/rec/work.db && cp /app/main.db-wal.dec /tmp/rec/work.db-wal && python3 -c \"\nimport sqlite3\ncon=sqlite3.connect('/tmp/rec/work.db')\ncur=con.cursor()\nprint('tables:', cur.execute(\\\"select name,sql from sqlite_master\\\").fetchall())\nprint('count:', cur.execute('select count(*) from items').fetchone())\nfor r in cur.execute('select * from items order by id'):\n    print(r)\ncon.close()\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 17292,
+   "dur_ms": 5213
+  },
+  {
+   "kind": "tool",
+   "at_ms": 22505,
+   "dur_ms": 126,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cp -n main.db-wal main.db-wal.orig && cp main.db-wal.dec main.db-wal && python3 -c \"\nimport json\nrows=[(1,'apple',150),(2,'banana',250),(3,'cherry',300),(4,'date',400),(5,'elderberry',500),(6,'fig',600),(7,'grape',700),(8,'honeydew',800),(9,'kiwi',900),(10,'lemon',1000),(11,'mango',1100)]\nout=[{'id':i,'name':n,'value':v} for i,n,v in sorted(rows)]\nopen('/app/recovered.json','w').write(json.dumps(out))\nprint(json.dumps(out))\n\"\n# verify by copying the fixed files to a clean temp dir and reading\nrm -rf /tmp/verify && mkdir -p /tmp/verify && cp /app/main.db /app/main.db-wal /tmp/verify/ && python3 -c \"\nimport sqlite3, json\ncon=sqlite3.connect('/tmp/verify/main.db')\nrows=con.execute('select id,name,value from items order by id').fetchall()\ncon.close()\nprint('rows read:', len(rows))\nprint('json matches db:', json.load(open('/app/recovered.json')) == [{'id':i,'name':n,'value':v} for i,n,v in rows])\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 22631,
+   "dur_ms": 1598
+  },
+  {
+   "kind": "tool",
+   "at_ms": 24229,
+   "dur_ms": 64,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "rm -f /app/main.db-wal.dec && ls -la /app/ && python3 -m json.tool /app/recovered.json >/dev/null && echo \"JSON valid\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 24293,
+   "dur_ms": 2316
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.096,
+ "calls": 7,
+ "cell": "TB1a"
+}

@@ -1,0 +1,329 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-f",
+ "instance_id": "feal-linear-cryptanalysis",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 130577,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 263,
+  "output": 16636,
+  "cacheRead": 76480,
+  "cacheWrite": 4736,
+  "total": 98115
+ },
+ "totals": {
+  "model_calls": 9,
+  "tool_calls": 8,
+  "model_ms": 117971,
+  "tool_ms": 11379,
+  "sandbox_ms": 10831
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1141,
+   "dur_ms": 1009,
+   "tokens_in": 26,
+   "tokens_out": 134,
+   "cache_read": 1024,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2154,
+   "dur_ms": 122,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -la /workspace\necho \"---feal.c---\"\ncat /workspace/feal.c\necho \"---decrypt.c---\"\ncat /workspace/decrypt.c\necho \"---pairs---\"\nhead -50 /workspace/pairs.txt\necho \"---ciphertexts---\"\nhead -50 /workspace/ciphertexts.txt\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 2204,
+     "dur_ms": 52,
+     "exit": 0,
+     "cpu_ms": 44.2,
+     "phases_us": {
+      "acquire": 90,
+      "resume": 20713,
+      "mount": 18194,
+      "run": 8388,
+      "destroy": 22847
+     },
+     "cold": null,
+     "vm": "vm-10"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 2279,
+   "dur_ms": 17473,
+   "tokens_in": 50,
+   "tokens_out": 2372,
+   "cache_read": 1344,
+   "cache_write": 3584,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 19753,
+   "dur_ms": 145,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\ntry:\n import z3\n print(\"z3 already\", z3.get_version_string())\nexcept Exception as e:\n print(\"no z3\", e)\nPY\nEOF",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 19802,
+     "dur_ms": 71,
+     "exit": 0,
+     "cpu_ms": 74.4,
+     "phases_us": {
+      "acquire": 73,
+      "resume": 21171,
+      "mount": 18028,
+      "run": 30031,
+      "destroy": 19841
+     },
+     "cold": null,
+     "vm": "vm-12"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 19901,
+   "dur_ms": 1007,
+   "tokens_in": 11,
+   "tokens_out": 103,
+   "cache_read": 7296,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 20909,
+   "dur_ms": 3280,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npip install z3-solver 2>&1 | tail -5\npython3 - <<'PY'\nimport z3\nprint(z3.get_version_string())\nPY\nEOF",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 20958,
+     "dur_ms": 3198,
+     "exit": 0,
+     "cpu_ms": 2231.6,
+     "phases_us": {
+      "acquire": 84,
+      "resume": 20037,
+      "mount": 17489,
+      "run": 3137121,
+      "destroy": 40114
+     },
+     "cold": null,
+     "vm": "vm-15"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 24191,
+   "dur_ms": 6562,
+   "tokens_in": 5,
+   "tokens_out": 1000,
+   "cache_read": 7424,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 30753,
+   "dur_ms": 2473,
+   "tool": "bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\npip install z3-solver >/dev/null 2>&1\ncat > /workspace/solve_z3.py <<'PY'\nfrom z3 import *\nimport time\npairs=[]\nfor line in open('/workspace/pairs.txt'):\n    a,b=line.split()\n    pairs.append((int(a),int(b)))\n\ndef rotl8(x,n):\n    return (x << n) | LShR(x, 8-n)\n\ndef g(a,b,c):\n    # c is constant 0/1\n    temp = a + b + BitVecVal(c,8)\n    return rotl8(temp,2)\n\ndef F(v):\n    x=[Extract(8*i+7,8*i,v) for i in range(4)]  # x0 LSB\n    y=[None]*4\n    y[2]=g(x[3]^x[2], x[1]^x[0], 1)\n    y[3]=g(x[3], y[2], 0)\n    y[1]=g(x[1]^x[0], y[2], 0)\n    y[0]=g(x[0], y[1], 1)\n    return Concat(y[3],y[2],y[1],y[0])  # y0 LSB\n\ndef expand(k):\n    return k ^ (k << 16) ^ (k * BitVecVal(12345,32))\n\ndef enc(pt, keys):\n    left=Extract(63,32,pt); right=Extract(31,0,pt)\n    right = right ^ left\n    for i in range(4):\n        mixed=F(right ^ keys[i])\n        left,right = right, left ^ mixed\n    left = left ^ right\n    return Concat(right,left)\n\nks=[BitVec(f'k{i}',20) for i in range(4)]\nkeys=[expand(k) for k in ks]\ns=Solver()\nfor pt,ct in pairs:\n    s.add(enc(BitVecVal(pt,64),keys)==BitVecVal(ct,64))\ns.set('timeout', 600000)\nt=time.time()\nprint(s.check())\nprint('time',time.time()-t)\nif s.check()==sat:\n    m=s.model()\n    print([hex(m.eval(k).as_long()) for k in ks])\nPY\npython3 /workspace/solve_z3.py\nEOF",
+   "timeout": 900,
+   "sandbox": [
+    {
+     "at_ms": 30803,
+     "dur_ms": 2397,
+     "exit": 1,
+     "cpu_ms": 2060.5,
+     "phases_us": {
+      "acquire": 111,
+      "resume": 20647,
+      "mount": 17718,
+      "run": 2334707,
+      "destroy": 41619
+     },
+     "cold": null,
+     "vm": "vm-16"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 33228,
+   "dur_ms": 2611,
+   "tokens_in": 62,
+   "tokens_out": 242,
+   "cache_read": 8576,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 35839,
+   "dur_ms": 4851,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npip install z3-solver >/dev/null 2>&1\npython3 - <<'PY'\nimport re\np='/workspace/solve_z3.py'\ns=open(p).read()\ns=s.replace(\"def expand(k):\\n    return k ^ (k << 16) ^ (k * BitVecVal(12345,32))\",\n\"def expand(k):\\n    x=ZeroExt(12,k)\\n    return x ^ (x << 16) ^ (x * BitVecVal(12345,32))\")\nopen(p,'w').write(s)\nPY\npython3 /workspace/solve_z3.py\nEOF",
+   "timeout": 900,
+   "sandbox": [
+    {
+     "at_ms": 35888,
+     "dur_ms": 4794,
+     "exit": 0,
+     "cpu_ms": 4310.6,
+     "phases_us": {
+      "acquire": 19,
+      "resume": 20648,
+      "mount": 18437,
+      "run": 4729817,
+      "destroy": 43172
+     },
+     "cold": null,
+     "vm": "vm-17"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 40692,
+   "dur_ms": 3116,
+   "tokens_in": 36,
+   "tokens_out": 385,
+   "cache_read": 9152,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 43808,
+   "dur_ms": 179,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\n./decrypt ciphertexts.txt 68e63 62571 1f61c b74a5 > plaintexts.txt\necho \"line count: $(wc -l < plaintexts.txt)\"\nhead -5 plaintexts.txt\n# verify recovered seeds reproduce every pair using the feal binary\npython3 - <<'PY'\nimport subprocess\nkeys=['68e63','62571','1f61c','b74a5']\nok=True\nfor line in open('/workspace/pairs.txt'):\n    p,c=line.split()\n    out=subprocess.check_output(['/workspace/feal',hex(int(p))[2:],*keys],text=True)\n    got=int(out.split('Ciphertext:')[1].strip(),16)\n    if got!=int(c):\n        ok=False; print('mismatch',p,c,got); break\nprint('all pairs verified:',ok)\nPY\nEOF",
+   "timeout": 180,
+   "sandbox": [
+    {
+     "at_ms": 43857,
+     "dur_ms": 117,
+     "exit": 0,
+     "cpu_ms": 130.9,
+     "phases_us": {
+      "acquire": 67,
+      "resume": 20621,
+      "mount": 18140,
+      "run": 71488,
+      "destroy": 24472
+     },
+     "cold": null,
+     "vm": "vm-19"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 43989,
+   "dur_ms": 7203,
+   "tokens_in": 36,
+   "tokens_out": 912,
+   "cache_read": 9600,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 51192,
+   "dur_ms": 206,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport subprocess\nkeys=['68e63','62571','1f61c','b74a5']\ncts=[int(x) for x in open('ciphertexts.txt')]\npts=[int(x) for x in open('plaintexts.txt')]\nprint('counts',len(cts),len(pts))\nok=True\nfor p,c in zip(pts,cts):\n    out=subprocess.check_output(['./feal',format(p,'x'),*keys],text=True)\n    got=int(out.split('Ciphertext:')[1].strip(),16)\n    if got!=c:\n        ok=False; print('mismatch',p,c,got); break\nprint('round-trip all ciphertexts:',ok)\nPY\nEOF",
+   "timeout": 180,
+   "sandbox": [
+    {
+     "at_ms": 51240,
+     "dur_ms": 146,
+     "exit": 0,
+     "cpu_ms": 176.8,
+     "phases_us": {
+      "acquire": 61,
+      "resume": 20743,
+      "mount": 18178,
+      "run": 99312,
+      "destroy": 25266
+     },
+     "cold": null,
+     "vm": "vm-21"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 51400,
+   "dur_ms": 74327,
+   "tokens_in": 16,
+   "tokens_out": 10882,
+   "cache_read": 10560,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 125728,
+   "dur_ms": 123,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -ld /app /workspace 2>/dev/null || true\ncd /workspace\necho \"--- first 3 ---\"; head -3 plaintexts.txt\necho \"--- last 3 ---\"; tail -3 plaintexts.txt\necho \"--- keys ---\"; echo \"K seeds: 0x68e63 0x62571 0x1f61c 0xb74a5\"\nsha256sum plaintexts.txt\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 125778,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 44.7,
+     "phases_us": {
+      "acquire": 92,
+      "resume": 23943,
+      "mount": 19146,
+      "run": 8478,
+      "destroy": 22824
+     },
+     "cold": null,
+     "vm": "vm-25"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 125856,
+   "dur_ms": 4663,
+   "tokens_in": 21,
+   "tokens_out": 606,
+   "cache_read": 21504,
+   "cache_write": 192,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.851,
+ "calls": 8,
+ "cell": "TB1f"
+}

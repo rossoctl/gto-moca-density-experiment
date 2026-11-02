@@ -1,0 +1,392 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "cobol-modernization",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 579015,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 917,
+  "output": 41535,
+  "cacheRead": 1174592,
+  "cacheWrite": 18944,
+  "total": 1235988
+ },
+ "totals": {
+  "model_calls": 27,
+  "tool_calls": 27,
+  "model_ms": 231001,
+  "tool_ms": 347440,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 543,
+   "dur_ms": 2224
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2612,
+   "dur_ms": 71,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /app /app/src /app/data 2>&1"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2767,
+   "dur_ms": 32,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/src/program.cbl"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 2799,
+   "dur_ms": 1270
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4069,
+   "dur_ms": 45,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "for f in src/INPUT.DAT data/ACCOUNTS.DAT data/BOOKS.DAT data/TRANSACTIONS.DAT; do echo \"=== $f ===\"; od -c \"$f\"; done; echo; which cobc gnucobol 2>&1; cobc --version 2>&1 | head -3"
+  },
+  {
+   "kind": "model",
+   "at_ms": 4114,
+   "dur_ms": 9909
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14023,
+   "dur_ms": 229,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "rm -rf /tmp/t1 && mkdir -p /tmp/t1 && cp -r /app/src /app/data /tmp/t1/ && cd /tmp/t1 && cobc -x -o program src/program.cbl 2>&1 && ./program; echo \"exit=$?\"; for f in data/*.DAT; do echo \"=== $f ===\"; od -c \"$f\"; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 14252,
+   "dur_ms": 2463
+  },
+  {
+   "kind": "tool",
+   "at_ms": 16715,
+   "dur_ms": 519,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "set -e\nrun_test() {\n  name=\"$1\"; input=\"$2\"\n  rm -rf /tmp/$name && mkdir -p /tmp/$name && cp -r /app/src /app/data /tmp/$name/\n  printf '%s' \"$input\" > /tmp/$name/src/INPUT.DAT\n  cd /tmp/$name && cobc -x -o program src/program.cbl >/dev/null 2>&1 && ./program\n  echo \"--- $name input=[$(printf '%s' \"$input\" | od -An -c | tr -s ' ')]\"\n  for f in data/*.DAT; do echo \"  $f:\"; od -An -c \"$f\" | sed 's/^/    /'; done\n}\nrun_test t_full 'U001U002B0010000000200'\nrun_test t_short 'U001U002B001200'\nrun_test t_amt999 'U001U002B0010000000999'\n"
+  },
+  {
+   "kind": "model",
+   "at_ms": 17234,
+   "dur_ms": 3932
+  },
+  {
+   "kind": "tool",
+   "at_ms": 21166,
+   "dur_ms": 54,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nfor t in ['t_full','t_short','t_amt999']:\n    print('===',t)\n    a=open(f'/tmp/{t}/data/ACCOUNTS.DAT','rb').read()\n    for i in range(0,len(a),34):\n        r=a[i:i+34]\n        print(' ',repr(r[:4]),repr(r[4:24]),repr(r[24:34]))\n    tr=open(f'/tmp/{t}/data/TRANSACTIONS.DAT','rb').read()\n    for i in range(0,len(tr),22):\n        r=tr[i:i+22]\n        print('  T',repr(r[:4]),repr(r[4:14]),repr(r[14:18]),repr(r[18:22]))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 21220,
+   "dur_ms": 7045
+  },
+  {
+   "kind": "tool",
+   "at_ms": 28265,
+   "dur_ms": 830,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "set -e\nrun_test() {\n  name=\"$1\"; input=\"$2\"\n  rm -rf /tmp/$name && mkdir -p /tmp/$name && cp -r /app/src /app/data /tmp/$name/\n  printf '%s' \"$input\" > /tmp/$name/src/INPUT.DAT\n  cd /tmp/$name && cobc -x -o program src/program.cbl >/dev/null 2>&1 && ./program >/dev/null\n  echo \"=== $name\"\n  python3 - \"$name\" <<'EOF'\nimport sys\nt=sys.argv[1]\na=open(f'/tmp/{t}/data/ACCOUNTS.DAT','rb').read()\nfor i in range(0,len(a),34):\n    r=a[i:i+34]; print(' ',r[:4].decode(),r[24:34].decode())\nb=open(f'/tmp/{t}/data/BOOKS.DAT','rb').read()\nfor i in range(0,len(b),28):\n    r=b[i:i+28]; print('  B',r[:4].decode(),r[24:28].decode())\ntr=open(f'/tmp/{t}/data/TRANSACTIONS.DAT','rb').read()\nprint('  T count',len(tr)//22,'rem',len(tr)%22)\nfor i in range(0,len(tr)-22+1,22):\n    r=tr[i:i+22]; print('   ',r[:4].decode(),r[4:14].decode(),r[14:18].decode(),r[18:22].decode())\nEOF\n}\nrun_test tf_over 'U001U002B0010000005000'\nrun_test tf_self 'U001U001B0020000000100'\nrun_test tf_ownbad 'U001U003B0010000000100'\nrun_test tf_unk 'U009U002B0010000000100'\nrun_test tf_zero 'U001U002B0020000000000'\n"
+  },
+  {
+   "kind": "model",
+   "at_ms": 29095,
+   "dur_ms": 6484
+  },
+  {
+   "kind": "tool",
+   "at_ms": 35579,
+   "dur_ms": 372,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "set -e\n# buyer==seller valid\nrm -rf /tmp/tf_self2 && mkdir -p /tmp/tf_self2 && cp -r /app/src /app/data /tmp/tf_self2/\nprintf 'U002U002B0010000000100' > /tmp/tf_self2/src/INPUT.DAT\ncd /tmp/tf_self2 && cobc -x -o program src/program.cbl >/dev/null 2>&1 && ./program\npython3 - <<'EOF'\na=open('/tmp/tf_self2/data/ACCOUNTS.DAT','rb').read()\nfor i in range(0,len(a),34): r=a[i:i+34]; print(r[:4],r[24:34])\nb=open('/tmp/tf_self2/data/BOOKS.DAT','rb').read()\nfor i in range(0,len(b),28): r=b[i:i+28]; print('B',r[:4],r[24:28])\ntr=open('/tmp/tf_self2/data/TRANSACTIONS.DAT','rb').read()\nfor i in range(0,len(tr),22): r=tr[i:i+22]; print('T',r[:4],r[4:14],r[14:18],r[18:22])\nEOF\n# overflow test: custom accounts\nrm -rf /tmp/tf_ovf && mkdir -p /tmp/tf_ovf/src /tmp/tf_ovf/data && cp /app/src/program.cbl /tmp/tf_ovf/src/\npython3 - <<'EOF'\ndef rec(i,n,bal): return i.encode()+n.ljust(20).encode()+f'{bal:010d}'.encode()\nopen('/tmp/tf_ovf/data/ACCOUNTS.DAT','wb').write(rec('U001','A',9999999999)+rec('U002','B',9999999999)+rec('U003','C',500))\nopen('/tmp/tf_ovf/data/BOOKS.DAT','wb').write('B001'.encode()+b'X'.ljust(20)+'U002'.encode())\nopen('/tmp/tf_ovf/data/TRANSACTIONS.DAT','wb').write(b'')\nopen('/tmp/tf_ovf/src/INPUT.DAT','wb').write(b'U001U002B001'+b'9999999999')\nEOF\ncd /tmp/tf_ovf && cobc -x -o program src/program.cbl >/dev/null 2>&1 && ./program\npython3 - <<'EOF'\na=open('/tmp/tf_ovf/data/ACCOUNTS.DAT','rb').read()\nfor i in range(0,len(a),34): r=a[i:i+34]; print(r[:4],r[24:34])\ntr=open('/tmp/tf_ovf/data/TRANSACTIONS.DAT','rb').read()\nprint('TR',tr)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 35951,
+   "dur_ms": 7018
+  },
+  {
+   "kind": "tool",
+   "at_ms": 42969,
+   "dur_ms": 235,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "rm -rf /tmp/tf_self3 && mkdir -p /tmp/tf_self3 && cp -r /app/src /app/data /tmp/tf_self3/\nprintf 'U002U002B0010000000100' > /tmp/tf_self3/src/INPUT.DAT\ncd /tmp/tf_self3 && cobc -x -o program src/program.cbl >/dev/null 2>&1\n./program >/tmp/self3.out 2>/tmp/self3.err; echo \"exit=$?\"\necho \"--stdout--\"; cat /tmp/self3.out; echo \"--stderr--\"; cat /tmp/self3.err\necho \"--sizes--\"; wc -c data/*.DAT\npython3 - <<'EOF'\nfor f in ['ACCOUNTS.DAT','BOOKS.DAT','TRANSACTIONS.DAT']:\n    d=open('/tmp/tf_self3/data/'+f,'rb').read()\n    print(f,len(d),repr(d))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 43204,
+   "dur_ms": 9550
+  },
+  {
+   "kind": "tool",
+   "at_ms": 52754,
+   "dur_ms": 839,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "set -e\ntest_amt() {\n  name=\"$1\"; amt=\"$2\"\n  rm -rf /tmp/$name && mkdir -p /tmp/$name && cp -r /app/src /app/data /tmp/$name/\n  printf 'U001U002B001%s' \"$amt\" > /tmp/$name/src/INPUT.DAT\n  cd /tmp/$name && cobc -x -o program src/program.cbl >/dev/null 2>&1\n  ./program >/tmp/$name.out 2>/tmp/$name.err || true\n  echo \"=== [$amt] out=[$(cat /tmp/$name.out)] err=[$(cat /tmp/$name.err)]\"\n  python3 - \"$name\" <<'EOF'\nimport sys\nt=sys.argv[1]\ntr=open(f'/tmp/{t}/data/TRANSACTIONS.DAT','rb').read()\nprint('   T:',repr(tr[-22:]) if len(tr)>=22 else None, 'len',len(tr))\na=open(f'/tmp/{t}/data/ACCOUNTS.DAT','rb').read()\nprint('   bal:',a[24:34],a[58:68])\nEOF\n}\ntest_amt a1 '  123     '\ntest_amt a2 '0000000123'\ntest_amt a3 '12 34     '\ntest_amt a4 '          '\ntest_amt a5 '0000000000'\n"
+  },
+  {
+   "kind": "model",
+   "at_ms": 53593,
+   "dur_ms": 10552
+  },
+  {
+   "kind": "tool",
+   "at_ms": 64145,
+   "dur_ms": 414,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "set -e\nrm -rf /tmp/t_part && mkdir -p /tmp/t_part/src /tmp/t_part/data && cp /app/src/program.cbl /tmp/t_part/src/\npython3 - <<'EOF'\ndef acc(i,n,b): return i.encode()+n.ljust(20).encode()+b\nopen('/tmp/t_part/data/ACCOUNTS.DAT','wb').write(acc('U001','A',b'0000001180')+b'U002J')\nopen('/tmp/t_part/data/BOOKS.DAT','wb').write('B001'.encode()+b'X'.ljust(20)+'U002'.encode()+b'B002partial')\nopen('/tmp/t_part/data/TRANSACTIONS.DAT','wb').write(b'')\nopen('/tmp/t_part/src/INPUT.DAT','wb').write(b'U001U002B001'+b'0000000100')\nEOF\ncd /tmp/t_part && cobc -x -o program src/program.cbl >/dev/null 2>&1\n./program >/tmp/part.out 2>/tmp/part.err; echo \"exit=$?\"; cat /tmp/part.out /tmp/part.err\npython3 - <<'EOF'\nfor f in ['ACCOUNTS.DAT','BOOKS.DAT','TRANSACTIONS.DAT']:\n    d=open('/tmp/t_part/data/'+f,'rb').read(); print(f,len(d),repr(d))\nEOF\n# partial book: buyer U001 seller U002, book partial B002 with owner U002 at end partial\nrm -rf /tmp/t_part2 && mkdir -p /tmp/t_part2/src /tmp/t_part2/data && cp /app/src/program.cbl /tmp/t_part2/src/\npython3 - <<'EOF'\nopen('/tmp/t_part2/data/ACCOUNTS.DAT','wb').write('U001A'.encode().ljust(4+b'') if False else b'U001'+b'A'.ljust(20)+b'0000001180'+b'U002'+b'B'.ljust(20)+b'0000001800')\nopen('/tmp/t_part2/data/BOOKS.DAT','wb').write('B001'.encode()+b'X'.ljust(20)+'U002'.encode()+b'B002PartialOwnerU002')\nopen('/tmp/t_part2/data/TRANSACTIONS.DAT','wb').write(b'')\nopen('/tmp/t_part2/src/INPUT.DAT','wb').write(b'U001U002B002'+b'0000000100')\nEOF\ncd /tmp/t_part2 && cobc -x -o program src/program.cbl >/dev/null 2>&1\n./program >/tmp/part2.out 2>/tmp/part2.err; echo \"exit=$?\"; cat /tmp/part2.out /tmp/part2.err\npython3 - <<'EOF'\nfor f in ['ACCOUNTS.DAT','BOOKS.DAT','TRANSACTIONS.DAT']:\n    d=open('/tmp/t_part2/data/'+f,'rb').read(); print(f,len(d),repr(d))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 64559,
+   "dur_ms": 20325
+  },
+  {
+   "kind": "tool",
+   "at_ms": 84884,
+   "dur_ms": 657,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "set -e\ntest_amt() {\n  name=\"$1\"; amt=\"$2\"\n  rm -rf /tmp/$name && mkdir -p /tmp/$name && cp -r /app/src /app/data /tmp/$name/\n  printf 'U001U002B001%s' \"$amt\" > /tmp/$name/src/INPUT.DAT\n  cd /tmp/$name && cobc -x -o program src/program.cbl >/dev/null 2>&1\n  ./program >/tmp/$name.out 2>/tmp/$name.err; rc=$? || rc=$?\n  echo \"=== [$amt] rc=$rc out=[$(tr '\\n' '|' </tmp/$name.out)] err=[$(tr '\\n' '|' </tmp/$name.err)]\"\n  python3 - \"$name\" <<'EOF'\nimport sys\nt=sys.argv[1]\ntr=open(f'/tmp/{t}/data/TRANSACTIONS.DAT','rb').read()\nprint('   T tail:',repr(tr[-22:]))\nEOF\n}\ntest_amt n1 'ABCDEFGHIJ'\ntest_amt n2 '00000A0000'\n# empty input\nrm -rf /tmp/t_empty && mkdir -p /tmp/t_empty && cp -r /app/src /app/data /tmp/t_empty/ && : > /tmp/t_empty/src/INPUT.DAT\ncd /tmp/t_empty && cobc -x -o program src/program.cbl >/dev/null 2>&1; ./program; echo \"empty rc=$?\"; md5sum /tmp/t_empty/data/* /app/data/*\n# 1 byte input\nrm -rf /tmp/t_one && mkdir -p /tmp/t_one && cp -r /app/src /app/data /tmp/t_one/ && printf 'U' > /tmp/t_one/src/INPUT.DAT\ncd /tmp/t_one && cobc -x -o program src/program.cbl >/dev/null 2>&1; ./program; echo \"one rc=$?\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 85541,
+   "dur_ms": 3484
+  },
+  {
+   "kind": "tool",
+   "at_ms": 89025,
+   "dur_ms": 28,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nfor t in ['n1','n2']:\n    a=open(f'/tmp/{t}/data/ACCOUNTS.DAT','rb').read()\n    print(t,[a[i+24:i+34] for i in range(0,len(a),34)])\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 89053,
+   "dur_ms": 36990
+  },
+  {
+   "kind": "tool",
+   "at_ms": 126043,
+   "dur_ms": 21,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/program.py",
+    "content": "#!/usr/bin/env python3\n\"\"\"Python re-implementation of src/program.cbl (BOOKFORUM).\n\nReads one transaction request from src/INPUT.DAT and, when it validates,\nupdates data/ACCOUNTS.DAT, data/BOOKS.DAT and appends to\ndata/TRANSACTIONS.DAT using the same fixed-length record layouts and the\nsame arithmetic semantics as the GnuCOBOL original.\n\"\"\"\n\nimport os\nimport sys\n\nBASE_DIR = os.path.dirname(os.path.abspath(__file__))\n\nINPUT_PATH = os.path.join(BASE_DIR, \"src\", \"INPUT.DAT\")\nACCOUNTS_PATH = os.path.join(BASE_DIR, \"data\", \"ACCOUNTS.DAT\")\nBOOKS_PATH = os.path.join(BASE_DIR, \"data\", \"BOOKS.DAT\")\nTRANSACTIONS_PATH = os.path.join(BASE_DIR, \"data\", \"TRANSACTIONS.DAT\")\n\n# FD record sizes:\n#   ACCOUNT-RECORD      PIC X(4) + X(20) + 9(10)      = 34\n#   BOOK-RECORD         PIC X(4) + X(20) + X(4)       = 28\n#   TRANSACTION-RECORD  PIC X(4) + 9(10) + X(4) + X(4) = 22\n#   INPUT-RECORD        PIC X(4) + X(4) + X(4) + 9(10) = 22\nACCOUNT_LEN = 34\nBOOK_LEN = 28\nTRANSACTION_LEN = 22\nINPUT_LEN = 22\n\nDIGIT_MOD = 10 ** 10\n\n\ndef display_to_int(field):\n    \"\"\"Interpret a PIC 9(n) DISPLAY field the way GnuCOBOL does.\n\n    Digit bytes keep their value and space bytes count as zero digits.\n    \"\"\"\n    value = 0\n    for byte in field:\n        if 48 <= byte <= 57:\n            value = value * 10 + (byte - 48)\n        else:\n            # GnuCOBOL treats blanks (and other non-digits) as zero digits.\n            value *= 10\n    return value\n\n\ndef int_to_display(value, width=10):\n    \"\"\"Store a COBOL arithmetic result into an unsigned PIC 9(width) field.\n\n    GnuCOBOL keeps the absolute value when a negative intermediate is\n    moved into an unsigned field and keeps the low-order digits when the\n    result overflows the field.\n    \"\"\"\n    if value < 0:\n        value = -value\n    value %= 10 ** width\n    return (\"%0*d\" % (width, value)).encode(\"ascii\")\n\n\ndef read_file(path):\n    with open(path, \"rb\") as handle:\n        return bytearray(handle.read())\n\n\ndef write_file(path, data):\n    with open(path, \"wb\") as handle:\n        handle.write(bytes(data))\n\n\ndef iter_records(data, record_len):\n    \"\"\"Yield (offset, padded_record, is_partial) for a fixed-record file.\n\n    A trailing short record is accepted by GnuCOBOL and padded with spaces.\n    \"\"\"\n    for offset in range(0, len(data), record_len):\n        chunk = bytes(data[offset:offset + record_len])\n        yield offset, chunk.ljust(record_len, b\" \"), len(chunk) < record_len\n\n\ndef read_input():\n    try:\n        raw = read_file(INPUT_PATH)\n    except OSError:\n        print(\"Error: Input file is empty\")\n        sys.exit(1)\n\n    if len(raw) == 0:\n        print(\"Error: Input file is empty\")\n        sys.exit(0)\n\n    record = bytes(raw[:INPUT_LEN]).ljust(INPUT_LEN, b\" \")\n    return (\n        record[0:4],      # INPUT-BUYER-ID\n        record[4:8],      # INPUT-SELLER-ID\n        record[8:12],     # INPUT-BOOK-ID\n        display_to_int(record[12:22]),  # INPUT-AMOUNT\n    )\n\n\ndef validate(accounts, books, buyer_id, seller_id, book_id):\n    buyer_found = False\n    seller_found = False\n    book_found = False\n    valid_owner = False\n\n    for _, record, _ in iter_records(accounts, ACCOUNT_LEN):\n        if record[0:4] == buyer_id:\n            buyer_found = True\n        if record[0:4] == seller_id:\n            seller_found = True\n\n    for _, record, _ in iter_records(books, BOOK_LEN):\n        if record[0:4] == book_id:\n            book_found = True\n            if record[24:28] == seller_id:\n                valid_owner = True\n\n    return buyer_found and seller_found and book_found and valid_owner\n\n\ndef process_accounts(accounts, buyer_id, seller_id, amount):\n    \"\"\"Apply debit/credit updates.  Returns (data, aborted).\n\n    GnuCOBOL's REWRITE requires that the record just read is still the\n    current record.  A short (partial) record, or a second REWRITE without\n    an intervening READ (which happens when buyer and seller are the same\n    account), fails with status 43 and aborts the run.  Updates already\n    rewritten are left in the file.\n    \"\"\"\n    data = bytearray(accounts)\n\n    for offset, record, partial in iter_records(data, ACCOUNT_LEN):\n        matches_buyer = record[0:4] == buyer_id\n        matches_seller = record[0:4] == seller_id\n\n        if not matches_buyer and not matches_seller:\n            continue\n\n        if partial:\n            # The subsequent REWRITE fails; no bytes of this record change.\n            return data, True\n\n        if matches_buyer:\n            balance = display_to_int(record[24:34]) - amount\n            updated = record[:24] + int_to_display(balance) + record[34:]\n            data[offset:offset + ACCOUNT_LEN] = updated\n\n            if matches_seller:\n                # ADD is performed but the second REWRITE fails, aborting.\n                return data, True\n\n        elif matches_seller:\n            balance = display_to_int(record[24:34]) + amount\n            updated = record[:24] + int_to_display(balance) + record[34:]\n            data[offset:offset + ACCOUNT_LEN] = updated\n\n    return data, False\n\n\ndef process_books(books, book_id, buyer_id):\n    \"\"\"Transfer ownership.  Returns (data, aborted).\"\"\"\n    data = bytearray(books)\n\n    for offset, record, partial in iter_records(data, BOOK_LEN):\n        if record[0:4] != book_id:\n            continue\n\n        if partial:\n            return data, True\n\n        updated = record[:24] + buyer_id + record[28:]\n        data[offset:offset + BOOK_LEN] = updated\n\n    return data, False\n\n\ndef append_transaction(book_id, amount, seller_id, buyer_id):\n    # TRANSACTION-RECORD layout: book, amount, seller, buyer.\n    record = book_id + int_to_display(amount) + seller_id + buyer_id\n    with open(TRANSACTIONS_PATH, \"ab\") as handle:\n        handle.write(record)\n\n\ndef main():\n    buyer_id, seller_id, book_id, amount = read_input()\n\n    accounts = read_file(ACCOUNTS_PATH)\n    books = read_file(BOOKS_PATH)\n\n    # VALIDATE-USERS-AND-BOOK ends with DISPLAY \" \".\n    print(\" \")\n\n    if not validate(accounts, books, buyer_id, seller_id, book_id):\n        print(\"Transaction failed due to validation errors\")\n        return 0\n\n    accounts, aborted = process_accounts(accounts, buyer_id, seller_id, amount)\n    write_file(ACCOUNTS_PATH, accounts)\n    if aborted:\n        print(\n            \"libcob: error: READ must be executed first (status = 43) \"\n            \"for file ACCOUNTS-FILE ('data' => data/ACCOUNTS.DAT)\",\n            file=sys.stderr,\n        )\n        return 1\n\n    books, aborted = process_books(books, book_id, buyer_id)\n    write_file(BOOKS_PATH, books)\n    if aborted:\n        print(\n            \"libcob: error: READ must be executed first (status = 43) \"\n            \"for file BOOKS-FILE ('data' => data/BOOKS.DAT)\",\n            file=sys.stderr,\n        )\n        return 1\n\n    append_transaction(book_id, amount, seller_id, buyer_id)\n    print(\"Transaction completed successfully\")\n    return 0\n\n\nif __name__ == \"__main__\":\n    sys.exit(main())\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 126064,
+   "dur_ms": 8559
+  },
+  {
+   "kind": "tool",
+   "at_ms": 134623,
+   "dur_ms": 32987,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/fuzz.py <<'PYEOF'\nimport os, random, shutil, subprocess, sys, filecmp\n\nCBL = '/app/src/program.cbl'\nPY = '/app/program.py'\nIDS = ['U001','U002','U003','U004','B001','B002','B003','X   ','    ']\n\ndef rec(n, fill): return (fill*n)\n\ndef gen_accounts(rng):\n    out=[]\n    for _ in range(rng.randint(0,5)):\n        i=rng.choice(['U001','U002','U003','U004','U005'])\n        name=''.join(rng.choice('ABC def') for _ in range(20))\n        bal='%010d'%rng.choice([0,1,100,1180,1800,1520,9999999999,rng.randint(0,9999999999)])\n        out.append(i+name+bal)\n    return ''.join(out).encode()\n\ndef gen_books(rng):\n    out=[]\n    for _ in range(rng.randint(0,5)):\n        i=rng.choice(['B001','B002','B003','B004'])\n        t=''.join(rng.choice('XYZ abc') for _ in range(20))\n        o=rng.choice(['U001','U002','U003','U004'])\n        out.append(i+t+o)\n    return ''.join(out).encode()\n\ndef gen_trans(rng):\n    out=[]\n    for _ in range(rng.randint(0,4)):\n        b=rng.choice(['B001','B002','B003'])\n        a='%010d'%rng.randint(0,9999999999)\n        s=rng.choice(['U001','U002','U003'])\n        bu=rng.choice(['U001','U002','U003'])\n        out.append(b+a+s+bu)\n    return ''.join(out).encode()\n\ndef gen_input(rng):\n    buyer=rng.choice(['U001','U002','U003','U004','U009'])\n    seller=rng.choice(['U001','U002','U003','U004','U009'])\n    book=rng.choice(['B001','B002','B003','B004','B009'])\n    mode=rng.random()\n    if mode<0.15:\n        # short like provided input\n        amt=str(rng.randint(0,999))\n    else:\n        amt='%010d'%rng.randint(0,9999999999)\n        if mode<0.4:\n            amt=''.join(c if rng.random()<0.7 else ' ' for c in amt)\n    return (buyer+seller+book+amt).encode()\n\ndef run_case(idx, rng):\n    root=f'/tmp/fz/c{idx}'\n    shutil.rmtree(root, ignore_errors=True)\n    os.makedirs(root+'/src'); os.makedirs(root+'/data')\n    shutil.copy(CBL, root+'/src/program.cbl')\n    shutil.copy(PY, root+'/program.py')\n    open(root+'/data/ACCOUNTS.DAT','wb').write(gen_accounts(rng))\n    open(root+'/data/BOOKS.DAT','wb').write(gen_books(rng))\n    open(root+'/data/TRANSACTIONS.DAT','wb').write(gen_trans(rng))\n    open(root+'/src/INPUT.DAT','wb').write(gen_input(rng))\n    # save initial\n    shutil.copytree(root+'/data', root+'/data_init')\n    # cobol\n    r=subprocess.run(['cobc','-x','-o','prog','src/program.cbl'],cwd=root,capture_output=True)\n    if r.returncode!=0:\n        print('compile fail',r.stderr); return True\n    c=subprocess.run(['./prog'],cwd=root,capture_output=True)\n    cobol_out={f:open(root+'/data/'+f,'rb').read() for f in ['ACCOUNTS.DAT','BOOKS.DAT','TRANSACTIONS.DAT']}\n    cobol_rc=c.returncode\n    # reset\n    shutil.rmtree(root+'/data'); shutil.copytree(root+'/data_init',root+'/data')\n    p=subprocess.run([sys.executable,root+'/program.py'],cwd=root,capture_output=True)\n    py_out={f:open(root+'/data/'+f,'rb').read() for f in ['ACCOUNTS.DAT','BOOKS.DAT','TRANSACTIONS.DAT']}\n    if cobol_out!=py_out:\n        print(f'MISMATCH case {idx}')\n        if r.returncode!=0: pass\n        print(' input',open(root+'/src/INPUT.DAT','rb').read())\n        print(' init', {f:open(root+'/data_init/'+f,'rb').read() for f in cobol_out})\n        for f in cobol_out:\n            if cobol_out[f]!=py_out[f]:\n                print('  ',f,'\\n   cobol',repr(cobol_out[f]),'\\n   py   ',repr(py_out[f]))\n        print(' cobol rc',cobol_rc,'py rc',p.returncode)\n        print(' cobol stderr',c.stderr.decode(errors='replace')[:200])\n        print(' py stderr',p.stderr.decode(errors='replace')[:200])\n        return False\n    return True\n\nrng=random.Random(int(sys.argv[1]) if len(sys.argv)>1 else 0)\nn=int(sys.argv[2]) if len(sys.argv)>2 else 200\nbad=0\nfor i in range(n):\n    if not run_case(i,rng):\n        bad+=1\n        if bad>=8: break\nprint('done, mismatches:',bad)\nPYEOF\npython3 /tmp/fuzz.py 1 200"
+  },
+  {
+   "kind": "model",
+   "at_ms": 167610,
+   "dur_ms": 5948
+  },
+  {
+   "kind": "tool",
+   "at_ms": 173558,
+   "dur_ms": 71942,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/fuzz2.py <<'PYEOF'\nimport os, random, shutil, subprocess, sys\nCBL='/app/src/program.cbl'; PY='/app/program.py'\ndef gen_accounts(rng):\n    out=[]\n    for _ in range(rng.randint(0,5)):\n        i=rng.choice(['U001','U002','U003','U004'])\n        out.append(i+(''.join(rng.choice('ABC def') for _ in range(20)))+('%010d'%rng.choice([0,100,1180,1800,9999999999,rng.randint(0,9999999999)])))\n    return ''.join(out).encode()\ndef gen_books(rng):\n    out=[]\n    for _ in range(rng.randint(0,5)):\n        out.append(rng.choice(['B001','B002','B003'])+''.join(rng.choice('XYZ abc') for _ in range(20))+rng.choice(['U001','U002','U003']))\n    return ''.join(out).encode()\ndef gen_trans(rng):\n    return b''.join(rng.choice(['B001','B002'])+('%010d'%rng.randint(0,9999999999))+rng.choice(['U001','U002'])+rng.choice(['U001','U002']) for _ in range(rng.randint(0,3))).encode() if False else b''.join((rng.choice(['B001','B002'])+('%010d'%rng.randint(0,9999999999))+rng.choice(['U001','U002'])+rng.choice(['U001','U002'])).encode() for _ in range(rng.randint(0,3)))\ndef gen_input(rng):\n    b=rng.choice(['U001','U002','U003','U004']); s=rng.choice(['U001','U002','U003','U004']); k=rng.choice(['B001','B002','B003'])\n    amt='%010d'%rng.randint(0,9999999999)\n    if rng.random()<0.5: amt=''.join(c if rng.random()<0.7 else ' ' for c in amt)\n    rec=(b+s+k+amt).encode()\n    if rng.random()<0.3: rec=rec[:rng.randint(1,len(rec))]\n    return rec\ndef run(idx,rng):\n    root=f'/tmp/fz2/c{idx}'; shutil.rmtree(root,ignore_errors=True); os.makedirs(root+'/src'); os.makedirs(root+'/data')\n    shutil.copy(CBL,root+'/src/program.cbl'); shutil.copy(PY,root+'/program.py')\n    a=gen_accounts(rng); bk=gen_books(rng); tr=gen_trans(rng)\n    if rng.random()<0.4 and a: a=a[:rng.randint(1,len(a)-1)] if len(a)>1 else a\n    if rng.random()<0.4 and bk: bk=bk[:rng.randint(1,len(bk)-1)] if len(bk)>1 else bk\n    if rng.random()<0.3 and tr: tr=tr[:rng.randint(1,len(tr)-1)] if len(tr)>1 else tr\n    open(root+'/data/ACCOUNTS.DAT','wb').write(a); open(root+'/data/BOOKS.DAT','wb').write(bk); open(root+'/data/TRANSACTIONS.DAT','wb').write(tr)\n    open(root+'/src/INPUT.DAT','wb').write(gen_input(rng))\n    shutil.copytree(root+'/data',root+'/data_init')\n    r=subprocess.run(['cobc','-x','-o','prog','src/program.cbl'],cwd=root,capture_output=True)\n    if r.returncode: print('compile fail'); return True\n    subprocess.run(['./prog'],cwd=root,capture_output=True)\n    co={f:open(root+'/data/'+f,'rb').read() for f in ['ACCOUNTS.DAT','BOOKS.DAT','TRANSACTIONS.DAT']}\n    shutil.rmtree(root+'/data'); shutil.copytree(root+'/data_init',root+'/data')\n    subprocess.run([sys.executable,root+'/program.py'],cwd=root,capture_output=True)\n    po={f:open(root+'/data/'+f,'rb').read() for f in co}\n    if co!=po:\n        print('MISMATCH',idx,'input',open(root+'/src/INPUT.DAT','rb').read())\n        for f in co:\n            if co[f]!=po[f]: print(' ',f,'\\n  co',repr(co[f]),'\\n  py',repr(po[f]))\n        return False\n    return True\nrng=random.Random(int(sys.argv[1])); n=int(sys.argv[2]); bad=0\nfor i in range(n):\n    if not run(i,rng):\n        bad+=1\n        if bad>=6: break\nprint('done bad',bad)\nPYEOF\nfor s in 1 2 3; do echo \"seed $s\"; python3 /tmp/fuzz2.py $s 150; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 245500,
+   "dur_ms": 8603
+  },
+  {
+   "kind": "tool",
+   "at_ms": 254103,
+   "dur_ms": 62,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/rerun1.py <<'PYEOF'\nimport random,sys\nexec(open('/tmp/fuzz2.py').read().split(\"rng=random.Random\")[0])\nrng=random.Random(1)\ntarget=53\nfor i in range(target+1):\n    root=f'/tmp/fz2/c{i}'\n    # regenerate same way as run() exactly, stopping state capture at target\n    if i==target:\n        # replicate generation\n        import os,shutil\n        root2='/tmp/case53'; shutil.rmtree(root2,ignore_errors=True); os.makedirs(root2+'/src'); os.makedirs(root2+'/data')\n        a=gen_accounts(rng); bk=gen_books(rng); tr=gen_trans(rng)\n        if rng.random()<0.4 and a: a=a[:rng.randint(1,len(a)-1)] if len(a)>1 else a\n        if rng.random()<0.4 and bk: bk=bk[:rng.randint(1,len(bk)-1)] if len(bk)>1 else bk\n        if rng.random()<0.3 and tr: tr=tr[:rng.randint(1,len(tr)-1)] if len(tr)>1 else tr\n        inp=gen_input(rng)\n        open(root2+'/data/ACCOUNTS.DAT','wb').write(a); open(root2+'/data/BOOKS.DAT','wb').write(bk); open(root2+'/data/TRANSACTIONS.DAT','wb').write(tr); open(root2+'/src/INPUT.DAT','wb').write(inp)\n        print('len accounts',len(a)); \n        for j in range(0,len(a),34): print(j,repr(a[j:j+34]))\n        print('books',repr(bk)); print('input',repr(inp))\n        break\n    else:\n        # consume rng as run() does\n        a=gen_accounts(rng); bk=gen_books(rng); tr=gen_trans(rng)\n        if rng.random()<0.4 and a: a=a[:rng.randint(1,len(a)-1)] if len(a)>1 else a\n        if rng.random()<0.4 and bk: bk=bk[:rng.randint(1,len(bk)-1)] if len(bk)>1 else bk\n        if rng.random()<0.3 and tr: tr=tr[:rng.randint(1,len(tr)-1)] if len(tr)>1 else tr\n        gen_input(rng)\nPYEOF\npython3 /tmp/rerun1.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 254165,
+   "dur_ms": 5151
+  },
+  {
+   "kind": "tool",
+   "at_ms": 259316,
+   "dur_ms": 257,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /tmp/case53 && cp /app/src/program.cbl src/ 2>/dev/null; cp /app/program.py .; cp -r data data_init2; cobc -x -o prog src/program.cbl 2>/dev/null; ./prog >/tmp/c53co.out 2>/tmp/c53co.err; echo \"co rc $?\"; python3 - <<'EOF'\na=open('/tmp/case53/data/ACCOUNTS.DAT','rb').read()\nfor i in range(0,len(a),34): print(i,repr(a[i:i+34]))\nEOF\nrm -rf data; cp -r data_init2 data; python3 program.py; echo \"py rc $?\"; python3 - <<'EOF'\na=open('/tmp/case53/data/ACCOUNTS.DAT','rb').read()\nfor i in range(0,len(a),34): print(i,repr(a[i:i+34]))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 259573,
+   "dur_ms": 42506
+  },
+  {
+   "kind": "tool",
+   "at_ms": 302079,
+   "dur_ms": 38,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/program.py",
+    "content": "#!/usr/bin/env python3\n\"\"\"Python re-implementation of src/program.cbl (BOOKFORUM).\n\nReads one transaction request from src/INPUT.DAT and, when it validates,\nupdates data/ACCOUNTS.DAT, data/BOOKS.DAT and appends to\ndata/TRANSACTIONS.DAT using the same fixed-length record layouts and the\nsame arithmetic semantics as the GnuCOBOL original.\n\"\"\"\n\nimport os\nimport sys\n\nBASE_DIR = os.path.dirname(os.path.abspath(__file__))\n\nINPUT_PATH = os.path.join(BASE_DIR, \"src\", \"INPUT.DAT\")\nACCOUNTS_PATH = os.path.join(BASE_DIR, \"data\", \"ACCOUNTS.DAT\")\nBOOKS_PATH = os.path.join(BASE_DIR, \"data\", \"BOOKS.DAT\")\nTRANSACTIONS_PATH = os.path.join(BASE_DIR, \"data\", \"TRANSACTIONS.DAT\")\n\n# FD record sizes:\n#   ACCOUNT-RECORD      PIC X(4) + X(20) + 9(10)       = 34\n#   BOOK-RECORD         PIC X(4) + X(20) + X(4)        = 28\n#   TRANSACTION-RECORD  PIC X(4) + 9(10) + X(4) + X(4) = 22\n#   INPUT-RECORD        PIC X(4) + X(4) + X(4) + 9(10) = 22\nACCOUNT_LEN = 34\nBOOK_LEN = 28\nTRANSACTION_LEN = 22\nINPUT_LEN = 22\n\nDIGIT_MOD = 10 ** 10\n\n\ndef display_to_int(field):\n    \"\"\"Interpret a PIC 9(n) DISPLAY field the way GnuCOBOL does.\n\n    Digit bytes keep their value and space bytes count as zero digits.\n    \"\"\"\n    value = 0\n    for byte in field:\n        if 48 <= byte <= 57:\n            value = value * 10 + (byte - 48)\n        else:\n            # GnuCOBOL treats blanks (and other non-digits) as zero digits.\n            value *= 10\n    return value\n\n\ndef int_to_display(value, width=10):\n    \"\"\"Store a COBOL arithmetic result into an unsigned PIC 9(width) field.\n\n    GnuCOBOL keeps the absolute value when a negative intermediate is\n    moved into an unsigned field and keeps the low-order digits when the\n    result overflows the field.\n    \"\"\"\n    if value < 0:\n        value = -value\n    value %= 10 ** width\n    return (\"%0*d\" % (width, value)).encode(\"ascii\")\n\n\ndef read_file(path):\n    with open(path, \"rb\") as handle:\n        return bytearray(handle.read())\n\n\ndef write_file(path, data):\n    with open(path, \"wb\") as handle:\n        handle.write(bytes(data))\n\n\nclass SequentialFile:\n    \"\"\"Fixed-length sequential file emulating a COBOL FD record area.\n\n    GnuCOBOL reads each record into a persistent record area: when the\n    final record is shorter than the FD length only its leading bytes are\n    overwritten, so the remaining bytes keep whatever the previous record\n    left there.  The record area also survives CLOSE/OPEN within a run.\n    \"\"\"\n\n    def __init__(self, path, record_len):\n        self.record_len = record_len\n        self.data = read_file(path)\n        self.record_area = bytearray(b\" \" * record_len)\n        self.position = 0\n        self.last_offset = 0\n        self.last_short = False\n\n    def reopen(self):\n        self.position = 0\n\n    def read(self):\n        if self.position >= len(self.data):\n            return None\n\n        offset = self.position\n        chunk = bytes(self.data[offset:offset + self.record_len])\n        self.position += self.record_len\n\n        self.record_area[:len(chunk)] = chunk\n        self.last_offset = offset\n        self.last_short = len(chunk) < self.record_len\n        return bytes(self.record_area)\n\n    def rewrite(self, record):\n        \"\"\"Rewrite the record just read (REWRITE).\"\"\"\n        if self.last_short:\n            # GnuCOBOL raises status 43 / aborts for a short record.\n            return False\n        offset = self.last_offset\n        self.data[offset:offset + self.record_len] = record\n        self.record_area[:] = record\n        return True\n\n\ndef read_input():\n    try:\n        raw = read_file(INPUT_PATH)\n    except OSError:\n        print(\"Error: Input file is empty\")\n        sys.exit(1)\n\n    if len(raw) == 0:\n        print(\"Error: Input file is empty\")\n        sys.exit(0)\n\n    # The INPUT FD record area starts as spaces and the short final read\n    # only overwrites the bytes actually present in the file.\n    record = bytearray(b\" \" * INPUT_LEN)\n    chunk = bytes(raw[:INPUT_LEN])\n    record[:len(chunk)] = chunk\n    return (\n        bytes(record[0:4]),      # INPUT-BUYER-ID\n        bytes(record[4:8]),      # INPUT-SELLER-ID\n        bytes(record[8:12]),     # INPUT-BOOK-ID\n        display_to_int(record[12:22]),  # INPUT-AMOUNT\n    )\n\n\ndef validate(accounts_file, books_file, buyer_id, seller_id, book_id):\n    buyer_found = False\n    seller_found = False\n    book_found = False\n    valid_owner = False\n\n    accounts_file.reopen()\n    while True:\n        record = accounts_file.read()\n        if record is None:\n            break\n        if record[0:4] == buyer_id:\n            buyer_found = True\n        if record[0:4] == seller_id:\n            seller_found = True\n\n    books_file.reopen()\n    while True:\n        record = books_file.read()\n        if record is None:\n            break\n        if record[0:4] == book_id:\n            book_found = True\n            if record[24:28] == seller_id:\n                valid_owner = True\n\n    return buyer_found and seller_found and book_found and valid_owner\n\n\ndef process_accounts(accounts_file, buyer_id, seller_id, amount):\n    \"\"\"Apply debit/credit updates.  Returns True if the run aborted.\n\n    GnuCOBOL's REWRITE requires that a full record was just read.  A short\n    record, or a second REWRITE without an intervening READ (which happens\n    when buyer and seller are the same account), aborts the run.  Updates\n    already rewritten remain in the file.\n    \"\"\"\n    accounts_file.reopen()\n\n    while True:\n        record = accounts_file.read()\n        if record is None:\n            break\n\n        matches_buyer = record[0:4] == buyer_id\n        matches_seller = record[0:4] == seller_id\n\n        if not matches_buyer and not matches_seller:\n            continue\n\n        if matches_buyer:\n            balance = display_to_int(record[24:34]) - amount\n            updated = record[:24] + int_to_display(balance) + record[34:]\n\n            if not accounts_file.rewrite(updated):\n                return True\n\n            if matches_seller:\n                # ADD is performed, but the second REWRITE fails and\n                # aborts the program before anything else happens.\n                return True\n\n        elif matches_seller:\n            balance = display_to_int(record[24:34]) + amount\n            updated = record[:24] + int_to_display(balance) + record[34:]\n\n            if not accounts_file.rewrite(updated):\n                return True\n\n    return False\n\n\ndef process_books(books_file, book_id, buyer_id):\n    \"\"\"Transfer ownership.  Returns True if the run aborted.\"\"\"\n    books_file.reopen()\n\n    while True:\n        record = books_file.read()\n        if record is None:\n            break\n\n        if record[0:4] != book_id:\n            continue\n\n        updated = record[:24] + buyer_id + record[28:]\n        if not books_file.rewrite(updated):\n            return True\n\n    return False\n\n\ndef append_transaction(book_id, amount, seller_id, buyer_id):\n    # TRANSACTION-RECORD layout: book, amount, seller, buyer.\n    record = book_id + int_to_display(amount) + seller_id + buyer_id\n    with open(TRANSACTIONS_PATH, \"ab\") as handle:\n        handle.write(record)\n\n\ndef main():\n    buyer_id, seller_id, book_id, amount = read_input()\n\n    accounts_file = SequentialFile(ACCOUNTS_PATH, ACCOUNT_LEN)\n    books_file = SequentialFile(BOOKS_PATH, BOOK_LEN)\n\n    # VALIDATE-USERS-AND-BOOK ends with DISPLAY \" \".\n    print(\" \")\n\n    if not validate(accounts_file, books_file, buyer_id, seller_id, book_id):\n        print(\"Transaction failed due to validation errors\")\n        return 0\n\n    if process_accounts(accounts_file, buyer_id, seller_id, amount):\n        write_file(ACCOUNTS_PATH, accounts_file.data)\n        print(\n            \"libcob: error: READ must be executed first (status = 43) \"\n            \"for file ACCOUNTS-FILE ('data' => data/ACCOUNTS.DAT)\",\n            file=sys.stderr,\n        )\n        return 1\n\n    if process_books(books_file, book_id, buyer_id):\n        write_file(ACCOUNTS_PATH, accounts_file.data)\n        write_file(BOOKS_PATH, books_file.data)\n        print(\n            \"libcob: error: READ must be executed first (status = 43) \"\n            \"for file BOOKS-FILE ('data' => data/BOOKS.DAT)\",\n            file=sys.stderr,\n        )\n        return 1\n\n    write_file(ACCOUNTS_PATH, accounts_file.data)\n    write_file(BOOKS_PATH, books_file.data)\n    append_transaction(book_id, amount, seller_id, buyer_id)\n    print(\"Transaction completed successfully\")\n    return 0\n\n\nif __name__ == \"__main__\":\n    sys.exit(main())\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 302117,
+   "dur_ms": 2077
+  },
+  {
+   "kind": "tool",
+   "at_ms": 304194,
+   "dur_ms": 120084,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "for s in 1 2 3 4 5; do echo \"seed $s\"; python3 /tmp/fuzz2.py $s 150; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 424278,
+   "dur_ms": 1819
+  },
+  {
+   "kind": "tool",
+   "at_ms": 426097,
+   "dur_ms": 60032,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sleep 60; cat /tmp/claude-0/-app/15cbb7e2-7487-41ba-8020-a832e7a3e83b/tasks/b33amcjet.output 2>/dev/null | tail -30"
+  },
+  {
+   "kind": "model",
+   "at_ms": 486129,
+   "dur_ms": 6150
+  },
+  {
+   "kind": "tool",
+   "at_ms": 492279,
+   "dur_ms": 915,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "set -e\n# exact provided files\nrm -rf /tmp/final_exact && mkdir -p /tmp/final_exact && cp -r /app/src /app/data /tmp/final_exact/ && cp /app/program.py /tmp/final_exact/\ncp -r /tmp/final_exact/data /tmp/final_exact/data_init\ncd /tmp/final_exact && cobc -x -o prog src/program.cbl 2>/dev/null && ./prog >/tmp/fe_co.out 2>&1; echo \"co rc=$?\"\nmkdir -p /tmp/final_exact/co && cp /tmp/final_exact/data/*.DAT /tmp/final_exact/co/\nrm -rf /tmp/final_exact/data && cp -r /tmp/final_exact/data_init /tmp/final_exact/data\npython3 /tmp/final_exact/program.py >/tmp/fe_py.out 2>&1; echo \"py rc=$?\"\ndiff -r /tmp/final_exact/co /tmp/final_exact/data && echo \"EXACT MATCH\"\necho \"co out:\"; cat /tmp/fe_co.out; echo \"py out:\"; cat /tmp/fe_py.out\n# a valid variant with the same data\nfor amt in 0000000200 200 0000009999 0000001180; do\n  rm -rf /tmp/v && mkdir -p /tmp/v && cp -r /app/src /app/data /tmp/v/ && cp /app/program.py /tmp/v/\n  printf 'U001U002B001%s' \"$amt\" > /tmp/v/src/INPUT.DAT\n  cp -r /tmp/v/data /tmp/v/data_init\n  cd /tmp/v && cobc -x -o prog src/program.cbl 2>/dev/null && ./prog >/dev/null 2>&1 || true\n  mkdir -p /tmp/v/co && cp /tmp/v/data/*.DAT /tmp/v/co/\n  rm -rf /tmp/v/data && cp -r /tmp/v/data_init /tmp/v/data\n  python3 /tmp/v/program.py >/dev/null 2>&1 || true\n  diff -r /tmp/v/co /tmp/v/data >/dev/null && echo \"variant $amt MATCH\" || { echo \"variant $amt DIFF\"; diff -r /tmp/v/co /tmp/v/data; }\ndone"
+  },
+  {
+   "kind": "model",
+   "at_ms": 493194,
+   "dur_ms": 1939
+  },
+  {
+   "kind": "tool",
+   "at_ms": 495133,
+   "dur_ms": 55818,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "for s in 11 22 33; do echo \"seed $s\"; python3 /tmp/fuzz.py $s 120; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 550951,
+   "dur_ms": 5523
+  },
+  {
+   "kind": "tool",
+   "at_ms": 556474,
+   "dur_ms": 801,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "set -e\ncmp_run() {\n  name=\"$1\"; python3 - \"$name\" <<'EOF'\nimport sys,os,shutil,subprocess\nname=sys.argv[1]\nroot='/tmp/nl_'+name\nshutil.rmtree(root,ignore_errors=True); os.makedirs(root+'/src'); os.makedirs(root+'/data')\nshutil.copy('/app/src/program.cbl',root+'/src/program.cbl'); shutil.copy('/app/program.py',root+'/program.py')\nfor f in ['ACCOUNTS.DAT','BOOKS.DAT','TRANSACTIONS.DAT']:\n    shutil.copy('/app/data/'+f,root+'/data/'+f)\ndata={\n 'a':b'U001U002B001200\\n',\n 'b':b'U001U002B001\\n',\n 'c':b'U001U002B0010000000200\\n',\n 'd':b'U001U002B0012000000000\\n',\n}\nopen(root+'/src/INPUT.DAT','wb').write(data[name])\nshutil.copytree(root+'/data',root+'/init')\nsubprocess.run(['cobc','-x','-o','prog','src/program.cbl'],cwd=root,check=True,capture_output=True)\nsubprocess.run(['./prog'],cwd=root,capture_output=True)\nco={f:open(root+'/data/'+f,'rb').read() for f in ['ACCOUNTS.DAT','BOOKS.DAT','TRANSACTIONS.DAT']}\nshutil.rmtree(root+'/data'); shutil.copytree(root+'/init',root+'/data')\nsubprocess.run([sys.executable,root+'/program.py'],cwd=root,capture_output=True)\npo={f:open(root+'/data/'+f,'rb').read() for f in co}\nprint(name,'MATCH' if co==po else 'DIFF')\nif co!=po:\n    for f in co:\n        if co[f]!=po[f]: print(' ',f,repr(co[f]),repr(po[f]))\nEOF\n}\nfor n in a b c d; do cmp_run $n; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 557275,
+   "dur_ms": 11510
+  },
+  {
+   "kind": "tool",
+   "at_ms": 568785,
+   "dur_ms": 27,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nfor v in [1962000000,2737095516,2737094336,1203400000]:\n    print(v,hex(v),v.to_bytes(4,'big').hex(),v.to_bytes(4,'little').hex())\n# input field bytes\nprint(b'200\\n      '.hex(), b'\\n         '.hex())\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 568812,
+   "dur_ms": 5260
+  },
+  {
+   "kind": "tool",
+   "at_ms": 574072,
+   "dur_ms": 103,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "md5sum /app/data/*.DAT /app/src/INPUT.DAT; echo '--- expected originals ---'; echo 'a87a4ee9e8ed9d54e5fd09e02251953e ACCOUNTS'; echo '115d7ef9f29d983c36cc49ab90cd805f BOOKS'; echo '76cab7217fe094136f0aff2bdc38982d TRANSACTIONS'; python3 -m py_compile /app/program.py && echo \"py_compile OK\"; ls -la /app"
+  },
+  {
+   "kind": "model",
+   "at_ms": 574175,
+   "dur_ms": 1711
+  },
+  {
+   "kind": "tool",
+   "at_ms": 575886,
+   "dur_ms": 28,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "rm -rf /app/__pycache__ && ls -la /app && echo OK"
+  },
+  {
+   "kind": "model",
+   "at_ms": 575914,
+   "dur_ms": 2999
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.998,
+ "calls": 27,
+ "cell": "TB1a"
+}

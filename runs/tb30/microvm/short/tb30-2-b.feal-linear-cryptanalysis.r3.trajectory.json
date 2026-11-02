@@ -1,0 +1,308 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "feal-linear-cryptanalysis",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 184434,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 257,
+  "output": 23290,
+  "cacheRead": 262144,
+  "cacheWrite": 6848,
+  "total": 292539
+ },
+ "totals": {
+  "model_calls": 9,
+  "tool_calls": 8,
+  "model_ms": 139386,
+  "tool_ms": 44418,
+  "sandbox_ms": 43679
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 507,
+   "dur_ms": 1036
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1543,
+   "dur_ms": 158,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nls -la\necho \"=== feal.c ===\"\ncat feal.c\necho \"=== decrypt.c ===\"\ncat decrypt.c\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 1622,
+     "dur_ms": 55,
+     "exit": 0,
+     "cpu_ms": 40.2,
+     "phases_us": {
+      "acquire": 120,
+      "resume": 21227,
+      "mount": 18661,
+      "run": 6670,
+      "destroy": 27077
+     },
+     "cold": null,
+     "vm": "vm-170"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 1701,
+   "dur_ms": 963
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2664,
+   "dur_ms": 132,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\necho \"=== pairs.txt ===\"\ncat pairs.txt\necho \"=== ciphertexts.txt ===\"\ncat ciphertexts.txt\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 2720,
+     "dur_ms": 46,
+     "exit": 0,
+     "cpu_ms": 38.3,
+     "phases_us": {
+      "acquire": 131,
+      "resume": 21083,
+      "mount": 18336,
+      "run": 4797,
+      "destroy": 19237
+     },
+     "cold": null,
+     "vm": "vm-172"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 2796,
+   "dur_ms": 81623
+  },
+  {
+   "kind": "tool",
+   "at_ms": 84419,
+   "dur_ms": 272,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx put /workspace/check.py <<'EOF'\nimport random, subprocess\n\ndef S(t): return ((t<<2)|(t>>6))&0xff\ndef Sinv(t): return ((t>>2)|(t<<6))&0xff\n\ndef F(w):\n    x=[(w>>(8*i))&0xff for i in range(4)]\n    y=[0]*4\n    y[2]=S((x[3]^x[2]) + (x[1]^x[0]) + 1)\n    y[3]=S(x[3] + y[2])\n    y[1]=S((x[1]^x[0]) + y[2])\n    y[0]=S(x[0] + y[1] + 1)\n    return sum(y[i]<<(8*i) for i in range(4))\n\ndef Finv(w):\n    y=[(w>>(8*i))&0xff for i in range(4)]\n    x=[0]*4\n    x[0]=(Sinv(y[0]) - y[1] - 1)&0xff\n    x1x0=(Sinv(y[1]) - y[2])&0xff\n    x[1]=x[0]^x1x0\n    x[3]=(Sinv(y[3]) - y[2])&0xff\n    x3x2=(Sinv(y[2]) - x1x0 - 1)&0xff\n    x[2]=x[3]^x3x2\n    return sum(x[i]<<(8*i) for i in range(4))\n\n# check F inverse\nfor _ in range(200000):\n    w=random.getrandbits(32)\n    assert F(Finv(w))==w, \"Finv fail\"\n    assert Finv(F(w))==w, \"F fail\"\nprint(\"F bijection OK\")\n\ndef expand(k):\n    k&=0xfffff\n    return (k ^ ((k<<16)&0xffffffff) ^ ((k*12345)&0xffffffff)) & 0xffffffff\n\ndef encrypt(pt, seeds):\n    key=[expand(s) for s in seeds]\n    left=(pt>>32)&0xffffffff\n    right=pt&0xffffffff\n    right^=left\n    for i in range(4):\n        mixed=F((right^key[i])&0xffffffff)\n        left,right=right,(left^mixed)&0xffffffff\n    left^=right\n    return ((right&0xffffffff)<<32)|(left&0xffffffff)\n\nseeds=[0x12345,0xABCDE,0x0F0F0,0x99999]\npt=0x0123456789ABCDEF\nprint(\"py ct\", hex(encrypt(pt,seeds)))\nout=subprocess.run([\"/workspace/feal\",hex(pt)]+[format(s,'x') for s in seeds],capture_output=True,text=True)\nprint(out.stdout, out.stderr)\nEOF\nsbx run <<'EOF'\ncd /workspace && python3 check.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 84451,
+     "dur_ms": 59,
+     "exit": 0,
+     "cpu_ms": 42.2,
+     "phases_us": {
+      "acquire": 90,
+      "resume": 21227,
+      "mount": 17100,
+      "run": 7534,
+      "destroy": 29949
+     },
+     "cold": null,
+     "vm": "vm-173"
+    },
+    {
+     "at_ms": 84556,
+     "dur_ms": 118,
+     "exit": 1,
+     "cpu_ms": 102.6,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 22116,
+      "mount": 18432,
+      "run": 62885,
+      "destroy": 32439
+     },
+     "cold": null,
+     "vm": "vm-167"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 84691,
+   "dur_ms": 7251
+  },
+  {
+   "kind": "tool",
+   "at_ms": 91942,
+   "dur_ms": 158,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace && python3 - <<'PY'\nimport random\ndef S(t): return ((t<<2)|(t>>6))&0xff\ndef Sinv(t): return ((t>>2)|(t<<6))&0xff\ndef F(w):\n    x=[(w>>(8*i))&0xff for i in range(4)]\n    y=[0]*4\n    y[2]=S((x[3]^x[2]) + (x[1]^x[0]) + 1)\n    y[3]=S(x[3] + y[2])\n    y[1]=S((x[1]^x[0]) + y[2])\n    y[0]=S(x[0] + y[1] + 1)\n    return sum(y[i]<<(8*i) for i in range(4))\ndef Finv(w):\n    y=[(w>>(8*i))&0xff for i in range(4)]\n    x=[0]*4\n    x[0]=(Sinv(y[0]) - y[1] - 1)&0xff\n    x1x0=(Sinv(y[1]) - y[2])&0xff\n    x[1]=x[0]^x1x0\n    x[3]=(Sinv(y[3]) - y[2])&0xff\n    x3x2=(Sinv(y[2]) - x1x0 - 1)&0xff\n    x[2]=x[3]^x3x2\n    return sum(x[i]<<(8*i) for i in range(4))\nbad=0\nfor _ in range(2000000):\n    w=random.getrandbits(32)\n    if F(Finv(w))!=w:\n        print(\"F(Finv) fail\",hex(w),hex(Finv(w)),hex(F(Finv(w)))); bad+=1; break\nfor _ in range(2000000):\n    w=random.getrandbits(32)\n    if Finv(F(w))!=w:\n        print(\"Finv(F) fail\",hex(w),hex(F(w)),hex(Finv(F(w))))\n        # also print rounds\n        x=[(w>>(8*i))&0xff for i in range(4)]\n        print(\"x\",x,\"F\",hex(F(w)))\n        break\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 91997,
+     "dur_ms": 76,
+     "exit": 0,
+     "cpu_ms": 72.4,
+     "phases_us": {
+      "acquire": 49,
+      "resume": 21133,
+      "mount": 18288,
+      "run": 35065,
+      "destroy": 19970
+     },
+     "cold": null,
+     "vm": "vm-182"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 92100,
+   "dur_ms": 25499
+  },
+  {
+   "kind": "tool",
+   "at_ms": 117599,
+   "dur_ms": 9982,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace && python3 - <<'PY'\nimport random, subprocess\ndef S(t):\n    t&=0xff\n    return ((t<<2)|(t>>6))&0xff\ndef Sinv(t):\n    t&=0xff\n    return ((t>>2)|(t<<6))&0xff\ndef F(w):\n    x=[(w>>(8*i))&0xff for i in range(4)]\n    y=[0]*4\n    y[2]=S((x[3]^x[2]) + (x[1]^x[0]) + 1)\n    y[3]=S(x[3] + y[2])\n    y[1]=S((x[1]^x[0]) + y[2])\n    y[0]=S(x[0] + y[1] + 1)\n    return sum(y[i]<<(8*i) for i in range(4))\ndef Finv(w):\n    y=[(w>>(8*i))&0xff for i in range(4)]\n    x=[0]*4\n    x[0]=(Sinv(y[0]) - y[1] - 1)&0xff\n    x1x0=(Sinv(y[1]) - y[2])&0xff\n    x[1]=x[0]^x1x0\n    x[3]=(Sinv(y[3]) - y[2])&0xff\n    x3x2=(Sinv(y[2]) - x1x0 - 1)&0xff\n    x[2]=x[3]^x3x2\n    return sum(x[i]<<(8*i) for i in range(4))\nfor _ in range(1000000):\n    w=random.getrandbits(32)\n    assert F(Finv(w))==w and Finv(F(w))==w\nprint(\"F bijection OK\")\ndef expand(k):\n    k&=0xfffff\n    return (k ^ ((k<<16)&0xffffffff) ^ ((k*12345)&0xffffffff)) & 0xffffffff\ndef encrypt(pt, seeds):\n    key=[expand(s) for s in seeds]\n    left=(pt>>32)&0xffffffff; right=pt&0xffffffff\n    right^=left\n    for i in range(4):\n        mixed=F((right^key[i])&0xffffffff)\n        left,right=right,(left^mixed)&0xffffffff\n    left^=right\n    return ((right&0xffffffff)<<32)|(left&0xffffffff)\nseeds=[0x12345,0xABCDE,0x0F0F0,0x99999]\nfor t in range(5):\n    pt=random.getrandbits(64)\n    py=encrypt(pt,seeds)\n    out=subprocess.run([\"/workspace/feal\",format(pt,'x')]+[format(s,'x') for s in seeds],capture_output=True,text=True).stdout\n    import re\n    c=int(re.search(r'Ciphertext:\\s*0x([0-9A-Fa-f]+)',out).group(1),16)\n    print(hex(pt),hex(py),hex(c),py==c)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 117656,
+     "dur_ms": 9913,
+     "exit": 0,
+     "cpu_ms": 9901.6,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 20387,
+      "mount": 17467,
+      "run": 9860647,
+      "destroy": 31479
+     },
+     "cold": null,
+     "vm": "vm-185"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 127581,
+   "dur_ms": 11647
+  },
+  {
+   "kind": "tool",
+   "at_ms": 139228,
+   "dur_ms": 17061,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put /workspace/attack.py <<'EOF'\nimport sys, time, random\n\ndef S(t):\n    t &= 0xff\n    return ((t << 2) | (t >> 6)) & 0xff\n\ndef Sinv(t):\n    t &= 0xff\n    return ((t >> 2) | (t << 6)) & 0xff\n\ndef F(w):\n    x0 = w & 0xff; x1 = (w >> 8) & 0xff; x2 = (w >> 16) & 0xff; x3 = (w >> 24) & 0xff\n    y2 = S((x3 ^ x2) + (x1 ^ x0) + 1)\n    y3 = S(x3 + y2)\n    y1 = S((x1 ^ x0) + y2)\n    y0 = S(x0 + y1 + 1)\n    return y0 | (y1 << 8) | (y2 << 16) | (y3 << 24)\n\ndef Finv(w):\n    y0 = w & 0xff; y1 = (w >> 8) & 0xff; y2 = (w >> 16) & 0xff; y3 = (w >> 24) & 0xff\n    x0 = (Sinv(y0) - y1 - 1) & 0xff\n    x1x0 = (Sinv(y1) - y2) & 0xff\n    x1 = x0 ^ x1x0\n    x3 = (Sinv(y3) - y2) & 0xff\n    x3x2 = (Sinv(y2) - x1x0 - 1) & 0xff\n    x2 = x3 ^ x3x2\n    return x0 | (x1 << 8) | (x2 << 16) | (x3 << 24)\n\ndef expand(k):\n    k &= 0xfffff\n    return (k ^ ((k << 16) & 0xffffffff) ^ ((k * 12345) & 0xffffffff)) & 0xffffffff\n\ndef encrypt(pt, seeds):\n    key = [expand(s) for s in seeds]\n    left = (pt >> 32) & 0xffffffff\n    right = pt & 0xffffffff\n    right ^= left\n    for i in range(4):\n        mixed = F((right ^ key[i]) & 0xffffffff)\n        left, right = right, (left ^ mixed) & 0xffffffff\n    left ^= right\n    return ((right & 0xffffffff) << 32) | (left & 0xffffffff)\n\ndef load_pairs(path):\n    ps = []\n    for line in open(path):\n        a = line.split()\n        if len(a) >= 2:\n            ps.append((int(a[0]), int(a[1])))\n    return ps\n\ndef attack(pairs, verbose=True):\n    # pair data: L0,R0,b0,b3,b4 per pair\n    data = []\n    for pt, ct in pairs:\n        L0 = (pt >> 32) & 0xffffffff\n        R0 = pt & 0xffffffff\n        b0 = R0 ^ L0\n        Lout = (ct >> 32) & 0xffffffff\n        Rout = ct & 0xffffffff\n        b3 = Lout ^ Rout\n        b4 = Lout\n        data.append((L0, b0, b3, b4))\n\n    # inverse map expanded-key -> seed\n    inv = {}\n    for s in range(1 << 20):\n        inv[expand(s)] = s\n\n    # choose 3 pairs for the MITM equations\n    idx = [0, 1, 2]\n    P = [data[i] for i in idx]\n\n    # Build A-table over K0 seeds: key = ((A0^A1)<<32) | (A0^A2) -> k0seed\n    t0 = time.time()\n    A0 = [0, 0, 0]\n    table = {}\n    for s in range(1 << 20):\n        rk = expand(s)\n        for j in range(3):\n            L0, b0, b3, b4 = P[j]\n            A0[j] = (L0 ^ F(b0 ^ rk)) & 0xffffffff\n        k = (((A0[0] ^ A0[1]) & 0xffffffff) << 32) | ((A0[0] ^ A0[2]) & 0xffffffff)\n        table[k] = s\n    if verbose:\n        print(\"A table built\", len(table), \"in\", round(time.time()-t0, 1), \"s\", flush=True)\n\n    t0 = time.time()\n    matches = []\n    for s3 in range(1 << 20):\n        rk3 = expand(s3)\n        B = [0, 0, 0]\n        for j in range(3):\n            L0, b0, b3, b4 = P[j]\n            a3 = (b4 ^ F(b3 ^ rk3)) & 0xffffffff\n            B[j] = Finv(b0 ^ a3) & 0xffffffff\n        k = (((B[0] ^ B[1]) & 0xffffffff) << 32) | ((B[0] ^ B[2]) & 0xffffffff)\n        s0 = table.get(k)\n        if s0 is not None:\n            matches.append((s0, s3, B))\n    if verbose:\n        print(\"K3 scan done in\", round(time.time()-t0, 1), \"s, matches:\", len(matches), flush=True)\n\n    results = []\n    for s0, s3, B in matches:\n        rk0 = expand(s0); rk3 = expand(s3)\n        L0, b0, b3, b4 = P[0]\n        b1 = (L0 ^ F(b0 ^ rk0)) & 0xffffffff\n        a3 = (b4 ^ F(b3 ^ rk3)) & 0xffffffff\n        k1 = b1 ^ B[0]\n        if k1 not in inv:\n            continue\n        k2 = (a3 ^ Finv(b3 ^ b1)) & 0xffffffff\n        if k2 not in inv:\n            continue\n        seeds = (s0, inv[k1], inv[k2], s3)\n        ok = all(encrypt(pt, seeds) == ct for pt, ct in pairs)\n        results.append((seeds, ok))\n    return results\n\nif __name__ == \"__main__\":\n    mode = sys.argv[1] if len(sys.argv) > 1 else \"real\"\n    if mode == \"synthetic\":\n        random.seed(1234)\n        seeds = (random.randrange(1 << 20), random.randrange(1 << 20),\n                 random.randrange(1 << 20), random.randrange(1 << 20))\n        print(\"true seeds\", [hex(x) for x in seeds])\n        pairs = [(random.getrandbits(64), 0) for _ in range(32)]\n        pairs = [(pt, encrypt(pt, seeds)) for pt, _ in pairs]\n        res = attack(pairs)\n        print(\"attack results:\", res)\n    else:\n        pairs = load_pairs(\"/workspace/pairs.txt\")\n        print(\"loaded\", len(pairs), \"pairs\")\n        res = attack(pairs)\n        print(\"attack results:\")\n        for seeds, ok in res:\n            print(\"  seeds\", [hex(x) for x in seeds], \"verified\", ok)\nEOF\nsbx run <<'EOF'\ncd /workspace && time python3 attack.py synthetic\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 139289,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 46.9,
+     "phases_us": {
+      "acquire": 77,
+      "resume": 23547,
+      "mount": 20100,
+      "run": 7797,
+      "destroy": 23828
+     },
+     "cold": null,
+     "vm": "vm-203"
+    },
+    {
+     "at_ms": 139391,
+     "dur_ms": 16864,
+     "exit": 0,
+     "cpu_ms": 16841.9,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 20250,
+      "mount": 17112,
+      "run": 16792744,
+      "destroy": 51293
+     },
+     "cold": null,
+     "vm": "vm-181"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 156289,
+   "dur_ms": 4538
+  },
+  {
+   "kind": "tool",
+   "at_ms": 160827,
+   "dur_ms": 16426,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace && time python3 attack.py real\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 160881,
+     "dur_ms": 16339,
+     "exit": 0,
+     "cpu_ms": 16307.2,
+     "phases_us": {
+      "acquire": 55,
+      "resume": 19760,
+      "mount": 16876,
+      "run": 16267952,
+      "destroy": 50772
+     },
+     "cold": null,
+     "vm": "vm-212"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 177253,
+   "dur_ms": 3300
+  },
+  {
+   "kind": "tool",
+   "at_ms": 180553,
+   "dur_ms": 229,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\n./decrypt ciphertexts.txt 68e63 62571 1f61c b74a5 > plaintexts.txt\nwc -l ciphertexts.txt plaintexts.txt\necho \"--- first 5 ---\"; head -5 plaintexts.txt\necho \"--- last 3 ---\"; tail -3 plaintexts.txt\necho \"--- roundtrip verify ---\"\npython3 - <<'PY'\nimport subprocess, re\nseeds=['68e63','62571','1f61c','b74a5']\ncts=[int(x) for x in open('ciphertexts.txt')]\npts=[int(x) for x in open('plaintexts.txt')]\nassert len(cts)==len(pts)\nbad=0\nfor pt,ct in zip(pts,cts):\n    out=subprocess.run(['./feal',format(pt,'x')]+seeds,capture_output=True,text=True).stdout\n    got=int(re.search(r'Ciphertext:\\s*0x([0-9A-Fa-f]+)',out).group(1),16)\n    if got!=ct:\n        bad+=1\n        print(\"MISMATCH\",pt,ct,got)\nprint(\"checked\",len(pts),\"pairs, mismatches:\",bad)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 180610,
+     "dur_ms": 153,
+     "exit": 0,
+     "cpu_ms": 201.8,
+     "phases_us": {
+      "acquire": 103,
+      "resume": 22750,
+      "mount": 19742,
+      "run": 106081,
+      "destroy": 23899
+     },
+     "cold": null,
+     "vm": "vm-219"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 180782,
+   "dur_ms": 3529
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.851,
+ "calls": 8,
+ "cell": "TB1b"
+}

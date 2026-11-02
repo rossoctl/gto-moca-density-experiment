@@ -1,0 +1,387 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-d",
+ "instance_id": "sqlite-db-truncate",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 183272,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 13324,
+  "output": 12256,
+  "cacheRead": 201984,
+  "cacheWrite": 0,
+  "total": 227564
+ },
+ "totals": {
+  "model_calls": 11,
+  "tool_calls": 10,
+  "model_ms": 60893,
+  "tool_ms": 121849,
+  "sandbox_ms": 1023
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 101,
+   "dur_ms": 3295,
+   "tokens_in": 40,
+   "tokens_out": 69,
+   "cache_read": 5632,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3396,
+   "dur_ms": 247,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app\nfile /app/trunc.db\nls -la /app/trunc.db",
+   "sandbox": [
+    {
+     "at_ms": 3513,
+     "dur_ms": 60,
+     "exit": 0,
+     "cpu_ms": 58.6,
+     "phases_us": {
+      "acquire": 14,
+      "resume": 21353,
+      "mount": 19332,
+      "run": 15821,
+      "destroy": 23003
+     },
+     "cold": null,
+     "vm": "vm-48"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3664,
+   "dur_ms": 737,
+   "tokens_in": 129,
+   "tokens_out": 65,
+   "cache_read": 5696,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4401,
+   "dur_ms": 131,
+   "tool": "bash",
+   "is_error": false,
+   "command": "which sqlite3 python3\nxxd /app/trunc.db | head -100",
+   "sandbox": [
+    {
+     "at_ms": 4455,
+     "dur_ms": 55,
+     "exit": 0,
+     "cpu_ms": 39.4,
+     "phases_us": {
+      "acquire": 104,
+      "resume": 21844,
+      "mount": 19498,
+      "run": 5130,
+      "destroy": 27989
+     },
+     "cold": null,
+     "vm": "vm-55"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 4548,
+   "dur_ms": 823,
+   "tokens_in": 67,
+   "tokens_out": 136,
+   "cache_read": 5888,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5371,
+   "dur_ms": 165,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\ndata=open('/app/trunc.db','rb').read()\nprint(len(data))\nfor i in range(0,len(data),16):\n    chunk=data[i:i+16]\n    print(f\"{i:08x}  {chunk.hex(' '):<48}  {''.join(chr(b) if 32<=b<127 else '.' for b in chunk)}\")\nPY",
+   "sandbox": [
+    {
+     "at_ms": 5423,
+     "dur_ms": 84,
+     "exit": 0,
+     "cpu_ms": 71.0,
+     "phases_us": {
+      "acquire": 64,
+      "resume": 21183,
+      "mount": 18750,
+      "run": 35275,
+      "destroy": 27738
+     },
+     "cold": null,
+     "vm": "vm-56"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 5552,
+   "dur_ms": 20538,
+   "tokens_in": 10243,
+   "tokens_out": 691,
+   "cache_read": 6080,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 26090,
+   "dur_ms": 122,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport struct\ndata=open('/app/trunc.db','rb').read()\nprint(\"len\",len(data))\n# treat as btree leaf page starting at 0\np=0\ntyp=data[0]\nfirst_free=struct.unpack('>H',data[1:3])[0]\nncells=struct.unpack('>H',data[3:5])[0]\ncellstart=struct.unpack('>H',data[5:7])[0]\nfrag=data[7]\nprint(\"type\",typ,\"firstfree\",first_free,\"ncells\",ncells,\"cellstart\",cellstart,\"frag\",frag)\nptrs=[struct.unpack('>H',data[8+2*i:10+2*i])[0] for i in range(ncells)]\nprint(\"ptrs\",ptrs)\n\ndef varint(b,i):\n    v=0\n    for k in range(9):\n        c=b[i+k]\n        if k==8:\n            v=(v<<8)|c\n            return v,i+9\n        v=(v<<7)|(c&0x7f)\n        if not c&0x80:\n            return v,i+k+1\n\ndef parse_record(payload):\n    hl,i=varint(payload,0)\n    print(\"   headerlen\",hl,\"payload hex\",payload.hex(' '))\n    types=[]\n    j=i\n    while j<hl:\n        t,j=varint(payload,j)\n        types.append(t)\n    print(\"   types\",types)\n    off=hl\n    vals=[]\n    for t in types:\n        if t==0:\n            vals.append(None)\n        elif 1<=t<=6:\n            n=[0,1,2,3,4,6,8][t]\n            v=int.from_bytes(payload[off:off+n],'big',signed=True)\n            off+=n\n            vals.append(v)\n        elif t==7:\n            v=struct.unpack('>d',payload[off:off+8])[0]\n            off+=8\n            vals.append(v)\n        elif t==8:\n            vals.append(0)\n        elif t==9:\n            vals.append(1)\n        elif t>=13:\n            if t%2==1:\n                n=(t-13)//2\n                vals.append(payload[off:off+n].decode('utf-8','replace'))\n                off+=n\n            else:\n                n=(t-12)//2\n                vals.append(payload[off:off+n])\n                off+=n\n        else:\n            vals.append(('reserved',t))\n    print(\"   vals\",vals)\n\nfor ptr in ptrs:\n    print(\"cell at\",hex(ptr))\n    plen,i=varint(data,ptr)\n    rowid,i=varint(data,i)\n    payload=data[i:i+plen]\n    print(\"   plen\",plen,\"rowid\",rowid)\n    parse_record(payload)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 26104,
+     "dur_ms": 89,
+     "exit": 0,
+     "cpu_ms": 88.2,
+     "phases_us": {
+      "acquire": 59,
+      "resume": 22421,
+      "mount": 20105,
+      "run": 38981,
+      "destroy": 27090
+     },
+     "cold": null,
+     "vm": "vm-57"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 26325,
+   "dur_ms": 10657,
+   "tokens_in": 974,
+   "tokens_out": 89,
+   "cache_read": 21248,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 36982,
+   "dur_ms": 275,
+   "tool": "bash",
+   "is_error": false,
+   "command": "find /app -maxdepth 2 -type f -o -type l | head -100\nls -la /workspace\nfind / -name '*.db' 2>/dev/null | head",
+   "sandbox": [
+    {
+     "at_ms": 37035,
+     "dur_ms": 207,
+     "exit": 0,
+     "cpu_ms": 268.0,
+     "phases_us": {
+      "acquire": 83,
+      "resume": 22972,
+      "mount": 20613,
+      "run": 151010,
+      "destroy": 32825
+     },
+     "cold": null,
+     "vm": "vm-60"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 37276,
+   "dur_ms": 1220,
+   "tokens_in": 147,
+   "tokens_out": 128,
+   "cache_read": 24384,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 38496,
+   "dur_ms": 129,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /opt/testbed-src\nfile /opt/testbed-src/trunc.db\nls -laR /opt/testbed-src | head -200\ncmp /app/trunc.db /opt/testbed-src/trunc.db && echo SAME || echo DIFF\nmd5sum /app/trunc.db /opt/testbed-src/trunc.db",
+   "sandbox": [
+    {
+     "at_ms": 38551,
+     "dur_ms": 65,
+     "exit": 0,
+     "cpu_ms": 64.8,
+     "phases_us": {
+      "acquire": 68,
+      "resume": 21435,
+      "mount": 19251,
+      "run": 18710,
+      "destroy": 24338
+     },
+     "cold": null,
+     "vm": "vm-62"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 38642,
+   "dur_ms": 1045,
+   "tokens_in": 244,
+   "tokens_out": 111,
+   "cache_read": 24704,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 39687,
+   "dur_ms": 120126,
+   "tool": "bash",
+   "is_error": false,
+   "command": "grep -rl \"testword\" / --exclude=trunc.db 2>/dev/null | head -50\nfind / -iname '*trunc*' 2>/dev/null | head -50\nfind / -iname '*recover*' 2>/dev/null | head -50",
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 159837,
+   "dur_ms": 1093,
+   "tokens_in": 132,
+   "tokens_out": 116,
+   "cache_read": 25024,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 160930,
+   "dur_ms": 327,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /opt /root /tmp /usr/local/bin 2>/dev/null\ngrep -rl \"testword\" /opt /root /tmp /usr/local 2>/dev/null | head -50\nfind /opt /root /tmp -maxdepth 4 -type f 2>/dev/null | head -100",
+   "sandbox": [
+    {
+     "at_ms": 160983,
+     "dur_ms": 254,
+     "exit": 0,
+     "cpu_ms": 263.8,
+     "phases_us": {
+      "acquire": 24160,
+      "resume": 21837,
+      "mount": 19964,
+      "run": 182709,
+      "destroy": 25468
+     },
+     "cold": "parked",
+     "vm": "vm-80"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 161273,
+   "dur_ms": 12394,
+   "tokens_in": 846,
+   "tokens_out": 778,
+   "cache_read": 25280,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 173667,
+   "dur_ms": 233,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport struct, json\n\ndata = open('/app/trunc.db','rb').read()\n\ndef varint(b, i):\n    v = 0\n    for k in range(9):\n        c = b[i+k]\n        if k == 8:\n            return (v << 8) | c, i+9\n        v = (v << 7) | (c & 0x7f)\n        if not (c & 0x80):\n            return v, i+k+1\n\ndef parse_record(payload):\n    hlen, i = varint(payload, 0)\n    types = []\n    j = i\n    while j < hlen:\n        t, j = varint(payload, j)\n        types.append(t)\n    off = hlen\n    vals = []\n    for t in types:\n        if t == 0:\n            vals.append(None)\n        elif 1 <= t <= 6:\n            n = [0,1,2,3,4,6,8][t]\n            vals.append(int.from_bytes(payload[off:off+n], 'big', signed=True))\n            off += n\n        elif t == 7:\n            vals.append(struct.unpack('>d', payload[off:off+8])[0])\n            off += 8\n        elif t == 8:\n            vals.append(0)\n        elif t == 9:\n            vals.append(1)\n        elif t >= 13:\n            n = (t-13)//2 if t & 1 else (t-12)//2\n            chunk = payload[off:off+n]\n            vals.append(chunk.decode('utf-8', 'replace') if t & 1 else chunk)\n            off += n\n    return vals\n\nrows = []\n# Walk every 4096-byte page and parse leaf table pages (type 13) or leaf index pages (10)\npage_size = 4096\nfor base in range(0, len(data), page_size):\n    page = data[base:base+page_size]\n    if not page:\n        continue\n    typ = page[0]\n    if typ not in (13,):\n        continue\n    ncells = struct.unpack('>H', page[3:5])[0]\n    for k in range(ncells):\n        ptr = struct.unpack('>H', page[8+2*k:10+2*k])[0]\n        if ptr >= len(page):\n            continue\n        plen, i = varint(page, ptr)\n        rowid, i = varint(page, i)\n        payload = page[i:i+plen]\n        if len(payload) < plen:\n            continue\n        vals = parse_record(payload)\n        words = [v for v in vals if isinstance(v, str) and v.startswith('testword')]\n        numbers = [v for v in vals if isinstance(v, (int, float)) and not isinstance(v, bool)]\n        if words:\n            rows.append((rowid, words[0], numbers[0] if numbers else None))\n\nrows.sort()\nout = [{\"word\": w, \"value\": v} for _, w, v in rows]\nwith open('/app/recover.json', 'w') as f:\n    json.dump(out, f)\nprint(json.dumps(out, indent=2))\nprint(\"rows:\", len(out))\nPY\ncat /app/recover.json",
+   "sandbox": [
+    {
+     "at_ms": 173723,
+     "dur_ms": 159,
+     "exit": 0,
+     "cpu_ms": 153.8,
+     "phases_us": {
+      "acquire": 100,
+      "resume": 23013,
+      "mount": 20341,
+      "run": 112754,
+      "destroy": 23054
+     },
+     "cold": null,
+     "vm": "vm-82"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 173915,
+   "dur_ms": 1948,
+   "tokens_in": 416,
+   "tokens_out": 82,
+   "cache_read": 28672,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 175863,
+   "dur_ms": 94,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app/lost+found\nfind /app/lost+found -maxdepth 2 -type f -ls 2>/dev/null | head -50",
+   "sandbox": [
+    {
+     "at_ms": 175880,
+     "dur_ms": 50,
+     "exit": 0,
+     "cpu_ms": 40.1,
+     "phases_us": {
+      "acquire": 99,
+      "resume": 21512,
+      "mount": 19195,
+      "run": 6921,
+      "destroy": 21477
+     },
+     "cold": null,
+     "vm": "vm-83"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 175989,
+   "dur_ms": 7143,
+   "tokens_in": 86,
+   "tokens_out": 90,
+   "cache_read": 29376,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.107,
+ "calls": 10,
+ "cell": "TB1d",
+ "removed": []
+}

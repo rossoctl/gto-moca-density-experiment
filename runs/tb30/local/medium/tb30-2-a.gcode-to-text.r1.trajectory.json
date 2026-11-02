@@ -1,0 +1,334 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "gcode-to-text",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 189679,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 35541,
+  "output": 28287,
+  "cacheRead": 728704,
+  "cacheWrite": 11072,
+  "total": 803604
+ },
+ "totals": {
+  "model_calls": 23,
+  "tool_calls": 22,
+  "model_ms": 175114,
+  "tool_ms": 13922,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 529,
+   "dur_ms": 1175
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1704,
+   "dur_ms": 65,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /app && wc -l /app/text.gcode && head -50 /app/text.gcode"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1769,
+   "dur_ms": 1477
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3246,
+   "dur_ms": 46,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "grep -n \"M486\" text.gcode | head -50 && echo ---- && grep -n \"LAYER_CHANGE\\|Z:\" text.gcode | head -40 && echo ---- && grep -n \"EXTRUDING\\|TYPE:\" text.gcode | head -40"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3292,
+   "dur_ms": 1408
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4700,
+   "dur_ms": 28,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sed -n '100,180p' text.gcode"
+  },
+  {
+   "kind": "model",
+   "at_ms": 4728,
+   "dur_ms": 7488
+  },
+  {
+   "kind": "tool",
+   "at_ms": 12216,
+   "dur_ms": 29,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "tail -80 text.gcode && echo ===== && sed -n '98440,98490p' text.gcode"
+  },
+  {
+   "kind": "model",
+   "at_ms": 12245,
+   "dur_ms": 3979
+  },
+  {
+   "kind": "tool",
+   "at_ms": 16224,
+   "dur_ms": 150,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport re\nobj=None\nsegs=[]\nx=y=z=0.0\ne=0.0\n# first pass: gather object blocks outlines\nmarks=[]\nfor i,line in enumerate(open('text.gcode'),1):\n    s=line.strip()\n    if s.startswith('M486 S'):\n        v=s.split('S',1)[1]\n        marks.append((i,v))\nprint(len(marks))\n# print block ranges\nfor j in range(len(marks)-1):\n    i,v=marks[j]; i2,_=marks[j+1]\n    if i2-i>50:\n        print(marks[j],'to',marks[j+1],'len',i2-i)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 16374,
+   "dur_ms": 5334
+  },
+  {
+   "kind": "tool",
+   "at_ms": 21708,
+   "dur_ms": 89,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport re\nz=None\ndef zlines(a,b):\n    zs=[]\n    for i,line in enumerate(open('text.gcode'),1):\n        if i<a: continue\n        if i>b: break\n        m=re.search(r'Z(-?[\\d.]+)',line)\n        if m: zs.append(float(m.group(1)))\n    if zs: return min(zs),max(zs),len(zs)\n    return None\nfor a,b in [(117,143),(1409,1528),(15014,16000),(50000,51000),(70000,71000),(90000,91000),(98400,98473)]:\n    print(a,b,zlines(a,b))\nEOF\necho ---- sample huge block ----\nsed -n '15014,15080p' text.gcode"
+  },
+  {
+   "kind": "model",
+   "at_ms": 21797,
+   "dur_ms": 12732
+  },
+  {
+   "kind": "tool",
+   "at_ms": 34529,
+   "dur_ms": 497,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport re\nxs=[];ys=[];zs=[];es=[]\nfor i,line in enumerate(open('text.gcode'),1):\n    if i<15015 or i>98472: continue\n    m=re.search(r'X([-\\d.]+)',line)\n    if m: xs.append(float(m.group(1)))\n    m=re.search(r'Y([-\\d.]+)',line)\n    if m: ys.append(float(m.group(1)))\n    m=re.search(r'Z([-\\d.]+)',line)\n    if m: zs.append(float(m.group(1)))\nprint('X',min(xs),max(xs),'Y',min(ys),max(ys),'Z',min(zs),max(zs),len(zs))\n# Z progression sample\nimport statistics\n# print every 5000th line's X,Y,Z\nx=y=z=None\ncnt=0\nfor i,line in enumerate(open('text.gcode'),1):\n    if i<15015: continue\n    if i>98472: break\n    for ax in 'XYZ':\n        m=re.search(ax+r'([-\\d.]+)',line)\n        if m:\n            if ax=='X': x=float(m.group(1))\n            if ax=='Y': y=float(m.group(1))\n            if ax=='Z': z=float(m.group(1))\n    if i%4000==0:\n        print(i, x,y,z)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 35026,
+   "dur_ms": 5004
+  },
+  {
+   "kind": "tool",
+   "at_ms": 40030,
+   "dur_ms": 107,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "python3 - <<'EOF'\nimport re\nmarks=[]\nfor i,line in enumerate(open('text.gcode'),1):\n    s=line.strip()\n    if s.startswith('M486 S'):\n        marks.append((i,s.split('S',1)[1]))\nmarks.append((98851,'end'))\ndef info(a,b):\n    x=y=z=None; xs=[];ys=[];zs=[]; g1=0; ext=0\n    for i,line in enumerate(open('text.gcode'),1):\n        if i<a: continue\n        if i>=b: break\n        s=line.strip()\n        if s.startswith('G1') or s.startswith('G0'):\n            g1+=1\n            for ax in 'XYZ':\n                m=re.search(r'\\b'+ax+r'(-?[\\d.]+)',s)\n                if m:\n                    v=float(m.group(1))\n                    if ax=='X': x=v; xs.append(v)\n                    elif ax=='Y': y=v; ys.append(v)\n                    else: z=v; zs.append(v)\n            m=re.search(r'\\bE(-?[\\d.]+)',s)\n            if m and float(m.group(1))>0: ext+=1\n    return (min(xs),max(xs),min(ys),max(ys),min(zs),max(zs),g1,ext)\nfor j in range(len(marks)-1):\n    i,v=marks[j]; i2,_=marks[j+1]\n    d=info(i,i2)\n    print(f\"S{v:>2} lines {i:6d}-{i2:6d} X[{d[0]:.1f},{d[1]:.1f}] Y[{d[2]:.1f},{d[3]:.1f}] Z[{d[4]:.2f},{d[5]:.2f}] moves={d[6]} extr={d[7]}\")\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 40137,
+   "dur_ms": 2591
+  },
+  {
+   "kind": "tool",
+   "at_ms": 42728,
+   "dur_ms": 465,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport re\nmarks=[]\nfor i,line in enumerate(open('text.gcode'),1):\n    s=line.strip()\n    if s.startswith('M486 S'):\n        marks.append((i,s.split('S',1)[1]))\nmarks.append((98851,'end'))\ndef info(a,b):\n    xs=[];ys=[];zs=[]; g1=0; ext=0\n    for i,line in enumerate(open('text.gcode'),1):\n        if i<a: continue\n        if i>=b: break\n        s=line.strip()\n        if s.startswith('G1') or s.startswith('G0'):\n            g1+=1\n            for ax,arr in (('X',xs),('Y',ys),('Z',zs)):\n                m=re.search(r'\\b'+ax+r'(-?[\\d.]+)',s)\n                if m: arr.append(float(m.group(1)))\n            m=re.search(r'\\bE(-?[\\d.]+)',s)\n            if m and float(m.group(1))>0: ext+=1\n    if not xs: return None\n    return (min(xs),max(xs),min(ys),max(ys),min(zs),max(zs),g1,ext)\nfor j in range(len(marks)-1):\n    i,v=marks[j]; i2,_=marks[j+1]\n    d=info(i,i2)\n    if d:\n        print(f\"S{v:>2} L{i:6d}-{i2:6d} X[{d[0]:.1f},{d[1]:.1f}] Y[{d[2]:.1f},{d[3]:.1f}] Z[{d[4]:.2f},{d[5]:.2f}] G1={d[6]} E+={d[7]}\")\n    else:\n        print(f\"S{v:>2} L{i:6d}-{i2:6d} (no moves)\")\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 43193,
+   "dur_ms": 10872
+  },
+  {
+   "kind": "tool",
+   "at_ms": 54065,
+   "dur_ms": 45,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "python3 - <<'EOF'\nimport re\nimport numpy as np\npts=[]\nx=y=z=0.0\nfor line in open('text.gcode'):\n    s=line.strip()\n    if not (s.startswith('G1') or s.startswith('G0')): continue\n    for ax in 'XYZ':\n        m=re.search(r'\\b'+ax+r'(-?[\\d.]+)',s)\n        if m:\n            v=float(m.group(1))\n            if ax=='X': x=v\n            elif ax=='Y': y=v\n            else: z=v\n    m=re.search(r'\\bE(-?[\\d.]+)',s)\n    if m and float(m.group(1))>0 and z>3.0 and z<64.5:\n        pts.append((x,y,z))\npts=np.array(pts)\nprint(len(pts))\n# bin by z\nfor z0 in range(3,65,6):\n    m=(pts[:,2]>=z0)&(pts[:,2]<z0+6)\n    if m.sum():\n        p=pts[m]\n        print(f\"Z {z0:2d}-{z0+6:2d}: X[{p[:,0].min():.1f},{p[:,0].max():.1f}] mean{p[:,0].mean():.1f}  Y[{p[:,1].min():.1f},{p[:,1].max():.1f}] mean{p[:,1].mean():.1f} n={m.sum()}\")\n# linear fit X(Z), Y(Z)\nA=np.vstack([pts[:,2],np.ones(len(pts))]).T\nfor i,lab in enumerate('XY'):\n    coef,*_=np.linalg.lstsq(A,pts[:,i],rcond=None)\n    print(lab,'= %.4f*Z + %.2f'%(coef[0],coef[1]))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 54110,
+   "dur_ms": 3258
+  },
+  {
+   "kind": "tool",
+   "at_ms": 57368,
+   "dur_ms": 497,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport re\npts=[]\nx=y=z=0.0\nfor line in open('text.gcode'):\n    s=line.strip()\n    if not (s.startswith('G1') or s.startswith('G0')): continue\n    for ax in 'XYZ':\n        m=re.search(r'\\b'+ax+r'(-?[\\d.]+)',s)\n        if m:\n            v=float(m.group(1))\n            if ax=='X': x=v\n            elif ax=='Y': y=v\n            else: z=v\n    m=re.search(r'\\bE(-?[\\d.]+)',s)\n    if m and float(m.group(1))>0 and z>3.0 and z<64.5:\n        pts.append((x,y,z))\nprint(len(pts))\nfor z0 in range(3,65,6):\n    p=[q for q in pts if z0<=q[2]<z0+6]\n    if p:\n        xs=[q[0] for q in p]; ys=[q[1] for q in p]\n        print(f\"Z {z0:2d}-{z0+6:2d}: X[{min(xs):.1f},{max(xs):.1f}] m{sum(xs)/len(xs):.1f}  Y[{min(ys):.1f},{max(ys):.1f}] m{sum(ys)/len(ys):.1f} n={len(p)}\")\n# least squares fit X=aZ+b\nn=len(pts); sz=sum(q[2] for q in pts); szz=sum(q[2]**2 for q in pts)\nfor idx,lab in [(0,'X'),(1,'Y')]:\n    sv=sum(q[idx] for q in pts); szv=sum(q[2]*q[idx] for q in pts)\n    a=(n*szv-sz*sv)/(n*szz-sz*sz); b=(sv-a*sz)/n\n    print(lab,'= %.4f*Z + %.2f'%(a,b))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 57865,
+   "dur_ms": 14050
+  },
+  {
+   "kind": "tool",
+   "at_ms": 71915,
+   "dur_ms": 103,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "python3 -c \"import matplotlib; print(matplotlib.__version__)\" 2>&1; python3 -c \"import PIL; print(PIL.__version__)\" 2>&1; which convert inkscape gnuplot 2>&1"
+  },
+  {
+   "kind": "model",
+   "at_ms": 72018,
+   "dur_ms": 7449
+  },
+  {
+   "kind": "tool",
+   "at_ms": 79467,
+   "dur_ms": 5827,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "mkdir -p /app/work && cat > /app/work/raster.py <<'EOF'\nimport re, struct, zlib, math, sys\n\ndef parse(path):\n    moves=[]  # (x0,y0,z0,x1,y1,z1,e_positive, obj)\n    x=y=z=0.0\n    e=0.0\n    obj=None\n    for line in open(path):\n        s=line.strip()\n        if s.startswith('M486 S'):\n            try: obj=int(s.split('S',1)[1])\n            except: pass\n            continue\n        if not (s.startswith('G1') or s.startswith('G0')): continue\n        nx,ny,nz,ne=x,y,z,e\n        for ax in 'XYZ':\n            m=re.search(r'\\b'+ax+r'(-?[\\d.]+)',s)\n            if m:\n                v=float(m.group(1))\n                if ax=='X': nx=v\n                elif ax=='Y': ny=v\n                else: nz=v\n        m=re.search(r'\\bE(-?[\\d.]+)',s)\n        if m: ne=float(m.group(1))\n        moves.append((x,y,z,nx,ny,nz,ne>0,obj))\n        x,y,z,e=nx,ny,nz,ne\n    return moves\n\ndef render_png(moves, proj, out, W=1200, pad=10, color=True, cmap_min=None, cmap_max=None):\n    pts=[]\n    for (x0,y0,z0,x1,y1,z1,ext,obj) in moves:\n        if not ext: continue\n        a=proj(x0,y0,z0); b=proj(x1,y1,z1)\n        pts.append((a,b,obj))\n    if not pts:\n        print('no points'); return\n    xs=[p[0][0] for p in pts]+[p[1][0] for p in pts]\n    ys=[p[0][1] for p in pts]+[p[1][1] for p in pts]\n    minx,maxx=min(xs),max(xs); miny,maxy=min(ys),max(ys)\n    dx=max(maxx-minx,1e-9); dy=max(maxy-miny,1e-9)\n    # keep aspect\n    sc=min((W-2*pad)/dx,(W-2*pad)/dy)\n    H=int(dy*sc)+2*pad\n    img=[[(255,255,255) for _ in range(W)] for _ in range(H)]\n    def px(p):\n        return (pad+(p[0]-minx)*sc, H-1-(pad+(p[1]-miny)*sc))\n    # draw segments with Bresenham-ish thick line\n    def line(p0,p1,col):\n        x0,y0=px(p0); x1,y1=px(p1)\n        n=max(2,int(max(abs(x1-x0),abs(y1-y0)))+1)\n        for i in range(n+1):\n            t=i/n\n            xx=int(round(x0+(x1-x0)*t)); yy=int(round(y0+(y1-y0)*t))\n            for ox in (-1,0,1):\n                for oy in (-1,0,1):\n                    X=xx+ox; Y=yy+oy\n                    if 0<=X<W and 0<=Y<H: img[Y][X]=col\n    colors=[(220,20,60),(30,90,220),(20,140,60),(200,120,0),(120,20,160),(0,150,160),(150,60,60),(60,60,60)]\n    for a,b,obj in pts:\n        line(a,b,colors[(obj if obj is not None else 7)%len(colors)])\n    raw=b''\n    for row in img:\n        raw+=b'\\x00'+b''.join(bytes(c) for c in row)\n    def chunk(t,d):\n        return struct.pack('>I',len(d))+t+d+struct.pack('>I',zlib.crc32(t+d)&0xffffffff)\n    png=b'\\x89PNG\\r\\n\\x1a\\n'+chunk(b'IHDR',struct.pack('>IIBBBBB',W,H,8,2,0,0,0))+chunk(b'IDAT',zlib.compress(raw,6))+chunk(b'IEND',b'')\n    open(out,'wb').write(png)\n    print('wrote',out,W,'x',H,'range x',minx,maxx,'y',miny,maxy)\n\nif __name__=='__main__':\n    moves=parse('/app/text.gcode')\n    # top view all objects, color by obj\n    render_png(moves, lambda x,y,z:(x,y),'/app/work/topall.png',W=1200)\nEOF\npython3 /app/work/raster.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 85294,
+   "dur_ms": 684
+  },
+  {
+   "kind": "tool",
+   "at_ms": 85978,
+   "dur_ms": 20,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/work/topall.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 85998,
+   "dur_ms": 16773
+  },
+  {
+   "kind": "tool",
+   "at_ms": 102771,
+   "dur_ms": 1309,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /app/work/plane.py <<'EOF'\nimport re, math\nfrom raster import parse\n\nmoves=parse('/app/text.gcode')\ndef centroid_cov(pts):\n    n=len(pts)\n    cx=sum(p[0] for p in pts)/n; cy=sum(p[1] for p in pts)/n; cz=sum(p[2] for p in pts)/n\n    C=[[0.0]*3 for _ in range(3)]\n    for x,y,z in pts:\n        d=[x-cx,y-cy,z-cz]\n        for i in range(3):\n            for j in range(3):\n                C[i][j]+=d[i]*d[j]\n    for i in range(3):\n        for j in range(3): C[i][j]/=n\n    return (cx,cy,cz),C\n\ndef jacobi(A):\n    A=[row[:] for row in A]\n    V=[[1.0 if i==j else 0.0 for j in range(3)] for i in range(3)]\n    for _ in range(100):\n        # find largest off-diagonal\n        p,q=0,1; mx=abs(A[0][1])\n        for i in range(3):\n            for j in range(i+1,3):\n                if abs(A[i][j])>mx: mx=abs(A[i][j]); p,q=i,j\n        if mx<1e-12: break\n        app,aqq,apq=A[p][p],A[q][q],A[p][q]\n        theta=(aqq-app)/(2*apq)\n        t=(1 if theta>=0 else -1)/(abs(theta)+math.sqrt(theta*theta+1))\n        c=1/math.sqrt(t*t+1); s=t*c\n        # rotate\n        for k in range(3):\n            if k!=p and k!=q:\n                akp,akq=A[k][p],A[k][q]\n                A[k][p]=A[p][k]=c*akp-s*akq\n                A[k][q]=A[q][k]=s*akp+c*akq\n        A[p][p]=c*c*app-2*s*c*apq+s*s*aqq\n        A[q][q]=s*s*app+2*s*c*apq+c*c*aqq\n        A[p][q]=A[q][p]=0.0\n        for k in range(3):\n            vkp,vkq=V[k][p],V[k][q]\n            V[k][p]=c*vkp-s*vkq\n            V[k][q]=s*vkp+c*vkq\n    vals=[A[i][i] for i in range(3)]\n    vecs=[[V[r][c] for r in range(3)] for c in range(3)]\n    return vals,vecs\n\nif __name__=='__main__':\n    pts=[]\n    for (x0,y0,z0,x1,y1,z1,ext,obj) in moves:\n        if ext and obj==0:\n            pts.append((x0,y0,z0)); pts.append((x1,y1,z1))\n    print('pts',len(pts))\n    c,C=centroid_cov(pts)\n    print('centroid',c)\n    vals,vecs=jacobi(C)\n    order=sorted(range(3),key=lambda i:vals[i])\n    print('eigenvalues',[vals[i] for i in order])\n    for i in order:\n        print('vec',vecs[i],'val',vals[i])\n    # plane normal = smallest\n    n=vecs[order[0]]\n    in1=vecs[order[2]]  # largest\n    in2=vecs[order[1]]\n    # choose vertical = in-plane with larger |z|\n    if abs(in1[2])>=abs(in2[2]):\n        vert=in1; horiz=in2\n    else:\n        vert=in2; horiz=in1\n    # ensure vert points up\n    if vert[2]<0: vert=[-v for v in vert]\n    print('normal',n,'vert',vert,'horiz',horiz)\n    # project and save points\n    import json\n    proj=[]\n    for p in pts:\n        d=[p[i]-c[i] for i in range(3)]\n        proj.append((sum(d[i]*horiz[i] for i in range(3)), sum(d[i]*vert[i] for i in range(3)), sum(d[i]*n[i] for i in range(3))))\n    json.dump(proj,open('/app/work/proj.json','w'))\n    xs=[p[0] for p in proj]; ys=[p[1] for p in proj]; zs=[p[2] for p in proj]\n    print('proj ranges h',min(xs),max(xs),'v',min(ys),max(ys),'n',min(zs),max(zs))\nEOF\ncd /app/work && python3 plane.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 104080,
+   "dur_ms": 14732
+  },
+  {
+   "kind": "tool",
+   "at_ms": 118812,
+   "dur_ms": 2319,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /app/work/render2.py <<'EOF'\nimport json, struct, zlib, math\nfrom raster import parse\nmoves=parse('/app/text.gcode')\n# axes from PCA (e_long, e_h, n)\ne_long=[0.8670847409788419,0.3540703778839899,0.35042576883948423]\ne_h   =[-0.3942983673025148,0.9177075936633452,0.04838977242355975]\nc=(124.6712179173252,110.22324071188478,29.988215390779782)\n\ndef render(proj,out,W=1600,pad=20):\n    pts=[]\n    for (x0,y0,z0,x1,y1,z1,ext,obj) in moves:\n        if not ext or obj!=0: continue\n        a=proj(x0,y0,z0); b=proj(x1,y1,z1)\n        pts.append((a,b))\n    xs=[p[0][0] for p in pts]+[p[1][0] for p in pts]\n    ys=[p[0][1] for p in pts]+[p[1][1] for p in pts]\n    minx,maxx=min(xs),max(xs); miny,maxy=min(ys),max(ys)\n    dx=max(maxx-minx,1e-9); dy=max(maxy-miny,1e-9)\n    sc=min((W-2*pad)/dx,(W-2*pad)/dy)\n    H=int(dy*sc)+2*pad\n    img=[[(255,255,255) for _ in range(W)] for _ in range(H)]\n    def px(p): return (pad+(p[0]-minx)*sc, H-1-(pad+(p[1]-miny)*sc))\n    def line(p0,p1):\n        x0,y0=px(p0); x1,y1=px(p1)\n        n=max(2,int(max(abs(x1-x0),abs(y1-y0)))+1)\n        for i in range(n+1):\n            t=i/n\n            xx=int(round(x0+(x1-x0)*t)); yy=int(round(y0+(y1-y0)*t))\n            for ox in (-1,0,1):\n                for oy in (-1,0,1):\n                    X=xx+ox; Y=yy+oy\n                    if 0<=X<W and 0<=Y<H: img[Y][X]=(150,0,0)\n    for a,b in pts: line(a,b)\n    raw=b''.join(b'\\x00'+b''.join(bytes(cc) for cc in row) for row in img)\n    def chunk(t,d): return struct.pack('>I',len(d))+t+d+struct.pack('>I',zlib.crc32(t+d)&0xffffffff)\n    png=b'\\x89PNG\\r\\n\\x1a\\n'+chunk(b'IHDR',struct.pack('>IIBBBBB',W,H,8,2,0,0,0))+chunk(b'IDAT',zlib.compress(raw,6))+chunk(b'IEND',b'')\n    open(out,'wb').write(png)\n    print('wrote',out,W,H,'ranges',minx,maxx,miny,maxy)\n\ndef dot(p,e): return sum((p[i]-c[i])*e[i] for i in range(3))\n# baseline horizontal, glyph up vertical\nrender(lambda x,y,z:(dot((x,y,z),e_long), dot((x,y,z),e_h)),'/app/work/text_a.png')\nrender(lambda x,y,z:(dot((x,y,z),e_long), -dot((x,y,z),e_h)),'/app/work/text_b.png')\nrender(lambda x,y,z:(-dot((x,y,z),e_long), dot((x,y,z),e_h)),'/app/work/text_c.png')\nEOF\ncd /app/work && python3 render2.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 121131,
+   "dur_ms": 1407
+  },
+  {
+   "kind": "tool",
+   "at_ms": 122538,
+   "dur_ms": 13,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/work/text_a.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 122551,
+   "dur_ms": 11897
+  },
+  {
+   "kind": "tool",
+   "at_ms": 134448,
+   "dur_ms": 2257,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /app/work/crop.py <<'EOF'\nimport struct,zlib,math\nfrom raster import parse\nmoves=parse('/app/text.gcode')\ne_long=[0.8670847409788419,0.3540703778839899,0.35042576883948423]\ne_h   =[-0.3942983673025148,0.9177075936633452,0.04838977242355975]\nc=(124.6712179173252,110.22324071188478,29.988215390779782)\ndef dot(p,e): return sum((p[i]-c[i])*e[i] for i in range(3))\nseg=[]\nfor (x0,y0,z0,x1,y1,z1,ext,obj) in moves:\n    if not ext or obj!=0: continue\n    a=(dot((x0,y0,z0),e_long), dot((x0,y0,z0),e_h))\n    b=(dot((x1,y1,z1),e_long), dot((x1,y1,z1),e_h))\n    seg.append((a,b))\nallx=[v for s in seg for p in s for v in [p[0]]]\nprint('u range',min(allx),max(allx))\ndef render(umin,umax,out,W=1800,Hpx=260):\n    s=[(a,b) for a,b in seg if umin<=a[0]<=umax or umin<=b[0]<=umax]\n    vmin=min(min(a[1],b[1]) for a,b in s); vmax=max(max(a[1],b[1]) for a,b in s)\n    sc=(W-20)/(umax-umin)\n    H=int((vmax-vmin)*sc)+20\n    img=[[(255,255,255) for _ in range(W)] for _ in range(H)]\n    def px(p): return (10+(p[0]-umin)*sc, H-1-(10+(p[1]-vmin)*sc))\n    for a,b in s:\n        x0,y0=px(a); x1,y1=px(b)\n        n=max(2,int(max(abs(x1-x0),abs(y1-y0)))+1)\n        for i in range(n+1):\n            t=i/n; xx=int(round(x0+(x1-x0)*t)); yy=int(round(y0+(y1-y0)*t))\n            for ox in (-1,0,1):\n                for oy in (-1,0,1):\n                    X=xx+ox;Y=yy+oy\n                    if 0<=X<W and 0<=Y<H: img[Y][X]=(120,0,0)\n    raw=b''.join(b'\\x00'+b''.join(bytes(cc) for cc in row) for row in img)\n    def chunk(t,d): return struct.pack('>I',len(d))+t+d+struct.pack('>I',zlib.crc32(t+d)&0xffffffff)\n    png=b'\\x89PNG\\r\\n\\x1a\\n'+chunk(b'IHDR',struct.pack('>IIBBBBB',W,H,8,2,0,0,0))+chunk(b'IDAT',zlib.compress(raw,6))+chunk(b'IEND',b'')\n    open(out,'wb').write(png); print('wrote',out,W,H,'u',umin,umax)\nrender(-78,-20,'/app/work/part1.png')\nrender(-20,35,'/app/work/part2.png')\nrender(35,91,'/app/work/part3.png')\nEOF\ncd /app/work && python3 crop.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 136705,
+   "dur_ms": 981
+  },
+  {
+   "kind": "tool",
+   "at_ms": 137686,
+   "dur_ms": 13,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/work/part1.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 137699,
+   "dur_ms": 1171
+  },
+  {
+   "kind": "tool",
+   "at_ms": 138870,
+   "dur_ms": 11,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/work/part2.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 138881,
+   "dur_ms": 1391
+  },
+  {
+   "kind": "tool",
+   "at_ms": 140272,
+   "dur_ms": 13,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/work/part3.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 140285,
+   "dur_ms": 46427
+  },
+  {
+   "kind": "tool",
+   "at_ms": 186712,
+   "dur_ms": 19,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "printf 'flag{gc0d3_iz_ch4LLenGiNg}\\n' > /app/out.txt && cat /app/out.txt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 186731,
+   "dur_ms": 2834
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 2.875,
+ "calls": 22,
+ "cell": "TB1a"
+}

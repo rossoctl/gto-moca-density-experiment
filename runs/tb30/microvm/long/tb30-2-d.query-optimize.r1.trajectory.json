@@ -1,0 +1,311 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-d",
+ "instance_id": "query-optimize",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 734228,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 2953,
+  "output": 6977,
+  "cacheRead": 90112,
+  "cacheWrite": 0,
+  "total": 100042
+ },
+ "totals": {
+  "model_calls": 9,
+  "tool_calls": 8,
+  "model_ms": 38147,
+  "tool_ms": 695683,
+  "sandbox_ms": 574972
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 104,
+   "dur_ms": 3683,
+   "tokens_in": 152,
+   "tokens_out": 88,
+   "cache_read": 5568,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3787,
+   "dur_ms": 211,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nls -la\necho '---QUERY---'\ncat my-sql-query.sql\necho '---SCHEMA---'\nsqlite3 oewn.sqlite '.schema'\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 3902,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 50.2,
+     "phases_us": {
+      "acquire": 83,
+      "resume": 21639,
+      "mount": 19118,
+      "run": 12417,
+      "destroy": 22133
+     },
+     "cold": null,
+     "vm": "vm-8"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 4061,
+   "dur_ms": 1224,
+   "tokens_in": 1723,
+   "tokens_out": 166,
+   "cache_read": 5760,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5285,
+   "dur_ms": 159,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\necho '---INDEXES---'\nsqlite3 oewn.sqlite \"SELECT type,name,tbl_name,sql FROM sqlite_master WHERE type='index';\"\necho '---COUNTS---'\nsqlite3 oewn.sqlite \"SELECT 'words',count(*) FROM words UNION ALL SELECT 'senses',count(*) FROM senses UNION ALL SELECT 'synsets',count(*) FROM synsets;\"\necho '---PLAN---'\nsqlite3 oewn.sqlite \"EXPLAIN QUERY PLAN $(cat my-sql-query.sql)\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 5337,
+     "dur_ms": 93,
+     "exit": 0,
+     "cpu_ms": 117.1,
+     "phases_us": {
+      "acquire": 115,
+      "resume": 21849,
+      "mount": 19425,
+      "run": 41585,
+      "destroy": 29371
+     },
+     "cold": null,
+     "vm": "vm-15"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 5460,
+   "dur_ms": 9371,
+   "tokens_in": 387,
+   "tokens_out": 544,
+   "cache_read": 7616,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14831,
+   "dur_ms": 120117,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncat > /tmp/sol.sql <<'SQL'\nWITH ws AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt,\n         syn.domainid, syn.posid\n  FROM senses s\n  JOIN synsets syn ON s.synsetid = syn.synsetid\n  GROUP BY s.wordid, s.synsetid\n),\nstats AS (\n  SELECT wordid,\n         SUM(cnt) AS total_senses,\n         COUNT(*) AS total_synsets,\n         COUNT(DISTINCT domainid) AS distinct_domains,\n         COUNT(DISTINCT posid) AS distinct_posids\n  FROM ws\n  GROUP BY wordid\n  HAVING COUNT(*) >= 2\n     AND COUNT(DISTINCT domainid) >= 2\n     AND SUM(cnt) >= 2\n),\nranked AS (\n  SELECT wordid, synsetid, cnt,\n         ROW_NUMBER() OVER (PARTITION BY wordid ORDER BY cnt DESC, synsetid ASC) AS rn\n  FROM ws\n)\nSELECT w.wordid AS word_id,\n       w.word AS word,\n       st.total_synsets,\n       st.total_senses,\n       st.distinct_domains,\n       st.distinct_posids,\n       r.synsetid AS top_synsetid,\n       r.cnt AS top_synset_sense_count\nFROM stats st\nJOIN words w ON w.wordid = st.wordid\nJOIN ranked r ON r.wordid = st.wordid AND r.rn = 1\nORDER BY st.total_senses DESC,\n         st.total_synsets DESC,\n         st.distinct_domains DESC,\n         w.wordid ASC\nLIMIT 500;\nSQL\necho '---dup wordids---'\nsqlite3 oewn.sqlite \"select count(*)-count(distinct wordid) from words;\"\necho '---run original---'\ntime sqlite3 oewn.sqlite \"$(cat my-sql-query.sql)\" > /tmp/orig.out\necho '---run new---'\ntime sqlite3 oewn.sqlite < /tmp/sol.sql > /tmp/new.out\necho '---diff---'\ndiff /tmp/orig.out /tmp/new.out && echo IDENTICAL\nwc -l /tmp/orig.out /tmp/new.out\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 134964,
+   "dur_ms": 2161,
+   "tokens_in": 79,
+   "tokens_out": 504,
+   "cache_read": 9792,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 137125,
+   "dur_ms": 1055,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncat > sol.sql <<'SQL'\nWITH ws AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt,\n         syn.domainid, syn.posid\n  FROM senses s\n  JOIN synsets syn ON s.synsetid = syn.synsetid\n  GROUP BY s.wordid, s.synsetid\n),\nstats AS (\n  SELECT wordid,\n         SUM(cnt) AS total_senses,\n         COUNT(*) AS total_synsets,\n         COUNT(DISTINCT domainid) AS distinct_domains,\n         COUNT(DISTINCT posid) AS distinct_posids\n  FROM ws\n  GROUP BY wordid\n  HAVING COUNT(*) >= 2\n     AND COUNT(DISTINCT domainid) >= 2\n     AND SUM(cnt) >= 2\n),\nranked AS (\n  SELECT wordid, synsetid, cnt,\n         ROW_NUMBER() OVER (PARTITION BY wordid ORDER BY cnt DESC, synsetid ASC) AS rn\n  FROM ws\n)\nSELECT w.wordid AS word_id,\n       w.word AS word,\n       st.total_synsets,\n       st.total_senses,\n       st.distinct_domains,\n       st.distinct_posids,\n       r.synsetid AS top_synsetid,\n       r.cnt AS top_synset_sense_count\nFROM stats st\nJOIN words w ON w.wordid = st.wordid\nJOIN ranked r ON r.wordid = st.wordid AND r.rn = 1\nORDER BY st.total_senses DESC,\n         st.total_synsets DESC,\n         st.distinct_domains DESC,\n         w.wordid ASC\nLIMIT 500;\nSQL\necho '---dup wordids---'\nsqlite3 oewn.sqlite \"select count(*)-count(distinct wordid) from words;\"\necho '---run new---'\ntime sqlite3 oewn.sqlite < sol.sql > /tmp/new.out\nwc -l /tmp/new.out\nhead -3 /tmp/new.out\nEOF",
+   "timeout": 120000,
+   "sandbox": [
+    {
+     "at_ms": 137178,
+     "dur_ms": 979,
+     "exit": 0,
+     "cpu_ms": 983.2,
+     "phases_us": {
+      "acquire": 23823,
+      "resume": 21093,
+      "mount": 19223,
+      "run": 910256,
+      "destroy": 23607
+     },
+     "cold": "parked",
+     "vm": "vm-19"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 138195,
+   "dur_ms": 3073,
+   "tokens_in": 121,
+   "tokens_out": 110,
+   "cache_read": 10432,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 141268,
+   "dur_ms": 285189,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\necho '---run original---'\ntime sqlite3 oewn.sqlite \"$(cat my-sql-query.sql)\" > /tmp/orig.out\nwc -l /tmp/orig.out\nEOF",
+   "timeout": 900000,
+   "sandbox": [
+    {
+     "at_ms": 141319,
+     "dur_ms": 285112,
+     "exit": 0,
+     "cpu_ms": 285200.8,
+     "phases_us": {
+      "acquire": 100,
+      "resume": 21819,
+      "mount": 19441,
+      "run": 285066469,
+      "destroy": 23841
+     },
+     "cold": null,
+     "vm": "vm-24"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 426474,
+   "dur_ms": 3861,
+   "tokens_in": 65,
+   "tokens_out": 260,
+   "cache_read": 10816,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 430335,
+   "dur_ms": 286099,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\necho '---dups synsets---'\nsqlite3 oewn.sqlite \"select count(*)-count(distinct synsetid) from synsets;\"\necho '---senses with missing synset---'\nsqlite3 oewn.sqlite \"select count(*) from senses s left join synsets y on s.synsetid=y.synsetid where y.synsetid is null;\"\necho '---original---'\ntime sqlite3 oewn.sqlite \"$(cat my-sql-query.sql)\" > /workspace/orig.out\necho '---new---'\ntime sqlite3 oewn.sqlite < sol.sql > /workspace/new.out\ndiff /workspace/orig.out /workspace/new.out && echo IDENTICAL\nsha256sum /workspace/orig.out /workspace/new.out\nrm -f /workspace/orig.out /workspace/new.out\nEOF",
+   "timeout": 900000,
+   "sandbox": [
+    {
+     "at_ms": 430387,
+     "dur_ms": 286026,
+     "exit": 0,
+     "cpu_ms": 286101.4,
+     "phases_us": {
+      "acquire": 19136,
+      "resume": 21013,
+      "mount": 18958,
+      "run": 285960447,
+      "destroy": 25561
+     },
+     "cold": "parked",
+     "vm": "vm-54"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 716451,
+   "dur_ms": 7281,
+   "tokens_in": 244,
+   "tokens_out": 1020,
+   "cache_read": 11584,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 723732,
+   "dur_ms": 2176,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncat > /tmp/v2.sql <<'SQL'\nWITH ws AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt,\n         syn.domainid, syn.posid\n  FROM senses s\n  JOIN synsets syn ON s.synsetid = syn.synsetid\n  GROUP BY s.wordid, s.synsetid\n),\nstats AS (\n  SELECT wordid,\n         SUM(cnt) AS total_senses,\n         COUNT(*) AS total_synsets,\n         COUNT(DISTINCT domainid) AS distinct_domains,\n         COUNT(DISTINCT posid) AS distinct_posids\n  FROM ws\n  GROUP BY wordid\n  HAVING COUNT(*) >= 2\n     AND COUNT(DISTINCT domainid) >= 2\n     AND SUM(cnt) >= 2\n),\nranked AS (\n  SELECT ws.wordid, ws.synsetid, ws.cnt,\n         ROW_NUMBER() OVER (PARTITION BY ws.wordid ORDER BY ws.cnt DESC, ws.synsetid ASC) AS rn\n  FROM ws\n  JOIN stats st ON st.wordid = ws.wordid\n)\nSELECT w.wordid AS word_id,\n       w.word AS word,\n       st.total_synsets,\n       st.total_senses,\n       st.distinct_domains,\n       st.distinct_posids,\n       r.synsetid AS top_synsetid,\n       r.cnt AS top_synset_sense_count\nFROM stats st\nJOIN words w ON w.wordid = st.wordid\nJOIN ranked r ON r.wordid = st.wordid AND r.rn = 1\nORDER BY st.total_senses DESC,\n         st.total_synsets DESC,\n         st.distinct_domains DESC,\n         w.wordid ASC\nLIMIT 500;\nSQL\nsqlite3 oewn.sqlite < sol.sql > /tmp/a.out\ntime sqlite3 oewn.sqlite < /tmp/v2.sql > /tmp/b.out\ndiff /tmp/a.out /tmp/b.out && echo SAME\necho '---v3 top-first---'\ncat > /tmp/v3.sql <<'SQL'\nWITH ws AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt,\n         syn.domainid, syn.posid\n  FROM senses s\n  JOIN synsets syn ON s.synsetid = syn.synsetid\n  GROUP BY s.wordid, s.synsetid\n),\nstats AS (\n  SELECT wordid,\n         SUM(cnt) AS total_senses,\n         COUNT(*) AS total_synsets,\n         COUNT(DISTINCT domainid) AS distinct_domains,\n         COUNT(DISTINCT posid) AS distinct_posids\n  FROM ws\n  GROUP BY wordid\n  HAVING COUNT(*) >= 2\n     AND COUNT(DISTINCT domainid) >= 2\n     AND SUM(cnt) >= 2\n),\ntop AS (\n  SELECT st.wordid, w.word, st.total_synsets, st.total_senses,\n         st.distinct_domains, st.distinct_posids\n  FROM stats st\n  JOIN words w ON w.wordid = st.wordid\n  ORDER BY st.total_senses DESC, st.total_synsets DESC,\n           st.distinct_domains DESC, w.wordid ASC\n  LIMIT 500\n),\nranked AS (\n  SELECT ws.wordid, ws.synsetid, ws.cnt,\n         ROW_NUMBER() OVER (PARTITION BY ws.wordid ORDER BY ws.cnt DESC, ws.synsetid ASC) AS rn\n  FROM ws\n  JOIN top t ON t.wordid = ws.wordid\n)\nSELECT t.wordid AS word_id, t.word AS word,\n       t.total_synsets, t.total_senses, t.distinct_domains, t.distinct_posids,\n       r.synsetid AS top_synsetid, r.cnt AS top_synset_sense_count\nFROM top t\nJOIN ranked r ON r.wordid = t.wordid AND r.rn = 1\nORDER BY t.total_senses DESC, t.total_synsets DESC,\n         t.distinct_domains DESC, t.wordid ASC\nLIMIT 500;\nSQL\ntime sqlite3 oewn.sqlite < /tmp/v3.sql > /tmp/c.out\ndiff /tmp/a.out /tmp/c.out && echo SAME3\nEOF",
+   "timeout": 120000,
+   "sandbox": [
+    {
+     "at_ms": 723784,
+     "dur_ms": 2103,
+     "exit": 0,
+     "cpu_ms": 2101.1,
+     "phases_us": {
+      "acquire": 24995,
+      "resume": 20898,
+      "mount": 18993,
+      "run": 2031079,
+      "destroy": 25856
+     },
+     "cold": "parked",
+     "vm": "vm-80"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 725922,
+   "dur_ms": 5959,
+   "tokens_in": 101,
+   "tokens_out": 561,
+   "cache_read": 13568,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 731881,
+   "dur_ms": 677,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncat > sol.sql <<'SQL'\nWITH ws AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt,\n         syn.domainid, syn.posid\n  FROM senses s\n  JOIN synsets syn ON s.synsetid = syn.synsetid\n  GROUP BY s.wordid, s.synsetid\n),\nstats AS (\n  SELECT wordid,\n         SUM(cnt) AS total_senses,\n         COUNT(*) AS total_synsets,\n         COUNT(DISTINCT domainid) AS distinct_domains,\n         COUNT(DISTINCT posid) AS distinct_posids\n  FROM ws\n  GROUP BY wordid\n  HAVING COUNT(*) >= 2\n     AND COUNT(DISTINCT domainid) >= 2\n     AND SUM(cnt) >= 2\n),\ntop AS (\n  SELECT st.wordid, w.word, st.total_synsets, st.total_senses,\n         st.distinct_domains, st.distinct_posids\n  FROM stats st\n  JOIN words w ON w.wordid = st.wordid\n  ORDER BY st.total_senses DESC, st.total_synsets DESC,\n           st.distinct_domains DESC, w.wordid ASC\n  LIMIT 500\n),\nranked AS (\n  SELECT ws.wordid, ws.synsetid, ws.cnt,\n         ROW_NUMBER() OVER (PARTITION BY ws.wordid ORDER BY ws.cnt DESC, ws.synsetid ASC) AS rn\n  FROM ws\n  JOIN top t ON t.wordid = ws.wordid\n)\nSELECT t.wordid AS word_id, t.word AS word,\n       t.total_synsets, t.total_senses, t.distinct_domains, t.distinct_posids,\n       r.synsetid AS top_synsetid, r.cnt AS top_synset_sense_count\nFROM top t\nJOIN ranked r ON r.wordid = t.wordid AND r.rn = 1\nORDER BY t.total_senses DESC, t.total_synsets DESC,\n         t.distinct_domains DESC, t.wordid ASC\nLIMIT 500;\nSQL\ntime sqlite3 oewn.sqlite < sol.sql | wc -l\ngrep -c -- '--' sol.sql || true\nEOF",
+   "timeout": 120000,
+   "sandbox": [
+    {
+     "at_ms": 731933,
+     "dur_ms": 603,
+     "exit": 0,
+     "cpu_ms": 623.9,
+     "phases_us": {
+      "acquire": 68,
+      "resume": 21829,
+      "mount": 19344,
+      "run": 556554,
+      "destroy": 24447
+     },
+     "cold": null,
+     "vm": "vm-82"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 732574,
+   "dur_ms": 1534,
+   "tokens_in": 81,
+   "tokens_out": 32,
+   "cache_read": 14976,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "long",
+ "weight_s_per_command": 42.177,
+ "calls": 8,
+ "cell": "TB1d"
+}

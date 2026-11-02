@@ -1,0 +1,1071 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "largest-eigenval",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 724711,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 153572,
+  "output": 96550,
+  "cacheRead": 5129408,
+  "cacheWrite": 45440,
+  "total": 5424970
+ },
+ "totals": {
+  "model_calls": 72,
+  "tool_calls": 72,
+  "model_ms": 555652,
+  "tool_ms": 137406,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 626,
+   "dur_ms": 825
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1299,
+   "dur_ms": 16,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/eigen.py"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1451,
+   "dur_ms": 18,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/eval.py"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 1469,
+   "dur_ms": 23652
+  },
+  {
+   "kind": "tool",
+   "at_ms": 25121,
+   "dur_ms": 393,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "ls -la && python -c \"import numpy, scipy; print(numpy.__version__, scipy.__version__)\" && python -c \"import numba; print('numba', numba.__version__)\" 2>&1 | tail -1 && gcc --version | head -1 && python -c \"import sys; print(sys.version)\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 25514,
+   "dur_ms": 1201
+  },
+  {
+   "kind": "tool",
+   "at_ms": 26715,
+   "dur_ms": 316,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python -c \"import numpy; print(numpy.__version__, numpy.__file__)\"; gcc --version | head -1; python -c \"import sys; print(sys.version)\"; python -c \"import numba; print(numba.__version__)\" 2>&1 | tail -1; ls /usr/lib/x86_64-linux-gnu/ | grep -i -E \"lapack|blas\" | head"
+  },
+  {
+   "kind": "model",
+   "at_ms": 27031,
+   "dur_ms": 1156
+  },
+  {
+   "kind": "tool",
+   "at_ms": 28187,
+   "dur_ms": 6150,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "which cc clang tcc g++ make python3 pip pip3 cargo rustc 2>&1; echo \"---\"; timeout 60 pip install --no-input scipy 2>&1 | tail -5"
+  },
+  {
+   "kind": "model",
+   "at_ms": 34337,
+   "dur_ms": 3410
+  },
+  {
+   "kind": "tool",
+   "at_ms": 37747,
+   "dur_ms": 974,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "cat > /tmp/bench1.py <<'EOF'\nimport time, numpy as np\nimport scipy.linalg as sla\nfrom scipy.linalg import lapack\n\ndef bench(fn, size, n=2000):\n    A = np.random.normal(size=(size,size))\n    fn(A)\n    ts=[]\n    for _ in range(n):\n        A = np.random.normal(size=(size,size))\n        t0=time.perf_counter(); fn(A); t1=time.perf_counter()\n        ts.append(t1-t0)\n    return np.median(ts)*1e6\n\ndef ref(A):\n    w,v = np.linalg.eig(A)\n    i = np.argmax(np.abs(w))\n    return w[i], v[:,i]\n\ndef eigvals_np(A):\n    return np.linalg.eigvals(A)\n\ndef scipy_eig(A):\n    w,v = sla.eig(A, check_finite=False, overwrite_a=False)\n    i=np.argmax(np.abs(w)); return w[i], v[:,i]\n\ndef scipy_eigvals(A):\n    return sla.eigvals(A, check_finite=False)\n\ndef lapack_eigvals(A):\n    # dgeev values only\n    w, vl, vr, info = lapack.dgeev(A, compute_vl=0, compute_vr=0)\n    return w\n\ndef lapack_eig_full(A):\n    w, vl, vr, info = lapack.dgeev(A, compute_vl=0, compute_vr=1)\n    i=np.argmax(np.abs(w)); return w[i], vr[:,i]\n\nfor n in [2,4,6,8,10]:\n    print(n, \"ref\", f\"{bench(ref,n):.2f}\", \"eigvals_np\", f\"{bench(eigvals_np,n):.2f}\",\n          \"scipy_eig\", f\"{bench(scipy_eig,n):.2f}\", \"scipy_eigvals\", f\"{bench(scipy_eigvals,n):.2f}\",\n          \"lapack_vals\", f\"{bench(lapack_eigvals,n):.2f}\", \"lapack_full\", f\"{bench(lapack_eig_full,n):.2f}\")\nEOF\npython /tmp/bench1.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 38721,
+   "dur_ms": 1142
+  },
+  {
+   "kind": "tool",
+   "at_ms": 39863,
+   "dur_ms": 572,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'EOF'\nimport numpy as np\nfrom scipy.linalg import lapack\nA=np.random.normal(size=(4,4))\nout=lapack.dgeev(A, compute_vl=0, compute_vr=0)\nprint(type(out), len(out))\nfor o in out: print(type(o), getattr(o,'shape',None), o if np.isscalar(o) or (hasattr(o,'size') and o.size<5) else '')\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 40435,
+   "dur_ms": 1638
+  },
+  {
+   "kind": "tool",
+   "at_ms": 42073,
+   "dur_ms": 641,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'EOF'\nfrom scipy.linalg import lapack\nprint(lapack.dgeev.__doc__[:2500])\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 42714,
+   "dur_ms": 3001
+  },
+  {
+   "kind": "tool",
+   "at_ms": 45715,
+   "dur_ms": 3182,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/bench1.py <<'EOF'\nimport time, numpy as np\nimport scipy.linalg as sla\nfrom scipy.linalg import lapack\n\ndef bench(fn, size, n=3000):\n    A = np.random.normal(size=(size,size))\n    for _ in range(5): fn(A)\n    ts=[]\n    for _ in range(n):\n        A = np.random.normal(size=(size,size))\n        t0=time.perf_counter(); fn(A); t1=time.perf_counter()\n        ts.append(t1-t0)\n    return np.median(ts)*1e6\n\ndef ref(A):\n    w,v = np.linalg.eig(A)\n    i = np.argmax(np.abs(w))\n    return w[i], v[:,i]\n\ndef eigvals_np(A):\n    return np.linalg.eigvals(A)\n\ndef scipy_eig(A):\n    w,v = sla.eig(A, check_finite=False, overwrite_a=False)\n    i=np.argmax(np.abs(w)); return w[i], v[:,i]\n\ndef scipy_eigvals(A):\n    return sla.eigvals(A, check_finite=False)\n\ndef lapack_eigvals(A):\n    return lapack.dgeev(A, compute_vl=0, compute_vr=0)[0:2]\n\ndef lapack_eig_full(A):\n    wr,wi,vl,vr,info = lapack.dgeev(A, compute_vl=0, compute_vr=1)\n    w=wr+1j*wi\n    i=np.argmax(np.abs(w)); return w[i], vr[:,i]\n\n# preallocated buffer variants\nbufs={}\ndef lapack_eigvals_buf(A):\n    return lapack.dgeev(A, compute_vl=0, compute_vr=0, overwrite_a=1)\n\nfor n in [2,4,6,8,10]:\n    print(n, \"ref\", f\"{bench(ref,n):.2f}\", \"eigvals_np\", f\"{bench(eigvals_np,n):.2f}\",\n          \"scipy_eig\", f\"{bench(scipy_eig,n):.2f}\", \"scipy_eigvals\", f\"{bench(scipy_eigvals,n):.2f}\",\n          \"lapack_vals\", f\"{bench(lapack_eigvals,n):.2f}\", \"lapack_full\", f\"{bench(lapack_eig_full,n):.2f}\")\nEOF\npython /tmp/bench1.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 48897,
+   "dur_ms": 21096
+  },
+  {
+   "kind": "tool",
+   "at_ms": 69993,
+   "dur_ms": 851,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "cat > /tmp/bench2.py <<'EOF'\nimport time, numpy as np\nfrom scipy.linalg import lapack\n\ndef bench(fn, size, n=5000):\n    A = np.random.normal(size=(size,size))\n    for _ in range(5): fn(A)\n    ts=[]\n    for _ in range(n):\n        A = np.random.normal(size=(size,size))\n        t0=time.perf_counter(); fn(A); t1=time.perf_counter()\n        ts.append(t1-t0)\n    return np.median(ts)*1e6\n\ndef vals_ow(A):\n    return lapack.dgeev(A, compute_vl=0, compute_vr=0, overwrite_a=1)\n\ndef vals_now(A):\n    return lapack.dgeev(A, compute_vl=0, compute_vr=0)\n\ndef vecs_ow(A):\n    return lapack.dgeev(A, compute_vl=0, compute_vr=1, overwrite_a=1)\n\ndef vecs_now(A):\n    return lapack.dgeev(A, compute_vl=0, compute_vr=1)\n\n# numpy-only bits timed separately\ndef argmax_only(A):\n    wr,wi = vals_ow(A)\n    return np.argmax(wr*wr+wi*wi)\n\ndef inviter(A):\n    wr,wi = lapack.dgeev(A, compute_vl=0, compute_vr=0, overwrite_a=1)\n    i = np.argmax(wr*wr+wi*wi)\n    lam = wr[i] + 1j*wi[i]\n    M = A.astype(np.complex128)\n    M[np.diag_indices_from(M)] -= lam\n    # shift to avoid exact singularity\n    s = (abs(lam)+np.abs(A).max())*1e-8\n    M[np.diag_indices_from(M)] += s\n    b = np.ones(M.shape[0], dtype=np.complex128)\n    lu, piv, x, info = lapack.zgesv(M, b)\n    x /= np.linalg.norm(x)\n    return lam, x\n\ndef inviter2(A):\n    # avoid complex copy: use dgeev vals; build M via empty\n    wr,wi = lapack.dgeev(A, compute_vl=0, compute_vr=0, overwrite_a=1)\n    i = np.argmax(wr*wr+wi*wi)\n    n=A.shape[0]\n    M = np.zeros((n,n), dtype=np.complex128)\n    M.real = A\n    M[np.diag_indices_from(M)] -= (wr[i]+1j*wi[i])\n    s = (abs(wr[i]+1j*wi[i])+np.abs(A).max())*1e-8\n    M[np.diag_indices_from(M)] += s\n    b = np.ones(n, dtype=np.complex128)\n    lu, piv, x, info = lapack.zgesv(M, b)\n    x /= np.linalg.norm(x)\n    return x\n\nfor n in [2,4,6,8,10]:\n    print(n, \"vals_ow\", f\"{bench(vals_ow,n):.2f}\", \"vals_now\", f\"{bench(vals_now,n):.2f}\",\n          \"vecs_ow\", f\"{bench(vecs_ow,n):.2f}\", \"vecs_now\", f\"{bench(vecs_now,n):.2f}\",\n          \"argmax\", f\"{bench(argmax_only,n):.2f}\", \"inviter2\", f\"{bench(inviter2,n):.2f}\")\nEOF\npython /tmp/bench2.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 70844,
+   "dur_ms": 1114
+  },
+  {
+   "kind": "tool",
+   "at_ms": 71958,
+   "dur_ms": 4453,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /tmp && sed -i 's/wr,wi = vals_ow(A)/wr,wi = vals_ow(A)[:2]/' bench2.py && sed -i 's/wr,wi = lapack.dgeev(A, compute_vl=0, compute_vr=0, overwrite_a=1)/wr,wi = lapack.dgeev(A, compute_vl=0, compute_vr=0, overwrite_a=1)[:2]/' bench2.py && python bench2.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 76411,
+   "dur_ms": 6366
+  },
+  {
+   "kind": "tool",
+   "at_ms": 82777,
+   "dur_ms": 16806,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "timeout 120 apt-get update -qq 2>&1 | tail -2; timeout 300 apt-get install -y -qq gcc 2>&1 | tail -3; which gcc cc"
+  },
+  {
+   "kind": "model",
+   "at_ms": 99583,
+   "dur_ms": 15557
+  },
+  {
+   "kind": "tool",
+   "at_ms": 115140,
+   "dur_ms": 334,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python -c \"import numpy; print(numpy.__config__.show())\" 2>/dev/null | head -40; echo ---; ls /usr/local/lib/python3.13/site-packages/numpy.libs/ 2>/dev/null; ls /usr/local/lib/python3.13/site-packages/scipy.libs/ 2>/dev/null; ldconfig -p | grep -i -E \"lapack|openblas|blas\" | head"
+  },
+  {
+   "kind": "model",
+   "at_ms": 115474,
+   "dur_ms": 10395
+  },
+  {
+   "kind": "tool",
+   "at_ms": 125869,
+   "dur_ms": 112,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "mkdir -p /tmp/cbench && cat > /tmp/cbench/bench_lapack.c <<'EOF'\n#include <stdio.h>\n#include <stdlib.h>\n#include <time.h>\n#include <math.h>\n#include <string.h>\n\nextern void dgeev_(const char*, const char*, const int*, double*, const int*,\n                   double*, double*, double*, const int*, double*, const int*,\n                   double*, const int*, int*);\n\nstatic double now(){ struct timespec ts; clock_gettime(CLOCK_MONOTONIC,&ts); return ts.tv_sec+1e-9*ts.tv_nsec; }\nstatic int cmpd(const void*a,const void*b){ double x=*(double*)a,y=*(double*)b; return (x>y)-(x<y); }\n\nint main(int argc,char**argv){\n  int n = argc>1?atoi(argv[1]):10;\n  int N = argc>2?atoi(argv[2]):20000;\n  double *A0=malloc(n*n*8), *A=malloc(n*n*8), *vr=malloc(n*n*8);\n  double *wr=malloc(n*8),*wi=malloc(n*8),*wrk=malloc(8*n*8);\n  double *ts=malloc(N*8);\n  int lwork=8*n, info; double vl_dummy[1]; int one=1;\n  srand(42);\n  double tot=0;\n  for(int it=0; it<N+200; it++){\n    for(int i=0;i<n*n;i++) A0[i]=(double)rand()/RAND_MAX*2-1 + ((double)rand()/RAND_MAX)*1e-9;\n    memcpy(A,A0,n*n*8);\n    double t0=now();\n    dgeev_(\"N\",\"V\",&n,A,&n,wr,wi,vl_dummy,&one,vr,&n,wrk,&lwork,&info);\n    double t1=now();\n    if(it>=200) ts[it-200]=t1-t0;\n    tot+=wr[0];\n  }\n  qsort(ts,N,8,cmpd);\n  printf(\"n=%d median dgeev+vec %.3f us  min %.3f\\n\", n, ts[N/2]*1e6, ts[0]*1e6);\n  // values only\n  for(int it=0; it<N+200; it++){\n    memcpy(A,A0,n*n*8);\n    double t0=now();\n    dgeev_(\"N\",\"N\",&n,A,&n,wr,wi,vl_dummy,&one,vr,&n,wrk,&lwork,&info);\n    double t1=now();\n    if(it>=200) ts[it-200]=t1-t0;\n  }\n  qsort(ts,N,8,cmpd);\n  printf(\"n=%d median dgeev vals %.3f us  min %.3f  (info %d)\\n\", n, ts[N/2]*1e6, ts[0]*1e6, info);\n  return (int)tot&0;\n}\nEOF\ncd /tmp/cbench && D=/usr/local/lib/python3.13/site-packages/scipy.libs && gcc -O3 -o bench_lapack bench_lapack.c -L$D -l:libscipy_openblas-5f890258.so -Wl,-rpath,$D -L/usr/local/lib/python3.13/site-packages/scipy.libs -lm 2>&1 | head; for n in 2 4 6 8 10; do LD_LIBRARY_PATH=/usr/local/lib/python3.13/site-packages/scipy.libs:/usr/local/lib/python3.13/site-packages/numpy.libs ./bench_lapack $n 20000; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 125981,
+   "dur_ms": 1368
+  },
+  {
+   "kind": "tool",
+   "at_ms": 127349,
+   "dur_ms": 47,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "D=/usr/local/lib/python3.13/site-packages/scipy.libs; nm -D $D/libscipy_openblas-5f890258.so | grep -i -E \" dgeev\" | head; echo ---; N=/usr/local/lib/python3.13/site-packages/numpy.libs; nm -D $N/libscipy_openblas64_-56d6093b.so | grep -i -E \" dgeev\" | head"
+  },
+  {
+   "kind": "model",
+   "at_ms": 127396,
+   "dur_ms": 1797
+  },
+  {
+   "kind": "tool",
+   "at_ms": 129193,
+   "dur_ms": 691,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "D=/usr/local/lib/python3.13/site-packages/scipy.libs; nm -D --defined-only $D/libscipy_openblas-5f890258.so | wc -l; nm -D --defined-only $D/libscipy_openblas-5f890258.so | grep -i -E \"geev|dgesv|sgesv|dsyev|LAPACKE\" | head -20; echo \"=== numpy\"; N=/usr/local/lib/python3.13/site-packages/numpy.libs; nm -D --defined-only $N/libscipy_openblas64_-56d6093b.so | grep -i -E \"geev|gesv|syev\" | head -20; python -c \"from scipy.linalg import lapack; print(lapack.dgeev.__module__, lapack.dgeev.__doc__[:80])\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 129884,
+   "dur_ms": 1403
+  },
+  {
+   "kind": "tool",
+   "at_ms": 131287,
+   "dur_ms": 50,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "D=/usr/local/lib/python3.13/site-packages/scipy.libs; nm -D --defined-only $D/libscipy_openblas-5f890258.so | grep -E \"scipy_dgeev_$|scipy_dgeev64_$|scipy_dgesv_\" | head; echo ---; nm -D --defined-only /usr/local/lib/python3.13/site-packages/numpy.libs/libscipy_openblas64_-56d6093b.so | grep -E \"scipy_dgeev64_$|scipy_dgesv64_\" | head"
+  },
+  {
+   "kind": "model",
+   "at_ms": 131337,
+   "dur_ms": 2544
+  },
+  {
+   "kind": "tool",
+   "at_ms": 133881,
+   "dur_ms": 4500,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /tmp/cbench && sed -i 's/extern void dgeev_/extern void scipy_dgeev_/; s/dgeev_(\"/scipy_dgeev_(\"/g' bench_lapack.c && D=/usr/local/lib/python3.13/site-packages/scipy.libs && gcc -O3 -o bench_lapack bench_lapack.c -L$D -l:libscipy_openblas-5f890258.so -Wl,-rpath,$D -lm && for n in 2 4 6 8 10; do LD_LIBRARY_PATH=$D ./bench_lapack $n 30000; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 138381,
+   "dur_ms": 104914
+  },
+  {
+   "kind": "tool",
+   "at_ms": 243295,
+   "dur_ms": 354,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python eval.py 2>&1 | head -20"
+  },
+  {
+   "kind": "model",
+   "at_ms": 243649,
+   "dur_ms": 22769
+  },
+  {
+   "kind": "tool",
+   "at_ms": 266418,
+   "dur_ms": 17,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/_dom_eig.c",
+    "content": "/*\n * Small dense real-matrix dominant eigenpair.\n *\n * Strategy:\n *   1. Reduce A to upper Hessenberg form with Householder similarity\n *      transformations (eigenvalues are unchanged).\n *   2. Francis implicit double-shift QR on the Hessenberg matrix to get all\n *      eigenvalues (JAMA \"hqr\" style, eigenvalues only -- no vectors).\n *   3. Pick the eigenvalue of largest modulus.\n *   4. Recover its eigenvector from the *original* A by inverse iteration\n *      with a Rayleigh-quotient shift.  Starting from an already very\n *      accurate eigenvalue this converges to machine precision in 1-2 steps.\n *\n * Everything is self contained (libm only); no LAPACK/BLAS dependency.\n *\n * Exposed as the CPython extension function:\n *      dominant(A) -> (eigenvalue: complex, eigenvector: complex ndarray)\n * and raises a RuntimeError if the QR iteration does not converge, so the\n * caller can fall back to a reference implementation.\n */\n\n#define PY_SSIZE_T_CLEAN\n#include <Python.h>\n#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION\n#include <numpy/arrayobject.h>\n\n#include <complex.h>\n#include <math.h>\n#include <stdlib.h>\n#include <string.h>\n\ntypedef double complex cplx;\n\n/* ------------------------------------------------------------------ */\n/* Hessenberg reduction (Householder), in place.                       */\n/* ------------------------------------------------------------------ */\nstatic void hessenberg(double *H, int n)\n{\n    double *ort = (double *)malloc((size_t)n * sizeof(double));\n    for (int m = 1; m < n - 1; m++) {\n        double scale = 0.0;\n        for (int i = m; i < n; i++)\n            scale += fabs(H[i * n + (m - 1)]);\n        if (scale == 0.0)\n            continue;\n        double h = 0.0;\n        for (int i = n - 1; i >= m; i--) {\n            ort[i] = H[i * n + (m - 1)] / scale;\n            h += ort[i] * ort[i];\n        }\n        double g = sqrt(h);\n        if (ort[m] > 0.0)\n            g = -g;\n        h -= ort[m] * g;\n        ort[m] -= g;\n\n        for (int j = m; j < n; j++) {\n            double f = 0.0;\n            for (int i = n - 1; i >= m; i--)\n                f += ort[i] * H[i * n + j];\n            f /= h;\n            for (int i = m; i < n; i++)\n                H[i * n + j] -= f * ort[i];\n        }\n        for (int i = 0; i < n; i++) {\n            double f = 0.0;\n            for (int j = n - 1; j >= m; j--)\n                f += ort[j] * H[i * n + j];\n            f /= h;\n            for (int j = m; j < n; j++)\n                H[i * n + j] -= f * ort[j];\n        }\n        ort[m] *= scale;\n        H[m * n + (m - 1)] = scale * g;\n    }\n    free(ort);\n}\n\n/* ------------------------------------------------------------------ */\n/* Francis double-shift QR, eigenvalues only.                          */\n/* Returns 0 on success, -1 if it fails to converge.                   */\n/* d[i] holds real parts, e[i] imaginary parts (real Schur convention).*/\n/* ------------------------------------------------------------------ */\nstatic int hqr_eigenvalues(double *H, int n, double *d, double *e)\n{\n    int nn, m, l, k, j, its, i, mmin;\n    double z = 0.0, y, x, w, v, u, t = 0.0, s, r = 0.0, q = 0.0, p = 0.0, anorm;\n\n    anorm = 0.0;\n    for (i = 0; i < n; i++) {\n        int j0 = (i - 1 > 0) ? i - 1 : 0;\n        for (j = j0; j < n; j++)\n            anorm += fabs(H[i * n + j]);\n    }\n\n    nn = n - 1;\n    t = 0.0;\n    while (nn >= 0) {\n        its = 0;\n        do {\n            /* look for a single small subdiagonal element */\n            for (l = nn; l >= 1; l--) {\n                s = fabs(H[(l - 1) * n + (l - 1)]) + fabs(H[l * n + l]);\n                if (s == 0.0)\n                    s = anorm;\n                if (fabs(H[l * n + (l - 1)]) + s == s) {\n                    H[l * n + (l - 1)] = 0.0;\n                    break;\n                }\n            }\n            x = H[nn * n + nn];\n            if (l == nn) { /* one root found */\n                d[nn] = x + t;\n                H[nn * n + nn] = x + t;\n                e[nn] = 0.0;\n                nn--;\n                its = 0;\n            } else {\n                y = H[(nn - 1) * n + (nn - 1)];\n                w = H[nn * n + (nn - 1)] * H[(nn - 1) * n + nn];\n                if (l == nn - 1) { /* two roots found */\n                    p = 0.5 * (y - x);\n                    q = p * p + w;\n                    z = sqrt(fabs(q));\n                    x = x + t;\n                    H[nn * n + nn] = x;\n                    H[(nn - 1) * n + (nn - 1)] = y + t;\n                    if (q >= 0.0) { /* real pair */\n                        z = p + (p >= 0.0 ? z : -z);\n                        d[nn - 1] = x + z;\n                        d[nn] = d[nn - 1];\n                        if (z != 0.0)\n                            d[nn] = x - w / z;\n                        e[nn - 1] = 0.0;\n                        e[nn] = 0.0;\n                        x = H[nn * n + (nn - 1)];\n                        s = fabs(x) + fabs(z);\n                        p = x / s;\n                        q = z / s;\n                        r = sqrt(p * p + q * q);\n                        p /= r;\n                        q /= r;\n                        for (j = nn - 1; j < n; j++) {\n                            z = H[(nn - 1) * n + j];\n                            H[(nn - 1) * n + j] = q * z + p * H[nn * n + j];\n                            H[nn * n + j] = q * H[nn * n + j] - p * z;\n                        }\n                        for (i = 0; i <= nn; i++) {\n                            z = H[i * n + (nn - 1)];\n                            H[i * n + (nn - 1)] = q * z + p * H[i * n + nn];\n                            H[i * n + nn] = q * H[i * n + nn] - p * z;\n                        }\n                    } else { /* complex pair */\n                        d[nn - 1] = x + p;\n                        d[nn] = x + p;\n                        e[nn - 1] = z;\n                        e[nn] = -z;\n                    }\n                    nn -= 2;\n                    its = 0;\n                } else { /* no convergence yet */\n                    if (its == 60)\n                        return -1;\n                    if (its == 10 || its == 20) {\n                        t += x;\n                        for (i = 0; i <= nn; i++)\n                            H[i * n + i] -= x;\n                        s = fabs(H[nn * n + (nn - 1)]) +\n                            fabs(H[(nn - 1) * n + (nn - 2)]);\n                        y = x = 0.75 * s;\n                        w = -0.4375 * s * s;\n                    }\n                    ++its;\n                    /* look for two consecutive small subdiagonal elements */\n                    for (m = nn - 2; m >= l; m--) {\n                        z = H[m * n + m];\n                        r = x - z;\n                        s = y - z;\n                        p = (r * s - w) / H[(m + 1) * n + m] + H[m * n + (m + 1)];\n                        q = H[(m + 1) * n + (m + 1)] - z - r - s;\n                        r = H[(m + 2) * n + (m + 1)];\n                        s = fabs(p) + fabs(q) + fabs(r);\n                        p /= s;\n                        q /= s;\n                        r /= s;\n                        if (m == l)\n                            break;\n                        u = fabs(H[m * n + (m - 1)]) * (fabs(q) + fabs(r));\n                        v = fabs(p) * (fabs(H[(m - 1) * n + (m - 1)]) + fabs(z) +\n                                       fabs(H[(m + 1) * n + (m + 1)]));\n                        if (u + v == v)\n                            break;\n                    }\n                    for (i = m + 2; i <= nn; i++) {\n                        H[i * n + (i - 2)] = 0.0;\n                        if (i != m + 2)\n                            H[i * n + (i - 3)] = 0.0;\n                    }\n                    /* double QR step involving rows l..nn and columns m..nn */\n                    for (k = m; k <= nn - 1; k++) {\n                        if (k != m) {\n                            p = H[k * n + (k - 1)];\n                            q = H[(k + 1) * n + (k - 1)];\n                            r = (k != nn - 1) ? H[(k + 2) * n + (k - 1)] : 0.0;\n                            x = fabs(p) + fabs(q) + fabs(r);\n                            if (x == 0.0)\n                                continue;\n                            p /= x;\n                            q /= x;\n                            r /= x;\n                        }\n                        s = sqrt(p * p + q * q + r * r);\n                        if (p < 0.0)\n                            s = -s;\n                        if (s != 0.0) {\n                            if (k != m)\n                                H[k * n + (k - 1)] = -s * x;\n                            else if (l != m)\n                                H[k * n + (k - 1)] = -H[k * n + (k - 1)];\n                            p += s;\n                            x = p / s;\n                            y = q / s;\n                            z = r / s;\n                            q /= p;\n                            r /= p;\n                            for (j = k; j < n; j++) {\n                                p = H[k * n + j] + q * H[(k + 1) * n + j];\n                                if (k != nn - 1) {\n                                    p += r * H[(k + 2) * n + j];\n                                    H[(k + 2) * n + j] -= p * z;\n                                }\n                                H[(k + 1) * n + j] -= p * y;\n                                H[k * n + j] -= p * x;\n                            }\n                            mmin = (nn < k + 3) ? nn : k + 3;\n                            for (i = 0; i <= mmin; i++) {\n                                p = x * H[i * n + k] + y * H[i * n + (k + 1)];\n                                if (k != nn - 1) {\n                                    p += z * H[i * n + (k + 2)];\n                                    H[i * n + (k + 2)] -= p * r;\n                                }\n                                H[i * n + (k + 1)] -= p * q;\n                                H[i * n + k] -= p;\n                            }\n                        }\n                    }\n                }\n            }\n        } while (l < nn - 1);\n    }\n    return 0;\n}\n\n/* ------------------------------------------------------------------ */\n/* Complex LU with partial pivoting, solves A x = b in place (b -> x). */\n/* Returns 0 on success.                                               */\n/* ------------------------------------------------------------------ */\nstatic int cmplx_lu_solve(cplx *M, int n, cplx *b)\n{\n    for (int k = 0; k < n; k++) {\n        int p = k;\n        double best = cabs(M[k * n + k]);\n        for (int i = k + 1; i < n; i++) {\n            double v = cabs(M[i * n + k]);\n            if (v > best) {\n                best = v;\n                p = i;\n            }\n        }\n        if (p != k) {\n            for (int j = 0; j < n; j++) {\n                cplx t = M[k * n + j];\n                M[k * n + j] = M[p * n + j];\n                M[p * n + j] = t;\n            }\n            cplx t = b[k];\n            b[k] = b[p];\n            b[p] = t;\n        }\n        cplx d = M[k * n + k];\n        if (cabs(d) == 0.0)\n            return -1;\n        cplx inv = 1.0 / d;\n        for (int i = k + 1; i < n; i++) {\n            cplx f = M[i * n + k] * inv;\n            M[i * n + k] = f;\n            for (int j = k + 1; j < n; j++)\n                M[i * n + j] -= f * M[k * n + j];\n            b[i] -= f * b[k];\n        }\n    }\n    for (int i = n - 1; i >= 0; i--) {\n        cplx s = b[i];\n        for (int j = i + 1; j < n; j++)\n            s -= M[i * n + j] * b[j];\n        cplx d = M[i * n + i];\n        if (cabs(d) == 0.0)\n            return -1;\n        b[i] = s / d;\n    }\n    return 0;\n}\n\n/* ------------------------------------------------------------------ */\n/* Inverse iteration with Rayleigh-quotient shifts.                    */\n/* On entry x holds a starting vector; on exit a unit-norm eigenvector */\n/* estimate.  Returns the residual ||A x - lambda x|| of the returned  */\n/* pair (with lambda set to the Rayleigh quotient), or -1 on failure.  */\n/* ------------------------------------------------------------------ */\nstatic double inverse_iteration(const double *A, int n, cplx lam,\n                                cplx *x, double anorm)\n{\n    cplx *M = (cplx *)malloc((size_t)n * n * sizeof(cplx));\n    cplx *b = (cplx *)malloc((size_t)n * sizeof(cplx));\n    cplx *Ax = (cplx *)malloc((size_t)n * sizeof(cplx));\n    double res = -1.0;\n\n    /* Start with a uniform (generic) right-hand side. */\n    for (int i = 0; i < n; i++)\n        b[i] = 1.0 + 0.0 * I;\n\n    double delta = 1e-13 * anorm;\n    for (int iter = 0; iter < 3; iter++) {\n        for (int i = 0; i < n; i++)\n            for (int j = 0; j < n; j++)\n                M[i * n + j] = (cplx)A[i * n + j];\n        for (int i = 0; i < n; i++)\n            M[i * n + i] -= lam;\n        /* Tiny shift keeps the nearly singular system solvable. */\n        for (int i = 0; i < n; i++)\n            M[i * n + i] += delta;\n\n        if (cmplx_lu_solve(M, n, b) != 0)\n            goto done;\n\n        double nrm = 0.0;\n        for (int i = 0; i < n; i++)\n            nrm += creal(b[i]) * creal(b[i]) + cimag(b[i]) * cimag(b[i]);\n        nrm = sqrt(nrm);\n        if (!(nrm > 0.0) || !isfinite(nrm))\n            goto done;\n        for (int i = 0; i < n; i++)\n            b[i] /= nrm;\n\n        /* Rayleigh quotient of the current vector. */\n        cplx rho = 0.0;\n        for (int i = 0; i < n; i++) {\n            cplx s = 0.0;\n            for (int j = 0; j < n; j++)\n                s += (cplx)A[i * n + j] * b[j];\n            Ax[i] = s;\n            rho += conj(b[i]) * s;\n        }\n        lam = rho;\n        /* Shrink the regularisation as the shift gets accurate. */\n        delta = (iter == 0) ? 1e-13 * anorm : 1e-15 * anorm;\n\n        /* residual of the current pair */\n        double rs = 0.0;\n        for (int i = 0; i < n; i++) {\n            cplx r = Ax[i] - lam * b[i];\n            rs += creal(r) * creal(r) + cimag(r) * cimag(r);\n        }\n        res = sqrt(rs);\n    }\n\n    for (int i = 0; i < n; i++)\n        x[i] = b[i];\n\ndone:\n    free(M);\n    free(b);\n    free(Ax);\n    return res;\n}\n\n/* ------------------------------------------------------------------ */\n/* Core routine: A is row-major n x n (n >= 1).                        */\n/* ------------------------------------------------------------------ */\nstatic int dominant_eigenpair(const double *A, int n, cplx *out_lam,\n                              cplx *out_vec)\n{\n    double *H = (double *)malloc((size_t)n * n * sizeof(double));\n    double *d = (double *)malloc((size_t)n * sizeof(double));\n    double *e = (double *)malloc((size_t)n * sizeof(double));\n    cplx *x = (cplx *)malloc((size_t)n * sizeof(cplx));\n    int status = -1;\n\n    double anorm = 0.0;\n    for (int i = 0; i < n; i++)\n        for (int j = 0; j < n; j++)\n            anorm += fabs(A[i * n + j]);\n    if (anorm == 0.0) {\n        out_lam[0] = 0.0;\n        for (int i = 0; i < n; i++)\n            out_vec[i] = (i == 0) ? 1.0 : 0.0;\n        status = 0;\n        goto cleanup;\n    }\n\n    if (n == 1) {\n        out_lam[0] = A[0];\n        out_vec[0] = 1.0;\n        status = 0;\n        goto cleanup;\n    }\n\n    memcpy(H, A, (size_t)n * n * sizeof(double));\n    hessenberg(H, n);\n    if (hqr_eigenvalues(H, n, d, e) != 0)\n        goto cleanup;\n\n    /* dominant eigenvalue by modulus */\n    int idx = 0;\n    double best = -1.0;\n    for (int i = 0; i < n; i++) {\n        double m = d[i] * d[i] + e[i] * e[i];\n        if (m > best) {\n            best = m;\n            idx = i;\n        }\n    }\n    cplx lam = d[idx] + e[idx] * I;\n\n    for (int i = 0; i < n; i++)\n        x[i] = 1.0;\n    double res = inverse_iteration(A, n, lam, x, anorm);\n    if (res < 0.0 || !isfinite(res))\n        goto cleanup;\n\n    /* Final Rayleigh quotient for the returned pair. */\n    cplx rho = 0.0;\n    for (int i = 0; i < n; i++) {\n        cplx s = 0.0;\n        for (int j = 0; j < n; j++)\n            s += (cplx)A[i * n + j] * x[j];\n        rho += conj(x[i]) * s;\n    }\n    out_lam[0] = rho;\n    memcpy(out_vec, x, (size_t)n * sizeof(cplx));\n    status = 0;\n\ncleanup:\n    free(H);\n    free(d);\n    free(e);\n    free(x);\n    return status;\n}\n\n/* ------------------------------------------------------------------ */\n/* Python wrapper                                                      */\n/* ------------------------------------------------------------------ */\nstatic PyObject *py_dominant(PyObject *self, PyObject *arg)\n{\n    PyArrayObject *arr = (PyArrayObject *)PyArray_FROM_OTF(\n        arg, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);\n    if (arr == NULL)\n        return NULL;\n\n    if (PyArray_NDIM(arr) != 2 ||\n        PyArray_DIM(arr, 0) != PyArray_DIM(arr, 1) ||\n        PyArray_DIM(arr, 0) < 1) {\n        Py_DECREF(arr);\n        PyErr_SetString(PyExc_ValueError, \"expected a non-empty square matrix\");\n        return NULL;\n    }\n\n    int n = (int)PyArray_DIM(arr, 0);\n    const double *A = (const double *)PyArray_DATA(arr);\n\n    cplx lam;\n    cplx *vec = (cplx *)malloc((size_t)n * sizeof(cplx));\n    if (vec == NULL) {\n        Py_DECREF(arr);\n        return PyErr_NoMemory();\n    }\n\n    int status = dominant_eigenpair(A, n, &lam, vec);\n    Py_DECREF(arr);\n    if (status != 0) {\n        free(vec);\n        PyErr_SetString(PyExc_RuntimeError, \"eigenvalue iteration failed\");\n        return NULL;\n    }\n\n    npy_intp dims[1] = {n};\n    PyArrayObject *out = (PyArrayObject *)PyArray_SimpleNew(1, dims,\n                                                            NPY_COMPLEX128);\n    if (out == NULL) {\n        free(vec);\n        return NULL;\n    }\n    memcpy(PyArray_DATA(out), vec, (size_t)n * sizeof(cplx));\n    free(vec);\n\n    PyObject *lam_obj = PyComplex_FromDoubles(creal(lam), cimag(lam));\n    if (lam_obj == NULL) {\n        Py_DECREF((PyObject *)out);\n        return NULL;\n    }\n    PyObject *ret = PyTuple_Pack(2, lam_obj, (PyObject *)out);\n    Py_DECREF(lam_obj);\n    Py_DECREF((PyObject *)out);\n    return ret;\n}\n\nstatic PyMethodDef methods[] = {\n    {\"dominant\", py_dominant, METH_O,\n     \"dominant(A) -> (eigenvalue, eigenvector) of largest-modulus eigenvalue\"},\n    {NULL, NULL, 0, NULL}};\n\nstatic struct PyModuleDef moduledef = {\n    PyModuleDef_HEAD_INIT, \"_dom_eig\",\n    \"Fast dominant eigenpair for small dense real matrices.\", -1, methods};\n\nPyMODINIT_FUNC PyInit__dom_eig(void)\n{\n    import_array();\n    return PyModule_Create(&moduledef);\n}\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 266435,
+   "dur_ms": 2511
+  },
+  {
+   "kind": "tool",
+   "at_ms": 268946,
+   "dur_ms": 908,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "INC=$(python -c \"import numpy;print(numpy.get_include())\") && PYINC=$(python -c \"import sysconfig;print(sysconfig.get_path('include'))\") && SUF=$(python -c \"import sysconfig;print(sysconfig.get_config_var('EXT_SUFFIX'))\") && echo $SUF && gcc -O3 -fPIC -shared -I$INC -I$PYINC _dom_eig.c -o _dom_eig$SUF -lm && ls -la _dom_eig*"
+  },
+  {
+   "kind": "model",
+   "at_ms": 269854,
+   "dur_ms": 2559
+  },
+  {
+   "kind": "tool",
+   "at_ms": 272413,
+   "dur_ms": 2487,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'EOF'\nimport numpy as np, _dom_eig\nrng=np.random.default_rng(0)\nworst=0; worstinfo=None; fails=0\nfor trial in range(20000):\n    n=rng.integers(1,11)\n    A=rng.normal(size=(n,n))\n    try:\n        lam,v=_dom_eig.dominant(A)\n    except Exception as ex:\n        fails+=1\n        if fails<5: print(\"EXC\",n,ex)\n        continue\n    # reference check\n    w,V=np.linalg.eig(A)\n    i=np.argmax(np.abs(w))\n    # compare eigenvalue magnitude/value (may differ by conjugate choice)\n    if abs(abs(lam)-abs(w[i]))>1e-8*max(1,abs(w[i])):\n        print(\"MAG MISMATCH\",n,lam,w[i]); break\n    r=np.linalg.norm(A@v-lam*v)\n    rel=r/np.linalg.norm(v)\n    ok=np.allclose(A@v, lam*v)\n    if not ok or rel>1e-9:\n        print(\"BAD\",n,\"rel\",rel,\"allclose\",ok,\"lam\",lam,\"ref\",w[i])\n        worstinfo=(A.copy(),lam,v)\n        break\n    if rel>worst: worst=rel\nelse:\n    print(\"all ok, worst relative residual\", worst, \"fails\",fails)\nprint(\"fails total\", fails)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 274900,
+   "dur_ms": 5948
+  },
+  {
+   "kind": "tool",
+   "at_ms": 280848,
+   "dur_ms": 326,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'EOF'\nimport numpy as np, _dom_eig\nrng=np.random.default_rng(1)\ncases=[]\n# repeated eigenvalues\ncases.append((\"identity\",np.eye(5)))\ncases.append((\"zero\",np.zeros((4,4))))\ncases.append((\"jordan\",np.eye(5)+np.diag(np.ones(4),1)))\ncases.append((\"jordan nilpotent\",np.diag(np.ones(4),1)))\ncases.append((\"repeat sym\",np.array([[2.,0,0],[0,2,0],[0,0,1]])))\ncases.append((\"block diag\",np.block([[np.array([[0.,-1],[1,0]]),np.zeros((2,3))],[np.zeros((3,2)),np.eye(3)]])))\ncases.append((\"rotation\",np.array([[0.,-1],[1,0]])))\n# badly scaled\nfor s in [1e-8,1e8,1e-100,1e100]:\n    A=rng.normal(size=(5,5)); A[0,:]*=s; A[:,0]*=s\n    cases.append((f\"scaled {s}\",A))\n# symmetric, triangular, permutation\ncases.append((\"symmetric\",(lambda M:M+M.T)(rng.normal(size=(8,8)))))\ncases.append((\"upper tri\",np.triu(rng.normal(size=(7,7)))))\ncases.append((\"perm\",np.eye(6)[rng.permutation(6)]))\n# near-defective\nJ=np.eye(10)+np.diag(np.ones(9),1); cases.append((\"jordan10\",J))\ncases.append((\"jordan10+eps\",J+1e-12*rng.normal(size=(10,10))))\n# integer / large values\ncases.append((\"large\",rng.normal(size=(10,10))*1e6))\ncases.append((\"tiny\",rng.normal(size=(10,10))*1e-6))\n# complex pair dominant with neighbors\nD=np.diag([3+4j,3-4j,2.9+0.1j,2.9-0.1j]+[0.1]*6)\nQ=np.linalg.qr(rng.normal(size=(10,10)))[0]\ncases.append((\"designed complex\", (Q@D@Q.T.conj()).real))\n# symmetric with degenerate top\ncases.append((\"deg top\",np.diag([5.,5.,1,1,1])))\nfor name,A in cases:\n    try:\n        lam,v=_dom_eig.dominant(A)\n        r=np.linalg.norm(A@v-lam*v); ok=np.allclose(A@v,lam*v)\n        w,V=np.linalg.eig(A); i=np.argmax(np.abs(w))\n        print(f\"{name:20s} n={A.shape[0]:2d} allclose={ok} res={r:.2e} lam={lam:.6g} refmax={w[i]:.6g}\")\n    except Exception as ex:\n        print(f\"{name:20s} EXC {ex}\")\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 281174,
+   "dur_ms": 3271
+  },
+  {
+   "kind": "tool",
+   "at_ms": 284445,
+   "dur_ms": 249,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'EOF'\nimport numpy as np, warnings\nwarnings.simplefilter('ignore')\nrng=np.random.default_rng(1)\ndef ref(A):\n    w,V=np.linalg.eig(A); i=np.argmax(np.abs(w)); return w[i], V[:,i]\nfor s in [1e8,1e100,1e150]:\n    A=rng.normal(size=(5,5)); A[0,:]*=s; A[:,0]*=s\n    try:\n        lam,v=ref(A); r=np.linalg.norm(A@v-lam*v)\n        print(s,\"ref lam\",lam,\"allclose\",np.allclose(A@v,lam*v),\"res\",r, \"rel\", r/np.linalg.norm(lam*v))\n    except Exception as e: print(s,\"ref EXC\",e)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 284694,
+   "dur_ms": 2412
+  },
+  {
+   "kind": "tool",
+   "at_ms": 287106,
+   "dur_ms": 10084,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'EOF'\nimport numpy as np, time, _dom_eig\ndef bench(fn,n,N=20000):\n    A=np.random.normal(size=(n,n)); fn(A)\n    ts=[]\n    for _ in range(N):\n        A=np.random.normal(size=(n,n))\n        t0=time.perf_counter(); fn(A); t1=time.perf_counter(); ts.append(t1-t0)\n    return np.median(ts)*1e6\ndef ref(A):\n    w,v=np.linalg.eig(A); i=np.argmax(np.abs(w)); return w[i], v[:,i]\nfor n in [2,4,6,8,10]:\n    print(n, \"cpp\", f\"{bench(_dom_eig.dominant,n):.3f}\", \"ref\", f\"{bench(ref,n):.2f}\", \"speedup\", f\"{bench(ref,n)/bench(_dom_eig.dominant,n):.1f}x\")\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 297190,
+   "dur_ms": 11171
+  },
+  {
+   "kind": "tool",
+   "at_ms": 308361,
+   "dur_ms": 2438,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'EOF'\n# crude split: compile a variant that returns eigenvalues only by using a patched copy\nsrc=open('_dom_eig.c').read()\n# make standalone: strip python includes & wrapper\nstart=src.index('/* ------------------------------------------------------------------ */\\n/* Python wrapper')\nalg=src[:start]\nalg=alg.replace('#define PY_SSIZE_T_CLEAN\\n#include <Python.h>\\n#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION\\n#include <numpy/arrayobject.h>\\n','')\nalg+='''\n#include <stdio.h>\n#include <time.h>\nstatic double now(){struct timespec ts;clock_gettime(CLOCK_MONOTONIC,&ts);return ts.tv_sec+1e-9*ts.tv_nsec;}\nstatic int cmpd(const void*a,const void*b){double x=*(const double*)a,y=*(const double*)b;return (x>y)-(x<y);}\nint main(int argc,char**argv){\n  int n=argc>1?atoi(argv[1]):10; int N=argc>2?atoi(argv[2]):50000;\n  double*A=malloc(n*n*8),*H=malloc(n*n*8),*d=malloc(n*8),*e=malloc(n*8);\n  cplx*x=malloc(n*sizeof(cplx));\n  double*ts=malloc(N*8); srand(1);\n  for(int it=0;it<N+1000;it++){\n    for(int i=0;i<n*n;i++)A[i]=(double)rand()/RAND_MAX*2-1;\n    double t0=now();\n    memcpy(H,A,n*n*8); hessenberg(H,n); hqr_eigenvalues(H,n,d,e);\n    double t1=now();\n    if(it>=1000)ts[it-1000]=t1-t0;\n  }\n  qsort(ts,N,8,cmpd); printf(\"n=%d  hess+qr: %.3f us (min %.3f)\\\\n\",n,ts[N/2]*1e6,ts[0]*1e6);\n  double anorm=0; for(int i=0;i<n*n;i++)anorm+=fabs(A[i]);\n  for(int it=0;it<N+1000;it++){\n    for(int i=0;i<n;i++)x[i]=1.0;\n    double t0=now();\n    inverse_iteration(A,n,d[0]+e[0]*I,x,anorm);\n    double t1=now();\n    if(it>=1000)ts[it-1000]=t1-t0;\n  }\n  qsort(ts,N,8,cmpd); printf(\"n=%d  inviter: %.3f us (min %.3f)\\\\n\",n,ts[N/2]*1e6,ts[0]*1e6);\n  return 0;\n}\n'''\nopen('/tmp/cbench/algbench.c','w').write(alg)\nEOF\ncd /tmp/cbench && gcc -O3 -o algbench algbench.c -lm && for n in 2 4 6 8 10; do ./algbench $n 50000; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 310799,
+   "dur_ms": 5889
+  },
+  {
+   "kind": "tool",
+   "at_ms": 316688,
+   "dur_ms": 3233,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /tmp/cbench && gcc -O3 -march=native -funroll-loops -o algbench_n algbench.c -lm && for n in 6 10; do ./algbench_n $n 50000; done; echo \"--- current -O3 ---\"; for n in 6 10; do ./algbench $n 50000; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 319921,
+   "dur_ms": 7492
+  },
+  {
+   "kind": "tool",
+   "at_ms": 327413,
+   "dur_ms": 3388,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'EOF'\n# measure how often dominant eigenvalue is real for random matrices\nimport numpy as np\nrng=np.random.default_rng(3)\nfor n in [2,4,6,8,10]:\n    cnt=0; M=20000\n    for _ in range(M):\n        w=np.linalg.eigvals(rng.normal(size=(n,n)))\n        i=np.argmax(np.abs(w))\n        if abs(w[i].imag)<1e-12: cnt+=1\n    print(n, \"real dominant fraction\", cnt/M)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 330801,
+   "dur_ms": 45025
+  },
+  {
+   "kind": "tool",
+   "at_ms": 375826,
+   "dur_ms": 36,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/_dom_eig.c",
+    "content": "/*\n * Small dense real-matrix dominant eigenpair.\n *\n * Strategy:\n *   1. Reduce A to upper Hessenberg form with Householder similarity\n *      transformations (eigenvalues are unchanged).\n *   2. Francis implicit double-shift QR on the Hessenberg matrix to get all\n *      eigenvalues (JAMA \"hqr\" style, eigenvalues only -- no vectors).\n *   3. Pick the eigenvalue of largest modulus.\n *   4. Recover its eigenvector from the *original* A by inverse iteration\n *      with Rayleigh-quotient shifts.  The QR eigenvalue is already accurate\n *      to working precision, so one or two solves give a machine-precision\n *      eigenpair.  Real eigenvalues use a real solve, complex ones complex.\n *\n * Everything is self contained (libm only); no LAPACK/BLAS dependency.\n *\n * Exposed as the CPython extension function:\n *      dominant(A) -> (eigenvalue: complex, eigenvector: complex ndarray)\n * and raises a RuntimeError if the QR iteration does not converge, so the\n * caller can fall back to a reference implementation.\n */\n\n#define PY_SSIZE_T_CLEAN\n#include <Python.h>\n#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION\n#include <numpy/arrayobject.h>\n\n#include <complex.h>\n#include <math.h>\n#include <stdlib.h>\n#include <string.h>\n\ntypedef double complex cplx;\n\n/* Stack buffers cover the documented sizes (n <= 10) without any heap use. */\n#define STACK_N 32\n\n/* ------------------------------------------------------------------ */\n/* Hessenberg reduction (Householder), in place.                       */\n/* ------------------------------------------------------------------ */\nstatic void hessenberg(double *H, int n, double *ort)\n{\n    for (int m = 1; m < n - 1; m++) {\n        double scale = 0.0;\n        for (int i = m; i < n; i++)\n            scale += fabs(H[i * n + (m - 1)]);\n        if (scale == 0.0)\n            continue;\n        double h = 0.0;\n        for (int i = n - 1; i >= m; i--) {\n            ort[i] = H[i * n + (m - 1)] / scale;\n            h += ort[i] * ort[i];\n        }\n        double g = sqrt(h);\n        if (ort[m] > 0.0)\n            g = -g;\n        h -= ort[m] * g;\n        ort[m] -= g;\n\n        for (int j = m; j < n; j++) {\n            double f = 0.0;\n            for (int i = n - 1; i >= m; i--)\n                f += ort[i] * H[i * n + j];\n            f /= h;\n            for (int i = m; i < n; i++)\n                H[i * n + j] -= f * ort[i];\n        }\n        for (int i = 0; i < n; i++) {\n            double f = 0.0;\n            for (int j = n - 1; j >= m; j--)\n                f += ort[j] * H[i * n + j];\n            f /= h;\n            for (int j = m; j < n; j++)\n                H[i * n + j] -= f * ort[j];\n        }\n        ort[m] *= scale;\n        H[m * n + (m - 1)] = scale * g;\n    }\n}\n\n/* ------------------------------------------------------------------ */\n/* Francis double-shift QR, eigenvalues only.                          */\n/* Returns 0 on success, -1 if it fails to converge.                   */\n/* d[i] holds real parts, e[i] imaginary parts (real Schur convention).*/\n/* ------------------------------------------------------------------ */\nstatic int hqr_eigenvalues(double *H, int n, double *d, double *e)\n{\n    int nn, m, l, k, j, its, i, mmin;\n    double z = 0.0, y, x, w, v, u, t = 0.0, s, r = 0.0, q = 0.0, p = 0.0, anorm;\n\n    anorm = 0.0;\n    for (i = 0; i < n; i++) {\n        int j0 = (i - 1 > 0) ? i - 1 : 0;\n        for (j = j0; j < n; j++)\n            anorm += fabs(H[i * n + j]);\n    }\n\n    nn = n - 1;\n    t = 0.0;\n    while (nn >= 0) {\n        its = 0;\n        do {\n            /* look for a single small subdiagonal element */\n            for (l = nn; l >= 1; l--) {\n                s = fabs(H[(l - 1) * n + (l - 1)]) + fabs(H[l * n + l]);\n                if (s == 0.0)\n                    s = anorm;\n                if (fabs(H[l * n + (l - 1)]) + s == s) {\n                    H[l * n + (l - 1)] = 0.0;\n                    break;\n                }\n            }\n            x = H[nn * n + nn];\n            if (l == nn) { /* one root found */\n                d[nn] = x + t;\n                H[nn * n + nn] = x + t;\n                e[nn] = 0.0;\n                nn--;\n                its = 0;\n            } else {\n                y = H[(nn - 1) * n + (nn - 1)];\n                w = H[nn * n + (nn - 1)] * H[(nn - 1) * n + nn];\n                if (l == nn - 1) { /* two roots found */\n                    p = 0.5 * (y - x);\n                    q = p * p + w;\n                    z = sqrt(fabs(q));\n                    x = x + t;\n                    H[nn * n + nn] = x;\n                    H[(nn - 1) * n + (nn - 1)] = y + t;\n                    if (q >= 0.0) { /* real pair */\n                        z = p + (p >= 0.0 ? z : -z);\n                        d[nn - 1] = x + z;\n                        d[nn] = d[nn - 1];\n                        if (z != 0.0)\n                            d[nn] = x - w / z;\n                        e[nn - 1] = 0.0;\n                        e[nn] = 0.0;\n                        x = H[nn * n + (nn - 1)];\n                        s = fabs(x) + fabs(z);\n                        p = x / s;\n                        q = z / s;\n                        r = sqrt(p * p + q * q);\n                        p /= r;\n                        q /= r;\n                        for (j = nn - 1; j < n; j++) {\n                            z = H[(nn - 1) * n + j];\n                            H[(nn - 1) * n + j] = q * z + p * H[nn * n + j];\n                            H[nn * n + j] = q * H[nn * n + j] - p * z;\n                        }\n                        for (i = 0; i <= nn; i++) {\n                            z = H[i * n + (nn - 1)];\n                            H[i * n + (nn - 1)] = q * z + p * H[i * n + nn];\n                            H[i * n + nn] = q * H[i * n + nn] - p * z;\n                        }\n                    } else { /* complex pair */\n                        d[nn - 1] = x + p;\n                        d[nn] = x + p;\n                        e[nn - 1] = z;\n                        e[nn] = -z;\n                    }\n                    nn -= 2;\n                    its = 0;\n                } else { /* no convergence yet */\n                    if (its == 60)\n                        return -1;\n                    if (its == 10 || its == 20) {\n                        t += x;\n                        for (i = 0; i <= nn; i++)\n                            H[i * n + i] -= x;\n                        s = fabs(H[nn * n + (nn - 1)]) +\n                            fabs(H[(nn - 1) * n + (nn - 2)]);\n                        y = x = 0.75 * s;\n                        w = -0.4375 * s * s;\n                    }\n                    ++its;\n                    /* look for two consecutive small subdiagonal elements */\n                    for (m = nn - 2; m >= l; m--) {\n                        z = H[m * n + m];\n                        r = x - z;\n                        s = y - z;\n                        p = (r * s - w) / H[(m + 1) * n + m] + H[m * n + (m + 1)];\n                        q = H[(m + 1) * n + (m + 1)] - z - r - s;\n                        r = H[(m + 2) * n + (m + 1)];\n                        s = fabs(p) + fabs(q) + fabs(r);\n                        p /= s;\n                        q /= s;\n                        r /= s;\n                        if (m == l)\n                            break;\n                        u = fabs(H[m * n + (m - 1)]) * (fabs(q) + fabs(r));\n                        v = fabs(p) * (fabs(H[(m - 1) * n + (m - 1)]) + fabs(z) +\n                                       fabs(H[(m + 1) * n + (m + 1)]));\n                        if (u + v == v)\n                            break;\n                    }\n                    for (i = m + 2; i <= nn; i++) {\n                        H[i * n + (i - 2)] = 0.0;\n                        if (i != m + 2)\n                            H[i * n + (i - 3)] = 0.0;\n                    }\n                    /* double QR step involving rows l..nn and columns m..nn */\n                    for (k = m; k <= nn - 1; k++) {\n                        if (k != m) {\n                            p = H[k * n + (k - 1)];\n                            q = H[(k + 1) * n + (k - 1)];\n                            r = (k != nn - 1) ? H[(k + 2) * n + (k - 1)] : 0.0;\n                            x = fabs(p) + fabs(q) + fabs(r);\n                            if (x == 0.0)\n                                continue;\n                            p /= x;\n                            q /= x;\n                            r /= x;\n                        }\n                        s = sqrt(p * p + q * q + r * r);\n                        if (p < 0.0)\n                            s = -s;\n                        if (s != 0.0) {\n                            if (k != m)\n                                H[k * n + (k - 1)] = -s * x;\n                            else if (l != m)\n                                H[k * n + (k - 1)] = -H[k * n + (k - 1)];\n                            p += s;\n                            x = p / s;\n                            y = q / s;\n                            z = r / s;\n                            q /= p;\n                            r /= p;\n                            for (j = k; j < n; j++) {\n                                p = H[k * n + j] + q * H[(k + 1) * n + j];\n                                if (k != nn - 1) {\n                                    p += r * H[(k + 2) * n + j];\n                                    H[(k + 2) * n + j] -= p * z;\n                                }\n                                H[(k + 1) * n + j] -= p * y;\n                                H[k * n + j] -= p * x;\n                            }\n                            mmin = (nn < k + 3) ? nn : k + 3;\n                            for (i = 0; i <= mmin; i++) {\n                                p = x * H[i * n + k] + y * H[i * n + (k + 1)];\n                                if (k != nn - 1) {\n                                    p += z * H[i * n + (k + 2)];\n                                    H[i * n + (k + 2)] -= p * r;\n                                }\n                                H[i * n + (k + 1)] -= p * q;\n                                H[i * n + k] -= p;\n                            }\n                        }\n                    }\n                }\n            }\n        } while (l < nn - 1);\n    }\n    return 0;\n}\n\n/* ------------------------------------------------------------------ */\n/* Real LU with partial pivoting; solves M x = b in place.            */\n/* Returns 0 on success.                                              */\n/* ------------------------------------------------------------------ */\nstatic int real_lu_solve(double *M, int n, double *b)\n{\n    for (int k = 0; k < n; k++) {\n        int p = k;\n        double best = fabs(M[k * n + k]);\n        for (int i = k + 1; i < n; i++) {\n            double v = fabs(M[i * n + k]);\n            if (v > best) {\n                best = v;\n                p = i;\n            }\n        }\n        if (p != k) {\n            for (int j = 0; j < n; j++) {\n                double t = M[k * n + j];\n                M[k * n + j] = M[p * n + j];\n                M[p * n + j] = t;\n            }\n            double t = b[k];\n            b[k] = b[p];\n            b[p] = t;\n        }\n        double d = M[k * n + k];\n        if (d == 0.0)\n            return -1;\n        double inv = 1.0 / d;\n        for (int i = k + 1; i < n; i++) {\n            double f = M[i * n + k] * inv;\n            M[i * n + k] = f;\n            for (int j = k + 1; j < n; j++)\n                M[i * n + j] -= f * M[k * n + j];\n            b[i] -= f * b[k];\n        }\n    }\n    for (int i = n - 1; i >= 0; i--) {\n        double s = b[i];\n        for (int j = i + 1; j < n; j++)\n            s -= M[i * n + j] * b[j];\n        double d = M[i * n + i];\n        if (d == 0.0)\n            return -1;\n        b[i] = s / d;\n    }\n    return 0;\n}\n\n/* ------------------------------------------------------------------ */\n/* Complex LU with partial pivoting; solves M x = b in place.         */\n/* ------------------------------------------------------------------ */\nstatic int cmplx_lu_solve(cplx *M, int n, cplx *b)\n{\n    for (int k = 0; k < n; k++) {\n        int p = k;\n        double best = creal(M[k * n + k]) * creal(M[k * n + k]) +\n                      cimag(M[k * n + k]) * cimag(M[k * n + k]);\n        for (int i = k + 1; i < n; i++) {\n            double re = creal(M[i * n + k]), im = cimag(M[i * n + k]);\n            double v = re * re + im * im;\n            if (v > best) {\n                best = v;\n                p = i;\n            }\n        }\n        if (p != k) {\n            for (int j = 0; j < n; j++) {\n                cplx t = M[k * n + j];\n                M[k * n + j] = M[p * n + j];\n                M[p * n + j] = t;\n            }\n            cplx t = b[k];\n            b[k] = b[p];\n            b[p] = t;\n        }\n        cplx d = M[k * n + k];\n        double dd = creal(d) * creal(d) + cimag(d) * cimag(d);\n        if (dd == 0.0)\n            return -1;\n        cplx inv = conj(d) / dd;\n        for (int i = k + 1; i < n; i++) {\n            cplx f = M[i * n + k] * inv;\n            M[i * n + k] = f;\n            for (int j = k + 1; j < n; j++)\n                M[i * n + j] -= f * M[k * n + j];\n            b[i] -= f * b[k];\n        }\n    }\n    for (int i = n - 1; i >= 0; i--) {\n        cplx s = b[i];\n        for (int j = i + 1; j < n; j++)\n            s -= M[i * n + j] * b[j];\n        cplx d = M[i * n + i];\n        double dd = creal(d) * creal(d) + cimag(d) * cimag(d);\n        if (dd == 0.0)\n            return -1;\n        b[i] = s * conj(d) / dd;\n    }\n    return 0;\n}\n\n/* ------------------------------------------------------------------ */\n/* Eigenvector for a real eigenvalue, using real arithmetic.          */\n/* Returns the residual ||A x - rho x|| for the unit vector x.        */\n/* ------------------------------------------------------------------ */\nstatic double inviter_real(const double *A, int n, double lam, double *x,\n                           double anorm, double *M, double *b, double *Ax)\n{\n    double delta = 1e-13 * anorm;\n    double res = -1.0;\n\n    for (int i = 0; i < n; i++)\n        b[i] = 1.0;\n\n    for (int iter = 0; iter < 3; iter++) {\n        for (int i = 0; i < n; i++)\n            for (int j = 0; j < n; j++)\n                M[i * n + j] = A[i * n + j];\n        for (int i = 0; i < n; i++)\n            M[i * n + i] += delta - lam;\n\n        if (real_lu_solve(M, n, b) != 0)\n            return -1.0;\n\n        double nrm = 0.0;\n        for (int i = 0; i < n; i++)\n            nrm += b[i] * b[i];\n        nrm = sqrt(nrm);\n        if (!(nrm > 0.0) || !isfinite(nrm))\n            return -1.0;\n        double inv_nrm = 1.0 / nrm;\n        for (int i = 0; i < n; i++)\n            b[i] *= inv_nrm;\n\n        double rho = 0.0, rs = 0.0;\n        for (int i = 0; i < n; i++) {\n            double s = 0.0;\n            for (int j = 0; j < n; j++)\n                s += A[i * n + j] * b[j];\n            Ax[i] = s;\n            rho += b[i] * s;\n        }\n        for (int i = 0; i < n; i++) {\n            double r = Ax[i] - rho * b[i];\n            rs += r * r;\n        }\n        res = sqrt(rs);\n        lam = rho;\n        for (int i = 0; i < n; i++)\n            x[i] = b[i];\n\n        if (res <= 1e-13 * anorm)\n            break;\n        delta = 1e-15 * anorm;\n    }\n    return res;\n}\n\n/* ------------------------------------------------------------------ */\n/* Eigenvector for a complex eigenvalue, using complex arithmetic.    */\n/* ------------------------------------------------------------------ */\nstatic double inviter_cmplx(const double *A, int n, cplx lam, cplx *x,\n                            double anorm, cplx *M, cplx *b, cplx *Ax)\n{\n    double delta = 1e-13 * anorm;\n    double res = -1.0;\n\n    for (int i = 0; i < n; i++)\n        b[i] = 1.0;\n\n    for (int iter = 0; iter < 3; iter++) {\n        for (int i = 0; i < n; i++)\n            for (int j = 0; j < n; j++)\n                M[i * n + j] = (cplx)A[i * n + j];\n        for (int i = 0; i < n; i++)\n            M[i * n + i] += delta - lam;\n\n        if (cmplx_lu_solve(M, n, b) != 0)\n            return -1.0;\n\n        double nrm = 0.0;\n        for (int i = 0; i < n; i++)\n            nrm += creal(b[i]) * creal(b[i]) + cimag(b[i]) * cimag(b[i]);\n        nrm = sqrt(nrm);\n        if (!(nrm > 0.0) || !isfinite(nrm))\n            return -1.0;\n        cplx inv_nrm = 1.0 / nrm;\n        for (int i = 0; i < n; i++)\n            b[i] *= inv_nrm;\n\n        cplx rho = 0.0;\n        double rs = 0.0;\n        for (int i = 0; i < n; i++) {\n            cplx s = 0.0;\n            for (int j = 0; j < n; j++)\n                s += (cplx)A[i * n + j] * b[j];\n            Ax[i] = s;\n            rho += conj(b[i]) * s;\n        }\n        for (int i = 0; i < n; i++) {\n            cplx r = Ax[i] - rho * b[i];\n            rs += creal(r) * creal(r) + cimag(r) * cimag(r);\n        }\n        res = sqrt(rs);\n        lam = rho;\n        for (int i = 0; i < n; i++)\n            x[i] = b[i];\n\n        if (res <= 1e-13 * anorm)\n            break;\n        delta = 1e-15 * anorm;\n    }\n    return res;\n}\n\n/* ------------------------------------------------------------------ */\n/* Core routine: A is row-major n x n (n >= 1).                        */\n/* ------------------------------------------------------------------ */\n#define BUFSZ (STACK_N * STACK_N)\n\nstatic int dominant_eigenpair(const double *A, int n, cplx *out_lam,\n                              cplx *out_vec)\n{\n    double Hb[BUFSZ], db[STACK_N], eb[STACK_N], ortb[STACK_N];\n    double Mb[BUFSZ], bb[STACK_N], Axb[STACK_N];\n    cplx Mzb[BUFSZ], bzb[STACK_N], Axzb[STACK_N], xzb[STACK_N];\n\n    double *H = Hb, *d = db, *e = eb, *ort = ortb;\n    double *M = Mb, *b = bb, *Ax = Axb;\n    cplx *Mz = Mzb, *bz = bzb, *Axz = Axzb, *xz = xzb;\n    int heap = 0;\n    int status = -1;\n\n    if (n > STACK_N) {\n        H = malloc((size_t)n * n * sizeof(double));\n        d = malloc((size_t)n * sizeof(double));\n        e = malloc((size_t)n * sizeof(double));\n        ort = malloc((size_t)n * sizeof(double));\n        M = malloc((size_t)n * n * sizeof(double));\n        b = malloc((size_t)n * sizeof(double));\n        Ax = malloc((size_t)n * sizeof(double));\n        Mz = malloc((size_t)n * n * sizeof(cplx));\n        bz = malloc((size_t)n * sizeof(cplx));\n        Axz = malloc((size_t)n * sizeof(cplx));\n        xz = malloc((size_t)n * sizeof(cplx));\n        heap = 1;\n        if (!H || !d || !e || !ort || !M || !b || !Ax || !Mz || !bz || !Axz ||\n            !xz) {\n            status = -1;\n            goto cleanup;\n        }\n    }\n\n    double anorm = 0.0;\n    for (int i = 0; i < n * n; i++)\n        anorm += fabs(A[i]);\n    if (anorm == 0.0) {\n        out_lam[0] = 0.0;\n        for (int i = 0; i < n; i++)\n            out_vec[i] = (i == 0) ? 1.0 : 0.0;\n        status = 0;\n        goto cleanup;\n    }\n\n    if (n == 1) {\n        out_lam[0] = A[0];\n        out_vec[0] = 1.0;\n        status = 0;\n        goto cleanup;\n    }\n\n    memcpy(H, A, (size_t)n * n * sizeof(double));\n    hessenberg(H, n, ort);\n    if (hqr_eigenvalues(H, n, d, e) != 0)\n        goto cleanup;\n\n    /* dominant eigenvalue by modulus */\n    int idx = 0;\n    double best = -1.0;\n    for (int i = 0; i < n; i++) {\n        double m = d[i] * d[i] + e[i] * e[i];\n        if (m > best) {\n            best = m;\n            idx = i;\n        }\n    }\n\n    if (e[idx] == 0.0) {\n        /* real eigenvalue: real arithmetic */\n        if (inviter_real(A, n, d[idx], b, anorm, M, b, Ax) < 0.0)\n            goto cleanup;\n        double rho = 0.0;\n        for (int i = 0; i < n; i++) {\n            double s = 0.0;\n            for (int j = 0; j < n; j++)\n                s += A[i * n + j] * b[j];\n            rho += b[i] * s;\n        }\n        out_lam[0] = rho;\n        for (int i = 0; i < n; i++)\n            out_vec[i] = b[i];\n    } else {\n        /* complex eigenvalue: complex arithmetic */\n        cplx lam = d[idx] + e[idx] * I;\n        for (int i = 0; i < n; i++)\n            xz[i] = 1.0;\n        double res = inviter_cmplx(A, n, lam, xz, anorm, Mz, bz, Axz);\n        if (res < 0.0 || !isfinite(res))\n            goto cleanup;\n        cplx rho = 0.0;\n        for (int i = 0; i < n; i++) {\n            cplx s = 0.0;\n            for (int j = 0; j < n; j++)\n                s += (cplx)A[i * n + j] * xz[j];\n            rho += conj(xz[i]) * s;\n        }\n        out_lam[0] = rho;\n        for (int i = 0; i < n; i++)\n            out_vec[i] = xz[i];\n    }\n    status = 0;\n\ncleanup:\n    if (heap) {\n        free(H);\n        free(d);\n        free(e);\n        free(ort);\n        free(M);\n        free(b);\n        free(Ax);\n        free(Mz);\n        free(bz);\n        free(Axz);\n        free(xz);\n    }\n    return status;\n}\n\n/* ------------------------------------------------------------------ */\n/* Python wrapper                                                      */\n/* ------------------------------------------------------------------ */\nstatic PyObject *py_dominant(PyObject *self, PyObject *arg)\n{\n    PyArrayObject *arr = (PyArrayObject *)PyArray_FROM_OTF(\n        arg, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);\n    if (arr == NULL)\n        return NULL;\n\n    if (PyArray_NDIM(arr) != 2 ||\n        PyArray_DIM(arr, 0) != PyArray_DIM(arr, 1) ||\n        PyArray_DIM(arr, 0) < 1) {\n        Py_DECREF(arr);\n        PyErr_SetString(PyExc_ValueError, \"expected a non-empty square matrix\");\n        return NULL;\n    }\n\n    int n = (int)PyArray_DIM(arr, 0);\n    const double *A = (const double *)PyArray_DATA(arr);\n\n    cplx lam;\n    npy_intp dims[1] = {n};\n    PyArrayObject *out = (PyArrayObject *)PyArray_SimpleNew(1, dims,\n                                                            NPY_COMPLEX128);\n    if (out == NULL) {\n        Py_DECREF(arr);\n        return NULL;\n    }\n\n    int status = dominant_eigenpair(A, n, &lam, (cplx *)PyArray_DATA(out));\n    Py_DECREF(arr);\n    if (status != 0) {\n        Py_DECREF((PyObject *)out);\n        PyErr_SetString(PyExc_RuntimeError, \"eigenvalue iteration failed\");\n        return NULL;\n    }\n\n    PyObject *lam_obj = PyComplex_FromDoubles(creal(lam), cimag(lam));\n    if (lam_obj == NULL) {\n        Py_DECREF((PyObject *)out);\n        return NULL;\n    }\n    PyObject *ret = PyTuple_Pack(2, lam_obj, (PyObject *)out);\n    Py_DECREF(lam_obj);\n    Py_DECREF((PyObject *)out);\n    return ret;\n}\n\nstatic PyMethodDef methods[] = {\n    {\"dominant\", py_dominant, METH_O,\n     \"dominant(A) -> (eigenvalue, eigenvector) of largest-modulus eigenvalue\"},\n    {NULL, NULL, 0, NULL}};\n\nstatic struct PyModuleDef moduledef = {\n    PyModuleDef_HEAD_INIT, \"_dom_eig\",\n    \"Fast dominant eigenpair for small dense real matrices.\", -1, methods};\n\nPyMODINIT_FUNC PyInit__dom_eig(void)\n{\n    import_array();\n    return PyModule_Create(&moduledef);\n}\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 375862,
+   "dur_ms": 7008
+  },
+  {
+   "kind": "tool",
+   "at_ms": 382870,
+   "dur_ms": 15,
+   "tool": "Edit",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/_dom_eig.c",
+    "old_string": "    if (e[idx] == 0.0) {\n        /* real eigenvalue: real arithmetic */\n        if (inviter_real(A, n, d[idx], b, anorm, M, b, Ax) < 0.0)\n            goto cleanup;",
+    "new_string": "    if (e[idx] == 0.0) {\n        /* Real eigenvalue: real arithmetic.  `b` doubles as workspace and\n         * output -- inviter_real only copies the working vector into x, and\n         * the working vector carries over between iterations by design. */\n        if (inviter_real(A, n, d[idx], b, anorm, M, b, Ax) < 0.0)\n            goto cleanup;",
+    "replace_all": false
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 382885,
+   "dur_ms": 2222
+  },
+  {
+   "kind": "tool",
+   "at_ms": 385107,
+   "dur_ms": 4221,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "INC=$(python -c \"import numpy;print(numpy.get_include())\") && PYINC=$(python -c \"import sysconfig;print(sysconfig.get_path('include'))\") && SUF=$(python -c \"import sysconfig;print(sysconfig.get_config_var('EXT_SUFFIX'))\") && gcc -O3 -fPIC -shared -I$INC -I$PYINC _dom_eig.c -o _dom_eig$SUF -lm && python - <<'EOF'\nimport numpy as np, _dom_eig, time\nrng=np.random.default_rng(0)\nworst=0; fails=0\nfor trial in range(50000):\n    n=int(rng.integers(1,11))\n    A=rng.normal(size=(n,n))\n    try:\n        lam,v=_dom_eig.dominant(A)\n    except Exception as ex:\n        fails+=1; continue\n    r=np.linalg.norm(A@v-lam*v)\n    if not np.allclose(A@v, lam*v):\n        print(\"BAD\",n,r,lam); break\n    worst=max(worst,r)\nelse:\n    print(\"random ok worst residual\",worst,\"failures\",fails)\n# real-dominant vs complex check\nworst=0\nfor trial in range(20000):\n    n=int(rng.integers(2,11)); A=rng.normal(size=(n,n))\n    lam,v=_dom_eig.dominant(A)\n    r=np.linalg.norm(A@v-lam*v); worst=max(worst,r)\nprint(\"worst2\",worst)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 389328,
+   "dur_ms": 5218
+  },
+  {
+   "kind": "tool",
+   "at_ms": 394546,
+   "dur_ms": 1169,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "python - <<'EOF'\nimport numpy as np, time, _dom_eig\ndef bench(fn,n,N=30000):\n    A=np.random.normal(size=(n,n)); \n    for _ in range(5): fn(A)\n    ts=[]\n    for _ in range(N):\n        A=np.random.normal(size=(n,n))\n        t0=time.perf_counter(); fn(A); t1=time.perf_counter(); ts.append(t1-t0)\n    return np.median(ts)*1e6\ndef ref(A):\n    w,v=np.linalg.eig(A); i=np.argmax(np.abs(w)); return w[i], v[:,i]\nfor n in [2,4,6,8,10]:\n    a=bench(_dom_eig.dominant,n); b=bench(ref,n)\n    print(f\"n={n:2d} cpp {a:7.3f} us   ref {b:6.2f} us   {b/a:5.1f}x\")\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 395715,
+   "dur_ms": 3059
+  },
+  {
+   "kind": "tool",
+   "at_ms": 398774,
+   "dur_ms": 674,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'EOF'\nimport numpy as np, _dom_eig\nrng=np.random.default_rng(0)\n# reproduce sequence in bench: 5 warmups then loop for n=4\nn=4\nfor _ in range(5): A=np.random.normal(size=(n,n))\nfor k in range(100000):\n    A=np.random.normal(size=(n,n))\n    try:\n        _dom_eig.dominant(A)\n    except Exception as ex:\n        print(\"fail at\",k,ex); np.save('/tmp/failA.npy',A); break\nelse: print(\"no fail\")\nEOF\npython - <<'EOF'\nimport numpy as np, _dom_eig\nA=np.load('/tmp/failA.npy'); print(A)\nprint(\"cond\",np.linalg.cond(A))\nw=np.linalg.eigvals(A); print(\"eigs\",w)\ntry: print(_dom_eig.dominant(A))\nexcept Exception as e: print(\"still fails\",e)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 399448,
+   "dur_ms": 7644
+  },
+  {
+   "kind": "tool",
+   "at_ms": 407092,
+   "dur_ms": 628,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /tmp/cbench && python - <<'EOF'\nsrc=open('/app/_dom_eig.c').read()\nstart=src.index('/* ------------------------------------------------------------------ */\\n/* Python wrapper')\nalg=src[:start]\nalg=alg.replace('#define PY_SSIZE_T_CLEAN\\n#include <Python.h>\\n#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION\\n#include <numpy/arrayobject.h>\\n','')\nalg+='''\n#include <stdio.h>\nint main(){\n  double A[16]={-0.76072277,-0.85820647,0.51994736,-1.95173927,\n                1.57712803,-1.88418778,-0.00863336,-0.87390955,\n                -0.22637309,-0.08520138,-0.33907987,-0.82000623,\n                -0.21128416,1.81549875,0.10825166,0.57797332};\n  int n=4; double H[16],d[4],e[4],ort[4]; cplx outv[4],lam;\n  double anorm=0; for(int i=0;i<16;i++)anorm+=fabs(A[i]);\n  memcpy(H,A,sizeof A); hessenberg(H,n,ort);\n  int st=hqr_eigenvalues(H,n,d,e);\n  printf(\"hqr status %d\\\\n\",st);\n  for(int i=0;i<n;i++)printf(\"  lam %d = %.10g %+.10gi\\\\n\",i,d[i],e[i]);\n  double M[16],b[4],Ax[4]; cplx Mz[16],bz[4],Axz[4],xz[4];\n  int idx=0;double best=-1;for(int i=0;i<n;i++){double m=d[i]*d[i]+e[i]*e[i];if(m>best){best=m;idx=i;}}\n  printf(\"idx %d e=%.3g\\\\n\",idx,e[idx]);\n  if(e[idx]==0.0){\n     for(int i=0;i<n;i++)b[i]=1.0;\n     double r=inviter_real(A,n,d[idx],b,anorm,M,b,Ax);\n     printf(\"inviter_real res %.3g\\\\n\",r);\n  } else {\n     for(int i=0;i<n;i++)xz[i]=1.0;\n     double r=inviter_cmplx(A,n,d[idx]+e[idx]*I,xz,anorm,Mz,bz,Axz);\n     printf(\"inviter_cmplx res %.3g\\\\n\",r);\n     for(int i=0;i<n;i++)printf(\"   x %d = %.6f %+.6fi\\\\n\",i,creal(xz[i]),cimag(xz[i]));\n  }\n  (void)outv;(void)lam;\n  return 0;\n}\n'''\nopen('/tmp/cbench/dbg.c','w').write(alg)\nEOF\ngcc -O3 -o /tmp/cbench/dbg /tmp/cbench/dbg.c -lm && /tmp/cbench/dbg"
+  },
+  {
+   "kind": "model",
+   "at_ms": 407720,
+   "dur_ms": 6624
+  },
+  {
+   "kind": "tool",
+   "at_ms": 414344,
+   "dur_ms": 802,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /tmp/cbench && python -c \"\nimport numpy as np\nA=np.load('/tmp/failA.npy'); A.astype(np.float64).tofile('/tmp/failA.bin'); print(repr(A))\n\" && python - <<'EOF'\nsrc=open('/app/_dom_eig.c').read()\nstart=src.index('/* ------------------------------------------------------------------ */\\n/* Python wrapper')\nalg=src[:start]\nalg=alg.replace('#define PY_SSIZE_T_CLEAN\\n#include <Python.h>\\n#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION\\n#include <numpy/arrayobject.h>\\n','')\nalg+='''\n#include <stdio.h>\nint main(){\n  double A[16]; FILE*f=fopen(\"/tmp/failA.bin\",\"rb\"); fread(A,8,16,f); fclose(f);\n  int n=4; double H[16],d[4],e[4],ort[4]; double anorm=0;\n  for(int i=0;i<16;i++)anorm+=fabs(A[i]);\n  memcpy(H,A,sizeof A); hessenberg(H,n,ort);\n  int st=hqr_eigenvalues(H,n,d,e);\n  printf(\"anorm=%.17g hqr status %d\\\\n\",anorm,st);\n  for(int i=0;i<n;i++)printf(\"  lam %d = %.17g %+.17gi  |.|=%.6g\\\\n\",i,d[i],e[i],hypot(d[i],e[i]));\n  double M[16],b[4],Ax[4]; cplx Mz[16],bz[4],Axz[4],xz[4];\n  int idx=0;double best=-1;for(int i=0;i<n;i++){double m=d[i]*d[i]+e[i]*e[i];if(m>best){best=m;idx=i;}}\n  printf(\"idx %d e=%.3g\\\\n\",idx,e[idx]);\n  if(e[idx]==0.0){\n     for(int i=0;i<n;i++)b[i]=1.0;\n     double r=inviter_real(A,n,d[idx],b,anorm,M,b,Ax);\n     printf(\"inviter_real res %.3g\\\\n\",r);\n     for(int i=0;i<n;i++)printf(\"   x %d = %.6f\\\\n\",i,b[i]);\n  } else {\n     for(int i=0;i<n;i++)xz[i]=1.0;\n     double r=inviter_cmplx(A,n,d[idx]+e[idx]*I,xz,anorm,Mz,bz,Axz);\n     printf(\"inviter_cmplx res %.3g\\\\n\",r);\n  }\n  cplx lam; cplx outv[4];\n  int s2=dominant_eigenpair(A,n,&lam,outv);\n  printf(\"dominant_eigenpair status %d lam %.6f %+.6fi\\\\n\",s2,creal(lam),cimag(lam));\n  return 0;\n}\n'''\nopen('/tmp/cbench/dbg2.c','w').write(alg)\nEOF\ngcc -O3 -o dbg2 dbg2.c -lm && ./dbg2"
+  },
+  {
+   "kind": "model",
+   "at_ms": 415146,
+   "dur_ms": 4701
+  },
+  {
+   "kind": "tool",
+   "at_ms": 419847,
+   "dur_ms": 66,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "cd /tmp/cbench && python - <<'EOF'\nsrc=open('/tmp/cbench/dbg2.c').read()\n# instrument real_lu_solve to print zero pivots\nsrc=src.replace('''        double d = M[k * n + k];\n        if (d == 0.0)\n            return -1;''','''        double d = M[k * n + k];\n        if (d == 0.0) { fprintf(stderr, \"zero pivot k=%d n=%d\\\\n\", k, n); return -1; }''')\nsrc=src.replace('''        for (int i = n - 1; i >= 0; i--) {\n        double s = b[i];\n        for (int j = i + 1; j < n; j++)\n            s -= M[i * n + j] * b[j];\n        double d = M[i * n + i];\n        if (d == 0.0)\n            return -1;''','''        for (int i = n - 1; i >= 0; i--) {\n        double s = b[i];\n        for (int j = i + 1; j < n; j++)\n            s -= M[i * n + j] * b[j];\n        double d = M[i * n + i];\n        if (d == 0.0) { fprintf(stderr, \"zero back pivot i=%d\\\\n\", i); return -1; }''')\nsrc=src.replace('''        nrm = sqrt(nrm);\n        if (!(nrm > 0.0) || !isfinite(nrm))\n            return -1.0;''','''        nrm = sqrt(nrm);\n        if (!(nrm > 0.0) || !isfinite(nrm)) { fprintf(stderr, \"bad nrm %g\\\\n\", nrm); return -1.0; }''')\nopen('/tmp/cbench/dbg3.c','w').write(src)\nEOF\ngcc -O3 -o dbg3 dbg3.c -lm && ./dbg3 2>&1 | head -30"
+  },
+  {
+   "kind": "model",
+   "at_ms": 419913,
+   "dur_ms": 1242
+  },
+  {
+   "kind": "tool",
+   "at_ms": 421155,
+   "dur_ms": 583,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /tmp/cbench && sed -i 's/#include <string.h>/#include <string.h>\\n#include <stdio.h>/' dbg3.c && gcc -O3 -o dbg3 dbg3.c -lm && ./dbg3 2>&1 | head -30"
+  },
+  {
+   "kind": "model",
+   "at_ms": 421738,
+   "dur_ms": 3409
+  },
+  {
+   "kind": "tool",
+   "at_ms": 425147,
+   "dur_ms": 585,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'EOF'\nimport numpy as np\nA=np.load('/tmp/failA.npy'); n=4\nlam=-1.8303222883960846\ndelta=1e-13*np.abs(A).sum()\nM=A.copy(); M[np.diag_indices(n)] += delta-lam\nprint(\"delta\",delta,\"det\",np.linalg.det(M))\n# manual LU with partial pivoting\nimport scipy.linalg as sla\nP,L,U=sla.lu(M)\nprint(\"U diag\",np.diag(U))\nprint(\"M diag\",np.diag(M))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 425732,
+   "dur_ms": 29260
+  },
+  {
+   "kind": "tool",
+   "at_ms": 454992,
+   "dur_ms": 16,
+   "tool": "Edit",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/_dom_eig.c",
+    "old_string": "static int real_lu_solve(double *M, int n, double *b)\n{\n    for (int k = 0; k < n; k++) {\n        int p = k;\n        double best = fabs(M[k * n + k]);\n        for (int i = k + 1; i < n; i++) {\n            double v = fabs(M[i * n + k]);\n            if (v > best) {\n                best = v;\n                p = i;\n            }\n        }\n        if (p != k) {\n            for (int j = 0; j < n; j++) {\n                double t = M[k * n + j];\n                M[k * n + j] = M[p * n + j];\n                M[p * n + j] = t;\n            }\n            double t = b[k];\n            b[k] = b[p];\n            b[p] = t;\n        }\n        double d = M[k * n + k];\n        if (d == 0.0)\n            return -1;\n        double inv = 1.0 / d;",
+    "new_string": "static int real_lu_solve(double *M, int n, double *b, double tiny)\n{\n    for (int k = 0; k < n; k++) {\n        int p = k;\n        double best = fabs(M[k * n + k]);\n        for (int i = k + 1; i < n; i++) {\n            double v = fabs(M[i * n + k]);\n            if (v > best) {\n                best = v;\n                p = i;\n            }\n        }\n        if (p != k) {\n            for (int j = 0; j < n; j++) {\n                double t = M[k * n + j];\n                M[k * n + j] = M[p * n + j];\n                M[p * n + j] = t;\n            }\n            double t = b[k];\n            b[k] = b[p];\n            b[p] = t;\n        }\n        double d = M[k * n + k];\n        /* A numerically singular system is exactly what inverse iteration\n         * produces.  Keep going with a tiny pivot instead of failing; the\n         * resulting huge component is the null-space direction we want. */\n        if (fabs(d) < tiny)\n            d = (d < 0.0) ? -tiny : tiny;\n        double inv = 1.0 / d;",
+    "replace_all": false
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 455008,
+   "dur_ms": 2584
+  },
+  {
+   "kind": "tool",
+   "at_ms": 457592,
+   "dur_ms": 17,
+   "tool": "Edit",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/_dom_eig.c",
+    "old_string": "    for (int i = n - 1; i >= 0; i--) {\n        double s = b[i];\n        for (int j = i + 1; j < n; j++)\n            s -= M[i * n + j] * b[j];\n        double d = M[i * n + i];\n        if (d == 0.0)\n            return -1;\n        b[i] = s / d;\n    }\n    return 0;\n}\n\n/* ------------------------------------------------------------------ */\n/* Complex LU with partial pivoting; solves M x = b in place.         */\n/* ------------------------------------------------------------------ */\nstatic int cmplx_lu_solve(cplx *M, int n, cplx *b)\n{",
+    "new_string": "    for (int i = n - 1; i >= 0; i--) {\n        double s = b[i];\n        for (int j = i + 1; j < n; j++)\n            s -= M[i * n + j] * b[j];\n        double d = M[i * n + i];\n        if (fabs(d) < tiny)\n            d = (d < 0.0) ? -tiny : tiny;\n        b[i] = s / d;\n    }\n    return 0;\n}\n\n/* ------------------------------------------------------------------ */\n/* Complex LU with partial pivoting; solves M x = b in place.         */\n/* ------------------------------------------------------------------ */\nstatic int cmplx_lu_solve(cplx *M, int n, cplx *b, double tiny)\n{",
+    "replace_all": false
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 457609,
+   "dur_ms": 1906
+  },
+  {
+   "kind": "tool",
+   "at_ms": 459515,
+   "dur_ms": 21,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "grep -n \"lu_solve\\|tiny\\|for (int i = n - 1\" /app/_dom_eig.c | head -40"
+  },
+  {
+   "kind": "model",
+   "at_ms": 459536,
+   "dur_ms": 1723
+  },
+  {
+   "kind": "tool",
+   "at_ms": 461259,
+   "dur_ms": 10,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/_dom_eig.c",
+    "offset": 309,
+    "limit": 55
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 461269,
+   "dur_ms": 1933
+  },
+  {
+   "kind": "tool",
+   "at_ms": 463202,
+   "dur_ms": 17,
+   "tool": "Edit",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/_dom_eig.c",
+    "old_string": "        cplx d = M[k * n + k];\n        double dd = creal(d) * creal(d) + cimag(d) * cimag(d);\n        if (dd == 0.0)\n            return -1;\n        cplx inv = conj(d) / dd;",
+    "new_string": "        cplx d = M[k * n + k];\n        double dd = creal(d) * creal(d) + cimag(d) * cimag(d);\n        if (dd < tiny * tiny) {\n            d = tiny;\n            dd = tiny * tiny;\n        }\n        cplx inv = conj(d) / dd;",
+    "replace_all": false
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 463219,
+   "dur_ms": 1932
+  },
+  {
+   "kind": "tool",
+   "at_ms": 465151,
+   "dur_ms": 16,
+   "tool": "Edit",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/_dom_eig.c",
+    "old_string": "        cplx d = M[i * n + i];\n        double dd = creal(d) * creal(d) + cimag(d) * cimag(d);\n        if (dd == 0.0)\n            return -1;\n        b[i] = s * conj(d) / dd;",
+    "new_string": "        cplx d = M[i * n + i];\n        double dd = creal(d) * creal(d) + cimag(d) * cimag(d);\n        if (dd < tiny * tiny) {\n            d = tiny;\n            dd = tiny * tiny;\n        }\n        b[i] = s * conj(d) / dd;",
+    "replace_all": false
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 465167,
+   "dur_ms": 4006
+  },
+  {
+   "kind": "tool",
+   "at_ms": 469173,
+   "dur_ms": 8,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/_dom_eig.c",
+    "offset": 365,
+    "limit": 120
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 469181,
+   "dur_ms": 3105
+  },
+  {
+   "kind": "tool",
+   "at_ms": 472286,
+   "dur_ms": 13,
+   "tool": "Edit",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/_dom_eig.c",
+    "old_string": "static double inviter_real(const double *A, int n, double lam, double *x,\n                           double anorm, double *M, double *b, double *Ax)\n{\n    double delta = 1e-13 * anorm;\n    double res = -1.0;\n\n    for (int i = 0; i < n; i++)\n        b[i] = 1.0;\n\n    for (int iter = 0; iter < 3; iter++) {\n        for (int i = 0; i < n; i++)\n            for (int j = 0; j < n; j++)\n                M[i * n + j] = A[i * n + j];\n        for (int i = 0; i < n; i++)\n            M[i * n + i] += delta - lam;\n\n        if (real_lu_solve(M, n, b) != 0)\n            return -1.0;",
+    "new_string": "static double inviter_real(const double *A, int n, double lam, double anorm,\n                           double *x, double *rho_out, double *M, double *b,\n                           double *Ax)\n{\n    double delta = 1e-11 * anorm;\n    double tiny = anorm * 1e-30;\n    double res = -1.0;\n\n    for (int i = 0; i < n; i++)\n        b[i] = 1.0;\n\n    for (int iter = 0; iter < 3; iter++) {\n        for (int i = 0; i < n; i++)\n            for (int j = 0; j < n; j++)\n                M[i * n + j] = A[i * n + j];\n        for (int i = 0; i < n; i++)\n            M[i * n + i] += delta - lam;\n\n        if (real_lu_solve(M, n, b, tiny) != 0)\n            return -1.0;",
+    "replace_all": false
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 472299,
+   "dur_ms": 1820
+  },
+  {
+   "kind": "tool",
+   "at_ms": 474119,
+   "dur_ms": 7,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/_dom_eig.c",
+    "offset": 366,
+    "limit": 60
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 474126,
+   "dur_ms": 4697
+  },
+  {
+   "kind": "tool",
+   "at_ms": 478823,
+   "dur_ms": 17,
+   "tool": "Edit",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/_dom_eig.c",
+    "old_string": "        res = sqrt(rs);\n        lam = rho;\n        for (int i = 0; i < n; i++)\n            x[i] = b[i];\n\n        if (res <= 1e-13 * anorm)\n            break;\n        delta = 1e-15 * anorm;\n    }\n    return res;\n}\n\n/* ------------------------------------------------------------------ */\n/* Eigenvector for a complex eigenvalue, using complex arithmetic.    */\n/* ------------------------------------------------------------------ */\nstatic double inviter_cmplx(const double *A, int n, cplx lam, cplx *x,\n                            double anorm, cplx *M, cplx *b, cplx *Ax)\n{\n    double delta = 1e-13 * anorm;\n    double res = -1.0;\n\n    for (int i = 0; i < n; i++)\n        b[i] = 1.0;\n\n    for (int iter = 0; iter < 3; iter++) {\n        for (int i = 0; i < n; i++)\n            for (int j = 0; j < n; j++)\n                M[i * n + j] = (cplx)A[i * n + j];\n        for (int i = 0; i < n; i++)\n            M[i * n + i] += delta - lam;\n\n        if (cmplx_lu_solve(M, n, b) != 0)\n            return -1.0;",
+    "new_string": "        res = sqrt(rs);\n        lam = rho;\n        for (int i = 0; i < n; i++)\n            x[i] = b[i];\n\n        if (iter >= 1 && res <= 1e-12 * anorm)\n            break;\n        delta = (iter == 0) ? 1e-13 * anorm : 1e-15 * anorm;\n    }\n    *rho_out = lam;\n    return res;\n}\n\n/* ------------------------------------------------------------------ */\n/* Eigenvector for a complex eigenvalue, using complex arithmetic.    */\n/* ------------------------------------------------------------------ */\nstatic double inviter_cmplx(const double *A, int n, cplx lam, double anorm,\n                            cplx *x, cplx *rho_out, cplx *M, cplx *b, cplx *Ax)\n{\n    double delta = 1e-11 * anorm;\n    double tiny = anorm * 1e-30;\n    double res = -1.0;\n\n    for (int i = 0; i < n; i++)\n        b[i] = 1.0;\n\n    for (int iter = 0; iter < 3; iter++) {\n        for (int i = 0; i < n; i++)\n            for (int j = 0; j < n; j++)\n                M[i * n + j] = (cplx)A[i * n + j];\n        for (int i = 0; i < n; i++)\n            M[i * n + i] += delta - lam;\n\n        if (cmplx_lu_solve(M, n, b, tiny) != 0)\n            return -1.0;",
+    "replace_all": false
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 478840,
+   "dur_ms": 3036
+  },
+  {
+   "kind": "tool",
+   "at_ms": 481876,
+   "dur_ms": 7,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/_dom_eig.c",
+    "offset": 408,
+    "limit": 75
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 481883,
+   "dur_ms": 2203
+  },
+  {
+   "kind": "tool",
+   "at_ms": 484086,
+   "dur_ms": 16,
+   "tool": "Edit",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/_dom_eig.c",
+    "old_string": "        res = sqrt(rs);\n        lam = rho;\n        for (int i = 0; i < n; i++)\n            x[i] = b[i];\n\n        if (res <= 1e-13 * anorm)\n            break;\n        delta = 1e-15 * anorm;\n    }\n    return res;\n}\n\n/* ------------------------------------------------------------------ */\n/* Core routine: A is row-major n x n (n >= 1).                        */",
+    "new_string": "        res = sqrt(rs);\n        lam = rho;\n        for (int i = 0; i < n; i++)\n            x[i] = b[i];\n\n        if (iter >= 1 && res <= 1e-12 * anorm)\n            break;\n        delta = (iter == 0) ? 1e-13 * anorm : 1e-15 * anorm;\n    }\n    *rho_out = lam;\n    return res;\n}\n\n/* ------------------------------------------------------------------ */\n/* Core routine: A is row-major n x n (n >= 1).                        */",
+    "replace_all": false
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 484102,
+   "dur_ms": 1516
+  },
+  {
+   "kind": "tool",
+   "at_ms": 485618,
+   "dur_ms": 9,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/_dom_eig.c",
+    "offset": 484,
+    "limit": 120
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 485627,
+   "dur_ms": 4429
+  },
+  {
+   "kind": "tool",
+   "at_ms": 490056,
+   "dur_ms": 16,
+   "tool": "Edit",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/_dom_eig.c",
+    "old_string": "    if (e[idx] == 0.0) {\n        /* Real eigenvalue: real arithmetic.  `b` doubles as workspace and\n         * output -- inviter_real only copies the working vector into x, and\n         * the working vector carries over between iterations by design. */\n        if (inviter_real(A, n, d[idx], b, anorm, M, b, Ax) < 0.0)\n            goto cleanup;\n        double rho = 0.0;\n        for (int i = 0; i < n; i++) {\n            double s = 0.0;\n            for (int j = 0; j < n; j++)\n                s += A[i * n + j] * b[j];\n            rho += b[i] * s;\n        }\n        out_lam[0] = rho;\n        for (int i = 0; i < n; i++)\n            out_vec[i] = b[i];\n    } else {\n        /* complex eigenvalue: complex arithmetic */\n        cplx lam = d[idx] + e[idx] * I;\n        for (int i = 0; i < n; i++)\n            xz[i] = 1.0;\n        double res = inviter_cmplx(A, n, lam, xz, anorm, Mz, bz, Axz);\n        if (res < 0.0 || !isfinite(res))\n            goto cleanup;\n        cplx rho = 0.0;\n        for (int i = 0; i < n; i++) {\n            cplx s = 0.0;\n            for (int j = 0; j < n; j++)\n                s += (cplx)A[i * n + j] * xz[j];\n            rho += conj(xz[i]) * s;\n        }\n        out_lam[0] = rho;\n        for (int i = 0; i < n; i++)\n            out_vec[i] = xz[i];\n    }\n    status = 0;",
+    "new_string": "    double res;\n    if (e[idx] == 0.0) {\n        /* Real eigenvalue: real arithmetic.  `b` doubles as workspace and\n         * output -- inviter_real only copies the working vector into x, and\n         * the working vector carries over between iterations by design. */\n        double rho = 0.0;\n        res = inviter_real(A, n, d[idx], anorm, b, &rho, M, b, Ax);\n        if (res < 0.0 || !isfinite(res))\n            goto cleanup;\n        out_lam[0] = rho;\n        for (int i = 0; i < n; i++)\n            out_vec[i] = b[i];\n    } else {\n        /* complex eigenvalue: complex arithmetic */\n        cplx lam = d[idx] + e[idx] * I;\n        for (int i = 0; i < n; i++)\n            xz[i] = 1.0;\n        cplx rho = 0.0;\n        res = inviter_cmplx(A, n, lam, anorm, xz, &rho, Mz, bz, Axz);\n        if (res < 0.0 || !isfinite(res))\n            goto cleanup;\n        out_lam[0] = rho;\n        for (int i = 0; i < n; i++)\n            out_vec[i] = xz[i];\n    }\n\n    /* Guard against pathological inputs: if the computed pair is not a\n     * good eigenpair, report failure so the caller can use a reference\n     * routine instead of returning something wrong. */\n    {\n        double rho_abs = cabs(out_lam[0]);\n        double tol = 1e-9 + 1e-6 * rho_abs;\n        if (res > tol)\n            goto cleanup;\n    }\n    status = 0;",
+    "replace_all": false
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 490072,
+   "dur_ms": 2754
+  },
+  {
+   "kind": "tool",
+   "at_ms": 492826,
+   "dur_ms": 6196,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "INC=$(python -c \"import numpy;print(numpy.get_include())\") && PYINC=$(python -c \"import sysconfig;print(sysconfig.get_path('include'))\") && SUF=$(python -c \"import sysconfig;print(sysconfig.get_config_var('EXT_SUFFIX'))\") && gcc -O3 -Wall -Wextra -fPIC -shared -I$INC -I$PYINC _dom_eig.c -o _dom_eig$SUF -lm 2>&1 | head -20 && python - <<'EOF'\nimport numpy as np, _dom_eig\nA=np.load('/tmp/failA.npy')\nlam,v=_dom_eig.dominant(A); print(\"fixed case:\",lam, np.linalg.norm(A@v-lam*v), np.allclose(A@v,lam*v))\nrng=np.random.default_rng(0)\nworst=0; fails=0; bad=0\nfor trial in range(100000):\n    n=int(rng.integers(1,11)); A=rng.normal(size=(n,n))\n    try: lam,v=_dom_eig.dominant(A)\n    except Exception: fails+=1; continue\n    r=np.linalg.norm(A@v-lam*v)\n    if not np.allclose(A@v,lam*v): bad+=1; print(\"BAD\",n,r); break\n    worst=max(worst,r)\nprint(\"worst\",worst,\"fails\",fails,\"bad\",bad)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 499022,
+   "dur_ms": 2024
+  },
+  {
+   "kind": "tool",
+   "at_ms": 501046,
+   "dur_ms": 9653,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'EOF'\nimport numpy as np, time, _dom_eig\ndef bench(fn,n,N=40000):\n    A=np.random.normal(size=(n,n))\n    for _ in range(5): fn(A)\n    ts=[]\n    for _ in range(N):\n        A=np.random.normal(size=(n,n))\n        t0=time.perf_counter(); fn(A); t1=time.perf_counter(); ts.append(t1-t0)\n    return np.median(ts)*1e6\ndef ref(A):\n    w,v=np.linalg.eig(A); i=np.argmax(np.abs(w)); return w[i], v[:,i]\nfor n in [2,4,6,8,10]:\n    a=bench(_dom_eig.dominant,n); b=bench(ref,n)\n    print(f\"n={n:2d} cpp {a:7.3f} us   ref {b:6.2f} us   {b/a:5.1f}x\")\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 510699,
+   "dur_ms": 8046
+  },
+  {
+   "kind": "tool",
+   "at_ms": 518745,
+   "dur_ms": 8009,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /tmp/cbench && python - <<'EOF'\nsrc=open('/app/_dom_eig.c').read()\nstart=src.index('/* ------------------------------------------------------------------ */\\n/* Python wrapper')\nalg=src[:start]\nalg=alg.replace('#define PY_SSIZE_T_CLEAN\\n#include <Python.h>\\n#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION\\n#include <numpy/arrayobject.h>\\n','')\nalg+='''\n#include <stdio.h>\n#include <time.h>\nstatic double now(){struct timespec ts;clock_gettime(CLOCK_MONOTONIC,&ts);return ts.tv_sec+1e-9*ts.tv_nsec;}\nstatic int cmpd(const void*a,const void*b){double x=*(const double*)a,y=*(const double*)b;return (x>y)-(x<y);}\nint main(int argc,char**argv){\n  int n=argc>1?atoi(argv[1]):10; int N=argc>2?atoi(argv[2]):100000;\n  double*A=malloc(n*n*8),*H=malloc(n*n*8),*d=malloc(n*8),*e=malloc(n*8),*ort=malloc(n*8);\n  double*ts=malloc(N*8); srand(1);\n  for(int it=0;it<N+2000;it++){\n    for(int i=0;i<n*n;i++)A[i]=(double)rand()/RAND_MAX*2-1;\n    double t0=now();\n    memcpy(H,A,n*n*8); hessenberg(H,n,ort); hqr_eigenvalues(H,n,d,e);\n    double t1=now();\n    if(it>=2000)ts[it-2000]=t1-t0;\n  }\n  qsort(ts,N,8,cmpd); printf(\"n=%d hess+qr median %.3f us  min %.3f\\\\n\",n,ts[N/2]*1e6,ts[0]*1e6);\n  // full dominant_eigenpair\n  cplx lam, v[64];\n  for(int it=0;it<N+2000;it++){\n    for(int i=0;i<n*n;i++)A[i]=(double)rand()/RAND_MAX*2-1;\n    double t0=now(); dominant_eigenpair(A,n,&lam,v); double t1=now();\n    if(it>=2000)ts[it-2000]=t1-t0;\n  }\n  qsort(ts,N,8,cmpd); printf(\"n=%d full median %.3f us  min %.3f\\\\n\",n,ts[N/2]*1e6,ts[0]*1e6);\n  return 0;\n}\n'''\nopen('/tmp/cbench/algbench2.c','w').write(alg)\nEOF\nfor f in \"-O3\" \"-O3 -fno-math-errno\" \"-O3 -fno-math-errno -funroll-loops\" \"-O3 -fno-math-errno -march=native\"; do echo \"=== $f\"; gcc $f -o ab2 algbench2.c -lm && ./ab2 10 60000; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 526754,
+   "dur_ms": 22676
+  },
+  {
+   "kind": "tool",
+   "at_ms": 549430,
+   "dur_ms": 17,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/eigen.py",
+    "content": "\"\"\"Dominant eigenpair of small dense real matrices.\n\nThe heavy lifting is done by a small self-contained C extension\n(``_dom_eig.c``) that is compiled on first use if a prebuilt module is not\navailable.  It computes the eigenvalues with a Householder Hessenberg\nreduction followed by a Francis double-shift QR iteration, picks the one of\nlargest modulus, and recovers its eigenvector by inverse iteration with a\nRayleigh-quotient shift -- roughly one to two orders of magnitude faster than\n``np.linalg.eig`` for the sizes in question, which computes every eigenpair.\n\nIf the native module cannot be built or loaded (or if it reports failure on a\npathological input) we fall back to LAPACK through SciPy/NumPy.\n\"\"\"\n\nimport glob\nimport importlib.util\nimport os\nimport sys\n\nimport numpy as np\n\n_HERE = os.path.dirname(os.path.abspath(__file__))\n\n\ndef _load_native():\n    \"\"\"Return the native ``dominant`` callable, building it if necessary.\"\"\"\n    suffix = None\n    try:\n        import sysconfig\n\n        suffix = sysconfig.get_config_var(\"EXT_SUFFIX\")\n    except Exception:\n        pass\n\n    candidates = []\n    if suffix:\n        candidates.append(os.path.join(_HERE, \"_dom_eig\" + suffix))\n    candidates.extend(sorted(glob.glob(os.path.join(_HERE, \"_dom_eig*.so\"))))\n    candidates.extend(sorted(glob.glob(os.path.join(_HERE, \"_dom_eig*.pyd\"))))\n\n    def _import(path):\n        name = \"_dom_eig\"\n        spec = importlib.util.spec_from_file_location(name, path)\n        if spec is None or spec.loader is None:\n            return None\n        module = importlib.util.module_from_spec(spec)\n        spec.loader.exec_module(module)\n        return module.dominant\n\n    for path in candidates:\n        if not os.path.exists(path):\n            continue\n        try:\n            return _import(path)\n        except Exception:\n            continue\n\n    # Nothing prebuilt: try to compile the bundled source.\n    src = os.path.join(_HERE, \"_dom_eig.c\")\n    if not os.path.exists(src):\n        return None\n    try:\n        import subprocess\n        import sysconfig\n\n        if suffix is None:\n            suffix = \".so\"\n        out = os.path.join(_HERE, \"_dom_eig\" + suffix)\n        cc = os.environ.get(\"CC\") or \"gcc\"\n        includes = []\n        try:\n            includes.append(np.get_include())\n        except Exception:\n            pass\n        try:\n            includes.append(sysconfig.get_path(\"include\"))\n        except Exception:\n            pass\n        cmd = [cc, \"-O3\", \"-shared\", \"-fPIC\"]\n        cmd += [\"-I\" + p for p in includes if p]\n        cmd += [src, \"-o\", out, \"-lm\"]\n        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL,\n                       stderr=subprocess.DEVNULL, timeout=120)\n        return _import(out)\n    except Exception:\n        return None\n\n\n_native_dominant = _load_native()\n\ntry:  # SciPy exposes LAPACK directly and is a bit faster than numpy here.\n    from scipy.linalg import eig as _scipy_eig\nexcept Exception:  # pragma: no cover - SciPy is optional\n    _scipy_eig = None\n\n\ndef _reference(A):\n    if _scipy_eig is not None:\n        eigenvalues, eigenvectors = _scipy_eig(\n            A, check_finite=False, overwrite_a=False\n        )\n    else:\n        eigenvalues, eigenvectors = np.linalg.eig(A)\n    idx = np.argmax(np.abs(eigenvalues))\n    return eigenvalues[idx], eigenvectors[:, idx]\n\n\ndef find_dominant_eigenvalue_and_eigenvector(A: np.ndarray):\n    \"\"\"\n    Find the dominant eigenvalue and eigenvector of a general real square matrix.\n\n    \"Dominant\" is the eigenvalue of largest magnitude.  The matrix is not\n    assumed to be symmetric, so the returned pair may be complex.\n\n    Args:\n        A: Real-valued square matrix (accepts numpy arrays) up to size 10x10,\n        dtype np.float64.\n\n    Returns:\n        eigenvalue: Dominant eigenvalue (potentially complex)\n        eigenvector: Corresponding eigenvector (np.ndarray, potentially complex)\n    \"\"\"\n    if _native_dominant is not None:\n        try:\n            return _native_dominant(A)\n        except Exception:\n            # Non-square input, non-convergence, or similar: use the\n            # reference path (which also raises the appropriate error for\n            # invalid shapes).\n            pass\n    return _reference(A)\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 549447,
+   "dur_ms": 1350
+  },
+  {
+   "kind": "tool",
+   "at_ms": 550797,
+   "dur_ms": 667,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python eval.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 551464,
+   "dur_ms": 4306
+  },
+  {
+   "kind": "tool",
+   "at_ms": 555770,
+   "dur_ms": 12686,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'EOF'\nimport numpy as np, time\nfrom eigen import find_dominant_eigenvalue_and_eigenvector as f\n\nrng = np.random.default_rng(12345)\nbad = 0; fails = 0; worst = 0.0; worst_magdiff = 0.0\nt0=time.time()\nN = 120000\nfor trial in range(N):\n    n = int(rng.integers(1, 11))\n    kind = trial % 6\n    if kind == 0:\n        A = rng.normal(size=(n, n))\n    elif kind == 1:\n        A = rng.uniform(-5, 5, size=(n, n))\n    elif kind == 2:\n        A = rng.integers(-9, 10, size=(n, n)).astype(np.float64)\n    elif kind == 3:\n        A = rng.normal(size=(n, n)); A = (A + A.T) * 0.5\n    elif kind == 4:\n        A = np.triu(rng.normal(size=(n, n)))\n    else:\n        A = rng.normal(size=(n, n)) * 10.0 ** rng.uniform(-6, 6)\n    try:\n        lam, v = f(A)\n    except Exception as ex:\n        fails += 1\n        if fails < 6: print(\"EXC\", n, kind, ex)\n        continue\n    r = np.linalg.norm(A @ v - lam * v)\n    if not np.allclose(A @ v, lam * v):\n        bad += 1\n        if bad < 6: print(\"BAD\", n, kind, r, lam, np.abs(A).max())\n        continue\n    worst = max(worst, r)\n    w = np.linalg.eigvals(A)\n    dm = abs(abs(lam) - np.abs(w).max()) / max(1.0, np.abs(w).max())\n    worst_magdiff = max(worst_magdiff, dm)\nprint(f\"N={N} bad={bad} fails={fails} worst_res={worst:.3e} worst_mag_rel_diff={worst_magdiff:.3e} time={time.time()-t0:.1f}s\")\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 568456,
+   "dur_ms": 4943
+  },
+  {
+   "kind": "tool",
+   "at_ms": 573399,
+   "dur_ms": 38,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "python - <<'EOF'\nimport numpy as np\nfrom eigen import find_dominant_eigenvalue_and_eigenvector as f\nrng = np.random.default_rng(12345)\nrecs=[]\nfor trial in range(120000):\n    n = int(rng.integers(1, 11)); kind = trial % 6\n    if kind == 0: A = rng.normal(size=(n, n))\n    elif kind == 1: A = rng.uniform(-5, 5, size=(n, n))\n    elif kind == 2: A = rng.integers(-9, 10, size=(n, n)).astype(np.float64)\n    elif kind == 3:\n        A = rng.normal(size=(n, n)); A = (A + A.T) * 0.5\n    elif kind == 4: A = np.triu(rng.normal(size=(n, n)))\n    else: A = rng.normal(size=(n, n)) * 10.0 ** rng.uniform(-6, 6)\n    lam, v = f(A)\n    w = np.linalg.eigvals(A)\n    m = np.abs(w).max()\n    dm = abs(abs(lam) - m) / max(1.0, m)\n    if dm > 1e-6:\n        recs.append((dm, trial, n, kind, A, lam, m))\nrecs.sort(key=lambda x: -x[0])\nprint(\"num mismatches\", len(recs))\nfor dm,trial,n,kind,A,lam,m in recs[:6]:\n    print(f\"dm={dm:.3e} trial={trial} n={n} kind={kind} lam={lam} refmaxmod={m:.6g} allclose={np.allclose(A@v:=None,0) if False else ''}\")\n    print(\"   |lam|=\",abs(lam))\n    if dm>0.5: np.save('/tmp/badcase.npy',A); print(\"saved\"); break\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 573437,
+   "dur_ms": 3375
+  },
+  {
+   "kind": "tool",
+   "at_ms": 576812,
+   "dur_ms": 6062,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'EOF'\nimport numpy as np\nfrom eigen import find_dominant_eigenvalue_and_eigenvector as f\nrng = np.random.default_rng(12345)\nrecs=[]\nfor trial in range(120000):\n    n = int(rng.integers(1, 11)); kind = trial % 6\n    if kind == 0: A = rng.normal(size=(n, n))\n    elif kind == 1: A = rng.uniform(-5, 5, size=(n, n))\n    elif kind == 2: A = rng.integers(-9, 10, size=(n, n)).astype(np.float64)\n    elif kind == 3:\n        A = rng.normal(size=(n, n)); A = (A + A.T) * 0.5\n    elif kind == 4: A = np.triu(rng.normal(size=(n, n)))\n    else: A = rng.normal(size=(n, n)) * 10.0 ** rng.uniform(-6, 6)\n    lam, v = f(A)\n    w = np.linalg.eigvals(A)\n    m = np.abs(w).max()\n    dm = abs(abs(lam) - m) / max(1.0, m)\n    if dm > 1e-6:\n        recs.append((dm, trial, n, kind, A.copy(), lam, m))\nrecs.sort(key=lambda x: -x[0])\nprint(\"num mismatches\", len(recs))\nfor dm,trial,n,kind,A,lam,m in recs[:8]:\n    print(f\"dm={dm:.3e} trial={trial} n={n} kind={kind} lam={lam} |lam|={abs(lam):.6g} refmaxmod={m:.6g} maxA={np.abs(A).max():.3g}\")\ndm,trial,n,kind,A,lam,m = recs[0]\nnp.save('/tmp/badcase.npy',A)\nprint(\"\\nworst saved; residual check:\")\nv=f(A)[1]; lam2,v2=f(A)\nprint(np.linalg.norm(A@v2-lam2*v2), np.allclose(A@v2,lam2*v2))\nprint(\"numpy eigs:\",np.linalg.eigvals(A))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 582874,
+   "dur_ms": 11170
+  },
+  {
+   "kind": "tool",
+   "at_ms": 594044,
+   "dur_ms": 866,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'EOF'\nimport numpy as np\nfrom eigen import find_dominant_eigenvalue_and_eigenvector as f\nrng = np.random.default_rng(12345)\nfor trial in range(120000):\n    n = int(rng.integers(1, 11)); kind = trial % 6\n    if kind == 0: A = rng.normal(size=(n, n))\n    elif kind == 1: A = rng.uniform(-5, 5, size=(n, n))\n    elif kind == 2: A = rng.integers(-9, 10, size=(n, n)).astype(np.float64)\n    elif kind == 3:\n        A = rng.normal(size=(n, n)); A = (A + A.T) * 0.5\n    elif kind == 4: A = np.triu(rng.normal(size=(n, n)))\n    else: A = rng.normal(size=(n, n)) * 10.0 ** rng.uniform(-6, 6)\n    lam, v = f(A)\n    w = np.linalg.eigvals(A); m=np.abs(w).max()\n    if abs(abs(lam)-m)/max(1,m) > 1e-6:\n        print(\"trial\",trial,\"n\",n,\"kind\",kind)\n        print(\"A=\",repr(A))\n        print(\"our lam\",lam,\"eigvals\",w)\n        print(\"our vec\",v,\"A@v\",A@v)\n        np.save('/tmp/bad2.npy',A)\n        break\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 594910,
+   "dur_ms": 21119
+  },
+  {
+   "kind": "tool",
+   "at_ms": 616029,
+   "dur_ms": 15,
+   "tool": "Edit",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/_dom_eig.c",
+    "old_string": "    double delta = 1e-11 * anorm;\n    double tiny = anorm * 1e-30;\n    double res = -1.0;\n\n    for (int i = 0; i < n; i++)\n        b[i] = 1.0;\n\n    for (int iter = 0; iter < 3; iter++) {\n        for (int i = 0; i < n; i++)\n            for (int j = 0; j < n; j++)\n                M[i * n + j] = A[i * n + j];\n        for (int i = 0; i < n; i++)\n            M[i * n + i] += delta - lam;\n\n        if (real_lu_solve(M, n, b, tiny) != 0)\n            return -1.0;",
+    "new_string": "    double delta = 1e-11 * anorm;\n    double tiny = anorm * 1e-30;\n    double res = -1.0;\n\n    /* Generic start vector.  A constant vector can be exactly orthogonal to\n     * the left eigenvector, in which case the resolvent has no pole along the\n     * wanted eigendirection and inverse iteration converges elsewhere. */\n    for (int i = 0; i < n; i++)\n        b[i] = 1.0 + 0.7548776662466927 * (double)i;\n\n    for (int iter = 0; iter < 3; iter++) {\n        for (int i = 0; i < n; i++)\n            for (int j = 0; j < n; j++)\n                M[i * n + j] = A[i * n + j];\n        for (int i = 0; i < n; i++)\n            M[i * n + i] += delta - lam;\n\n        if (real_lu_solve(M, n, b, tiny) != 0)\n            return -1.0;",
+    "replace_all": false
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 616044,
+   "dur_ms": 3603
+  },
+  {
+   "kind": "tool",
+   "at_ms": 619647,
+   "dur_ms": 15,
+   "tool": "Edit",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/_dom_eig.c",
+    "old_string": "    double delta = 1e-11 * anorm;\n    double tiny = anorm * 1e-30;\n    double res = -1.0;\n\n    for (int i = 0; i < n; i++)\n        b[i] = 1.0;\n\n    for (int iter = 0; iter < 3; iter++) {\n        for (int i = 0; i < n; i++)\n            for (int j = 0; j < n; j++)\n                M[i * n + j] = (cplx)A[i * n + j];\n        for (int i = 0; i < n; i++)\n            M[i * n + i] += delta - lam;\n\n        if (cmplx_lu_solve(M, n, b, tiny) != 0)\n            return -1.0;",
+    "new_string": "    double delta = 1e-11 * anorm;\n    double tiny = anorm * 1e-30;\n    double res = -1.0;\n\n    /* Generic start vector: see the comment in inviter_real. */\n    for (int i = 0; i < n; i++)\n        b[i] = 1.0 + 0.7548776662466927 * (double)i;\n\n    for (int iter = 0; iter < 3; iter++) {\n        for (int i = 0; i < n; i++)\n            for (int j = 0; j < n; j++)\n                M[i * n + j] = (cplx)A[i * n + j];\n        for (int i = 0; i < n; i++)\n            M[i * n + i] += delta - lam;\n\n        if (cmplx_lu_solve(M, n, b, tiny) != 0)\n            return -1.0;",
+    "replace_all": false
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 619662,
+   "dur_ms": 1949
+  },
+  {
+   "kind": "tool",
+   "at_ms": 621611,
+   "dur_ms": 8,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/_dom_eig.c",
+    "offset": 430,
+    "limit": 22
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 621619,
+   "dur_ms": 5473
+  },
+  {
+   "kind": "tool",
+   "at_ms": 627092,
+   "dur_ms": 14,
+   "tool": "Edit",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/_dom_eig.c",
+    "old_string": "    double res;\n    if (e[idx] == 0.0) {\n        /* Real eigenvalue: real arithmetic.  `b` doubles as workspace and\n         * output -- inviter_real only copies the working vector into x, and\n         * the working vector carries over between iterations by design. */\n        double rho = 0.0;\n        res = inviter_real(A, n, d[idx], anorm, b, &rho, M, b, Ax);\n        if (res < 0.0 || !isfinite(res))\n            goto cleanup;\n        out_lam[0] = rho;\n        for (int i = 0; i < n; i++)\n            out_vec[i] = b[i];\n    } else {\n        /* complex eigenvalue: complex arithmetic */\n        cplx lam = d[idx] + e[idx] * I;\n        for (int i = 0; i < n; i++)\n            xz[i] = 1.0;\n        cplx rho = 0.0;\n        res = inviter_cmplx(A, n, lam, anorm, xz, &rho, Mz, bz, Axz);\n        if (res < 0.0 || !isfinite(res))\n            goto cleanup;\n        out_lam[0] = rho;\n        for (int i = 0; i < n; i++)\n            out_vec[i] = xz[i];\n    }",
+    "new_string": "    double res;\n    double target_err;\n    if (e[idx] == 0.0) {\n        /* Real eigenvalue: real arithmetic.  `b` doubles as workspace and\n         * output -- inviter_real only copies the working vector into x, and\n         * the working vector carries over between iterations by design. */\n        double rho = 0.0;\n        res = inviter_real(A, n, d[idx], anorm, b, &rho, M, b, Ax);\n        if (res < 0.0 || !isfinite(res))\n            goto cleanup;\n        out_lam[0] = rho;\n        for (int i = 0; i < n; i++)\n            out_vec[i] = b[i];\n        target_err = fabs(rho - d[idx]);\n    } else {\n        /* complex eigenvalue: complex arithmetic */\n        cplx lam = d[idx] + e[idx] * I;\n        cplx rho = 0.0;\n        res = inviter_cmplx(A, n, lam, anorm, xz, &rho, Mz, bz, Axz);\n        if (res < 0.0 || !isfinite(res))\n            goto cleanup;\n        out_lam[0] = rho;\n        for (int i = 0; i < n; i++)\n            out_vec[i] = xz[i];\n        target_err = cabs(rho - lam);\n    }\n\n    /* The inverse iteration must have converged to the eigenvalue the QR\n     * step selected; otherwise the returned pair, while still an eigenpair,\n     * might not be the dominant one. */\n    {\n        double scale = 1.0 + cabs(out_lam[0]);\n        if (target_err > 1e-6 * scale)\n            goto cleanup;\n    }",
+    "replace_all": false
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 627106,
+   "dur_ms": 5396
+  },
+  {
+   "kind": "tool",
+   "at_ms": 632502,
+   "dur_ms": 15620,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "INC=$(python -c \"import numpy;print(numpy.get_include())\") && PYINC=$(python -c \"import sysconfig;print(sysconfig.get_path('include'))\") && SUF=$(python -c \"import sysconfig;print(sysconfig.get_config_var('EXT_SUFFIX'))\") && gcc -O3 -fPIC -shared -I$INC -I$PYINC _dom_eig.c -o _dom_eig$SUF -lm && python - <<'EOF'\nimport numpy as np, time\nfrom eigen import find_dominant_eigenvalue_and_eigenvector as f\nA=np.array([[5.,-5.],[1.,-1.]]); lam,v=f(A); print(\"case:\",lam, np.linalg.norm(A@v-lam*v), np.allclose(A@v,lam*v))\nrng = np.random.default_rng(12345)\nbad=fails=0; worst=0; wmd=0\nt0=time.time(); N=150000\nfor trial in range(N):\n    n = int(rng.integers(1, 11)); kind = trial % 6\n    if kind == 0: A = rng.normal(size=(n, n))\n    elif kind == 1: A = rng.uniform(-5, 5, size=(n, n))\n    elif kind == 2: A = rng.integers(-9, 10, size=(n, n)).astype(np.float64)\n    elif kind == 3:\n        A = rng.normal(size=(n, n)); A = (A + A.T) * 0.5\n    elif kind == 4: A = np.triu(rng.normal(size=(n, n)))\n    else: A = rng.normal(size=(n, n)) * 10.0 ** rng.uniform(-6, 6)\n    try: lam, v = f(A)\n    except Exception as ex:\n        fails+=1\n        if fails<4: print(\"EXC\",n,kind,ex)\n        continue\n    r = np.linalg.norm(A @ v - lam * v)\n    if not np.allclose(A @ v, lam * v):\n        bad+=1\n        if bad<4: print(\"BAD\", n, kind, r, lam)\n        continue\n    worst=max(worst,r)\n    w=np.linalg.eigvals(A); m=np.abs(w).max()\n    dm=abs(abs(lam)-m)/max(1.0,m)\n    if dm>1e-6:\n        wmd+=1\n        if wmd<6: print(\"MAGDIFF\",dm,n,kind,lam,m)\nprint(f\"N={N} bad={bad} fails={fails} magdiff={wmd} worst_res={worst:.3e} time={time.time()-t0:.1f}s\")\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 648122,
+   "dur_ms": 6455
+  },
+  {
+   "kind": "tool",
+   "at_ms": 654577,
+   "dur_ms": 760,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'EOF'\nimport numpy as np\nfrom eigen import find_dominant_eigenvalue_and_eigenvector as f\nrng = np.random.default_rng(12345)\nfor trial in range(150000):\n    n = int(rng.integers(1, 11)); kind = trial % 6\n    if kind == 0: A = rng.normal(size=(n, n))\n    elif kind == 1: A = rng.uniform(-5, 5, size=(n, n))\n    elif kind == 2: A = rng.integers(-9, 10, size=(n, n)).astype(np.float64)\n    elif kind == 3:\n        A = rng.normal(size=(n, n)); A = (A + A.T) * 0.5\n    elif kind == 4: A = np.triu(rng.normal(size=(n, n)))\n    else: A = rng.normal(size=(n, n)) * 10.0 ** rng.uniform(-6, 6)\n    lam, v = f(A)\n    w=np.linalg.eigvals(A); m=np.abs(w).max()\n    if abs(abs(lam)-m)/max(1.0,m) > 1e-7:\n        print(\"trial\",trial,\"n\",n); print(repr(A)); print(\"our\",lam,\"eigvals\",w)\n        print(\"det\",np.linalg.det(A),\"trace\",np.trace(A))\n        print(\"res\",np.linalg.norm(A@v-lam*v), \"v\",v)\n        print(\"char poly exact roots by numpy:\",w)\n        print(\"allclose\",np.allclose(A@v,lam*v))\n        break\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 686251,
+   "dur_ms": 6484
+  },
+  {
+   "kind": "tool",
+   "at_ms": 692735,
+   "dur_ms": 625,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python eval.py",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 693360,
+   "dur_ms": 9956
+  },
+  {
+   "kind": "tool",
+   "at_ms": 703316,
+   "dur_ms": 650,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'EOF'\nimport numpy as np, warnings\nfrom eigen import find_dominant_eigenvalue_and_eigenvector as f\nwarnings.filterwarnings(\"ignore\")\n\ncases = {}\ncases['identity2'] = np.eye(2)\ncases['zero2'] = np.zeros((2,2))\ncases['zero5'] = np.zeros((5,5))\ncases['ones3'] = np.ones((3,3))\ncases['jordan3'] = np.array([[2.,1,0],[0,2,1],[0,0,2]])\ncases['jordan5'] = np.diag([3.]*5) + np.diag([1.]*4,1)\ncases['nilpotent4'] = np.diag([1.]*3,1)\ncases['rotation2'] = np.array([[0.,-1],[1,0]])\ncases['rotation4'] = np.kron(np.eye(2), np.array([[0.,-1],[1,0]]))\ncases['blockdiag'] = np.array([[1.,0,0,0],[0,1,0,0],[0,0,10,0],[0,0,0,10]])\ncases['upper_tri'] = np.triu(np.arange(1,17,dtype=float).reshape(4,4))\ncases['lower_tri'] = np.tril(np.arange(1,17,dtype=float).reshape(4,4))\ncases['diag_neg'] = np.diag([-5.,3,2,1])\ncases['perm4'] = np.eye(4)[[2,0,3,1]]\ncases['sym'] = np.array([[4.,1,2],[1,3,0],[2,0,5]])\ncases['sym_big'] = (lambda r: (r+r.T)/2)(np.random.default_rng(0).normal(size=(10,10)))\ncases['badscale'] = np.diag([1e-8,1e8,1,1e-3])\ncases['badscale2'] = np.array([[1e10, 2e10],[3e10,4e10]])\ncases['simil'] = np.array([[1.,1000],[0,2]])\ncases['shear'] = np.array([[1.,1e6],[0,1]])\ncases['near_defect'] = np.array([[1.,1],[1e-12,1]])\ncases['companion'] = np.array([[0.,0,0,-1],[1,0,0,4],[0,1,0,-6],[0,0,1,4]])  # (x-1)^4\ncases['cplx_pair'] = np.array([[1.,-2],[2,1]])\ncases['cplx_pair5'] = np.tile(np.array([[0.,-3],[3,0]]),(2,2)) if False else np.kron(np.eye(2),np.array([[0.,-3],[3,0]]))\ncases['dominant_neg'] = np.array([[-10.,1],[0,1]])\ncases['int_defect'] = np.array([[-7.,-1],[9,-1]])\ncases['huge'] = np.array([[1e300,0],[0,1e300]])\ncases['tiny'] = np.array([[1e-300,0],[0,1e-300]])\ncases['diag_mixed'] = np.diag([3.,-3,2,1])\ncases['nonnormal'] = np.array([[0.,1e8],[-1e-8,0]])\n\nfor n in range(1,11):\n    rng = np.random.default_rng(100+n)\n    for t in range(3):\n        A = rng.normal(size=(n,n))\n        cases[f'rand{n}_{t}'] = A\n        cases[f'sym{n}_{t}'] = (A+A.T)/2\n        cases[f'int{n}_{t}'] = rng.integers(-5,6,size=(n,n)).astype(float)\n        cases[f'cplxblk{n}_{t}'] = np.kron(np.eye(n//2+1)[:n,:n], np.array([[0.,-2],[2,0]])) if n%2==0 else A\n\nbad=0; nonfinite=0; zero=0; worst=0; worstname=None; dom_bad=[]\nfor name, A in cases.items():\n    A = np.asarray(A, dtype=np.float64)\n    try:\n        lam, v = f(A)\n        err = np.linalg.norm(A@v - lam*v)\n        rel = err / max(np.linalg.norm(v), 1e-300)\n        ok = np.allclose(A@v, lam*v)\n        finite = np.isfinite(np.real(lam)) and np.isfinite(np.imag(lam)) and np.all(np.isfinite(v))\n        nz = np.linalg.norm(v) > 0\n        if not (ok and finite and nz):\n            bad+=1; print(f\"BAD {name}: lam={lam} res={err:.3e} rel={rel:.3e} allclose={ok} finite={finite} nz={nz}\")\n            print(np.array2string(A, precision=3, max_line_width=120))\n        if not finite: nonfinite+=1\n        if not nz: zero+=1\n        if err>worst: worst,worstname=err,name\n        # dominance check (skip zero matrix)\n        if np.any(A):\n            ev = np.linalg.eigvals(A); m = np.abs(ev).max()\n            if abs(abs(lam)-m) > 1e-5*max(1.0,m):\n                dom_bad.append((name, lam, m, ev, abs(abs(lam)-m)/max(1.0,m)))\n    except Exception as e:\n        bad+=1; print(f\"EXC {name}: {type(e).__name__}: {e}\")\nprint(f\"\\n{len(cases)} cases: bad={bad} nonfinite={nonfinite} zero={zero} worst_res={worst:.3e} ({worstname})\")\nfor d in dom_bad: print(\"DOMDIFF\", d[0], \"our\",d[1],\"refmax\",d[2],\"relmod\",d[4], \"eigvals\",d[3][:5])\nEOF",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 703966,
+   "dur_ms": 4266
+  },
+  {
+   "kind": "tool",
+   "at_ms": 708232,
+   "dur_ms": 1504,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "ls -l --time-style=full-iso _dom_eig.c _dom_eig*.so eigen.py && echo \"--- so newer than source? ---\" && [ _dom_eig*.so -nt _dom_eig.c ] && echo YES || echo NO\necho \"--- fallback test: no prebuilt .so, gcc available -> rebuild ---\"\nrm -rf /tmp/fb1 && mkdir -p /tmp/fb1 && cp /app/eigen.py /app/_dom_eig.c /tmp/fb1/\ncd /tmp/fb1 && PYTHONPATH=/tmp/fb1 python - <<'EOF'\nimport numpy as np, eigen, glob, os\nprint(\"native loaded:\", eigen._native_dominant is not None)\nprint(\"built:\", [os.path.basename(p) for p in glob.glob('/tmp/fb1/_dom_eig*.so')])\nA=np.array([[5.,-5],[1,-1]])\nlam,v=eigen.find_dominant_eigenvalue_and_eigenvector(A)\nprint(\"lambda:\",lam,\"res:\",np.linalg.norm(A@v-lam*v))\nEOF\necho \"--- fallback test: no gcc, no .so -> scipy/numpy path ---\"\nrm -rf /tmp/fb2 && mkdir -p /tmp/fb2 && cp /app/eigen.py /app/_dom_eig.c /tmp/fb2/\ncd /tmp/fb2 && CC=/nonexistent/gcc PATH=/usr/bin:/bin PYTHONPATH=/tmp/fb2 python - <<'EOF'\nimport numpy as np, eigen\nprint(\"native loaded:\", eigen._native_dominant is not None, \"| scipy:\", eigen._scipy_eig is not None)\nA=np.array([[5.,-5],[1,-1]])\nlam,v=eigen.find_dominant_eigenvalue_and_eigenvector(A)\nprint(\"lambda:\",lam,\"res:\",np.linalg.norm(A@v-lam*v))\nEOF",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 709736,
+   "dur_ms": 2310
+  },
+  {
+   "kind": "tool",
+   "at_ms": 712046,
+   "dur_ms": 595,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "PY=$(command -v python); echo \"python: $PY\"\nrm -rf /tmp/fb2 && mkdir -p /tmp/fb2 && cp /app/eigen.py /app/_dom_eig.c /tmp/fb2/\ncd /tmp/fb2 && CC=/nonexistent/gcc PATH=/usr/bin:/bin PYTHONPATH=/tmp/fb2 \"$PY\" - <<'EOF'\nimport numpy as np, eigen, glob\nprint(\"native loaded:\", eigen._native_dominant is not None, \"| scipy:\", eigen._scipy_eig is not None)\nprint(\"built .so:\", glob.glob('/tmp/fb2/_dom_eig*.so'))\nfor A in (np.array([[5.,-5],[1,-1]]), np.array([[0.,-2],[2,0]]), np.diag([1e-8,1e8])):\n    lam,v = eigen.find_dominant_eigenvalue_and_eigenvector(A)\n    print(\"lambda:\",lam,\"res:\",np.linalg.norm(A@v-lam*v),\"allclose:\",np.allclose(A@v,lam*v))\nEOF",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 712641,
+   "dur_ms": 4655
+  },
+  {
+   "kind": "tool",
+   "at_ms": 717296,
+   "dur_ms": 847,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'EOF'\nimport time, numpy as np\nfrom eigen import find_dominant_eigenvalue_and_eigenvector as f\nrng = np.random.default_rng(7)\ndef ref(A):\n    w,v = np.linalg.eig(A); i=np.argmax(np.abs(w)); return w[i], v[:,i]\nfor rep in range(3):\n    print(f\"rep {rep}: \", end=\"\")\n    for n in (2,4,6,8,10):\n        mats=[rng.normal(size=(n,n)) for _ in range(300)]\n        ts=[]\n        for A in mats:\n            t0=time.perf_counter(); f(A); ts.append(time.perf_counter()-t0)\n        rs=[]\n        for A in mats:\n            t0=time.perf_counter(); ref(A); rs.append(time.perf_counter()-t0)\n        ts=np.array(ts); rs=np.array(rs)\n        print(f\"n={n}: med {np.median(ts)*1e6:5.2f}us p99 {np.percentile(ts,99)*1e6:6.2f}us max {ts.max()*1e6:6.2f}us | ref {np.median(rs)*1e6:6.2f}us\", end=\"   \")\n    print()\nEOF",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 718143,
+   "dur_ms": 6439
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.233,
+ "calls": 72,
+ "cell": "TB1a"
+}

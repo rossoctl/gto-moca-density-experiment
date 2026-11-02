@@ -1,0 +1,1193 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "largest-eigenval",
+ "rep": 1,
+ "attempt": 2,
+ "agent": "Claude Code",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 465158,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 1128,
+  "output": 58162,
+  "cacheRead": 1721920,
+  "cacheWrite": 9472,
+  "total": 1790682
+ },
+ "totals": {
+  "model_calls": 38,
+  "tool_calls": 37,
+  "model_ms": 329069,
+  "tool_ms": 135490,
+  "sandbox_ms": 129311
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 478,
+   "dur_ms": 996
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1474,
+   "dur_ms": 160,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -la /workspace\necho \"=== eigen.py ===\"\ncat /workspace/eigen.py\necho \"=== eval.py ===\"\ncat /workspace/eval.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 1556,
+     "dur_ms": 46,
+     "exit": 0,
+     "cpu_ms": 38.8,
+     "phases_us": {
+      "acquire": 95,
+      "resume": 19870,
+      "mount": 17736,
+      "run": 6460,
+      "destroy": 19768
+     },
+     "cold": null,
+     "vm": "vm-153"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 1634,
+   "dur_ms": 15720
+  },
+  {
+   "kind": "tool",
+   "at_ms": 17354,
+   "dur_ms": 397,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 -c \"import numpy, scipy; print(numpy.__version__, scipy.__version__)\"\npython3 - <<'PY'\nimport numpy as np, time, scipy.linalg as sla\nfrom scipy.linalg import lapack\nprint([x for x in dir(lapack) if x.startswith('dgee')])\nn=10\nA=np.random.normal(size=(n,n))\ndef bench(f, reps=20000):\n    for _ in range(100): f()\n    ts=[]\n    for _ in range(reps):\n        t=time.perf_counter(); f(); ts.append(time.perf_counter()-t)\n    return np.median(ts)*1e6\nprint(\"np eig\", bench(lambda: np.linalg.eig(A)))\nprint(\"scipy eig\", bench(lambda: sla.eig(A, check_finite=False)))\nprint(\"scipy eig overwrite\", bench(lambda: sla.eig(A.copy(), check_finite=False, overwrite_a=True)))\nprint(\"np eigvals\", bench(lambda: np.linalg.eigvals(A)))\nprint(\"scipy eigvals\", bench(lambda: sla.eigvals(A, check_finite=False)))\nprint(\"dgeev direct\", bench(lambda: lapack.dgeev(A.copy(), compute_vl=0, compute_vr=1, overwrite_a=1)))\nprint(\"dgeev novr\", bench(lambda: lapack.dgeev(A.copy(), compute_vl=0, compute_vr=0, overwrite_a=1)))\nfor n in [2,4,6,8,10]:\n    A=np.random.normal(size=(n,n))\n    print(n, \"np\", bench(lambda: np.linalg.eig(A),5000), \"scipy\", bench(lambda: sla.eig(A,check_finite=False),5000))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 17411,
+     "dur_ms": 290,
+     "exit": 1,
+     "cpu_ms": 458.4,
+     "phases_us": {
+      "acquire": 17,
+      "resume": 20556,
+      "mount": 17435,
+      "run": 240885,
+      "destroy": 28838
+     },
+     "cold": null,
+     "vm": "vm-155"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 17751,
+   "dur_ms": 1455
+  },
+  {
+   "kind": "tool",
+   "at_ms": 19206,
+   "dur_ms": 5763,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 -c \"import numpy; print(numpy.__version__)\"\npip install scipy 2>&1 | tail -2\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 19262,
+     "dur_ms": 5674,
+     "exit": 0,
+     "cpu_ms": 5759.8,
+     "phases_us": {
+      "acquire": 20,
+      "resume": 19378,
+      "mount": 17273,
+      "run": 5595794,
+      "destroy": 58694
+     },
+     "cold": null,
+     "vm": "vm-164"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 24969,
+   "dur_ms": 5776
+  },
+  {
+   "kind": "tool",
+   "at_ms": 30745,
+   "dur_ms": 2225,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\nimport numpy as np, time\ndef bench(f, reps=5000):\n    for _ in range(200): f()\n    ts=[]\n    for _ in range(reps):\n        t=time.perf_counter(); f(); ts.append(time.perf_counter()-t)\n    return np.median(ts)*1e6\nfor n in [2,4,6,8,10]:\n    A=np.random.normal(size=(n,n))\n    e,v=np.linalg.eig(A)\n    i=np.argmax(np.abs(e))\n    def ref():\n        e,v=np.linalg.eig(A); i=np.argmax(np.abs(e)); return e[i],v[:,i]\n    print(n, \"eig full\", round(bench(ref),2), \"eigvals\", round(bench(lambda: np.linalg.eigvals(A)),2))\n    print(\"   argmax\", round(bench(lambda: np.argmax(np.abs(e))),2), \"getcol\", round(bench(lambda: v[:,i]),2), \"matvec\", round(bench(lambda: A@v[:,i]),2))\nPY\necho \"=== gcc ===\"\nwhich gcc g++ cc\necho \"=== numpy libs ===\"\npython3 -c \"import numpy, os; d=os.path.dirname(numpy.__file__); print(d); print(os.listdir(os.path.join(d,'lib')))\"\nfind / -name \"*.so*\" 2>/dev/null | grep -iE \"openblas|lapack|blas\" | head -20\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 30805,
+     "dur_ms": 2147,
+     "exit": 0,
+     "cpu_ms": 2327.4,
+     "phases_us": {
+      "acquire": 74,
+      "resume": 20011,
+      "mount": 17651,
+      "run": 2095202,
+      "destroy": 31799
+     },
+     "cold": null,
+     "vm": "vm-169"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 32970,
+   "dur_ms": 5475
+  },
+  {
+   "kind": "tool",
+   "at_ms": 38445,
+   "dur_ms": 129,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /usr/local/lib/python3.13/site-packages/numpy\necho \"=== lapack_lite symbols (eig) ===\"\nnm -D linalg/lapack_lite.cpython-313-x86_64-linux-gnu.so 2>/dev/null | grep -iE \"dgeev|dgees|dhseqr|dgehrd|dtrevc|dgetrf\" | head\necho \"=== openblas symbols ===\"\nnm -D numpy.libs/libscipy_openblas64_-56d6093b.so 2>/dev/null | grep -iE \" dgeev| dgehrd| dhseqr| dtrevc\" | head\necho \"=== openblas base name ===\"\nnm -D numpy.libs/libscipy_openblas64_-56d6093b.so 2>/dev/null | grep -iE \"dgeev\" | head\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 38501,
+     "dur_ms": 53,
+     "exit": 0,
+     "cpu_ms": 42.7,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 19976,
+      "mount": 17705,
+      "run": 7378,
+      "destroy": 25436
+     },
+     "cold": null,
+     "vm": "vm-174"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 38574,
+   "dur_ms": 2196
+  },
+  {
+   "kind": "tool",
+   "at_ms": 40770,
+   "dur_ms": 269,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\nwhich nm objdump readelf strings gcc cc make\npython3 - <<'PY'\nimport ctypes, numpy as np, os\np=os.path.join(os.path.dirname(np.__file__),'libs','libscipy_openblas64_-56d6093b.so')\nlib=ctypes.CDLL(p)\nfor name in ['dgeev_','dgeev_64_','dgeev','dgeev_64','scipy_dgeev_','dgeev_64_']:\n    try:\n        f=getattr(lib,name); print(\"FOUND\",name)\n    except Exception as e:\n        print(\"no\",name)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 40827,
+     "dur_ms": 201,
+     "exit": 1,
+     "cpu_ms": 309.6,
+     "phases_us": {
+      "acquire": 16,
+      "resume": 19671,
+      "mount": 17511,
+      "run": 157683,
+      "destroy": 23769
+     },
+     "cold": null,
+     "vm": "vm-177"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 41039,
+   "dur_ms": 2265
+  },
+  {
+   "kind": "tool",
+   "at_ms": 43304,
+   "dur_ms": 307,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\nimport ctypes, numpy as np, os\nd=os.path.dirname(np.__file__)\np=os.path.join(os.path.dirname(d),'numpy.libs','libscipy_openblas64_-56d6093b.so')\nprint(os.path.exists(p), p)\nlib=ctypes.CDLL(p)\nfor name in ['dgeev_','dgeev_64_','dgeev','dgeev_64','dgeev_64_','dgehrd_64_','dhseqr_64_','dtrevc_64_','dgeev_64_']:\n    try:\n        getattr(lib,name); print(\"FOUND\",name)\n    except Exception as e:\n        print(\"no\",name)\nPY\napt-get --version 2>/dev/null | head -1; ls /usr/bin | grep -E \"^(cc|gcc|clang|tcc|nm|objdump)\" | head\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 43358,
+     "dur_ms": 217,
+     "exit": 0,
+     "cpu_ms": 310.1,
+     "phases_us": {
+      "acquire": 16,
+      "resume": 19891,
+      "mount": 17799,
+      "run": 168380,
+      "destroy": 28585
+     },
+     "cold": null,
+     "vm": "vm-179"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 43611,
+   "dur_ms": 8104
+  },
+  {
+   "kind": "tool",
+   "at_ms": 51715,
+   "dur_ms": 5969,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nexport DEBIAN_FRONTEND=noninteractive\napt-get update -qq >/dev/null 2>&1\napt-get install -y -qq binutils >/dev/null 2>&1\necho \"nm: $(which nm)\"\npip install -q scipy 2>&1 | tail -1\npython3 -c \"import scipy; print('scipy', scipy.__version__)\"\nSP=$(python3 -c \"import scipy,os;print(os.path.dirname(os.path.dirname(scipy.__file__)))\")\necho \"site: $SP\"\nls -la $SP/scipy.libs/ 2>/dev/null\necho \"=== numpy openblas dgeev symbols ===\"\nnm -D $SP/numpy.libs/libscipy_openblas64_*.so 2>/dev/null | grep -iE \"dgeev|dgehrd|dhseqr|dtrevc|dgesvd\" | head -20\necho \"=== scipy openblas dgeev symbols ===\"\nfor f in $SP/scipy.libs/*.so*; do echo \"-- $f\"; nm -D \"$f\" 2>/dev/null | grep -iE \" dgeev|dgeev_\" | head -5; done\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 51769,
+     "dur_ms": 5886,
+     "exit": 0,
+     "cpu_ms": 6042.0,
+     "phases_us": {
+      "acquire": 72,
+      "resume": 20246,
+      "mount": 17989,
+      "run": 5814731,
+      "destroy": 51030
+     },
+     "cold": null,
+     "vm": "vm-182"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 57684,
+   "dur_ms": 3635
+  },
+  {
+   "kind": "tool",
+   "at_ms": 61319,
+   "dur_ms": 1283,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\npip install -q pyelftools 2>&1 | tail -1\npython3 - <<'PY'\nfrom elftools.elf.elffile import ELFFile\nimport glob,os,numpy,scipy\nfor pat in [os.path.join(os.path.dirname(os.path.dirname(numpy.__file__)),'numpy.libs','*.so'),\n            os.path.join(os.path.dirname(os.path.dirname(scipy.__file__)),'scipy.libs','*.so')]:\n    for f in glob.glob(pat):\n        try:\n            with open(f,'rb') as fh:\n                e=ELFFile(fh); s=e.get_section_by_name('.dynsym')\n                names=[x.name for x in s.iter_symbols()] if s else []\n            hits=[n for n in names if 'geev' in n.lower()]\n            print(os.path.basename(f), len(names), 'hits:', hits[:10])\n        except Exception as ex: print(f, 'ERR', ex)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 61373,
+     "dur_ms": 1184,
+     "exit": 1,
+     "cpu_ms": 1189.1,
+     "phases_us": {
+      "acquire": 81,
+      "resume": 20590,
+      "mount": 18034,
+      "run": 1135467,
+      "destroy": 28041
+     },
+     "cold": null,
+     "vm": "vm-188"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 62602,
+   "dur_ms": 1715
+  },
+  {
+   "kind": "tool",
+   "at_ms": 64317,
+   "dur_ms": 6556,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npip install -q scipy pyelftools 2>&1 | tail -1\npython3 - <<'PY'\nfrom elftools.elf.elffile import ELFFile\nimport glob,os,numpy,scipy\nfor pat in [os.path.join(os.path.dirname(os.path.dirname(numpy.__file__)),'numpy.libs','*.so'),\n            os.path.join(os.path.dirname(os.path.dirname(scipy.__file__)),'scipy.libs','*.so')]:\n    for f in glob.glob(pat):\n        try:\n            with open(f,'rb') as fh:\n                e=ELFFile(fh); s=e.get_section_by_name('.dynsym')\n                names=[x.name for x in s.iter_symbols()] if s else []\n            hits=[n for n in names if 'geev' in n.lower() or 'gehrd' in n.lower() or 'hseqr' in n.lower()]\n            print(os.path.basename(f), len(names), 'hits:', hits[:12])\n        except Exception as ex: print(f, 'ERR', ex)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 64373,
+     "dur_ms": 6492,
+     "exit": 0,
+     "cpu_ms": 6555.2,
+     "phases_us": {
+      "acquire": 83,
+      "resume": 20090,
+      "mount": 17645,
+      "run": 6404357,
+      "destroy": 66646
+     },
+     "cold": null,
+     "vm": "vm-190"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 70873,
+   "dur_ms": 12858
+  },
+  {
+   "kind": "tool",
+   "at_ms": 83731,
+   "dur_ms": 330,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\nimport numpy as np, ctypes, os, glob, time\nd=os.path.dirname(np.__file__)\nprint(\"numpy.libs:\", os.listdir(os.path.join(os.path.dirname(d),'numpy.libs')))\np=glob.glob(os.path.join(os.path.dirname(d),'numpy.libs','*openblas*'))[0]\nlib=ctypes.CDLL(p)\nfrom elftools_placeholder import x if False else None\nPY\npython3 - <<'PY'\nimport numpy as np, ctypes, os, glob\nd=os.path.dirname(np.__file__)\np=glob.glob(os.path.join(os.path.dirname(d),'numpy.libs','*openblas*'))[0]\nlib=ctypes.CDLL(p)\nnames=['scipy_LAPACKE_dgeev_work64_','scipy_LAPACKE_dgeev64_','scipy_dgeev_64_','scipy_LAPACKE_dgeev_work','scipy_LAPACKE_dgeev']\nfor n in names:\n    print(n, hasattr(lib,n))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 83786,
+     "dur_ms": 233,
+     "exit": 0,
+     "cpu_ms": 314.7,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 20203,
+      "mount": 17250,
+      "run": 179030,
+      "destroy": 33855
+     },
+     "cold": null,
+     "vm": "vm-194"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 84061,
+   "dur_ms": 5084
+  },
+  {
+   "kind": "tool",
+   "at_ms": 89145,
+   "dur_ms": 3652,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncat > /workspace/bench_lapack.py <<'PY'\nimport numpy as np, ctypes, os, glob, time\nd=os.path.dirname(np.__file__)\np=glob.glob(os.path.join(os.path.dirname(d),'numpy.libs','*openblas*'))[0]\nlib=ctypes.CDLL(p)\nDP=ctypes.POINTER(ctypes.c_double)\ncn=ctypes.c_int64\nf=lib.scipy_LAPACKE_dgeev_work64_\nf.restype=cn\nf.argtypes=[ctypes.c_int, ctypes.c_char, ctypes.c_char, cn, DP, cn, DP, DP, DP, cn, DP, cn, DP, cn]\n\ndef eig_fast(A, cache={}):\n    n=A.shape[0]\n    Af=np.array(A, dtype=np.float64, order='F', copy=True)\n    wr=np.empty(n); wi=np.empty(n); vr=np.empty((n,n), order='F'); work=np.empty(8*n)\n    info=f(102,b'N',b'V',n,Af.ctypes.data_as(DP),n,\n           wr.ctypes.data_as(DP),wi.ctypes.data_as(DP),None,1,\n           vr.ctypes.data_as(DP),n,work.ctypes.data_as(DP),8*n)\n    mag=wr*wr+wi*wi\n    i=int(np.argmax(mag))\n    if wi[i]==0.0:\n        return complex(wr[i]), vr[:,i].copy()\n    return complex(wr[i],wi[i]), vr[:,i].copy()+1j*vr[:,i+1].copy()\n\ndef ref(A):\n    e,v=np.linalg.eig(A); i=np.argmax(np.abs(e)); return e[i],v[:,i]\n\n# correctness\nrng=np.random.default_rng(0)\nworst=0\nfor n in range(1,11):\n    for _ in range(200):\n        A=rng.normal(size=(n,n))\n        l,v=eig_fast(A)\n        r=np.linalg.norm(A@v-l*v)/max(np.linalg.norm(v),1e-300)\n        if r>worst: worst=r\n        assert np.allclose(A@v,l*v), (n,r,A)\nprint(\"correctness worst rel residual\",worst)\n\ndef bench(fn, reps=20000):\n    A=np.random.normal(size=(10,10))\n    for _ in range(500): fn(A)\n    ts=[]\n    for _ in range(reps):\n        t=time.perf_counter(); fn(A); ts.append(time.perf_counter()-t)\n    return np.median(ts)*1e6\nfor n in [2,4,6,8,10]:\n    A=rng.normal(size=(n,n))\n    print(n, \"ref\", round(bench(ref,5000),2), \"fast\", round(bench(eig_fast,5000),2))\nPY\ncd /workspace && python3 bench_lapack.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 89205,
+     "dur_ms": 3552,
+     "exit": 0,
+     "cpu_ms": 3682.6,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 19985,
+      "mount": 17694,
+      "run": 3505718,
+      "destroy": 26488
+     },
+     "cold": null,
+     "vm": "vm-199"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 92797,
+   "dur_ms": 5803
+  },
+  {
+   "kind": "tool",
+   "at_ms": 98600,
+   "dur_ms": 1006,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\ncat > /workspace/prof.py <<'PY'\nimport numpy as np, ctypes, os, glob, time\nd=os.path.dirname(np.__file__)\np=glob.glob(os.path.join(os.path.dirname(d),'numpy.libs','*openblas*'))[0]\nlib=ctypes.CDLL(p)\nDP=ctypes.POINTER(ctypes.c_double); cn=ctypes.c_int64\ndef setup(lapacke=True):\n    if lapacke:\n        f=lib.scipy_LAPACKE_dgeev_work64_; f.restype=cn\n        f.argtypes=[ctypes.c_int, ctypes.c_char, ctypes.c_char, cn, DP, cn, DP, DP, DP, cn, DP, cn, DP, cn]\n    else:\n        f=lib.scipy_dgeev_64_; f.restype=None\n        f.argtypes=[ctypes.c_char_p, ctypes.c_char_p, DP, DP, DP, DP, DP, DP, DP, DP, DP, DP, DP, DP, DP, ctypes.POINTER(cn)]\n    return f\ndef bench(fn, reps=20000):\n    for _ in range(500): fn()\n    ts=[]\n    for _ in range(reps):\n        t=time.perf_counter(); fn(); ts.append(time.perf_counter()-t)\n    return np.median(ts)*1e6\nn=10\nA=np.random.normal(size=(n,n))\nAf=np.array(A,order='F')\nwr=np.empty(n); wi=np.empty(n); vr=np.empty((n,n),order='F'); work=np.empty(8*n)\ndp=DP()\nf=setup(True)\ndef call_lapacke():\n    f(102,b'N',b'V',n,Af.ctypes.data_as(DP),n,wr.ctypes.data_as(DP),wi.ctypes.data_as(DP),None,1,vr.ctypes.data_as(DP),n,work.ctypes.data_as(DP),8*n)\nprint(\"lapacke call (arrays preallocated)\", bench(call_lapacke))\nprint(\"copy F\", bench(lambda: np.array(A,order='F',copy=True)))\nprint(\"alloc wr wi vr work\", bench(lambda: (np.empty(n),np.empty(n),np.empty((n,n),order='F'),np.empty(8*n))))\nprint(\"argmax mag\", bench(lambda: np.argmax(wr*wr+wi*wi)))\nprint(\"assemble vec\", bench(lambda: vr[:,i].copy()+1j*vr[:,i+1].copy() for i in [0]))\n# direct dgeev\ng=setup(False)\ninfo=cn(0)\nAf2=Af\ndef call_dgeev():\n    g(b'N',b'V',ctypes.byref(cn(n)),Af2.ctypes.data_as(DP),ctypes.byref(cn(n)),wr.ctypes.data_as(DP),wi.ctypes.data_as(DP),None,ctypes.byref(cn(1)),vr.ctypes.data_as(DP),ctypes.byref(cn(n)),work.ctypes.data_as(DP),ctypes.byref(cn(8*n)),ctypes.byref(info))\nprint(\"dgeev direct\", bench(call_dgeev))\nprint(\"np eigvals\", bench(lambda: np.linalg.eigvals(A)))\nprint(\"np eig\", bench(lambda: np.linalg.eig(A)))\nPY\ncd /workspace && python3 prof.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 98655,
+     "dur_ms": 902,
+     "exit": 1,
+     "cpu_ms": 1006.2,
+     "phases_us": {
+      "acquire": 22,
+      "resume": 20273,
+      "mount": 18000,
+      "run": 859350,
+      "destroy": 22444
+     },
+     "cold": null,
+     "vm": "vm-203"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 99606,
+   "dur_ms": 12773
+  },
+  {
+   "kind": "tool",
+   "at_ms": 112379,
+   "dur_ms": 5188,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncat > /workspace/prof2.py <<'PY'\nimport numpy as np, ctypes, os, glob, time\nd=os.path.dirname(np.__file__)\np=glob.glob(os.path.join(os.path.dirname(d),'numpy.libs','*openblas*'))[0]\nlib=ctypes.CDLL(p)\nDP=ctypes.POINTER(ctypes.c_double); CN=ctypes.POINTER(ctypes.c_int64)\ncn=ctypes.c_int64\nfl=lib.scipy_LAPACKE_dgeev_work64_; fl.restype=cn\nfl.argtypes=[ctypes.c_int, ctypes.c_char, ctypes.c_char, cn, DP, cn, DP, DP, DP, cn, DP, cn, DP, cn]\nfd=lib.scipy_dgeev_64_\nfd.argtypes=[ctypes.c_char_p, ctypes.c_char_p, CN, DP, CN, DP, DP, DP, CN, DP, CN, DP, CN, CN]\ndef bench(fn, reps=20000):\n    for _ in range(300): fn()\n    ts=[]\n    for _ in range(reps):\n        t=time.perf_counter(); fn(); ts.append(time.perf_counter()-t)\n    return np.median(ts)*1e6\nrng=np.random.default_rng(1)\nfor n in [2,4,6,8,10]:\n    A=np.array(rng.normal(size=(n,n)),order='F')\n    wr=np.empty(n); wi=np.empty(n); vr=np.empty((n,n),order='F'); work=np.empty(8*n); info=cn(0)\n    N=cn(n); LDA=cn(n); LDVL=cn(1); LDVR=cn(n); LW=cn(8*n)\n    def lapacke_v():\n        A2=A.copy(); fl(102,b'N',b'V',n,A2.ctypes.data_as(DP),n,wr.ctypes.data_as(DP),wi.ctypes.data_as(DP),None,1,vr.ctypes.data_as(DP),n,work.ctypes.data_as(DP),8*n)\n    def lapacke_n():\n        A2=A.copy(); fl(102,b'N',b'N',n,A2.ctypes.data_as(DP),n,wr.ctypes.data_as(DP),wi.ctypes.data_as(DP),None,1,None,1,work.ctypes.data_as(DP),8*n)\n    def dgeev_v():\n        A2=A.copy(); fd(b'N',b'V',ctypes.byref(N),A2.ctypes.data_as(DP),ctypes.byref(LDA),wr.ctypes.data_as(DP),wi.ctypes.data_as(DP),None,ctypes.byref(LDVL),vr.ctypes.data_as(DP),ctypes.byref(LDVR),work.ctypes.data_as(DP),ctypes.byref(LW),ctypes.byref(info))\n    def dgeev_n():\n        A2=A.copy(); fd(b'N',b'N',ctypes.byref(N),A2.ctypes.data_as(DP),ctypes.byref(LDA),wr.ctypes.data_as(DP),wi.ctypes.data_as(DP),None,ctypes.byref(LDVL),None,ctypes.byref(LDVR),work.ctypes.data_as(DP),ctypes.byref(LW),ctypes.byref(info))\n    print(n, \"lapacke V\", round(bench(lapacke_v,5000),2), \"lapacke N\", round(bench(lapacke_n,5000),2), \"dgeev V\", round(bench(dgeev_v,5000),2), \"dgeev N\", round(bench(dgeev_n,5000),2), \"np eig\", round(bench(lambda: np.linalg.eig(A),5000),2), \"np eigvals\", round(bench(lambda: np.linalg.eigvals(A),5000),2))\nPY\ncd /workspace && OPENBLAS_NUM_THREADS=1 python3 prof2.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 112433,
+     "dur_ms": 5100,
+     "exit": 0,
+     "cpu_ms": 5107.8,
+     "phases_us": {
+      "acquire": 64,
+      "resume": 20476,
+      "mount": 17508,
+      "run": 5048095,
+      "destroy": 30654
+     },
+     "cold": null,
+     "vm": "vm-207"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 117567,
+   "dur_ms": 10008
+  },
+  {
+   "kind": "tool",
+   "at_ms": 127575,
+   "dur_ms": 145,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nexport DEBIAN_FRONTEND=noninteractive\napt-get update 2>&1 | tail -5\napt-get install -y gcc 2>&1 | tail -10\nwhich gcc cc; gcc --version 2>/dev/null | head -1\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 127628,
+     "dur_ms": 78,
+     "exit": 0,
+     "cpu_ms": 76.1,
+     "phases_us": {
+      "acquire": 83,
+      "resume": 20783,
+      "mount": 17375,
+      "run": 32515,
+      "destroy": 23947
+     },
+     "cold": null,
+     "vm": "vm-213"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 127720,
+   "dur_ms": 12602
+  },
+  {
+   "kind": "tool",
+   "at_ms": 140322,
+   "dur_ms": 16312,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncat > /workspace/conv.py <<'PY'\nimport numpy as np\nrng=np.random.default_rng(0)\n\ndef block_power(A, maxit=200, tol=1e-5):\n    n=A.shape[0]\n    Q=np.linalg.qr(rng.normal(size=(n,2)))[0]\n    for it in range(1,maxit+1):\n        Z=A@Q\n        Q,_=np.linalg.qr(Z)\n        B=Q.T@A@Q\n        w,V=np.linalg.eig(B)\n        i=np.argmax(np.abs(w))\n        lam=w[i]; y=V[:,i]\n        v=Q@y\n        res=np.linalg.norm(A@v-lam*v)/np.linalg.norm(v)\n        if res<tol: return it,res\n    return maxit,res\n\nfor n in range(2,11):\n    its=[]; fails=0\n    for t in range(500):\n        A=rng.normal(size=(n,n))\n        it,res=block_power(A, maxit=100)\n        its.append(it)\n        if res>=1e-5: fails+=1\n    its=np.array(its)\n    print(n, \"median\",int(np.median(its)),\"p90\",int(np.percentile(its,90)),\"max\",its.max(),\"fails\",fails)\nPY\ncd /workspace && python3 conv.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 140377,
+     "dur_ms": 16214,
+     "exit": 0,
+     "cpu_ms": 16319.5,
+     "phases_us": {
+      "acquire": 81,
+      "resume": 21468,
+      "mount": 17405,
+      "run": 16170017,
+      "destroy": 22664
+     },
+     "cold": null,
+     "vm": "vm-218"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 156634,
+   "dur_ms": 12203
+  },
+  {
+   "kind": "tool",
+   "at_ms": 168837,
+   "dur_ms": 9697,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npip install -q ziglang 2>&1 | tail -2\npython3 -m ziglang version\nmkdir -p /workspace/native\ncat > /workspace/native/t.c <<'C'\ndouble add(double a, double b){ return a+b; }\nC\npython3 -m ziglang cc -O2 -fPIC -shared /workspace/native/t.c -o /workspace/native/t.so && ls -la /workspace/native/\npython3 -c \"\nimport ctypes; l=ctypes.CDLL('/workspace/native/t.so'); l.add.restype=ctypes.c_double; l.add.argtypes=[ctypes.c_double]*2; print(l.add(2,3))\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 168891,
+     "dur_ms": 9633,
+     "exit": 0,
+     "cpu_ms": 9608.8,
+     "phases_us": {
+      "acquire": 87,
+      "resume": 20255,
+      "mount": 17479,
+      "run": 9524149,
+      "destroy": 88573
+     },
+     "cold": null,
+     "vm": "vm-228"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 178534,
+   "dur_ms": 67051
+  },
+  {
+   "kind": "tool",
+   "at_ms": 245585,
+   "dur_ms": 1838,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx put /workspace/native/dom.c <<'EOF'\n#include <math.h>\n#include <float.h>\n#include <string.h>\n\n#define MAXN 16\n\n#define A(i,j) a[(i)*n+(j)]\n#define SIGN(a,b) ((b)>=0.0 ? fabs(a) : -fabs(a))\n\n/* Householder reduction to upper Hessenberg form (similarity transform). */\nstatic void hessenberg(double *a, int n)\n{\n    double v[MAXN];\n    for (int k = 0; k < n - 2; k++) {\n        int m = n - k - 1;\n        double nrm = 0.0;\n        for (int i = 0; i < m; i++) {\n            double t = A(k + 1 + i, k);\n            nrm += t * t;\n        }\n        nrm = sqrt(nrm);\n        if (nrm == 0.0) continue;\n        double x0 = A(k + 1, k);\n        double alpha = (x0 >= 0.0) ? -nrm : nrm;\n        double vv = 0.0;\n        for (int i = 0; i < m; i++) {\n            v[i] = A(k + 1 + i, k);\n        }\n        v[0] -= alpha;\n        for (int i = 0; i < m; i++) vv += v[i] * v[i];\n        if (vv == 0.0) continue;\n        double f = 2.0 / vv;\n\n        /* left: A <- H A  (rows k+1..n-1, cols k..n-1) */\n        for (int j = k; j < n; j++) {\n            double w = 0.0;\n            for (int i = 0; i < m; i++) w += v[i] * A(k + 1 + i, j);\n            w *= f;\n            for (int i = 0; i < m; i++) A(k + 1 + i, j) -= w * v[i];\n        }\n        /* right: A <- A H  (rows 0..n-1, cols k+1..n-1) */\n        for (int i = 0; i < n; i++) {\n            double w = 0.0;\n            for (int j = 0; j < m; j++) w += A(i, k + 1 + j) * v[j];\n            w *= f;\n            for (int j = 0; j < m; j++) A(i, k + 1 + j) -= w * v[j];\n        }\n        A(k + 1, k) = alpha;\n        for (int i = 1; i < m; i++) A(k + 1 + i, k) = 0.0;\n    }\n}\n\n/* Francis double-shift QR on an upper Hessenberg matrix (Numerical Recipes\n   hqr, translated to double / 0-based / row-major).  Fills wr, wi.\n   Returns 0 on success, -1 if the iteration limit is exceeded. */\nstatic int hqr(double *a, int n, double *wr, double *wi)\n{\n    int nn, m, l, k, j, its, i, mmin;\n    double z, y, x, w, v, u, t, s, r, q, p, anorm;\n\n    anorm = fabs(A(0, 0));\n    for (i = 1; i < n; i++)\n        for (j = i - 1; j < n; j++)\n            anorm += fabs(A(i, j));\n\n    nn = n - 1;\n    t = 0.0;\n    while (nn >= 0) {\n        its = 0;\n        do {\n            for (l = nn; l >= 1; l--) {\n                s = fabs(A(l - 1, l - 1)) + fabs(A(l, l));\n                if (s == 0.0) s = anorm;\n                if (fabs(A(l, l - 1)) <= DBL_EPSILON * s) {\n                    A(l, l - 1) = 0.0;\n                    break;\n                }\n            }\n            x = A(nn, nn);\n            if (l == nn) {\n                wr[nn] = x + t;\n                wi[nn] = 0.0;\n                nn--;\n            } else {\n                y = A(nn - 1, nn - 1);\n                w = A(nn, nn - 1) * A(nn - 1, nn);\n                if (l == nn - 1) {\n                    p = 0.5 * (y - x);\n                    q = p * p + w;\n                    z = sqrt(fabs(q));\n                    x += t;\n                    if (q >= 0.0) {\n                        z = p + SIGN(z, p);\n                        wr[nn - 1] = wr[nn] = x + z;\n                        if (z != 0.0) wr[nn] = x - w / z;\n                        wi[nn - 1] = wi[nn] = 0.0;\n                    } else {\n                        wr[nn - 1] = wr[nn] = x + p;\n                        wi[nn - 1] = -(wi[nn] = z);\n                    }\n                    nn -= 2;\n                } else {\n                    if (its == 60) return -1;\n                    if (its == 10 || its == 20) {\n                        t += x;\n                        for (i = 0; i <= nn; i++) A(i, i) -= x;\n                        s = fabs(A(nn, nn - 1)) + fabs(A(nn - 1, nn - 2));\n                        y = x = 0.75 * s;\n                        w = -0.4375 * s * s;\n                    }\n                    ++its;\n                    for (m = nn - 2; m >= l; m--) {\n                        z = A(m, m);\n                        r = x - z;\n                        s = y - z;\n                        p = (r * s - w) / A(m + 1, m) + A(m, m + 1);\n                        q = A(m + 1, m + 1) - z - r - s;\n                        r = A(m + 2, m + 1);\n                        s = fabs(p) + fabs(q) + fabs(r);\n                        p /= s;\n                        q /= s;\n                        r /= s;\n                        if (m == l) break;\n                        u = fabs(A(m, m - 1)) * (fabs(q) + fabs(r));\n                        v = fabs(p) * (fabs(A(m - 1, m - 1)) + fabs(z) + fabs(A(m + 1, m + 1)));\n                        if (u <= DBL_EPSILON * v) break;\n                    }\n                    for (i = m + 2; i <= nn; i++) {\n                        A(i, i - 2) = 0.0;\n                        if (i != m + 2) A(i, i - 3) = 0.0;\n                    }\n                    for (k = m; k <= nn - 1; k++) {\n                        if (k != m) {\n                            p = A(k, k - 1);\n                            q = A(k + 1, k - 1);\n                            r = 0.0;\n                            if (k != nn - 1) r = A(k + 2, k - 1);\n                            if ((x = fabs(p) + fabs(q) + fabs(r)) != 0.0) {\n                                p /= x;\n                                q /= x;\n                                r /= x;\n                            }\n                        }\n                        if ((s = SIGN(sqrt(p * p + q * q + r * r), p)) != 0.0) {\n                            if (k == m) {\n                                if (l != m) A(k, k - 1) = -A(k, k - 1);\n                            } else {\n                                A(k, k - 1) = -s * x;\n                            }\n                            p += s;\n                            x = p / s;\n                            y = q / s;\n                            z = r / s;\n                            q /= p;\n                            r /= p;\n                            for (j = k; j <= nn; j++) {\n                                p = A(k, j) + q * A(k + 1, j);\n                                if (k != nn - 1) {\n                                    p += r * A(k + 2, j);\n                                    A(k + 2, j) -= p * z;\n                                }\n                                A(k + 1, j) -= p * y;\n                                A(k, j) -= p * x;\n                            }\n                            mmin = (nn < k + 3) ? nn : k + 3;\n                            for (i = l; i <= mmin; i++) {\n                                p = x * A(i, k) + y * A(i, k + 1);\n                                if (k != nn - 1) {\n                                    p += z * A(i, k + 2);\n                                    A(i, k + 2) -= p * r;\n                                }\n                                A(i, k + 1) -= p * q;\n                                A(i, k) -= p;\n                            }\n                        }\n                    }\n                }\n            }\n        } while (l < nn - 1);\n    }\n    return 0;\n}\n\n/* Complex LU factorization with partial pivoting, row-major n x n. */\nstatic void clu_factor(double *ar, double *ai, int n, int *piv)\n{\n    for (int k = 0; k < n; k++) {\n        int p = k;\n        double best = ar[k * n + k] * ar[k * n + k] + ai[k * n + k] * ai[k * n + k];\n        for (int i = k + 1; i < n; i++) {\n            double val = ar[i * n + k] * ar[i * n + k] + ai[i * n + k] * ai[i * n + k];\n            if (val > best) { best = val; p = i; }\n        }\n        piv[k] = p;\n        if (p != k) {\n            for (int j = k; j < n; j++) {\n                double tr = ar[k * n + j], ti = ai[k * n + j];\n                ar[k * n + j] = ar[p * n + j]; ai[k * n + j] = ai[p * n + j];\n                ar[p * n + j] = tr; ai[p * n + j] = ti;\n            }\n        }\n        double dr = ar[k * n + k], di = ai[k * n + k];\n        double den = dr * dr + di * di;\n        if (den == 0.0) {\n            /* exactly singular pivot: nudge */\n            dr = DBL_EPSILON; di = 0.0;\n            ar[k * n + k] = dr; ai[k * n + k] = 0.0;\n            den = dr * dr;\n        }\n        for (int i = k + 1; i < n; i++) {\n            double xr = ar[i * n + k], xi = ai[i * n + k];\n            double mr = (xr * dr + xi * di) / den;\n            double mi = (xi * dr - xr * di) / den;\n            ar[i * n + k] = mr; ai[i * n + k] = mi;\n            for (int j = k + 1; j < n; j++) {\n                ar[i * n + j] -= mr * ar[k * n + j] - mi * ai[k * n + j];\n                ai[i * n + j] -= mr * ai[k * n + j] + mi * ar[k * n + j];\n            }\n        }\n    }\n}\n\nstatic void clu_solve(const double *ar, const double *ai, int n, const int *piv,\n                      double *br, double *bi)\n{\n    for (int k = 0; k < n; k++) {\n        int p = piv[k];\n        if (p != k) {\n            double tr = br[k], ti = bi[k];\n            br[k] = br[p]; bi[k] = bi[p];\n            br[p] = tr; bi[p] = ti;\n        }\n    }\n    for (int i = 0; i < n; i++) {\n        double sr = br[i], si = bi[i];\n        for (int j = 0; j < i; j++) {\n            sr -= ar[i * n + j] * br[j] - ai[i * n + j] * bi[j];\n            si -= ar[i * n + j] * bi[j] + ai[i * n + j] * br[j];\n        }\n        br[i] = sr; bi[i] = si;\n    }\n    for (int i = n - 1; i >= 0; i--) {\n        double sr = br[i], si = bi[i];\n        for (int j = i + 1; j < n; j++) {\n            sr -= ar[i * n + j] * br[j] - ai[i * n + j] * bi[j];\n            si -= ar[i * n + j] * bi[j] + ai[i * n + j] * br[j];\n        }\n        double dr = ar[i * n + i], di = ai[i * n + i];\n        double den = dr * dr + di * di;\n        br[i] = (sr * dr + si * di) / den;\n        bi[i] = (si * dr - sr * di) / den;\n    }\n}\n\n/* Solve (A - lambda I) x = b repeatedly from a fixed starting vector and\n   return the normalized vector in vr/vi. */\nstatic void inverse_iteration(const double *a, int n, double lr, double li,\n                              double *vr, double *vi)\n{\n    double ar[MAXN * MAXN], ai[MAXN * MAXN];\n    int piv[MAXN];\n    double br[MAXN], bi[MAXN];\n\n    for (int i = 0; i < n; i++) {\n        for (int j = 0; j < n; j++) {\n            ar[i * n + j] = a[i * n + j];\n            ai[i * n + j] = 0.0;\n        }\n        ar[i * n + i] -= lr;\n        ai[i * n + i] -= li;\n    }\n    clu_factor(ar, ai, n, piv);\n\n    unsigned int seed = 12345u;\n    for (int i = 0; i < n; i++) {\n        seed = seed * 1103515245u + 12345u;\n        br[i] = (double)((seed >> 16) & 0x7fff) / 32768.0 - 0.5;\n        bi[i] = 0.0;\n    }\n\n    for (int it = 0; it < 3; it++) {\n        clu_solve(ar, ai, n, piv, br, bi);\n        double nrm = 0.0;\n        for (int i = 0; i < n; i++) nrm += br[i] * br[i] + bi[i] * bi[i];\n        nrm = sqrt(nrm);\n        if (!(nrm > 0.0) || !isfinite(nrm)) {\n            /* restart with a different vector */\n            seed = 987654321u + it;\n            for (int i = 0; i < n; i++) {\n                seed = seed * 1103515245u + 12345u;\n                br[i] = (double)((seed >> 16) & 0x7fff) / 32768.0 - 0.5;\n                bi[i] = 0.0;\n            }\n            continue;\n        }\n        for (int i = 0; i < n; i++) { br[i] /= nrm; bi[i] /= nrm; }\n    }\n    for (int i = 0; i < n; i++) { vr[i] = br[i]; vi[i] = bi[i]; }\n}\n\n/* Return 0 and fill eigenvalue + eigenvector on success; nonzero on failure. */\nint dominant_eig(const double *ain, int n, double *out)\n{\n    double a[MAXN * MAXN];\n    double wr[MAXN], wi[MAXN], vr[MAXN], vi[MAXN];\n\n    if (n <= 0 || n > MAXN) return 1;\n    for (int i = 0; i < n * n; i++) a[i] = ain[i];\n\n    if (n == 1) {\n        out[0] = a[0];\n        out[1] = 0.0;\n        out[2] = 1.0;\n        out[3] = 0.0;\n        return 0;\n    }\n\n    hessenberg(a, n);\n    if (hqr(a, n, wr, wi) != 0) return 2;\n\n    int idx = 0;\n    double best = -1.0;\n    for (int i = 0; i < n; i++) {\n        double mag = wr[i] * wr[i] + wi[i] * wi[i];\n        if (!isfinite(mag)) return 3;\n        if (mag > best) { best = mag; idx = i; }\n    }\n    double lr = wr[idx], li = wi[idx];\n\n    inverse_iteration(ain, n, lr, li, vr, vi);\n\n    double nrm = 0.0;\n    for (int i = 0; i < n; i++) nrm += vr[i] * vr[i] + vi[i] * vi[i];\n    if (!(nrm > 0.0) || !isfinite(nrm)) return 4;\n\n    /* residual check: |A v - lambda v| <= atol + rtol * |lambda v| */\n    const double atol = 5e-9, rtol = 5e-6;\n    int ok = 1;\n    for (int i = 0; i < n; i++) {\n        double rr = 0.0, ri = 0.0;\n        for (int j = 0; j < n; j++) {\n            double av_r = ain[i * n + j] * vr[j];\n            double av_i = ain[i * n + j] * vi[j];\n            rr += av_r;\n            ri += av_i;\n        }\n        /* lambda * v */\n        double lvr = lr * vr[i] - li * vi[i];\n        double lvi = lr * vi[i] + li * vr[i];\n        double dr = rr - lvr, di = ri - lvi;\n        double err = sqrt(dr * dr + di * di);\n        double scale = atol + rtol * sqrt(lvr * lvr + lvi * lvi);\n        if (!isfinite(err) || err > scale) { ok = 0; break; }\n    }\n    if (!ok) return 5;\n\n    out[0] = lr;\n    out[1] = li;\n    for (int i = 0; i < n; i++) {\n        out[2 + 2 * i] = vr[i];\n        out[3 + 2 * i] = vi[i];\n    }\n    return 0;\n}\nEOF\ncd /workspace && python3 -m ziglang cc -O2 -fPIC -shared -mcpu=baseline native/dom.c -o native/libdom.so -lm && ls -la native/\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 247360,
+     "dur_ms": 55,
+     "exit": 0,
+     "cpu_ms": 44.1,
+     "phases_us": {
+      "acquire": 97,
+      "resume": 23983,
+      "mount": 19288,
+      "run": 7645,
+      "destroy": 23444
+     },
+     "cold": null,
+     "vm": "vm-232"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 247423,
+   "dur_ms": 4360
+  },
+  {
+   "kind": "tool",
+   "at_ms": 251783,
+   "dur_ms": 131,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -la /workspace/native/ && head -5 /workspace/native/dom.c && wc -l /workspace/native/dom.c\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 251839,
+     "dur_ms": 50,
+     "exit": 0,
+     "cpu_ms": 44.0,
+     "phases_us": {
+      "acquire": 69,
+      "resume": 22796,
+      "mount": 20120,
+      "run": 6934,
+      "destroy": 20543
+     },
+     "cold": null,
+     "vm": "vm-233"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 251914,
+   "dur_ms": 2896
+  },
+  {
+   "kind": "tool",
+   "at_ms": 254810,
+   "dur_ms": 10410,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npip install -q ziglang 2>&1 | tail -1\ncd /workspace\npython3 -m ziglang cc -O2 -fPIC -shared -mcpu=baseline native/dom.c -o native/libdom.so -lm && ls -la native/\nfile native/libdom.so 2>/dev/null || true\npython3 - <<'PY'\nimport ctypes, numpy as np\nl=ctypes.CDLL('/workspace/native/libdom.so')\nDP=ctypes.POINTER(ctypes.c_double)\nf=l.dominant_eig; f.restype=ctypes.c_int\nf.argtypes=[DP, ctypes.c_int, DP]\nrng=np.random.default_rng(0)\nbad=0; worst=0; fb=0\nfor n in range(1,11):\n    for t in range(1000):\n        A=np.ascontiguousarray(rng.normal(size=(n,n)))\n        out=np.empty(2+2*n)\n        rc=f(A.ctypes.data_as(DP), n, out.ctypes.data_as(DP))\n        if rc!=0:\n            fb+=1; continue\n        lam=complex(out[0],out[1])\n        v=out[2:].copy().view(np.complex128)\n        r=np.linalg.norm(A@v-lam*v)/max(np.linalg.norm(v),1e-300)\n        worst=max(worst,r)\n        if not np.allclose(A@v,lam*v): bad+=1\nprint(\"fallbacks\",fb,\"bad\",bad,\"worst rel\",worst)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 254869,
+     "dur_ms": 10342,
+     "exit": 0,
+     "cpu_ms": 10463.2,
+     "phases_us": {
+      "acquire": 109,
+      "resume": 23299,
+      "mount": 20624,
+      "run": 10224707,
+      "destroy": 94192
+     },
+     "cold": null,
+     "vm": "vm-234"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 265220,
+   "dur_ms": 13412
+  },
+  {
+   "kind": "tool",
+   "at_ms": 278632,
+   "dur_ms": 2919,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put /workspace/eigen_new.py <<'PY'\nimport ctypes\nimport os\n\nimport numpy as np\n\n_DP = ctypes.POINTER(ctypes.c_double)\n_fn = None\ntry:\n    _path = os.path.join(os.path.dirname(os.path.abspath(__file__)), \"native\", \"libdom.so\")\n    _lib = ctypes.CDLL(_path)\n    _fn = _lib.dominant_eig\n    _fn.restype = ctypes.c_int\n    _fn.argtypes = [_DP, ctypes.c_int, _DP]\nexcept Exception:\n    _fn = None\n\n\ndef find_dominant_eigenvalue_and_eigenvector(A: np.ndarray):\n    \"\"\"Dominant eigenpair of a general real square matrix (up to 16x16).\"\"\"\n    if _fn is not None:\n        a = np.asarray(A, dtype=np.float64)\n        n = a.shape[0]\n        if a.ndim == 2 and a.shape[1] == n and 1 <= n <= 16:\n            if not a.flags.c_contiguous:\n                a = np.ascontiguousarray(a)\n            out = np.empty(2 + 2 * n)\n            if _fn(a.ctypes.data_as(_DP), n, out.ctypes.data_as(_DP)) == 0:\n                return complex(out[0], out[1]), out[2:].view(np.complex128)\n    eigenvalues, eigenvectors = np.linalg.eig(A)\n    idx = np.argmax(np.abs(eigenvalues))\n    return eigenvalues[idx], eigenvectors[:, idx]\nPY\nsbx run <<'EOF'\ncd /workspace\ncp eigen_new.py eigen_testmod.py\npython3 - <<'PY'\nimport numpy as np, time, importlib.util, sys\nspec=importlib.util.spec_from_file_location(\"m\",\"/workspace/eigen_testmod.py\"); m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\nf=m.find_dominant_eigenvalue_and_eigenvector\nrng=np.random.default_rng(0)\ndef ref(A):\n    e,v=np.linalg.eig(A); i=np.argmax(np.abs(e)); return e[i],v[:,i]\n# dominance check\nbad=0\nfor n in range(1,11):\n    for _ in range(2000):\n        A=rng.normal(size=(n,n))\n        l,v=f(A)\n        re,rv=ref(A)\n        if abs(abs(l)-abs(re))>1e-8*max(1,abs(re)):\n            bad+=1\nprint(\"dominance mismatches\",bad)\n# adversarial\ntests=[]\ntests.append(np.eye(10)); tests.append(np.zeros((5,5)))\ntests.append(np.diag([-3.,2,1,0.5]))\ntests.append(np.array([[0.,-1.],[1.,0.]]))\ntests.append(np.array([[1.,1.],[0.,1.]]))\ntests.append(np.array([[1e6,1],[0,1e-6]]))\nJ=np.eye(10,k=1); tests.append(J)\nfor M in tests:\n    l,v=f(M)\n    ok=np.allclose(M@v,l*v)\n    print(M.shape, complex(l), \"resid ok\",ok, \"resid\",np.linalg.norm(M@v-l*v))\n# speed\ndef bench(fn,A,reps=20000):\n    for _ in range(500): fn(A)\n    ts=[]\n    for _ in range(reps):\n        t=time.perf_counter(); fn(A); ts.append(time.perf_counter()-t)\n    return np.median(ts)*1e6\nfor n in [2,4,6,8,10]:\n    A=rng.normal(size=(n,n))\n    print(n,\"ref\",round(bench(ref,A,5000),2),\"fast\",round(bench(f,A,5000),2))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 278692,
+     "dur_ms": 50,
+     "exit": 0,
+     "cpu_ms": 46.7,
+     "phases_us": {
+      "acquire": 194,
+      "resume": 23943,
+      "mount": 19987,
+      "run": 8122,
+      "destroy": 17955
+     },
+     "cold": null,
+     "vm": "vm-235"
+    },
+    {
+     "at_ms": 278789,
+     "dur_ms": 2717,
+     "exit": 0,
+     "cpu_ms": 2847.9,
+     "phases_us": {
+      "acquire": 15,
+      "resume": 22692,
+      "mount": 17924,
+      "run": 2666625,
+      "destroy": 27100
+     },
+     "cold": null,
+     "vm": "vm-152"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 281551,
+   "dur_ms": 4617
+  },
+  {
+   "kind": "tool",
+   "at_ms": 286168,
+   "dur_ms": 1444,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport numpy as np, time, ctypes\nl=ctypes.CDLL('/workspace/native/libdom.so')\nDP=ctypes.POINTER(ctypes.c_double)\nfn=l.dominant_eig; fn.restype=ctypes.c_int; fn.argtypes=[DP,ctypes.c_int,DP]\nrng=np.random.default_rng(0)\ndef bench(fn_,reps=20000):\n    for _ in range(1000): fn_()\n    ts=[]\n    for _ in range(reps):\n        t=time.perf_counter(); fn_(); ts.append(time.perf_counter()-t)\n    return np.median(ts)*1e6\nfor n in [2,4,6,8,10]:\n    A=np.ascontiguousarray(rng.normal(size=(n,n)))\n    out=np.empty(2+2*n)\n    ap=A.ctypes.data_as(DP); op=out.ctypes.data_as(DP)\n    print(n,\n      \"raw call\", round(bench(lambda: fn(ap,n,op)),2),\n      \"| asarray\", round(bench(lambda: np.asarray(A,dtype=np.float64)),2),\n      \"| empty\", round(bench(lambda: np.empty(2+2*n)),2),\n      \"| ptr\", round(bench(lambda: A.ctypes.data_as(DP)),2),\n      \"| view\", round(bench(lambda: out[2:].view(np.complex128)),2),\n      \"| lam\", round(bench(lambda: complex(out[0],out[1])),2))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 286226,
+     "dur_ms": 1346,
+     "exit": 0,
+     "cpu_ms": 1472.4,
+     "phases_us": {
+      "acquire": 326,
+      "resume": 23384,
+      "mount": 20275,
+      "run": 1295779,
+      "destroy": 25802
+     },
+     "cold": null,
+     "vm": "vm-237"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 287612,
+   "dur_ms": 9627
+  },
+  {
+   "kind": "tool",
+   "at_ms": 297239,
+   "dur_ms": 375,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls /usr/local/include/python3.13/Python.h 2>&1\npython3 -c \"import sysconfig; print(sysconfig.get_paths()['include'])\"\npython3 -c \"import numpy; print(numpy.get_include())\"\nls $(python3 -c \"import numpy; print(numpy.get_include())\")/numpy/arrayobject.h 2>&1\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 297295,
+     "dur_ms": 292,
+     "exit": 0,
+     "cpu_ms": 469.5,
+     "phases_us": {
+      "acquire": 90,
+      "resume": 23431,
+      "mount": 20162,
+      "run": 248536,
+      "destroy": 19799
+     },
+     "cold": null,
+     "vm": "vm-238"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 297614,
+   "dur_ms": 7456
+  },
+  {
+   "kind": "tool",
+   "at_ms": 305070,
+   "dur_ms": 3168,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport numpy as np, time, ctypes\nl=ctypes.CDLL('/workspace/native/libdom.so')\nDP=ctypes.POINTER(ctypes.c_double)\nfn=l.dominant_eig; fn.restype=ctypes.c_int; fn.argtypes=[ctypes.c_void_p,ctypes.c_int,ctypes.c_void_p]\nrng=np.random.default_rng(0)\ndef bench(f,reps=50000):\n    for _ in range(2000): f()\n    ts=[]\n    for _ in range(reps):\n        t=time.perf_counter(); f(); ts.append(time.perf_counter()-t)\n    return np.median(ts)*1e6\nA=np.ascontiguousarray(rng.normal(size=(10,10))); out=np.empty(22)\nprint(\"A.ctypes.data\", bench(lambda: A.ctypes.data))\nprint(\"out.ctypes.data\", bench(lambda: out.ctypes.data))\nprint(\"voidp call\", bench(lambda: fn(A.ctypes.data,10,out.ctypes.data)))\nprint(\"data_as ptr call\", bench(lambda: fn.__call__(A.ctypes.data_as(DP),10,out.ctypes.data_as(DP))))\n# full wrapper with int pointers\ndef full(A):\n    a=A if (A.dtype==np.float64 and A.flags.c_contiguous) else np.ascontiguousarray(A,dtype=np.float64)\n    n=a.shape[0]\n    o=np.empty(2+2*n)\n    if fn(a.ctypes.data,n,o.ctypes.data)==0:\n        return complex(o[0],o[1]), o[2:].view(np.complex128)\n    e,v=np.linalg.eig(A); i=np.argmax(np.abs(e)); return e[i],v[:,i]\nfor n in [2,4,6,8,10]:\n    A=rng.normal(size=(n,n))\n    print(n,\"full\",round(bench(full.__call__ if False else (lambda: full(A)),20000),2))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 305128,
+     "dur_ms": 3070,
+     "exit": 0,
+     "cpu_ms": 3169.3,
+     "phases_us": {
+      "acquire": 99,
+      "resume": 23352,
+      "mount": 19830,
+      "run": 3018253,
+      "destroy": 28411
+     },
+     "cold": null,
+     "vm": "vm-239"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 308238,
+   "dur_ms": 7782
+  },
+  {
+   "kind": "tool",
+   "at_ms": 316020,
+   "dur_ms": 19980,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npip install -q ziglang 2>&1 | tail -1\ncd /workspace/native\nfor flags in \"-O2 -mcpu=baseline\" \"-O3 -mcpu=baseline\" \"-O3 -mcpu=x86_64_v3\" \"-O3 -mcpu=native\"; do\n  python3 -m ziglang cc $flags -fPIC -shared dom.c -o \"v_$(echo $flags | tr ' =' '__').so\" -lm 2>/dev/null && echo \"built $flags\"\ndone\nls\npython3 - <<'PY'\nimport numpy as np, time, ctypes, glob\nrng=np.random.default_rng(0)\ndef bench(fn_,reps=30000):\n    for _ in range(1000): fn_()\n    ts=[]\n    for _ in range(reps):\n        t=time.perf_counter(); fn_(); ts.append(time.perf_counter()-t)\n    return np.median(ts)*1e6\nfor n in [2,4,6,8,10]:\n    A=np.ascontiguousarray(rng.normal(size=(n,n))); o=np.empty(2+2*n); ap=A.ctypes.data; op=o.ctypes.data\n    row=[]\n    for f in sorted(glob.glob('/workspace/native/v_*.so')):\n        l=ctypes.CDLL(f); fn=l.dominant_eig; fn.restype=ctypes.c_int; fn.argtypes=[ctypes.c_void_p,ctypes.c_int,ctypes.c_void_p]\n        row.append((f.split('v_')[1][:20], round(bench(lambda: fn(ap,n,op)),2)))\n    print(n,row)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 316036,
+     "dur_ms": 19955,
+     "exit": 0,
+     "cpu_ms": 20096.7,
+     "phases_us": {
+      "acquire": 87,
+      "resume": 23009,
+      "mount": 20194,
+      "run": 19834644,
+      "destroy": 97099
+     },
+     "cold": null,
+     "vm": "vm-240"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 336000,
+   "dur_ms": 7259
+  },
+  {
+   "kind": "tool",
+   "at_ms": 343259,
+   "dur_ms": 479,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put /workspace/eigen.py <<'PY'\nimport ctypes\nimport os\n\nimport numpy as np\n\n# Fast small-matrix dominant-eigenpair kernel (Hessenberg + Francis QR +\n# inverse iteration), compiled to native code.  Falls back to numpy if the\n# shared object cannot be loaded or reports trouble.\n_fn = None\ntry:\n    _path = os.path.join(os.path.dirname(os.path.abspath(__file__)), \"native\", \"libdom.so\")\n    _lib = ctypes.CDLL(_path)\n    _fn = _lib.dominant_eig\n    _fn.restype = ctypes.c_int\n    _fn.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p]\nexcept Exception:\n    _fn = None\n\n\ndef find_dominant_eigenvalue_and_eigenvector(A: np.ndarray):\n    \"\"\"Find the dominant eigenvalue and eigenvector of a general real matrix.\"\"\"\n    if _fn is not None:\n        a = np.asarray(A, dtype=np.float64)\n        n = a.shape[0]\n        if a.ndim == 2 and a.shape[1] == n and 1 <= n <= 16:\n            if not a.flags.c_contiguous:\n                a = np.ascontiguousarray(a)\n            out = np.empty(2 + 2 * n)\n            if _fn(a.ctypes.data, n, out.ctypes.data) == 0:\n                return complex(out[0], out[1]), out[2:].view(np.complex128)\n    eigenvalues, eigenvectors = np.linalg.eig(A)\n    idx = np.argmax(np.abs(eigenvalues))\n    return eigenvalues[idx], eigenvectors[:, idx]\nPY\nsbx run <<'EOF'\ncd /workspace\npython3 eval.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 343318,
+     "dur_ms": 49,
+     "exit": 0,
+     "cpu_ms": 47.1,
+     "phases_us": {
+      "acquire": 81,
+      "resume": 22517,
+      "mount": 19881,
+      "run": 8085,
+      "destroy": 18131
+     },
+     "cold": null,
+     "vm": "vm-241"
+    },
+    {
+     "at_ms": 343413,
+     "dur_ms": 279,
+     "exit": 0,
+     "cpu_ms": 407.3,
+     "phases_us": {
+      "acquire": 28,
+      "resume": 22157,
+      "mount": 17864,
+      "run": 226861,
+      "destroy": 29305
+     },
+     "cold": null,
+     "vm": "vm-236"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 343738,
+   "dur_ms": 27617
+  },
+  {
+   "kind": "tool",
+   "at_ms": 371355,
+   "dur_ms": 704,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put /workspace/native/ext.c <<'EOF'\n#define PY_SSIZE_T_CLEAN\n#include <Python.h>\n#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION\n#include <numpy/arrayobject.h>\n\nextern int dominant_eig2(const double *a, int n, double *lr, double *li, double *vout);\n\nstatic PyObject *py_solve(PyObject *self, PyObject *args)\n{\n    PyObject *obj;\n    int n;\n    if (!PyArg_ParseTuple(args, \"Oi\", &obj, &n))\n        return NULL;\n    if (n <= 0 || n > 16)\n        Py_RETURN_NONE;\n\n    PyArrayObject *arr = (PyArrayObject *)PyArray_FROM_OTF(obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);\n    if (!arr)\n        return NULL;\n    if (PyArray_NDIM(arr) != 2 || PyArray_DIM(arr, 0) != n || PyArray_DIM(arr, 1) != n) {\n        Py_DECREF(arr);\n        Py_RETURN_NONE;\n    }\n\n    npy_intp dims[1] = {n};\n    PyArrayObject *out = (PyArrayObject *)PyArray_SimpleNew(1, dims, NPY_CDOUBLE);\n    if (!out) {\n        Py_DECREF(arr);\n        return NULL;\n    }\n\n    double lr = 0.0, li = 0.0;\n    int rc = dominant_eig2((const double *)PyArray_DATA(arr), n, &lr, &li,\n                           (double *)PyArray_DATA(out));\n    Py_DECREF(arr);\n    if (rc != 0) {\n        Py_DECREF(out);\n        Py_RETURN_NONE;\n    }\n\n    PyObject *lam = PyComplex_FromDoubles(lr, li);\n    if (!lam) {\n        Py_DECREF(out);\n        return NULL;\n    }\n    PyObject *res = PyTuple_Pack(2, lam, (PyObject *)out);\n    Py_DECREF(lam);\n    Py_DECREF(out);\n    return res;\n}\n\nstatic PyMethodDef methods[] = {\n    {\"solve\", py_solve, METH_VARARGS, \"dominant eigenpair\"},\n    {NULL, NULL, 0, NULL}\n};\n\nstatic struct PyModuleDef moduledef = {\n    PyModuleDef_HEAD_INIT, \"_domfast\", NULL, -1, methods\n};\n\nPyMODINIT_FUNC PyInit__domfast(void)\n{\n    import_array();\n    return PyModule_Create(&moduledef);\n}\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 371989,
+     "dur_ms": 62,
+     "exit": 0,
+     "cpu_ms": 48.3,
+     "phases_us": {
+      "acquire": 118,
+      "resume": 22981,
+      "mount": 19794,
+      "run": 8240,
+      "destroy": 30998
+     },
+     "cold": null,
+     "vm": "vm-243"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 372059,
+   "dur_ms": 3644
+  },
+  {
+   "kind": "tool",
+   "at_ms": 375703,
+   "dur_ms": 10037,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncat >> /workspace/native/dom.c <<'C'\nint dominant_eig2(const double *a, int n, double *lr, double *li, double *vout)\n{\n    double tmp[2 + 2 * MAXN];\n    int rc = dominant_eig(a, n, tmp);\n    if (rc != 0) return rc;\n    *lr = tmp[0];\n    *li = tmp[1];\n    for (int i = 0; i < 2 * n; i++) vout[i] = tmp[2 + i];\n    return 0;\n}\nC\npip install -q ziglang 2>&1 | tail -1\ncd /workspace\nPYINC=$(python3 -c \"import sysconfig;print(sysconfig.get_paths()['include'])\")\nNPINC=$(python3 -c \"import numpy;print(numpy.get_include())\")\nSUFFIX=$(python3 -c \"import sysconfig;print(sysconfig.get_config_var('EXT_SUFFIX'))\")\necho \"suffix=$SUFFIX\"\npython3 -m ziglang cc -O3 -mcpu=baseline -fPIC -shared -I\"$PYINC\" -I\"$NPINC\" native/ext.c native/dom.c -o \"native/_domfast$SUFFIX\" -lm && ls -la native/\npython3 - <<'PY'\nimport importlib.machinery, importlib.util, glob, numpy as np\np=glob.glob('/workspace/native/_domfast*.so')[0]\nloader=importlib.machinery.ExtensionFileLoader('_domfast',p)\nspec=importlib.util.spec_from_loader('_domfast',loader)\nm=importlib.util.module_from_spec(spec); loader.exec_module(m)\nrng=np.random.default_rng(0)\nA=rng.normal(size=(5,5))\nlam,v=m.solve(A,5)\nprint(lam,v.dtype,v.shape,np.allclose(A@v,lam*v,atol=1e-8))\nprint(m.solve(np.zeros((3,3)),3))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 375760,
+     "dur_ms": 9972,
+     "exit": 0,
+     "cpu_ms": 10118.1,
+     "phases_us": {
+      "acquire": 73,
+      "resume": 23293,
+      "mount": 20539,
+      "run": 9853548,
+      "destroy": 95453
+     },
+     "cold": null,
+     "vm": "vm-244"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 385740,
+   "dur_ms": 8832
+  },
+  {
+   "kind": "tool",
+   "at_ms": 394572,
+   "dur_ms": 858,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx put /workspace/eigen.py <<'PY'\nimport ctypes\nimport glob\nimport importlib.machinery\nimport importlib.util\nimport os\n\nimport numpy as np\n\n_here = os.path.dirname(os.path.abspath(__file__))\n\n# Preferred fast path: a small C extension.  The kernel reduces the matrix to\n# upper Hessenberg form, runs a Francis double-shift QR iteration to get all\n# eigenvalues, then refines the dominant eigenvector by inverse iteration and\n# verifies the residual before returning.\n_ext_solve = None\ntry:\n    _cands = sorted(glob.glob(os.path.join(_here, \"native\", \"_domfast*.so\")))\n    if _cands:\n        _loader = importlib.machinery.ExtensionFileLoader(\"_domfast\", _cands[0])\n        _spec = importlib.util.spec_from_loader(\"_domfast\", _loader)\n        _mod = importlib.util.module_from_spec(_spec)\n        _loader.exec_module(_mod)\n        _ext_solve = getattr(_mod, \"solve\", None)\nexcept Exception:\n    _ext_solve = None\n\n# Secondary fast path: the same kernel called through ctypes (works with any\n# CPython version, no extension ABI dependency).\n_fn = None\nif _ext_solve is None:\n    try:\n        _lib = ctypes.CDLL(os.path.join(_here, \"native\", \"libdom.so\"))\n        _fn = _lib.dominant_eig\n        _fn.restype = ctypes.c_int\n        _fn.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p]\n    except Exception:\n        _fn = None\n\n\ndef find_dominant_eigenvalue_and_eigenvector(A: np.ndarray):\n    \"\"\"Find the dominant eigenvalue and eigenvector of a real square matrix.\"\"\"\n    if _ext_solve is not None and isinstance(A, np.ndarray):\n        n = A.shape[0]\n        if A.ndim == 2 and A.shape[1] == n and 1 <= n <= 16:\n            res = _ext_solve(A, n)\n            if res is not None:\n                return res\n    elif _fn is not None and isinstance(A, np.ndarray):\n        n = A.shape[0]\n        if A.ndim == 2 and A.shape[1] == n and 1 <= n <= 16:\n            a = np.ascontiguousarray(A, dtype=np.float64)\n            out = np.empty(2 + 2 * n)\n            if _fn(a.ctypes.data, n, out.ctypes.data) == 0:\n                return complex(out[0], out[1]), out[2:].view(np.complex128)\n\n    eigenvalues, eigenvectors = np.linalg.eig(A)\n    idx = np.argmax(np.abs(eigenvalues))\n    return eigenvalues[idx], eigenvectors[:, idx]\nPY\nsbx run <<'EOF'\npip install -q ziglang 2>&1 | tail -1\ncd /workspace\npython3 -m ziglang cc -O3 -mcpu=baseline -fPIC -shared native/dom.c -o native/libdom.so -lm\nrm -f native/t.c native/t.so native/v_*.so native/ext.c.bak\npython3 - <<'PY'\nimport numpy as np, time, importlib.util\nspec=importlib.util.spec_from_file_location(\"eigen\",\"/workspace/eigen.py\"); m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\nf=m.find_dominant_eigenvalue_and_eigenvector\nrng=np.random.default_rng(0)\ndef ref(A):\n    e,v=np.linalg.eig(A); i=np.argmax(np.abs(e)); return e[i],v[:,i]\ndef bench(fn_,A,reps=20000):\n    for _ in range(1000): fn_(A)\n    ts=[]\n    for _ in range(reps):\n        t=time.perf_counter(); fn_(A); ts.append(time.perf_counter()-t)\n    return np.median(ts)*1e6\nfor n in [2,4,6,8,10]:\n    A=rng.normal(size=(n,n))\n    print(n,\"ref\",round(bench(ref,A,5000),2),\"ext\",round(bench(f,A,20000),2))\nprint(\"ext loaded:\", m._ext_solve is not None)\nEOF\necho \"================ eval runs ================\"\ncd /workspace && for i in 1 2; do python3 eval.py; done",
+   "sandbox": [
+    {
+     "at_ms": 395255,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 46.6,
+     "phases_us": {
+      "acquire": 89,
+      "resume": 23838,
+      "mount": 19987,
+      "run": 8213,
+      "destroy": 24015
+     },
+     "cold": null,
+     "vm": "vm-245"
+    },
+    {
+     "at_ms": 395358,
+     "dur_ms": 39,
+     "exit": 2,
+     "cpu_ms": 28.6,
+     "phases_us": {
+      "acquire": 28,
+      "resume": 20564,
+      "mount": 17321,
+      "run": 1032,
+      "destroy": 16812
+     },
+     "cold": null,
+     "vm": "vm-242"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 395430,
+   "dur_ms": 2325
+  },
+  {
+   "kind": "tool",
+   "at_ms": 397755,
+   "dur_ms": 131,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nhead -3 /workspace/eigen.py; grep -c \"\" /workspace/eigen.py; ls /workspace/native\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 397811,
+     "dur_ms": 47,
+     "exit": 0,
+     "cpu_ms": 45.0,
+     "phases_us": {
+      "acquire": 95,
+      "resume": 22679,
+      "mount": 19932,
+      "run": 7398,
+      "destroy": 16800
+     },
+     "cold": null,
+     "vm": "vm-247"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 397886,
+   "dur_ms": 2267
+  },
+  {
+   "kind": "tool",
+   "at_ms": 400153,
+   "dur_ms": 11578,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npip install -q ziglang 2>&1 | tail -1\ncd /workspace\npython3 -m ziglang cc -O3 -mcpu=baseline -fPIC -shared native/dom.c -o native/libdom.so -lm\nrm -f native/t.c native/t.so native/v_*.so\nls -la native/\npython3 - <<'PY'\nimport numpy as np, time, importlib.util\nspec=importlib.util.spec_from_file_location(\"eigen\",\"/workspace/eigen.py\"); m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\nf=m.find_dominant_eigenvalue_and_eigenvector\nrng=np.random.default_rng(0)\ndef ref(A):\n    e,v=np.linalg.eig(A); i=np.argmax(np.abs(e)); return e[i],v[:,i]\ndef bench(fn_,A,reps=20000):\n    for _ in range(1000): fn_(A)\n    ts=[]\n    for _ in range(reps):\n        t=time.perf_counter(); fn_(A); ts.append(time.perf_counter()-t)\n    return np.median(ts)*1e6\nfor n in [2,4,6,8,10]:\n    A=rng.normal(size=(n,n))\n    print(n,\"ref\",round(bench(ref,A,5000),2),\"ext\",round(bench(f,A,20000),2))\nprint(\"ext loaded:\", m._ext_solve is not None)\nPY\necho \"================ eval runs ================\"\nfor i in 1 2; do python3 eval.py; done\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 400212,
+     "dur_ms": 11510,
+     "exit": 0,
+     "cpu_ms": 11792.3,
+     "phases_us": {
+      "acquire": 78,
+      "resume": 23452,
+      "mount": 20840,
+      "run": 11396188,
+      "destroy": 89934
+     },
+     "cold": null,
+     "vm": "vm-248"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 411731,
+   "dur_ms": 13039
+  },
+  {
+   "kind": "tool",
+   "at_ms": 424770,
+   "dur_ms": 4551,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport numpy as np, importlib.util\nspec=importlib.util.spec_from_file_location(\"eigen\",\"/workspace/eigen.py\"); m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\nf=m.find_dominant_eigenvalue_and_eigenvector; ext=m._ext_solve\nrng=np.random.default_rng(123)\ndef ref(A):\n    e,v=np.linalg.eig(A); i=np.argmax(np.abs(e)); return e[i],v[:,i]\ndef check(A,label,count_fb=False):\n    A0=A.copy()\n    l,v=f(A)\n    assert np.array_equal(A,A0), f\"input mutated {label}\"\n    assert not np.allclose(v,0) and np.isfinite(l), f\"bad trivial {label}\"\n    ok=np.allclose(A@v,l*v)\n    re,_=ref(A)\n    dom=abs(abs(l)-abs(re))<=1e-6*max(1.0,abs(re))\n    fb = (ext(A,int(A.shape[0])) is None) if count_fb else None\n    return ok,dom,fb,np.linalg.norm(A@v-l*v)/max(np.linalg.norm(v),1e-300)\nfails=[]\n# random suites at different scales\nfor n in range(1,11):\n    for t in range(3000):\n        A=rng.normal(size=(n,n))\n        scale=10.0**rng.integers(-6,7)\n        A*=scale\n        ok,dom,_,r=check(A,'rand')\n        if not(ok and dom): fails.append(('rand',n,scale,r,ok,dom))\nprint(\"random failures:\",len(fails), fails[:3])\n\nspecial=[]\nfor n in range(1,11):\n    special += [\n      np.eye(n), np.zeros((n,n)), np.ones((n,n)), np.diag(np.arange(n,dtype=float)),\n      np.diag([2.,-2.]+[1.]*(n-2)) if n>=2 else np.array([[2.]]),\n      np.diag([3.,-3.]+[1.]*(n-2)) if n>=2 else np.array([[3.]]),\n      np.fliplr(np.eye(n)), np.triu(rng.normal(size=(n,n))),\n      np.tril(rng.normal(size=(n,n))),\n      np.eye(n,k=1), (np.eye(n,k=1) + 1e-8*np.eye(n)),\n      rng.normal(size=(n,n)).astype(np.int64).astype(float),\n      np.round(rng.normal(size=(n,n))*3),\n      rng.normal(size=(n,n))*1e8, rng.normal(size=(n,n))*1e-8,\n      np.triu(np.ones((n,n))),\n    ]\n    if n>=2:\n        special.append(np.array([[0.,-1.],[1.,0.]]))\n        special.append(np.block([[np.zeros((n//2,n//2)), -np.eye(n//2)],[np.eye(n//2), np.zeros((n//2,n//2))]]) if n%2==0 else np.eye(n))\n        # companion matrix\n        c=rng.normal(size=n); special.append(np.eye(n,k=-1) if False else np.array([[0]*n]*n,dtype=float))\n        C=np.zeros((n,n)); C[0,:]=c; C[1:,:-1]=np.eye(n-1); special.append(C)\n        # symmetric / skew\n        S=rng.normal(size=(n,n)); special.append((S+S.T)/2); special.append((S-S.T)/2)\n        # near defective Jordan with perturbation\n        J=np.eye(n,k=1)+np.eye(n); special.append(J + 1e-10*rng.normal(size=(n,n)))\nnfb=0; nbad=0\nfor A in special:\n    ok,dom,fb,r=check(A,'special',True)\n    if fb: nfb+=1\n    if not(ok and dom):\n        nbad+=1; print(\"SPECIAL FAIL\",A.shape,r,ok,dom)\nprint(\"special count\",len(special),\"fallbacks\",nfb,\"bad\",nbad)\n\n# dtype / layout robustness\nA=rng.normal(size=(6,6))\nvariants=[A.astype(np.float32), A.astype(np.int32), A.astype(np.complex128), A.T, A[::-1], A[::2,::2], A.tolist(), np.asfortranarray(A), A.astype(np.longdouble)]\nfor B in variants:\n    l,v=f(B); ok=np.allclose(np.asarray(B)@v,l*v)\n    print(type(B).__name__, getattr(B,'dtype',None), getattr(B,'shape',None), ok)\n# independent outputs\nl1,v1=f(A); l2,v2=f(A)\nv1[0]=999\nl3,v3=f(A)\nprint(\"independent:\", v3[0]!=999, np.allclose(A@v3,l3*v3))\n# 1x1\nprint(\"1x1:\", f(np.array([[5.0]])), f(np.array([[-2.0]])))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 424829,
+     "dur_ms": 4462,
+     "exit": 1,
+     "cpu_ms": 4585.0,
+     "phases_us": {
+      "acquire": 100,
+      "resume": 24087,
+      "mount": 20121,
+      "run": 4406244,
+      "destroy": 31775
+     },
+     "cold": null,
+     "vm": "vm-249"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 429321,
+   "dur_ms": 4284
+  },
+  {
+   "kind": "tool",
+   "at_ms": 433605,
+   "dur_ms": 122,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put /workspace/eigen.py <<'PY'\nimport ctypes\nimport glob\nimport importlib.machinery\nimport importlib.util\nimport os\n\nimport numpy as np\n\n_here = os.path.dirname(os.path.abspath(__file__))\n\n# Preferred fast path: a small C extension.  The kernel reduces the matrix to\n# upper Hessenberg form, runs a Francis double-shift QR iteration to obtain the\n# eigenvalues, then refines the dominant eigenvector by inverse iteration and\n# verifies the residual before returning anything.\n_ext_solve = None\ntry:\n    _cands = sorted(glob.glob(os.path.join(_here, \"native\", \"_domfast*.so\")))\n    if _cands:\n        _loader = importlib.machinery.ExtensionFileLoader(\"_domfast\", _cands[0])\n        _spec = importlib.util.spec_from_loader(\"_domfast\", _loader)\n        _mod = importlib.util.module_from_spec(_spec)\n        _loader.exec_module(_mod)\n        _ext_solve = getattr(_mod, \"solve\", None)\nexcept Exception:\n    _ext_solve = None\n\n# Secondary fast path: the same kernel through ctypes (no CPython ABI\n# dependency, so it survives a Python version change).\n_fn = None\nif _ext_solve is None:\n    try:\n        _lib = ctypes.CDLL(os.path.join(_here, \"native\", \"libdom.so\"))\n        _fn = _lib.dominant_eig\n        _fn.restype = ctypes.c_int\n        _fn.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p]\n    except Exception:\n        _fn = None\n\n\ndef find_dominant_eigenvalue_and_eigenvector(A: np.ndarray):\n    \"\"\"Find the dominant eigenvalue and eigenvector of a real square matrix.\"\"\"\n    if isinstance(A, np.ndarray):\n        n = A.shape[0]\n        if A.ndim == 2 and A.shape[1] == n and 1 <= n <= 16:\n            if _ext_solve is not None:\n                try:\n                    res = _ext_solve(A, n)\n                except Exception:\n                    res = None\n                if res is not None:\n                    return res\n            elif _fn is not None:\n                a = np.ascontiguousarray(A, dtype=np.float64)\n                out = np.empty(2 + 2 * n)\n                if _fn(a.ctypes.data, n, out.ctypes.data) == 0:\n                    return complex(out[0], out[1]), out[2:].view(np.complex128)\n\n    eigenvalues, eigenvectors = np.linalg.eig(A)\n    idx = np.argmax(np.abs(eigenvalues))\n    return eigenvalues[idx], eigenvectors[:, idx]\nPY",
+   "sandbox": [
+    {
+     "at_ms": 433663,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 49.8,
+     "phases_us": {
+      "acquire": 82,
+      "resume": 23578,
+      "mount": 20739,
+      "run": 8073,
+      "destroy": 24373
+     },
+     "cold": null,
+     "vm": "vm-250"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 433727,
+   "dur_ms": 4197
+  },
+  {
+   "kind": "tool",
+   "at_ms": 437924,
+   "dur_ms": 4874,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport numpy as np, importlib.util\nspec=importlib.util.spec_from_file_location(\"eigen\",\"/workspace/eigen.py\"); m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\nf=m.find_dominant_eigenvalue_and_eigenvector; ext=m._ext_solve\nrng=np.random.default_rng(123)\ndef ref(A):\n    e,v=np.linalg.eig(A); i=np.argmax(np.abs(e)); return e[i],v[:,i]\ndef check(A):\n    A0=np.array(A,copy=True)\n    l,v=f(A)\n    assert not np.allclose(v,0) and np.isfinite(l)\n    ok=bool(np.allclose(np.asarray(A)@v,l*v))\n    try: dom=abs(abs(l)-abs(ref(A)[0]))<=1e-6*max(1.0,abs(ref(A)[0]))\n    except Exception: dom=True\n    return ok,dom\nfails=[]\nfor n in range(1,11):\n    for t in range(3000):\n        A=rng.normal(size=(n,n))*(10.0**rng.integers(-6,7))\n        ok,dom=check(A)\n        if not(ok and dom): fails.append((n,ok,dom))\nprint(\"random failures:\",len(fails))\n# dtype/layout\nA=rng.normal(size=(6,6))\nvariants=[A.astype(np.float32), A.astype(np.int32), A.astype(np.complex128), A.T, A[::-1], A[::2,::2], A.tolist(), np.asfortranarray(A), A.astype(np.longdouble), np.matrix(A)]\nfor B in variants:\n    l,v=f(B); ok=np.allclose(np.asarray(B)@v,l*v)\n    print(type(B).__name__, getattr(B,'dtype',None), getattr(B,'shape',None), ok)\nl1,v1=f(A); v1[0]=999; l3,v3=f(A)\nprint(\"independent:\", v3[0]!=999, np.allclose(A@v3,l3*v3))\nprint(\"1x1:\", f(np.array([[5.0]])), f(np.array([[-2.0]])))\n# sim non-contiguous strided, complex dominant pair\nB=np.array([[0.,-2.],[2.,0.]]); l,v=f(B); print(\"complex pair\",l, np.allclose(B@v,l*v))\n# force ctypes fallback\nm._ext_solve=None\nl,v=f(A); print(\"ctypes path\", np.allclose(A@v,l*v))\nm._fn=None\nl,v=f(A); print(\"numpy fallback\", np.allclose(A@v,l*v))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 437981,
+     "dur_ms": 4779,
+     "exit": 1,
+     "cpu_ms": 4884.8,
+     "phases_us": {
+      "acquire": 101,
+      "resume": 23724,
+      "mount": 20684,
+      "run": 4730716,
+      "destroy": 24121
+     },
+     "cold": null,
+     "vm": "vm-251"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 442798,
+   "dur_ms": 3956
+  },
+  {
+   "kind": "tool",
+   "at_ms": 446754,
+   "dur_ms": 1259,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport numpy as np, importlib.util\nspec=importlib.util.spec_from_file_location(\"eigen\",\"/workspace/eigen.py\"); m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\nf=m.find_dominant_eigenvalue_and_eigenvector\nrng=np.random.default_rng(7)\nA=rng.normal(size=(6,6))\nvariants=[np.asfortranarray(A), np.matrix(A), A.astype(np.float16)]\nfor B in variants:\n    try:\n        l,v=f(B); print(type(B).__name__, getattr(B,'dtype',None), np.allclose(np.asarray(B)@v,l*v))\n    except Exception as e: print(type(B).__name__,\"ERR\",e)\nl1,v1=f(A); v1[0]=999; l3,v3=f(A)\nprint(\"independent:\", v3[0]!=999, np.allclose(A@v3,l3*v3))\nprint(\"1x1:\", f(np.array([[5.0]])), f(np.array([[-2.0]])))\nB=np.array([[0.,-2.],[2.,0.]]); l,v=f(B); print(\"complex pair\",l, np.allclose(B@v,l*v))\nm._ext_solve=None\nl,v=f(A); print(\"ctypes path\", np.allclose(A@v,l*v))\nm._fn=None\nl,v=f(A); print(\"numpy fallback\", np.allclose(A@v,l*v))\n# verify ctypes path broadly\nm._ext_solve=None\nimport ctypes\nl=ctypes.CDLL('/workspace/native/libdom.so'); fn=l.dominant_eig; fn.restype=ctypes.c_int; fn.argtypes=[ctypes.c_void_p,ctypes.c_int,ctypes.c_void_p]; m._fn=fn\nbad=0\nfor n in range(1,11):\n    for _ in range(2000):\n        B=rng.normal(size=(n,n)); l,v=f(B)\n        if not np.allclose(B@v,l*v): bad+=1\nprint(\"ctypes random bad\",bad)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 446815,
+     "dur_ms": 1159,
+     "exit": 0,
+     "cpu_ms": 1255.9,
+     "phases_us": {
+      "acquire": 86,
+      "resume": 23339,
+      "mount": 20650,
+      "run": 1104993,
+      "destroy": 30242
+     },
+     "cold": null,
+     "vm": "vm-252"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 448013,
+   "dur_ms": 7571
+  },
+  {
+   "kind": "tool",
+   "at_ms": 455584,
+   "dur_ms": 855,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport numpy as np, importlib.util\nspec=importlib.util.spec_from_file_location(\"eigen\",\"/workspace/eigen.py\"); m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\next=m._ext_solve; rng=np.random.default_rng(0)\nfor n in [2,3,4,5,6,7,8,9,10]:\n    fb=0; N=10000\n    for _ in range(N):\n        A=rng.normal(size=(n,n))\n        if ext(A,n) is None: fb+=1\n    print(n,\"fallback rate\",fb/N)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 455640,
+     "dur_ms": 778,
+     "exit": 0,
+     "cpu_ms": 908.8,
+     "phases_us": {
+      "acquire": 81,
+      "resume": 23253,
+      "mount": 20429,
+      "run": 735252,
+      "destroy": 19531
+     },
+     "cold": null,
+     "vm": "vm-253"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 456439,
+   "dur_ms": 4380
+  },
+  {
+   "kind": "tool",
+   "at_ms": 460819,
+   "dur_ms": 389,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nrm -f bench_lapack.py prof.py prof2.py conv.py eigen_new.py eigen_testmod.py\nls -la /workspace /workspace/native\necho \"=== eigen.py ===\"\ncat eigen.py\necho \"=== final eval ===\"\npython3 eval.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 460876,
+     "dur_ms": 284,
+     "exit": 0,
+     "cpu_ms": 413.8,
+     "phases_us": {
+      "acquire": 97,
+      "resume": 23208,
+      "mount": 20351,
+      "run": 228463,
+      "destroy": 31740
+     },
+     "cold": null,
+     "vm": "vm-254"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 461208,
+   "dur_ms": 3829
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.233,
+ "calls": 37,
+ "cell": "TB1b"
+}

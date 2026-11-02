@@ -1,0 +1,115 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "log-summary-date-ranges",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 9332,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 149,
+  "output": 1443,
+  "cacheRead": 33856,
+  "cacheWrite": 7424,
+  "total": 42872
+ },
+ "totals": {
+  "model_calls": 5,
+  "tool_calls": 4,
+  "model_ms": 7548,
+  "tool_ms": 544,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1138,
+   "dur_ms": 538,
+   "tokens_in": 22,
+   "tokens_out": 59,
+   "cache_read": 1856,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1680,
+   "dur_ms": 20,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app/logs && head -20 /app/logs/*.log | head -100"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1700,
+   "dur_ms": 3009,
+   "tokens_in": 46,
+   "tokens_out": 641,
+   "cache_read": 1920,
+   "cache_write": 6912,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4710,
+   "dur_ms": 347,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport csv, glob, os, re\nfrom datetime import date, timedelta\nfrom collections import Counter, defaultdict\n\nref = date(2025, 8, 12)\nperiods = {\n    'today': (ref, ref),\n    'last_7_days': (ref - timedelta(days=6), ref),\n    'last_30_days': (ref - timedelta(days=29), ref),\n    'month_to_date': (ref.replace(day=1), ref),\n}\nseverities = ['ERROR', 'WARNING', 'INFO']\ncounts = {p: Counter() for p in list(periods) + ['total']}\n\npat = re.compile(r'^(\\d{4}-\\d{2}-\\d{2})_')\nfor path in glob.glob('/app/logs/*.log'):\n    m = pat.match(os.path.basename(path))\n    if not m:\n        continue\n    d = date.fromisoformat(m.group(1))\n    with open(path, encoding='utf-8') as f:\n        for line in f:\n            sm = re.search(r'\\[(ERROR|WARNING|INFO)\\]', line)\n            if not sm:\n                continue\n            sev = sm.group(1)\n            counts['total'][sev] += 1\n            for p, (start, end) in periods.items():\n                if start <= d <= end:\n                    counts[p][sev] += 1\n\nwith open('/app/summary.csv', 'w', newline='', encoding='utf-8') as f:\n    w = csv.writer(f)\n    w.writerow(['period', 'severity', 'count'])\n    for p in ['today', 'last_7_days', 'last_30_days', 'month_to_date', 'total']:\n        for sev in severities:\n            w.writerow([p, sev, counts[p][sev]])\n\nprint(open('/app/summary.csv').read())\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 5064,
+   "dur_ms": 2509,
+   "tokens_in": 6,
+   "tokens_out": 537,
+   "cache_read": 9472,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 7575,
+   "dur_ms": 137,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport glob, os, re\nfrom datetime import date\nbad=[]\nfor p in glob.glob('logs/*.log'):\n    fn=os.path.basename(p)[:10]\n    with open(p) as f:\n        for i,line in enumerate(f,1):\n            if line[:10]!=fn:\n                bad.append((p,i,line[:10]))\n                break\nprint('mismatched files:', len(bad))\nprint('files:', len(glob.glob('logs/*.log')))\nPY\n# Independent counts using grep with filename date filters\nfor sev in ERROR WARNING INFO; do\n  echo -n \"$sev today: \"; grep -h \"\\[$sev\\]\" logs/2025-08-12_*.log | wc -l\n  echo -n \"$sev last7: \"; grep -h \"\\[$sev\\]\" logs/2025-08-{06,07,08,09,10,11,12}_*.log | wc -l\n  echo -n \"$sev mtd: \"; grep -h \"\\[$sev\\]\" logs/2025-08-{01,02,03,04,05,06,07,08,09,10,11,12}_*.log | wc -l\n  echo -n \"$sev total: \"; grep -h \"\\[$sev\\]\" logs/*.log | wc -l\ndone"
+  },
+  {
+   "kind": "model",
+   "at_ms": 7712,
+   "dur_ms": 997,
+   "tokens_in": 19,
+   "tokens_out": 165,
+   "cache_read": 10176,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 8710,
+   "dur_ms": 40,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && for sev in ERROR WARNING INFO; do echo -n \"$sev last30: \"; grep -h \"\\[$sev\\]\" logs/2025-07-{14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31}_*.log logs/2025-08-{01,02,03,04,05,06,07,08,09,10,11,12}_*.log | wc -l; done; cat summary.csv"
+  },
+  {
+   "kind": "model",
+   "at_ms": 8750,
+   "dur_ms": 495,
+   "tokens_in": 56,
+   "tokens_out": 41,
+   "cache_read": 10432,
+   "cache_write": 192,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.192,
+ "calls": 4,
+ "cell": "TB1e"
+}

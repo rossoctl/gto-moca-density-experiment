@@ -1,0 +1,218 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-f",
+ "instance_id": "db-wal-recovery",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 23898,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 246,
+  "output": 3410,
+  "cacheRead": 52160,
+  "cacheWrite": 13952,
+  "total": 69768
+ },
+ "totals": {
+  "model_calls": 6,
+  "tool_calls": 5,
+  "model_ms": 21905,
+  "tool_ms": 789,
+  "sandbox_ms": 447
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1115,
+   "dur_ms": 758,
+   "tokens_in": 59,
+   "tokens_out": 87,
+   "cache_read": 1216,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1877,
+   "dur_ms": 117,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npwd\nls -la\nfind . -maxdepth 2 -type f -printf '%p %s bytes\\n'\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 1926,
+     "dur_ms": 52,
+     "exit": 0,
+     "cpu_ms": 38.4,
+     "phases_us": {
+      "acquire": 63,
+      "resume": 20588,
+      "mount": 18535,
+      "run": 5539,
+      "destroy": 26055
+     },
+     "cold": null,
+     "vm": "vm-50"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 1997,
+   "dur_ms": 1006,
+   "tokens_in": 34,
+   "tokens_out": 129,
+   "cache_read": 1344,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3004,
+   "dur_ms": 134,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nfile main.db main.db-wal\nxxd main.db | head -40\necho '--- WAL ---'\nxxd main.db-wal | head -60\necho '--- strings db ---'\nstrings -a main.db\necho '--- strings wal ---'\nstrings -a main.db-wal | head -100\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 3053,
+     "dur_ms": 72,
+     "exit": 0,
+     "cpu_ms": 62.3,
+     "phases_us": {
+      "acquire": 62,
+      "resume": 19967,
+      "mount": 17901,
+      "run": 22220,
+      "destroy": 29912
+     },
+     "cold": null,
+     "vm": "vm-52"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 3141,
+   "dur_ms": 6131,
+   "tokens_in": 27,
+   "tokens_out": 1026,
+   "cache_read": 1600,
+   "cache_write": 11968,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 9273,
+   "dur_ms": 158,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nfrom pathlib import Path\nsrc=Path('main.db-wal').read_bytes()\ndec=bytes(b^0x42 for b in src)\nPath('main.db-wal.fixed').write_bytes(dec)\nprint('decoded header:', dec[:32].hex(' '))\nprint('frames count:', (len(dec)-32)//(4096+24))\nPY\nls -la\nxxd main.db-wal.fixed | head -25\nsqlite3 main.db \"PRAGMA journal_mode; SELECT * FROM items ORDER BY id;\" 2>&1 | head -50\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 9320,
+     "dur_ms": 98,
+     "exit": 0,
+     "cpu_ms": 106.6,
+     "phases_us": {
+      "acquire": 68,
+      "resume": 20706,
+      "mount": 18243,
+      "run": 59420,
+      "destroy": 17065
+     },
+     "cold": null,
+     "vm": "vm-53"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 9433,
+   "dur_ms": 3357,
+   "tokens_in": 41,
+   "tokens_out": 480,
+   "cache_read": 14592,
+   "cache_write": 1088,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 12791,
+   "dur_ms": 220,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nfrom pathlib import Path\nimport struct\nb=Path('main.db-wal.fixed').read_bytes()\nps=struct.unpack('>I',b[8:12])[0]\nprint('page size',ps,'size',len(b))\noff=32\ni=0\nwhile off+24<=len(b):\n    h=b[off:off+24]\n    print(i, 'off', off, 'pgno',struct.unpack('>I',h[0:4])[0], 'dbsize',struct.unpack('>I',h[4:8])[0], 'salt',h[8:16].hex(), 'cksum',h[16:24].hex())\n    off+=24+ps\n    i+=1\nPY\n# backup original corrupt WAL and install fixed one\ncp -n main.db-wal main.db-wal.corrupt\ncp main.db-wal.fixed main.db-wal\nsqlite3 main.db \"PRAGMA journal_mode; SELECT * FROM items ORDER BY id;\" 2>&1 | head -100\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 12840,
+     "dur_ms": 125,
+     "exit": 0,
+     "cpu_ms": 129.2,
+     "phases_us": {
+      "acquire": 32,
+      "resume": 24634,
+      "mount": 22303,
+      "run": 75246,
+      "destroy": 25027
+     },
+     "cold": null,
+     "vm": "vm-58"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 13011,
+   "dur_ms": 4766,
+   "tokens_in": 50,
+   "tokens_out": 730,
+   "cache_read": 16192,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 17778,
+   "dur_ms": 160,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nls -la\npython3 - <<'PY'\nimport sqlite3, json\ncon=sqlite3.connect('main.db')\nrows=con.execute('SELECT id, name, value FROM items ORDER BY id').fetchall()\nprint('rows:', rows)\ndata=[{'id':r[0], 'name':r[1], 'value':r[2]} for r in rows]\nwith open('recovered.json','w') as f:\n    json.dump(data, f, indent=2)\n    f.write('\\n')\nprint('count:', len(data))\nPY\ncat recovered.json\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 17826,
+     "dur_ms": 100,
+     "exit": 0,
+     "cpu_ms": 108.7,
+     "phases_us": {
+      "acquire": 41,
+      "resume": 20958,
+      "mount": 18534,
+      "run": 53401,
+      "destroy": 25894
+     },
+     "cold": null,
+     "vm": "vm-61"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 17940,
+   "dur_ms": 5887,
+   "tokens_in": 35,
+   "tokens_out": 958,
+   "cache_read": 17216,
+   "cache_write": 512,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.096,
+ "calls": 5,
+ "cell": "TB1f"
+}

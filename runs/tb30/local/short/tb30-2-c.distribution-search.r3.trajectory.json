@@ -1,0 +1,190 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "distribution-search",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 60799,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 1383,
+  "output": 11107,
+  "cacheRead": 137088,
+  "cacheWrite": 0,
+  "total": 149578
+ },
+ "totals": {
+  "model_calls": 9,
+  "tool_calls": 8,
+  "model_ms": 55429,
+  "tool_ms": 4896,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 103,
+   "dur_ms": 22736,
+   "tokens_in": 11,
+   "tokens_out": 504,
+   "cache_read": 7296,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 22839,
+   "dur_ms": 849,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport numpy as np\nfrom scipy.optimize import root, least_squares\nN=150000\ntarget=10.0\nlnN=np.log(N)\n\ndef eq_for_m(m):\n    n=N-m\n    # variables a,b direct maybe use logit transform? let's root in a,b with bounds\n    def eq(v):\n        a,b=v\n        # assume a,b>0\n        norm=m*a+n*b-1\n        kf=lnN + m*a*np.log(a)+n*b*np.log(b)-target\n        # backward: -lnN -(m ln a+n ln b)/N - target\n        kb=-lnN-(m*np.log(a)+n*np.log(b))/N-target\n        return [norm,kf,kb]\n    # Need 3 eq 2 vars overdetermined; instead use normalization to eliminate b\n    def eq2(v):\n        a=v[0]\n        b=(1-m*a)/n\n        if b<=0: return [1e9,1e9]\n        kf=lnN + m*a*np.log(a)+n*b*np.log(b)-target\n        kb=-lnN-(m*np.log(a)+n*np.log(b))/N-target\n        return [kf,kb]\n    best=[]\n    for a0 in np.linspace(1.01/N, 0.999/m, 20):\n        # corresponding b for rough\n        res=root(eq2,[a0],method='hybr')\n        if res.success:\n            a=res.x[0]; b=(1-m*a)/n\n            if a>0 and b>0:\n                best.append((res.fun[0],res.fun[1],a,b))\n    return best\nfor m in range(1,20):\n    best=eq_for_m(m)\n    if best:\n        # filter with failure small\n        sols=[z for z in best if max(abs(z[0]),abs(z[1]))<1e-8]\n        if sols:\n            print('m',m,'sol',sols[:3])\n    # else print\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 23717,
+   "dur_ms": 8612,
+   "tokens_in": 250,
+   "tokens_out": 580,
+   "cache_read": 11584,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 32329,
+   "dur_ms": 653,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport numpy as np\nfrom scipy.optimize import root, least_squares\nN=150000\nlnN=np.log(N)\nT=10.0\n\ndef fun(v):\n    # v = [logit(alpha), loga, logb]\n    z,la,lb=v\n    alpha=1/(1+np.exp(-z))\n    a=np.exp(la); b=np.exp(lb)\n    norm=N*(alpha*a+(1-alpha)*b)-1\n    kf=lnN + N*(alpha*a*la+(1-alpha)*b*lb)-T\n    kb=-lnN-(alpha*la+(1-alpha)*lb)-T\n    return [norm,kf,kb]\n\nguesses=[]\nfor m in [5,6,6.5,7,7.5,8,10,20]:\n    alpha=m/N\n    for a in [1/m*0.98,1/m,1/m*1.02]:\n        for b in [1e-9,1e-10,1e-11,3e-10]:\n            guesses.append([np.log(alpha/(1-alpha)),np.log(a),np.log(b)])\nfor g in guesses:\n    res=root(fun,g,method='hybr',options={'maxfev':10000})\n    if res.success and np.max(np.abs(res.fun))<1e-8:\n        z,la,lb=res.x\n        alpha=1/(1+np.exp(-z)); a=np.exp(la); b=np.exp(lb)\n        if 0<alpha<1 and a>0 and b>0:\n            print('alpha',alpha,'m',alpha*N,'a',a,'b',b,'fun',res.fun)\n            break\nelse:\n    # least squares best\n    best=None\n    for g in guesses:\n        r=least_squares(fun,g,xtol=1e-14,ftol=1e-14,gtol=1e-14,max_nfev=100000)\n        cost=np.max(np.abs(r.fun))\n        if best is None or cost<best[0]: best=(cost,r.x,r.fun)\n    print('best',best[0],best[2])\n    z,la,lb=best[1]; alpha=1/(1+np.exp(-z));a=np.exp(la);b=np.exp(lb)\n    print('alpha',alpha,'m',alpha*N,'a',a,'b',b)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 33002,
+   "dur_ms": 7386,
+   "tokens_in": 141,
+   "tokens_out": 450,
+   "cache_read": 13632,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 40388,
+   "dur_ms": 907,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport numpy as np\nfrom scipy.optimize import root, least_squares\nN=150000\nlnN=np.log(N); T=10.0\n\ndef solve(counts, guesses):\n    counts=np.array(counts,dtype=float)\n    n=counts.sum()\n    assert n==N\n    def fun(v):\n        p=np.exp(v)\n        norm=n*0 # placeholder\n        norm=np.sum(counts*p)-1\n        kf=lnN+np.sum(counts*p*np.log(p))-T\n        kb=-lnN-np.sum(counts*np.log(p))/N-T\n        return [norm,kf,kb]\n    for g in guesses:\n        res=root(fun,np.log(g),method='hybr',options={'maxfev':20000})\n        if res.success and np.max(np.abs(res.fun))<1e-9:\n            p=np.exp(res.x)\n            if np.all(p>0):\n                return p,res.fun\n    return None,None\n\n# counts: 6 high, 1 mid, rest low\nfor n1 in [5,6,7,8]:\n  for n2 in [1,2,3]:\n    counts=[n1,n2,N-n1-n2]\n    guesses=[]\n    for a in [0.14,0.145,0.15]:\n      for c in [0.05,0.1,0.12,0.14]:\n        for b in [1e-10,3e-10,1e-9]:\n          guesses.append([a,c,b])\n    p,f=solve(counts,guesses)\n    if p is not None:\n        print('counts',counts,'p',p,'fun',f)\n        # compute KL\n        print('masses',[c*pi for c,pi in zip(counts,p)])\n        break\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 41312,
+   "dur_ms": 1566,
+   "tokens_in": 407,
+   "tokens_out": 42,
+   "cache_read": 15232,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 42878,
+   "dur_ms": 24,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app"
+  },
+  {
+   "kind": "model",
+   "at_ms": 42929,
+   "dur_ms": 6716,
+   "tokens_in": 86,
+   "tokens_out": 454,
+   "cache_read": 15872,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 49645,
+   "dur_ms": 1053,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport numpy as np\nfrom scipy.optimize import root\nN=150000\nT=10.0\nlnN=np.log(N)\nn1,n2=5,2\nn3=N-n1-n2\n\ndef eq(v):\n    p1,p2=np.exp(v)\n    p3=(1-n1*p1-n2*p2)/n3\n    if p3<=0:\n        return [1e6,1e6]\n    p=np.array([p1,p2,p3])\n    c=np.array([n1,n2,n3])\n    kf=lnN+np.sum(c*p*np.log(p))-T\n    kb=-lnN-np.sum(c*np.log(p))/N-T\n    return [kf,kb]\n\nres=root(eq,np.log([0.163472029,0.0912972501]),method='hybr',options={'xtol':1e-14})\np1,p2=np.exp(res.x)\np3=(1-n1*p1-n2*p2)/n3\nc=np.array([n1,n2,n3])\np=np.array([p1,p2,p3])\nprint(res.success,res.fun,res.message)\nprint(p)\nprint('sum',p.sum(), 'sum scaled', (c*p).sum())\nprint('kf',lnN+np.sum(c*p*np.log(p)))\nprint('kb',-lnN-np.sum(c*np.log(p))/N)\nprint('counts',c)\n# full array\narr=np.empty(N)\narr[:n1]=p1; arr[n1:n1+n2]=p2; arr[n1+n2:]=p3\nprint('full sum',arr.sum())\nfrom scipy.stats import entropy\nprint('entropy forward',entropy(arr,np.ones(N)/N))\nprint('entropy backward',entropy(np.ones(N)/N,arr))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 50718,
+   "dur_ms": 1634,
+   "tokens_in": 196,
+   "tokens_out": 223,
+   "cache_read": 17344,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 52352,
+   "dur_ms": 760,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport numpy as np\nfrom scipy.optimize import root\nN=150000;T=10.;lnN=np.log(N);n1,n2=5,2;n3=N-7\n\ndef eq(v):\n    p1,p2=np.exp(v)\n    p3=(1-n1*p1-n2*p2)/n3\n    p=np.array([p1,p2,p3]);c=np.array([n1,n2,n3])\n    return [lnN+np.sum(c*p*np.log(p))-T, -lnN-np.sum(c*np.log(p))/N-T]\nres=root(eq,np.log([0.163472029,0.0912972501]),method='hybr',options={'xtol':1e-12})\nprint(res.success,res.fun,res.message)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 53128,
+   "dur_ms": 5489,
+   "tokens_in": 88,
+   "tokens_out": 602,
+   "cache_read": 17792,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 58617,
+   "dur_ms": 18,
+   "tool": "write",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/find_dist.py",
+    "content": "import numpy as np\nfrom scipy.optimize import root\n\nVOCAB_SIZE = 150_000\nTARGET_KL = 10.0\nTOLERANCE = 1e-3\n\ncounts = np.array([5.0, 2.0, VOCAB_SIZE - 7.0])\ninitial = np.log(np.array([0.163472029, 0.0912972501]))\n\n\ndef equations(log_probs):\n    p1, p2 = np.exp(log_probs)\n    p3 = (1.0 - counts[0] * p1 - counts[1] * p2) / counts[2]\n    if p3 <= 0.0:\n        return np.array([1e6, 1e6])\n\n    probs = np.array([p1, p2, p3])\n    forward = np.log(VOCAB_SIZE) + np.sum(counts * probs * np.log(probs))\n    backward = -np.log(VOCAB_SIZE) - np.sum(counts * np.log(probs)) / VOCAB_SIZE\n    return np.array([forward - TARGET_KL, backward - TARGET_KL])\n\n\nresult = root(equations, initial, method=\"hybr\", options={\"xtol\": 1e-12})\nif not result.success:\n    raise RuntimeError(result.message)\n\np1, p2 = np.exp(result.x)\np3 = (1.0 - counts[0] * p1 - counts[1] * p2) / counts[2]\n\ndist = np.empty(VOCAB_SIZE, dtype=np.float64)\ndist[:5] = p1\ndist[5:7] = p2\ndist[7:] = p3\ndist /= dist.sum()\n\nforward_kl = np.log(VOCAB_SIZE) + np.sum(dist * np.log(dist))\nbackward_kl = np.sum((1.0 / VOCAB_SIZE) * np.log((1.0 / VOCAB_SIZE) / dist))\n\nif not (abs(forward_kl - TARGET_KL) <= TOLERANCE and abs(backward_kl - TARGET_KL) <= TOLERANCE):\n    raise RuntimeError(\"KL targets were not met\")\n\nnp.save(\"/app/dist.npy\", dist)\n\nprint(f\"forward KL = {forward_kl:.12f}\")\nprint(f\"backward KL = {backward_kl:.12f}\")\nprint(f\"sum = {dist.sum():.12f}\")\nprint(f\"saved /app/dist.npy with shape {dist.shape}\")\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 58698,
+   "dur_ms": 574,
+   "tokens_in": 63,
+   "tokens_out": 54,
+   "cache_read": 19136,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 59272,
+   "dur_ms": 632,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 /app/find_dist.py && ls -l /app/dist.npy"
+  },
+  {
+   "kind": "model",
+   "at_ms": 59919,
+   "dur_ms": 716,
+   "tokens_in": 141,
+   "tokens_out": 66,
+   "cache_read": 19200,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.527,
+ "calls": 8,
+ "cell": "TB1c"
+}

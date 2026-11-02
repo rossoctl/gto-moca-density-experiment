@@ -1,0 +1,225 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "db-wal-recovery",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 26084,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 248,
+  "output": 4662,
+  "cacheRead": 114752,
+  "cacheWrite": 4160,
+  "total": 123822
+ },
+ "totals": {
+  "model_calls": 7,
+  "tool_calls": 6,
+  "model_ms": 23505,
+  "tool_ms": 1881,
+  "sandbox_ms": 559
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 549,
+   "dur_ms": 1050
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1599,
+   "dur_ms": 164,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /workspace\necho \"---\"\nls -la /workspace/ 2>/dev/null || true\necho \"--- pwd\"\npwd",
+   "sandbox": [
+    {
+     "at_ms": 1683,
+     "dur_ms": 59,
+     "exit": 0,
+     "cpu_ms": 38.4,
+     "phases_us": {
+      "acquire": 113,
+      "resume": 20758,
+      "mount": 18558,
+      "run": 5586,
+      "destroy": 32584
+     },
+     "cold": null,
+     "vm": "vm-81"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1763,
+   "dur_ms": 1819
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3582,
+   "dur_ms": 174,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\necho \"=== main.db header ===\"\nxxd main.db | head -20\necho \"=== main.db-wal header ===\"\nxxd main.db-wal | head -20\necho \"=== file sizes ===\"\nstat -c '%n %s' main.db main.db-wal\necho \"=== sqlite version ===\"\nsqlite3 --version 2>/dev/null || echo \"no sqlite3 cli\"\npython3 -c \"import sqlite3; print(sqlite3.sqlite_version)\"",
+   "sandbox": [
+    {
+     "at_ms": 3641,
+     "dur_ms": 91,
+     "exit": 0,
+     "cpu_ms": 104.8,
+     "phases_us": {
+      "acquire": 69,
+      "resume": 20261,
+      "mount": 17835,
+      "run": 46484,
+      "destroy": 23722
+     },
+     "cold": null,
+     "vm": "vm-84"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3756,
+   "dur_ms": 10302
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14058,
+   "dur_ms": 165,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\ndata = open('main.db-wal','rb').read()\ndec = bytes(b ^ 0x42 for b in data)\nimport struct\nprint(\"decoded header:\")\nprint(\" magic:\", hex(struct.unpack('>I', dec[0:4])[0]))\nprint(\" version:\", struct.unpack('>I', dec[4:8])[0])\nprint(\" pagesize:\", struct.unpack('>I', dec[8:12])[0])\nprint(\" ckptseq:\", struct.unpack('>I', dec[12:16])[0])\nprint(\" salt1:\", dec[16:20].hex(), \"salt2:\", dec[20:24].hex())\nprint(\" first frame page:\", struct.unpack('>I', dec[32:36])[0])\nprint(\" first frame dbsize:\", struct.unpack('>I', dec[36:40])[0])\nprint(\" page0 magic:\", dec[32+24:32+24+16])\n# frame count\nps = struct.unpack('>I', dec[8:12])[0]\nprint(\" frame size:\", 24+ps, \"payload bytes:\", len(data)-32, \"frames:\", (len(data)-32)/(24+ps))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 14115,
+     "dur_ms": 79,
+     "exit": 0,
+     "cpu_ms": 71.8,
+     "phases_us": {
+      "acquire": 4,
+      "resume": 20893,
+      "mount": 18396,
+      "run": 33150,
+      "destroy": 25013
+     },
+     "cold": null,
+     "vm": "vm-86"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 14223,
+   "dur_ms": 2991
+  },
+  {
+   "kind": "tool",
+   "at_ms": 17214,
+   "dur_ms": 207,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\ncp main.db-wal main.db-wal.corrupt.bak\ncp main.db main.db.bak\npython3 - <<'PY'\nimport struct\ndata = open('main.db-wal','rb').read()\ndec = bytes(b ^ 0x42 for b in data)\nopen('main.db-wal','wb').write(dec)\nps = struct.unpack('>I', dec[8:12])[0]\nfs = 24+ps\nn = (len(dec)-32)//fs\nfor i in range(n):\n    off = 32+i*fs\n    pg, dbsz = struct.unpack('>II', dec[off:off+8])\n    c1,c2 = struct.unpack('>II', dec[off+16:off+24])\n    print(f\"frame {i}: page={pg} dbsize={dbsz} cksum={c1:08x},{c2:08x}\")\nPY\necho \"=== query ===\"\npython3 - <<'PY'\nimport sqlite3\ncon = sqlite3.connect('main.db')\nprint(\"journal_mode:\", con.execute(\"PRAGMA journal_mode\").fetchone())\nprint(\"tables:\", con.execute(\"SELECT name,sql FROM sqlite_master\").fetchall())\ntry:\n    rows = con.execute(\"SELECT * FROM items ORDER BY id\").fetchall()\n    print(\"rows count:\", len(rows))\n    for r in rows: print(r)\nexcept Exception as e:\n    print(\"items error\", e)\n    print(con.execute(\"SELECT name FROM sqlite_master WHERE type='table'\").fetchall())\ncon.close()\nPY",
+   "sandbox": [
+    {
+     "at_ms": 17275,
+     "dur_ms": 108,
+     "exit": 0,
+     "cpu_ms": 109.1,
+     "phases_us": {
+      "acquire": 69,
+      "resume": 20343,
+      "mount": 17896,
+      "run": 63495,
+      "destroy": 24011
+     },
+     "cold": null,
+     "vm": "vm-98"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 17421,
+   "dur_ms": 2376
+  },
+  {
+   "kind": "tool",
+   "at_ms": 19797,
+   "dur_ms": 974,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\nimport sqlite3, json\ncon = sqlite3.connect('main.db')\nrows = con.execute(\"SELECT id, name, value FROM items ORDER BY id\").fetchall()\ncon.close()\ndata = [{\"id\": r[0], \"name\": r[1], \"value\": r[2]} for r in rows]\nwith open('recovered.json','w') as f:\n    json.dump(data, f, indent=2)\nprint(\"wrote\", len(data), \"records\")\nPY\necho \"=== recovered.json ===\"\ncat recovered.json\necho \"=== integrity check ===\"\npython3 - <<'PY'\nimport json\nd = json.load(open('recovered.json'))\nprint(\"records:\", len(d), \"ids:\", [x['id'] for x in d])\nPY\nls -la /workspace",
+   "sandbox": [
+    {
+     "at_ms": 20609,
+     "dur_ms": 121,
+     "exit": 0,
+     "cpu_ms": 134.8,
+     "phases_us": {
+      "acquire": 80,
+      "resume": 20426,
+      "mount": 18252,
+      "run": 76771,
+      "destroy": 23495
+     },
+     "cold": null,
+     "vm": "vm-100"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 20771,
+   "dur_ms": 2285
+  },
+  {
+   "kind": "tool",
+   "at_ms": 23056,
+   "dur_ms": 197,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\nimport sqlite3, json\n# verify standing alone (WAL gone)\ncon = sqlite3.connect('main.db')\nrows = con.execute(\"SELECT id,name,value FROM items ORDER BY id\").fetchall()\nprint(\"main.db rows:\", len(rows))\nprint(\"integrity:\", con.execute(\"PRAGMA integrity_check\").fetchone()[0])\ncon.close()\nj = json.load(open('recovered.json'))\nassert [(r[0],r[1],r[2]) for r in rows] == [(x['id'],x['name'],x['value']) for x in j]\nprint(\"JSON matches DB exactly. IDs 1..11, all values recovered.\")\nPY",
+   "sandbox": [
+    {
+     "at_ms": 23112,
+     "dur_ms": 101,
+     "exit": 0,
+     "cpu_ms": 111.2,
+     "phases_us": {
+      "acquire": 79,
+      "resume": 20748,
+      "mount": 18241,
+      "run": 54066,
+      "destroy": 26246
+     },
+     "cold": null,
+     "vm": "vm-102"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 23253,
+   "dur_ms": 2682
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.096,
+ "calls": 6,
+ "cell": "TB1b",
+ "removed": []
+}

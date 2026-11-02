@@ -1,0 +1,211 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "large-scale-text-editing",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 101288,
+ "resolved": false,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 459,
+  "output": 8930,
+  "cacheRead": 348544,
+  "cacheWrite": 10304,
+  "total": 368237
+ },
+ "totals": {
+  "model_calls": 14,
+  "tool_calls": 13,
+  "model_ms": 50488,
+  "tool_ms": 49329,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 612,
+   "dur_ms": 997
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1609,
+   "dur_ms": 106,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la && echo \"--- INPUT HEAD ---\" && head -5 input.csv && echo \"--- EXPECTED HEAD ---\" && head -5 expected.csv && echo \"--- LINE COUNTS ---\" && wc -l input.csv expected.csv"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1715,
+   "dur_ms": 1901
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3616,
+   "dur_ms": 808,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\necho \"--- sample 20 ---\"; paste -d'|' <(head -20 input.csv) <(head -20 expected.csv)\necho \"--- expected suffix counts ---\"; awk -F';' '{print $NF}' expected.csv | sort | uniq -c | head\necho \"--- field count input ---\"; awk -F',' '{print NF}' input.csv | sort | uniq -c\necho \"--- expected field count ---\"; awk -F';' '{print NF}' expected.csv | sort | uniq -c"
+  },
+  {
+   "kind": "model",
+   "at_ms": 4424,
+   "dur_ms": 2034
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6458,
+   "dur_ms": 151,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\necho \"--- char classes in input (non-alnum, non-space, non-comma) ---\"\nLC_ALL=C tr -d 'A-Za-z0-9 ,\\n' < input.csv | fold -w1 | sort | uniq -c\necho \"--- char classes expected ---\"\nLC_ALL=C tr -d 'A-Za-z0-9 ;\\n' < expected.csv | fold -w1 | sort | uniq -c\necho \"--- last bytes input ---\"; tail -c 50 input.csv | xxd | tail -3\necho \"--- last bytes expected ---\"; tail -c 50 expected.csv | xxd | tail -3\necho \"--- verify transform on all rows via python simulation ---\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 6609,
+   "dur_ms": 1502
+  },
+  {
+   "kind": "tool",
+   "at_ms": 8111,
+   "dur_ms": 1807,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\npython3 - <<'EOF'\nmismatch=0\nwith open('input.csv') as fi, open('expected.csv') as fe:\n    for i,(a,b) in enumerate(zip(fi,fe)):\n        a=a.rstrip('\\n'); b=b.rstrip('\\n')\n        f=[x.strip().upper() for x in a.split(',')]\n        out=';'.join(reversed(f))+';OK'\n        if out!=b:\n            mismatch+=1\n            if mismatch<5: print(i,repr(a),repr(b),repr(out))\nprint(\"mismatches:\",mismatch)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 9918,
+   "dur_ms": 15683
+  },
+  {
+   "kind": "tool",
+   "at_ms": 25601,
+   "dur_ms": 58,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\nhead -1000 input.csv > /tmp/small.csv\ncat > /tmp/test1.vim <<'VIMEOF'\ncall setreg('a', \":s/ *\\\\(\\\\S\\\\+\\\\) *, *\\\\(\\\\S\\\\+\\\\) *, *\\\\(\\\\S\\\\+\\\\) *$/\\\\3;\\\\2;\\\\1/\\<CR>\")\ncall setreg('b', \"gUU\")\ncall setreg('c', \":s/$/;OK/\\<CR>\")\nVIMEOF\necho \"--- register contents ---\"\nvim -Nu NONE -n -Es -c 'source /tmp/test1.vim' -c 'call writefile([string(getreg(\"a\")), string(getreg(\"b\")), string(getreg(\"c\"))], \"/tmp/regs.txt\")' -c 'qa!' </dev/null\ncat /tmp/regs.txt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 25659,
+   "dur_ms": 3008
+  },
+  {
+   "kind": "tool",
+   "at_ms": 28667,
+   "dur_ms": 30,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "cd /app\nhead -1000 input.csv > /tmp/t.csv\ncp /tmp/t.csv /tmp/t.orig\ncat > /tmp/run.vim <<'VIMEOF'\ncall setreg('a', \":s/ *\\\\(\\\\S\\\\+\\\\) *, *\\\\(\\\\S\\\\+\\\\) *, *\\\\(\\\\S\\\\+\\\\) *$/\\\\3;\\\\2;\\\\1/\\<CR>\")\ncall setreg('b', \"gUU\")\ncall setreg('c', \":s/$/;OK/\\<CR>\")\n%normal! @a\n%normal! @b\n%normal! @c\nwq\nVIMEOF\n/usr/bin/time -f \"TIME %e\" vim -Nu NONE -n -Es /tmp/t.csv -S /tmp/run.vim </dev/null; echo \"exit=$?\"\necho \"--- diff vs expected head ---\"\ndiff <(head -1000 expected.csv) /tmp/t.csv && echo \"MATCH 1000\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 28697,
+   "dur_ms": 1837
+  },
+  {
+   "kind": "tool",
+   "at_ms": 30534,
+   "dur_ms": 73,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\nhead -1000 input.csv > /tmp/t.csv\ncat > /tmp/run.vim <<'VIMEOF'\ncall setreg('a', \":s/ *\\\\(\\\\S\\\\+\\\\) *, *\\\\(\\\\S\\\\+\\\\) *, *\\\\(\\\\S\\\\+\\\\) *$/\\\\3;\\\\2;\\\\1/\\<CR>\")\ncall setreg('b', \"gUU\")\ncall setreg('c', \":s/$/;OK/\\<CR>\")\n%normal! @a\n%normal! @b\n%normal! @c\nwq\nVIMEOF\nstart=$(date +%s.%N)\nvim -Nu NONE -n -Es /tmp/t.csv -S /tmp/run.vim </dev/null; ec=$?\nend=$(date +%s.%N)\necho \"exit=$ec time=$(echo \"$end-$start\"|bc)\"\ndiff <(head -1000 expected.csv) /tmp/t.csv >/dev/null && echo \"MATCH 1000\" || { echo FAIL; diff <(head -3 expected.csv) <(head -3 /tmp/t.csv); }"
+  },
+  {
+   "kind": "model",
+   "at_ms": 30607,
+   "dur_ms": 1466
+  },
+  {
+   "kind": "tool",
+   "at_ms": 32073,
+   "dur_ms": 3606,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\nhead -100000 input.csv > /tmp/t100k.csv\ncp /tmp/t100k.csv /tmp/t100k.bak\ntime vim -Nu NONE -n -Es /tmp/t100k.csv -S /tmp/run.vim </dev/null\necho \"exit=$?\"\ndiff <(head -100000 expected.csv) /tmp/t100k.csv >/dev/null && echo \"MATCH 100k\" || echo FAIL"
+  },
+  {
+   "kind": "model",
+   "at_ms": 35679,
+   "dur_ms": 3766
+  },
+  {
+   "kind": "tool",
+   "at_ms": 39445,
+   "dur_ms": 3416,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\nfor m in a b c; do\n  cp /tmp/t100k.bak /tmp/one.csv\n  cat > /tmp/one.vim <<EOF\ncall setreg('a', \":s/ *\\\\\\\\(\\\\\\\\S\\\\\\\\+\\\\\\\\) *, *\\\\\\\\(\\\\\\\\S\\\\\\\\+\\\\\\\\) *, *\\\\\\\\(\\\\\\\\S\\\\\\\\+\\\\\\\\) *\\$/\\\\\\\\3;\\\\\\\\2;\\\\\\\\1/\\<CR>\")\ncall setreg('b', \"gUU\")\ncall setreg('c', \"A;OK\\<Esc>\")\n%normal! @$m\nwq\nEOF\n  echo \"== macro $m ==\"\n  time vim -Nu NONE -n -Es /tmp/one.csv -S /tmp/one.vim </dev/null\ndone"
+  },
+  {
+   "kind": "model",
+   "at_ms": 42861,
+   "dur_ms": 9798
+  },
+  {
+   "kind": "tool",
+   "at_ms": 52659,
+   "dur_ms": 18,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/apply_macros.vim",
+    "content": "call setreg('a', \":s/ *\\\\(\\\\S\\\\+\\\\) *, *\\\\(\\\\S\\\\+\\\\) *, *\\\\(\\\\S\\\\+\\\\) *$/\\\\3;\\\\2;\\\\1/\\<CR>\")\ncall setreg('b', \"gUU\")\ncall setreg('c', \"A;OK\\<Esc>\")\n%normal! @a\n%normal! @b\n%normal! @c\nwq\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 52677,
+   "dur_ms": 1348
+  },
+  {
+   "kind": "tool",
+   "at_ms": 54025,
+   "dur_ms": 3259,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\nhead -100000 input.csv > /tmp/final100k.csv\nvim -Nu NONE -n -Es /tmp/final100k.csv -S /app/apply_macros.vim </dev/null; echo \"exit=$?\"\ndiff <(head -100000 expected.csv) /tmp/final100k.csv >/dev/null && echo \"MATCH 100k byte-for-byte: $(cmp -s <(head -100000 expected.csv) /tmp/final100k.csv && echo yes)\" || echo FAIL"
+  },
+  {
+   "kind": "model",
+   "at_ms": 57284,
+   "dur_ms": 1679
+  },
+  {
+   "kind": "tool",
+   "at_ms": 58963,
+   "dur_ms": 34765,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\ncp input.csv /tmp/input.orig.csv\ntime vim -Nu NONE -n -Es /app/input.csv -S /app/apply_macros.vim </dev/null; echo \"exit=$?\"\ncmp -s input.csv expected.csv && echo \"BYTE-FOR-BYTE MATCH\" || { echo \"MISMATCH\"; cmp input.csv expected.csv | head; }\nls -l input.csv expected.csv",
+   "timeout": 600000
+  },
+  {
+   "kind": "model",
+   "at_ms": 93728,
+   "dur_ms": 2096
+  },
+  {
+   "kind": "tool",
+   "at_ms": 95824,
+   "dur_ms": 1232,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\necho \"--- apply_macros.vim ---\"; cat -A apply_macros.vim\necho \"--- keystroke count ---\"\nvim -Nu NONE -n -Es -c 'source /app/apply_macros.vim' -c 'call writefile([string(strlen(getreg(\"a\"))+strlen(getreg(\"b\"))+strlen(getreg(\"c\")))], \"/tmp/kc.txt\")' -c 'qa!' </dev/null 2>/dev/null || true\ncat /tmp/kc.txt 2>/dev/null\necho \"--- md5 equality ---\"; md5sum input.csv expected.csv"
+  },
+  {
+   "kind": "model",
+   "at_ms": 97056,
+   "dur_ms": 3373
+  }
+ ],
+ "class": "long",
+ "weight_s_per_command": 17.611,
+ "calls": 13,
+ "cell": "TB1a"
+}

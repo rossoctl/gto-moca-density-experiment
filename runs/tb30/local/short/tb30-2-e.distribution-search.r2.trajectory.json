@@ -1,0 +1,133 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "distribution-search",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 46045,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 251,
+  "output": 7389,
+  "cacheRead": 35392,
+  "cacheWrite": 960,
+  "total": 43992
+ },
+ "totals": {
+  "model_calls": 6,
+  "tool_calls": 5,
+  "model_ms": 42050,
+  "tool_ms": 2784,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1132,
+   "dur_ms": 8872,
+   "tokens_in": 51,
+   "tokens_out": 1598,
+   "cache_read": 1728,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 10008,
+   "dur_ms": 10,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app && find /app -maxdepth 2 -type f | head -50"
+  },
+  {
+   "kind": "model",
+   "at_ms": 10021,
+   "dur_ms": 4052,
+   "tokens_in": 41,
+   "tokens_out": 721,
+   "cache_read": 3328,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14073,
+   "dur_ms": 937,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport numpy as np\nfrom scipy.optimize import brentq\nn=150000\nh0=np.log(n)-10\ng0=-np.log(n)-10\nprint(n,h0,g0, np.exp(g0), np.exp(g0)*n)\n\ndef Hq(q,m):\n    l=n-m\n    return q*np.log(m/q)+(1-q)*np.log(l/(1-q))\ndef Bq(q,m):\n    l=n-m\n    a=q/m; b=(1-q)/l\n    return -np.log(n) - (m/n)*np.log(a)-(l/n)*np.log(b)\n\nfor m in range(2,30):\n    # q near 1, H increases with? find q H=h0\n    # q range such that H maybe 0..log m? actually for q->? \n    # test root near 1 - small\n    try:\n        q=brentq(lambda q:Hq(q,m)-h0, 1e-12, 1-1e-15)\n    except Exception as e:\n        # print(m, 'fail',e)\n        continue\n    print(m, q, Bq(q,m), Bq(q,m)-10, 'a',q/m,'b',(1-q)/(n-m))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 15013,
+   "dur_ms": 14280,
+   "tokens_in": 42,
+   "tokens_out": 2554,
+   "cache_read": 4096,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 29293,
+   "dur_ms": 731,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport numpy as np\nfrom scipy.optimize import root, least_squares, fsolve\nn=150000; l=n-7\nh0=np.log(n)-10\ng0=-np.log(n)-10\n\ndef props(x):\n    q,r=x\n    r1=r; rrest=(1-r1)/6\n    # high probs q*r_i\n    # low b=(1-q)/l\n    rs=np.r_[r1, np.full(6,rrest)]\n    a=q*rs\n    b=(1-q)/l\n    H=-q*np.sum(rs*np.log(a)) - (1-q)*np.log(b)  # Wait sum a log a: q sum r log(qr)\n    # better\n    H= -np.sum(a*np.log(a)) - l*b*np.log(b)\n    B= -np.log(n) - (np.sum(np.log(a)) + l*np.log(b))/n\n    return H,B\n\ndef fun(x):\n    H,B=props(x)\n    return [H-h0,B-10]\n# bounds q in (0,1), r in (1/7 maybe 1)\nfor guess in [(0.9999,0.2),(0.999,0.3),(0.99999,0.15),(1-1e-6,0.5),(0.99,0.5)]:\n    sol=least_squares(fun,guess,bounds=([0,1/7+1e-12],[1-1e-15,1-1e-12]),xtol=1e-15,ftol=1e-15,gtol=1e-15,max_nfev=10000)\n    print(guess, sol.x, fun(sol.x), sol.cost)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 30026,
+   "dur_ms": 10906,
+   "tokens_in": 56,
+   "tokens_out": 2071,
+   "cache_read": 6976,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 40932,
+   "dur_ms": 743,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /app/find_distribution.py <<'PY'\n\"\"\"Construct a probability distribution with forward and backward KL divergences of 10.\n\nFor a uniform reference distribution U with n categories, and a model distribution P:\n\n    KL(P || U) = sum_i P_i log(P_i / U_i)\n    KL(U || P) = sum_i U_i log(U_i / P_i)\n\nWe use a two-level distribution:\n  * 7 \"high-probability\" categories, one with probability q*s and six with\n    probability q*(1-s)/6;\n  * the remaining n-7 categories all have the same small probability.\n\nThe two free parameters q and s are solved numerically so both KL values equal 10.\n\"\"\"\n\nimport numpy as np\nfrom scipy.optimize import least_squares\n\nN = 150_000\nTARGET_KL = 10.0\nTOLERANCE = 0.001\nNUM_HIGH = 7\n\n# The two constraints can be written as:\n#   forward KL = log(N) - H(P) = 10\n#   backward KL = -log(N) - E[log(P)] = 10\nTARGET_ENTROPY = np.log(N) - TARGET_KL\nTARGET_MEAN_LOG = -np.log(N) - TARGET_KL\n\nLOW_COUNT = N - NUM_HIGH\n\n\ndef make_distribution(q: float, s: float) -> np.ndarray:\n    \"\"\"Build the distribution from high-group mass q and high-group shape s.\"\"\"\n    high = np.full(NUM_HIGH, q * (1.0 - s) / (NUM_HIGH - 1), dtype=np.float64)\n    high[0] = q * s\n    low = np.full(LOW_COUNT, (1.0 - q) / LOW_COUNT, dtype=np.float64)\n    return np.concatenate((high, low))\n\n\ndef kl_values(q: float, s: float) -> tuple[float, float]:\n    p = make_distribution(q, s)\n\n    # KL(P || U)\n    forward = np.sum(p * np.log(p * N))\n\n    # KL(U || P)\n    backward = -np.mean(np.log(N * p))\n\n    return forward, backward\n\n\ndef residuals(x: np.ndarray) -> np.ndarray:\n    q, s = x\n    forward, backward = kl_values(q, s)\n    return np.array([forward - TARGET_KL, backward - TARGET_KL])\n\n\n# Initial values and feasible bounds.  s > 1/7 makes the high group slightly\n# non-uniform, which reduces its entropy to the required value.\nx0 = np.array([0.99995, 0.25])\nlower = np.array([1e-12, 1.0 / NUM_HIGH + 1e-12])\nupper = np.array([1.0 - 1e-12, 1.0 - 1e-12])\n\nsolution = least_squares(\n    residuals,\n    x0,\n    bounds=(lower, upper),\n    xtol=1e-15,\n    ftol=1e-15,\n    gtol=1e-15,\n    max_nfev=10_000,\n)\n\nif not solution.success:\n    raise RuntimeError(f\"Optimization failed: {solution.message}\")\n\nq, s = solution.x\ndist = make_distribution(q, s)\n\nforward, backward = kl_values(q, s)\nprint(f\"sum(P)              = {dist.sum():.17g}\")\nprint(f\"min(P)              = {dist.min():.17g}\")\nprint(f\"KL(P || U)          = {forward:.15f}\")\nprint(f\"KL(U || P)          = {backward:.15f}\")\nprint(f\"q (high-group mass) = {q:.15f}\")\nprint(f\"s (largest shape)   = {s:.15f}\")\n\nif dist.min() <= 0.0 or not np.isclose(dist.sum(), 1.0, atol=1e-14):\n    raise RuntimeError(\"Constructed array is not a valid probability distribution\")\nif abs(forward - TARGET_KL) > TOLERANCE or abs(backward - TARGET_KL) > TOLERANCE:\n    raise RuntimeError(\"KL targets were not met within tolerance\")\n\nnp.save(\"/app/dist.npy\", dist)\nprint(\"Saved /app/dist.npy\")\nPY\ncd /app && python3 find_distribution.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 41678,
+   "dur_ms": 2097,
+   "tokens_in": 3,
+   "tokens_out": 338,
+   "cache_read": 9408,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 43775,
+   "dur_ms": 363,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport numpy as np\np=np.load('/app/dist.npy')\nn=p.size\nf=np.sum(p*np.log(p*n))\nb=-np.mean(np.log(n*p))\nprint('shape:', p.shape, 'dtype:', p.dtype)\nprint('finite:', np.all(np.isfinite(p)), 'min:', p.min(), 'positive:', np.all(p>0))\nprint('sum:', p.sum())\nprint('KL(P||U):', f, 'error:', abs(f-10))\nprint('KL(U||P):', b, 'error:', abs(b-10))\nPY\nls -l /app/dist.npy /app/find_distribution.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 44139,
+   "dur_ms": 1843,
+   "tokens_in": 58,
+   "tokens_out": 107,
+   "cache_read": 9856,
+   "cache_write": 128,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.527,
+ "calls": 5,
+ "cell": "TB1e"
+}

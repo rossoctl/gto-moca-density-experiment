@@ -1,0 +1,1433 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-f",
+ "instance_id": "gcode-to-text",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 514142,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 1293,
+  "output": 56336,
+  "cacheRead": 1946240,
+  "cacheWrite": 71808,
+  "total": 2075677
+ },
+ "totals": {
+  "model_calls": 40,
+  "tool_calls": 34,
+  "model_ms": 374513,
+  "tool_ms": 115800,
+  "sandbox_ms": 113427
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1089,
+   "dur_ms": 676,
+   "tokens_in": 58,
+   "tokens_out": 91,
+   "cache_read": 1088,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1769,
+   "dur_ms": 121,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /workspace\nfind /workspace -name 'text.gcode' -o -name '*.gcode' | head -50",
+   "sandbox": [
+    {
+     "at_ms": 1821,
+     "dur_ms": 53,
+     "exit": 0,
+     "cpu_ms": 41.1,
+     "phases_us": {
+      "acquire": 83,
+      "resume": 20895,
+      "mount": 18821,
+      "run": 6925,
+      "destroy": 25136
+     },
+     "cold": null,
+     "vm": "vm-666"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1892,
+   "dur_ms": 1051,
+   "tokens_in": 2,
+   "tokens_out": 139,
+   "cache_read": 1216,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2944,
+   "dur_ms": 118,
+   "tool": "bash",
+   "is_error": false,
+   "command": "wc -l /workspace/text.gcode\nhead -100 /workspace/text.gcode\necho '=== TEMP/TOOL CHANGES ==='\ngrep -nE 'M104|M109|M140|M190|T[0-9]|G28|G92|M83|M82|G90|G91' /workspace/text.gcode | head -80",
+   "sandbox": [
+    {
+     "at_ms": 2993,
+     "dur_ms": 55,
+     "exit": 0,
+     "cpu_ms": 45.6,
+     "phases_us": {
+      "acquire": 92,
+      "resume": 20635,
+      "mount": 18441,
+      "run": 10933,
+      "destroy": 23474
+     },
+     "cold": null,
+     "vm": "vm-668"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3065,
+   "dur_ms": 1417,
+   "tokens_in": 60,
+   "tokens_out": 196,
+   "cache_read": 1472,
+   "cache_write": 1088,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4483,
+   "dur_ms": 124,
+   "tool": "bash",
+   "is_error": false,
+   "command": "grep -n 'M486' /workspace/text.gcode\necho '=== layers M73 / Z changes around first part ==='\nsed -n '100,200p' /workspace/text.gcode\necho '=== comments ==='\ngrep -n '^;' /workspace/text.gcode | head -100",
+   "sandbox": [
+    {
+     "at_ms": 4532,
+     "dur_ms": 68,
+     "exit": 0,
+     "cpu_ms": 56.0,
+     "phases_us": {
+      "acquire": 114,
+      "resume": 22946,
+      "mount": 19857,
+      "run": 15097,
+      "destroy": 29209
+     },
+     "cold": null,
+     "vm": "vm-670"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 4609,
+   "dur_ms": 6997,
+   "tokens_in": 2,
+   "tokens_out": 1051,
+   "cache_read": 2752,
+   "cache_write": 1408,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 11608,
+   "dur_ms": 604,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\nimport re\np='/workspace/text.gcode'\nlines=open(p,errors='ignore').read().splitlines()\nobj=None; z=None; x=y=None; e=0\nfrom collections import defaultdict\nstats=defaultdict(lambda: defaultdict(lambda:[0,0,None,None])) # obj->z->[extr moves, totalE, xmin..]\nlayer=0\nfor i,l in enumerate(lines,1):\n    s=l.strip()\n    if s.startswith('M486'):\n        m=re.match(r'M486 S(-?\\d+)',s)\n        if m:\n            v=int(m.group(1))\n            if v==-1: obj=None\n            else: obj=v\n        continue\n    if s.startswith(';'):\n        continue\n    toks=s.split()\n    if not toks: continue\n    cmd=toks[0]\n    if cmd in ('G0','G1','G2','G3'):\n        vals={}\n        for t in toks[1:]:\n            mm=re.match(r'([XYZEF])([-+]?\\d*\\.?\\d+)',t)\n            if mm: vals[mm.group(1)]=float(mm.group(2))\n        if 'Z' in vals: z=vals['Z']\n        if 'X' in vals: x=vals['X']\n        if 'Y' in vals: y=vals['Y']\n        if 'E' in vals:\n            # M83 relative\n            dE=vals['E']\n            if dE>0 and obj is not None and x is not None and y is not None:\n                key=round(z if z is not None else -1,3)\n                st=stats[obj][key]\n                st[0]+=1; st[1]+=dE\n                if st[2] is None:\n                    st[2]=[x,x,y,y]\n                else:\n                    st[2][0]=min(st[2][0],x); st[2][1]=max(st[2][1],x)\n                    st[2][2]=min(st[2][2],y); st[2][3]=max(st[2][3],y)\nfor obj in sorted(stats):\n    print('OBJECT',obj,'layers',len(stats[obj]))\n    for zz in sorted(stats[obj]):\n        st=stats[obj][zz]\n        print(f'  z={zz:8.3f} moves={st[0]:6d} E={st[1]:9.3f} bbox={st[2]}')\nPY",
+   "sandbox": [
+    {
+     "at_ms": 11658,
+     "dur_ms": 541,
+     "exit": 0,
+     "cpu_ms": 535.4,
+     "phases_us": {
+      "acquire": 17,
+      "resume": 21449,
+      "mount": 19289,
+      "run": 487320,
+      "destroy": 32353
+     },
+     "cold": null,
+     "vm": "vm-672"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 12218,
+   "dur_ms": 12374,
+   "tokens_in": 61,
+   "tokens_out": 1475,
+   "cache_read": 1024,
+   "cache_write": 13632,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 24592,
+   "dur_ms": 330,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\nimport re\nlines=open('/workspace/text.gcode',errors='ignore').read().splitlines()\nz=None\nfor i,l in enumerate(lines,1):\n    s=l.strip()\n    if s.startswith('M486'):\n        print(i, 'z=',z, s)\n    elif re.match(r'^G[01]\\b',s):\n        m=re.search(r'Z([-+]?\\d*\\.?\\d+)',s)\n        if m: z=float(m.group(1))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 24643,
+     "dur_ms": 275,
+     "exit": 0,
+     "cpu_ms": 261.1,
+     "phases_us": {
+      "acquire": 122,
+      "resume": 22630,
+      "mount": 19837,
+      "run": 220869,
+      "destroy": 30783
+     },
+     "cold": null,
+     "vm": "vm-678"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 24925,
+   "dur_ms": 2307,
+   "tokens_in": 24,
+   "tokens_out": 173,
+   "cache_read": 16128,
+   "cache_write": 704,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 27233,
+   "dur_ms": 125,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sed -n '14990,15080p' /workspace/text.gcode\necho '=== around first big text layer z3.6 ==='\nsed -n '15150,15290p' /workspace/text.gcode",
+   "sandbox": [
+    {
+     "at_ms": 27283,
+     "dur_ms": 55,
+     "exit": 0,
+     "cpu_ms": 48.2,
+     "phases_us": {
+      "acquire": 74,
+      "resume": 22333,
+      "mount": 20040,
+      "run": 14177,
+      "destroy": 18579
+     },
+     "cold": null,
+     "vm": "vm-683"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 27361,
+   "dur_ms": 8020,
+   "tokens_in": 6,
+   "tokens_out": 1055,
+   "cache_read": 17024,
+   "cache_write": 1920,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 35381,
+   "dur_ms": 145,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\ntry:\n import matplotlib; print('matplotlib',matplotlib.__version__)\nexcept Exception as e: print('no matplotlib',e)\ntry:\n from PIL import Image; print('PIL ok')\nexcept Exception as e: print('no PIL',e)\ntry:\n import numpy; print('numpy',numpy.__version__)\nexcept Exception as e: print('no numpy',e)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 35430,
+     "dur_ms": 83,
+     "exit": 0,
+     "cpu_ms": 73.1,
+     "phases_us": {
+      "acquire": 63,
+      "resume": 22036,
+      "mount": 19745,
+      "run": 34466,
+      "destroy": 26691
+     },
+     "cold": null,
+     "vm": "vm-684"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 35528,
+   "dur_ms": 1700,
+   "tokens_in": 11,
+   "tokens_out": 151,
+   "cache_read": 19968,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 37229,
+   "dur_ms": 2875,
+   "tool": "bash",
+   "is_error": false,
+   "command": "pip install --quiet pillow 2>&1 | tail -5\npython3 -c 'import PIL; print(PIL.__version__)'",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 37278,
+     "dur_ms": 2809,
+     "exit": 0,
+     "cpu_ms": 2478.6,
+     "phases_us": {
+      "acquire": 4,
+      "resume": 21217,
+      "mount": 19047,
+      "run": 2745774,
+      "destroy": 41839
+     },
+     "cold": null,
+     "vm": "vm-686"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 40106,
+   "dur_ms": 27006,
+   "tokens_in": 37,
+   "tokens_out": 3775,
+   "cache_read": 20160,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 67112,
+   "dur_ms": 639,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport re, math\nlines=open('/workspace/text.gcode',errors='ignore').read().splitlines()\nobj=None; z=None; x=y=None\npts=[]\ndef arc_points(x0,y0,x1,y1,i,j,cw=False,steps=8):\n    # center offsets I,J relative start\n    cx=x0+i; cy=y0+j\n    r=math.hypot(x0-cx,y0-cy)\n    a0=math.atan2(y0-cy,x0-cx); a1=math.atan2(y1-cy,x1-cx)\n    if cw:\n        while a1>=a0: a1-=2*math.pi\n    else:\n        while a1<=a0: a1+=2*math.pi\n    return [(cx+r*math.cos(a0+(a1-a0)*k/steps), cy+r*math.sin(a0+(a1-a0)*k/steps)) for k in range(1,steps+1)]\nfor l in lines:\n    s=l.strip()\n    if s.startswith('M486'):\n        m=re.match(r'M486 S(-?\\d+)',s)\n        if m:\n            v=int(m.group(1)); obj=None if v==-1 else v\n        continue\n    if not s or s[0]==';': continue\n    t=s.split()[0]\n    if t in ('G0','G1','G2','G3'):\n        d={}\n        for tok in s.split()[1:]:\n            m=re.match(r'([XYZEFIJ])([-+]?\\d*\\.?\\d+)',tok)\n            if m: d[m.group(1)]=float(m.group(2))\n        if 'Z' in d: z=d['Z']\n        if 'X' in d or 'Y' in d:\n            nx=d.get('X',x); ny=d.get('Y',y)\n            if 'E' in d and d['E']>0 and obj==0 and x is not None and y is not None and z is not None:\n                if t in ('G2','G3'):\n                    seq=arc_points(x,y,nx,ny,d.get('I',0),d.get('J',0),cw=(t=='G2'))\n                else:\n                    seq=[(nx,ny)]\n                for px,py in seq:\n                    pts.append((px,py,z))\n            x,y=nx,ny\n# fit z = A x + B y + C using normal equations\nimport itertools\nn=len(pts)\nSx=sum(p[0] for p in pts); Sy=sum(p[1] for p in pts); Sz=sum(p[2] for p in pts)\nSxx=sum(p[0]**2 for p in pts); Sxy=sum(p[0]*p[1] for p in pts); Sxz=sum(p[0]*p[2] for p in pts)\nSyy=sum(p[1]**2 for p in pts); Syz=sum(p[1]*p[2] for p in pts)\n# solve [[Sxx,Sxy,Sx],[Sxy,Syy,Sy],[Sx,Sy,n]] [A,B,C] = [Sxz,Syz,Sz]\nM=[[Sxx,Sxy,Sx,Sxz],[Sxy,Syy,Sy,Syz],[Sx,Sy,n,Sz]]\nfor i in range(3):\n    p=max(range(i,3),key=lambda r:abs(M[r][i])); M[i],M[p]=M[p],M[i]\n    piv=M[i][i]\n    for j in range(i,4): M[i][j]/=piv\n    for r in range(3):\n        if r!=i:\n            f=M[r][i]\n            for j in range(i,4): M[r][j]-=f*M[i][j]\nA,B,C=M[0][3],M[1][3],M[2][3]\nprint('n',n,'plane z =',A,'x +',B,'y +',C)\nprint('grad',math.hypot(A,B),'angle',math.degrees(math.atan(math.hypot(A,B))))\n# residual\nres=[p[2]-(A*p[0]+B*p[1]+C) for p in pts]\nprint('res minmax mean rms',min(res),max(res),sum(res)/n,math.sqrt(sum(r*r for r in res)/n))\n# s vector\nden=A*A+B*B\nprint('s=',A/den,B/den)\n# uv extents\nsq=math.sqrt(den)\nus=[(A*p[0]+B*p[1]-p[2])/sq for p in pts]\nvs=[(-B*p[0]+A*p[1])/sq for p in pts]\nprint('u',min(us),max(us),'v',min(vs),max(vs))\n# layer z distribution of u\nfrom collections import defaultdict\nbyz=defaultdict(list)\nfor p,u,v in zip(pts,us,vs): byz[round(p[2],2)].append((u,v))\nfor zz in sorted(byz)[::20]:\n    arr=byz[zz]\n    print('z',zz,'u',min(a for a,b in arr),max(a for a,b in arr),'v',min(b for a,b in arr),max(b for a,b in arr))\nPY",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 67161,
+     "dur_ms": 581,
+     "exit": 0,
+     "cpu_ms": 579.9,
+     "phases_us": {
+      "acquire": 66,
+      "resume": 21693,
+      "mount": 18983,
+      "run": 539712,
+      "destroy": 19390
+     },
+     "cold": null,
+     "vm": "vm-689"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 67755,
+   "dur_ms": 20425,
+   "tokens_in": 45,
+   "tokens_out": 2761,
+   "cache_read": 24064,
+   "cache_write": 640,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 88180,
+   "dur_ms": 658,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport re,math\nlines=open('/workspace/text.gcode',errors='ignore').read().splitlines()\nobj=None; z=None; x=y=None; pts=[]\ndef arc_points(x0,y0,x1,y1,i,j,cw=False,steps=8):\n    cx=x0+i; cy=y0+j; r=math.hypot(x0-cx,y0-cy)\n    a0=math.atan2(y0-cy,x0-cx); a1=math.atan2(y1-cy,x1-cx)\n    if cw:\n        while a1>=a0: a1-=2*math.pi\n    else:\n        while a1<=a0: a1+=2*math.pi\n    return [(cx+r*math.cos(a0+(a1-a0)*k/steps),cy+r*math.sin(a0+(a1-a0)*k/steps)) for k in range(1,steps+1)]\nfor l in lines:\n    s=l.strip()\n    if s.startswith('M486'):\n        m=re.match(r'M486 S(-?\\d+)',s)\n        if m: obj=None if int(m.group(1))==-1 else int(m.group(1))\n        continue\n    if not s or s[0]==';': continue\n    t=s.split()[0]\n    if t in ('G0','G1','G2','G3'):\n        d={}\n        for tok in s.split()[1:]:\n            m=re.match(r'([XYZEFIJ])([-+]?\\d*\\.?\\d+)',tok)\n            if m: d[m.group(1)]=float(m.group(2))\n        if 'Z' in d: z=d['Z']\n        if 'X' in d or 'Y' in d:\n            nx=d.get('X',x); ny=d.get('Y',y)\n            if 'E' in d and d['E']>0 and obj==0 and x is not None and y is not None and z is not None:\n                seq=arc_points(x,y,nx,ny,d.get('I',0),d.get('J',0),cw=(t=='G2')) if t in ('G2','G3') else [(nx,ny)]\n                for px,py in seq: pts.append((px,py,z))\n            x,y=nx,ny\nA=0.3331427379140506;B=0.17015711148471718;C=-30.177252534810446\ng=math.hypot(A,B)\nus=[(A*p[0]+B*p[1]-p[2])/g for p in pts]\nvs=[(-B*p[0]+A*p[1])/g for p in pts]\ndef ascii_map(xs,ys,W=120,H=50,rev_y=True):\n    xmin,xmax=min(xs),max(xs); ymin,ymax=min(ys),max(ys)\n    pad=0.02\n    xmin-=pad*(xmax-xmin);xmax+=pad*(xmax-xmin);ymin-=pad*(ymax-ymin);ymax+=pad*(ymax-ymin)\n    grid=[[0]*W for _ in range(H)]\n    for x,y in zip(xs,ys):\n        c=int((x-xmin)/(xmax-xmin)*(W-1)); r=int((y-ymin)/(ymax-ymin)*(H-1))\n        if rev_y: r=H-1-r\n        if 0<=r<H and 0<=c<W: grid[r][c]+=1\n    chars=' .:-=+*#%@'\n    mx=max(max(row) for row in grid) or 1\n    for row in grid:\n        print(''.join(chars[min(9,int(v/mx*9))] for v in row))\nprint('U-V projection')\nascii_map(us,vs,140,55)\nprint('X-Y top projection')\nascii_map([p[0] for p in pts],[p[1] for p in pts],140,50)\nPY",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 88234,
+     "dur_ms": 564,
+     "exit": 0,
+     "cpu_ms": 561.1,
+     "phases_us": {
+      "acquire": 87,
+      "resume": 33713,
+      "mount": 29142,
+      "run": 502418,
+      "destroy": 27653
+     },
+     "cold": null,
+     "vm": "vm-694"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 88841,
+   "dur_ms": 5012,
+   "tokens_in": 40,
+   "tokens_out": 533,
+   "cache_read": 27456,
+   "cache_write": 3072,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 93853,
+   "dur_ms": 273,
+   "tool": "bash",
+   "is_error": false,
+   "command": "which tesseract || true\nwhich convert || true\nwhich gnuplot || true\npython3 -c 'import cv2; print(cv2.__version__)' 2>/dev/null || echo no-cv2",
+   "sandbox": [
+    {
+     "at_ms": 93902,
+     "dur_ms": 206,
+     "exit": 0,
+     "cpu_ms": 206.9,
+     "phases_us": {
+      "acquire": 5,
+      "resume": 23227,
+      "mount": 20484,
+      "run": 156302,
+      "destroy": 26654
+     },
+     "cold": null,
+     "vm": "vm-702"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 94130,
+   "dur_ms": 14260,
+   "tokens_in": 13,
+   "tokens_out": 2216,
+   "cache_read": 31040,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 108390,
+   "dur_ms": 581,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport re,math\nlines=open('/workspace/text.gcode',errors='ignore').read().splitlines()\nobj=None; z=None; x=y=None; pts=[]\ndef arc_points(x0,y0,x1,y1,i,j,cw=False,steps=8):\n    cx=x0+i; cy=y0+j; r=math.hypot(x0-cx,y0-cy)\n    a0=math.atan2(y0-cy,x0-cx); a1=math.atan2(y1-cy,x1-cx)\n    if cw:\n        while a1>=a0: a1-=2*math.pi\n    else:\n        while a1<=a0: a1+=2*math.pi\n    return [(cx+r*math.cos(a0+(a1-a0)*k/steps),cy+r*math.sin(a0+(a1-a0)*k/steps)) for k in range(1,steps+1)]\nfor l in lines:\n    s=l.strip()\n    if s.startswith('M486'):\n        m=re.match(r'M486 S(-?\\d+)',s)\n        if m: obj=None if int(m.group(1))==-1 else int(m.group(1))\n        continue\n    if not s or s[0]==';': continue\n    t=s.split()[0]\n    if t in ('G0','G1','G2','G3'):\n        d={}\n        for tok in s.split()[1:]:\n            m=re.match(r'([XYZEFIJ])([-+]?\\d*\\.?\\d+)',tok)\n            if m: d[m.group(1)]=float(m.group(2))\n        if 'Z' in d: z=d['Z']\n        if 'X' in d or 'Y' in d:\n            nx=d.get('X',x); ny=d.get('Y',y)\n            if 'E' in d and d['E']>0 and obj==0 and x is not None and y is not None and z is not None:\n                seq=arc_points(x,y,nx,ny,d.get('I',0),d.get('J',0),cw=(t=='G2')) if t in ('G2','G3') else [(nx,ny)]\n                for px,py in seq: pts.append((px,py,z))\n            x,y=nx,ny\nA=0.3331427379140506;B=0.17015711148471718;g=math.hypot(A,B);g2=g*g\nws=[(A*p[0]+B*p[1]+g2*p[2])/g for p in pts]\nvs=[(-B*p[0]+A*p[1])/g for p in pts]\ndef ascii_map(xs,ys,W=180,H=40,rev_y=True):\n    xmin,xmax=min(xs),max(xs); ymin,ymax=min(ys),max(ys)\n    pad=0.02\n    xmin-=pad*(xmax-xmin);xmax+=pad*(xmax-xmin);ymin-=pad*(ymax-ymin);ymax+=pad*(ymax-ymin)\n    grid=[[0]*W for _ in range(H)]\n    for x,y in zip(xs,ys):\n        c=int((x-xmin)/(xmax-xmin)*(W-1)); r=int((y-ymin)/(ymax-ymin)*(H-1))\n        if rev_y: r=H-1-r\n        if 0<=r<H and 0<=c<W: grid[r][c]+=1\n    chars=' .:-=+*#%@'\n    mx=max(max(row) for row in grid) or 1\n    for row in grid:\n        print(''.join(chars[min(9,int(v/mx*9))] for v in row))\nprint('W-V projection extents',min(ws),max(ws),min(vs),max(vs))\nascii_map(ws,vs,180,50)\nPY",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 108440,
+     "dur_ms": 524,
+     "exit": 0,
+     "cpu_ms": 528.0,
+     "phases_us": {
+      "acquire": 47,
+      "resume": 21917,
+      "mount": 18926,
+      "run": 478405,
+      "destroy": 23669
+     },
+     "cold": null,
+     "vm": "vm-703"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 108974,
+   "dur_ms": 10023,
+   "tokens_in": 29,
+   "tokens_out": 1284,
+   "cache_read": 33280,
+   "cache_write": 768,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 118997,
+   "dur_ms": 601,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport re,math\nlines=open('/workspace/text.gcode',errors='ignore').read().splitlines()\nobj=None; z=None; x=y=None\nfrom collections import defaultdict\nseg=defaultdict(list)\ndef arc_points(x0,y0,x1,y1,i,j,cw=False,steps=8):\n    cx=x0+i; cy=y0+j; r=math.hypot(x0-cx,y0-cy)\n    a0=math.atan2(y0-cy,x0-cx); a1=math.atan2(y1-cy,x1-cx)\n    if cw:\n        while a1>=a0: a1-=2*math.pi\n    else:\n        while a1<=a0: a1+=2*math.pi\n    return [(cx+r*math.cos(a0+(a1-a0)*k/steps),cy+r*math.sin(a0+(a1-a0)*k/steps)) for k in range(1,steps+1)]\nfor l in lines:\n    s=l.strip()\n    if s.startswith('M486'):\n        m=re.match(r'M486 S(-?\\d+)',s)\n        if m: obj=None if int(m.group(1))==-1 else int(m.group(1))\n        continue\n    if not s or s[0]==';': continue\n    t=s.split()[0]\n    if t in ('G0','G1','G2','G3'):\n        d={}\n        for tok in s.split()[1:]:\n            m=re.match(r'([XYZEFIJ])([-+]?\\d*\\.?\\d+)',tok)\n            if m: d[m.group(1)]=float(m.group(2))\n        if 'Z' in d: z=d['Z']\n        if 'X' in d or 'Y' in d:\n            nx=d.get('X',x); ny=d.get('Y',y)\n            if 'E' in d and d['E']>0 and obj==0 and x is not None and y is not None and z is not None:\n                seq=[(x,y)]+(arc_points(x,y,nx,ny,d.get('I',0),d.get('J',0),cw=(t=='G2')) if t in ('G2','G3') else [(nx,ny)])\n                zz=round(z,2)\n                for (ax,ay),(bx,by) in zip(seq,seq[1:]): seg[zz].append((ax,ay,bx,by))\n            x,y=nx,ny\ndef draw(keys, cols=4):\n    # individual normalized boxes, but common scale per row? use each own bbox\n    for ki,zz in enumerate(keys):\n        ss=seg.get(zz,[])\n        if not ss: \n            print('z',zz,'no seg'); continue\n        xs=[v for s in ss for v in (s[0],s[2])]; ys=[v for s in ss for v in (s[1],s[3])]\n        xmin,xmax=min(xs),max(xs); ymin,ymax=min(ys),max(ys)\n        W,H=60,25\n        grid=[[' ']*W for _ in range(H)]\n        for ax,ay,bx,by in ss:\n            n=max(2,int(math.hypot(bx-ax,by-ay)/0.15))\n            for k in range(n+1):\n                xx=ax+(bx-ax)*k/n; yy=ay+(by-ay)*k/n\n                c=int((xx-xmin)/(xmax-xmin)*(W-1)) if xmax>xmin else 0\n                r=int((yy-ymin)/(ymax-ymin)*(H-1)) if ymax>ymin else 0\n                grid[H-1-r][c]='#'\n        print(f'--- z={zz} bbox {xmin:.1f},{ymin:.1f} to {xmax:.1f},{ymax:.1f} segs={len(ss)}')\n        for row in grid: print(''.join(row))\n# pick layers from different parts: z 3.0,3.6,4.8,6,8,10,15,20,30,40,50,60\nkeys=sorted(seg)\nfor target in [3.0,3.6,4.8,6.0,8.0,10.0,15.0,20.0,30.0,40.0,50.0,60.0]:\n    zz=min(keys,key=lambda k:abs(k-target))\n    draw([zz])\nPY",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 119046,
+     "dur_ms": 549,
+     "exit": 0,
+     "cpu_ms": 544.9,
+     "phases_us": {
+      "acquire": 78,
+      "resume": 28454,
+      "mount": 24769,
+      "run": 493022,
+      "destroy": 26920
+     },
+     "cold": null,
+     "vm": "vm-705"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 119602,
+   "dur_ms": 34908,
+   "tokens_in": 58,
+   "tokens_out": 4749,
+   "cache_read": 35328,
+   "cache_write": 2944,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 154510,
+   "dur_ms": 7039,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport re,math\nlines=open('/workspace/text.gcode',errors='ignore').read().splitlines()\nobj=None; z=None; x=y=None; segs=[]\ndef arc_points(x0,y0,x1,y1,i,j,cw=False,steps=12):\n    cx=x0+i; cy=y0+j; r=math.hypot(x0-cx,y0-cy)\n    a0=math.atan2(y0-cy,x0-cx); a1=math.atan2(y1-cy,x1-cx)\n    if cw:\n        while a1>=a0: a1-=2*math.pi\n    else:\n        while a1<=a0: a1+=2*math.pi\n    return [(cx+r*math.cos(a0+(a1-a0)*k/steps),cy+r*math.sin(a0+(a1-a0)*k/steps)) for k in range(1,steps+1)]\nfor l in lines:\n    s=l.strip()\n    if s.startswith('M486'):\n        m=re.match(r'M486 S(-?\\d+)',s)\n        if m: obj=None if int(m.group(1))==-1 else int(m.group(1))\n        continue\n    if not s or s[0]==';': continue\n    t=s.split()[0]\n    if t in ('G0','G1','G2','G3'):\n        d={}\n        for tok in s.split()[1:]:\n            m=re.match(r'([XYZEFIJ])([-+]?\\d*\\.?\\d+)',tok)\n            if m: d[m.group(1)]=float(m.group(2))\n        if 'Z' in d: z=d['Z']\n        if 'X' in d or 'Y' in d:\n            nx=d.get('X',x); ny=d.get('Y',y)\n            if 'E' in d and d['E']>0 and obj==0 and x is not None and y is not None and z is not None and z>=2.9:\n                seq=[(x,y)]+(arc_points(x,y,nx,ny,d.get('I',0),d.get('J',0),cw=(t=='G2')) if t in ('G2','G3') else [(nx,ny)])\n                for (ax,ay),(bx,by) in zip(seq,seq[1:]): segs.append((ax,ay,z,bx,by,z))\n            x,y=nx,ny\npts=[]\nfor ax,ay,az,bx,by,bz in segs:\n    pts.append((ax,ay,az)); pts.append((bx,by,bz))\n# fit robust plane repeatedly removing gross outliers\nimport random\ndef fit(ps):\n    n=len(ps)\n    Sx=sum(p[0] for p in ps); Sy=sum(p[1] for p in ps); Sz=sum(p[2] for p in ps)\n    Sxx=sum(p[0]**2 for p in ps); Sxy=sum(p[0]*p[1] for p in ps); Sxz=sum(p[0]*p[2] for p in ps)\n    Syy=sum(p[1]**2 for p in ps); Syz=sum(p[1]*p[2] for p in ps)\n    M=[[Sxx,Sxy,Sx,Sxz],[Sxy,Syy,Sy,Syz],[Sx,Sy,n,Sz]]\n    for i in range(3):\n        p=max(range(i,3),key=lambda r:abs(M[r][i])); M[i],M[p]=M[p],M[i]\n        piv=M[i][i]\n        for j in range(i,4): M[i][j]/=piv\n        for r in range(3):\n            if r!=i:\n                f=M[r][i]\n                for j in range(i,4): M[r][j]-=f*M[i][j]\n    return M[0][3],M[1][3],M[2][3]\nfor it in range(5):\n    A,B,C=fit(pts)\n    den=math.sqrt(1+A*A+B*B)\n    ds=[abs((A*p[0]+B*p[1]-p[2]+C)/den) for p in pts]\n    ds_sorted=sorted(ds); thr=ds_sorted[int(len(ds)*0.95)]\n    pts=[p for p,d in zip(pts,ds) if d<=thr]\n    print('iter',it,'thr',thr,'kept',len(pts),'A B C',A,B,C)\nprint('FINAL',A,B,C,'angle',math.degrees(math.atan(math.hypot(A,B))))\ng=math.hypot(A,B);g2=g*g\ndef wv(p):\n    x,y,z=p\n    return ((A*x+B*y+g2*z)/g, (-B*x+A*y)/g, (A*x+B*y-z)/math.sqrt(1+g2))\nws=[];vs=[];us=[]\nfor p in pts:\n    w,v,u=wv(p);ws.append(w);vs.append(v);us.append(u)\nprint('extents w',min(ws),max(ws),'v',min(vs),max(vs),'u',min(us),max(us))\n# render function max u per cell, W=200 H=30 plus chunked zoom\ndef render(ws,vs,us,W,H,umin=None,umax=None,flipx=False,flipy=True):\n    xmin,xmax=min(ws),max(ws); ymin,ymax=min(vs),max(vs)\n    # equal aspect via H based on actual? caller gives\n    grid=[[None]*W for _ in range(H)]\n    for w,v,u in zip(ws,vs,us):\n        if umin is not None and u<umin: continue\n        if umax is not None and u>umax: continue\n        c=int((w-xmin)/(xmax-xmin)*(W-1)); r=int((v-ymin)/(ymax-ymin)*(H-1))\n        if flipx: c=W-1-c\n        if flipy: r=H-1-r\n        if 0<=r<H and 0<=c<W:\n            if grid[r][c] is None or u>grid[r][c]: grid[r][c]=u\n    chars=' .:-=+*#%@'\n    for row in grid:\n        print(''.join(chars[min(9,int((v-(umin or min(us)))/((umax or max(us))-(umin or min(us))+1e-9)*9))] if v is not None else ' ' for v in row))\n# full with actual aspect W=180 H=25\nprint('FULL W-V max-u')\nrender(ws,vs,us,180,30)\n# chunks 60mm wide\nfor start in [min(ws)+i*45 for i in range(4)]:\n    sel=[(w,v,u) for w,v,u in zip(ws,vs,us) if start<=w<start+45]\n    if not sel: continue\n    print('CHUNK w',round(start,1),'to',round(start+45,1))\n    render([a for a,b,c in sel],[b for a,b,c in sel],[c for a,b,c in sel],90,30)\nPY",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 154560,
+     "dur_ms": 6980,
+     "exit": 0,
+     "cpu_ms": 6975.9,
+     "phases_us": {
+      "acquire": 51,
+      "resume": 22564,
+      "mount": 19771,
+      "run": 6921288,
+      "destroy": 35380
+     },
+     "cold": null,
+     "vm": "vm-708"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 161554,
+   "dur_ms": 7153,
+   "tokens_in": 47,
+   "tokens_out": 951,
+   "cache_read": 43072,
+   "cache_write": 3776,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 168707,
+   "dur_ms": 141,
+   "tool": "bash",
+   "is_error": false,
+   "command": "apt-get update -qq && apt-get install -y -qq tesseract-ocr >/tmp/apt.log 2>&1; tail -5 /tmp/apt.log; which tesseract; tesseract --version 2>/dev/null | head -1",
+   "timeout": 180,
+   "sandbox": [
+    {
+     "at_ms": 168757,
+     "dur_ms": 76,
+     "exit": 0,
+     "cpu_ms": 87.6,
+     "phases_us": {
+      "acquire": 70,
+      "resume": 22529,
+      "mount": 20024,
+      "run": 29683,
+      "destroy": 23847
+     },
+     "cold": null,
+     "vm": "vm-717"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 168852,
+   "dur_ms": 1250,
+   "tokens_in": 32,
+   "tokens_out": 130,
+   "cache_read": 47808,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "model",
+   "at_ms": 171975,
+   "dur_ms": 1535,
+   "tokens_in": 42,
+   "tokens_out": 157,
+   "cache_read": 48000,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 173510,
+   "dur_ms": 1816,
+   "tool": "bash",
+   "is_error": false,
+   "command": "id\nls -ld /var/lib/dpkg /var/lib/apt/lists\ntouch /var/lib/dpkg/lock-frontend 2>&1 || true\nmkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial\napt-get update -qq 2>&1 | tail -10",
+   "timeout": 240,
+   "sandbox": [
+    {
+     "at_ms": 173560,
+     "dur_ms": 1760,
+     "exit": 0,
+     "cpu_ms": 1865.8,
+     "phases_us": {
+      "acquire": 114,
+      "resume": 21445,
+      "mount": 19029,
+      "run": 1696935,
+      "destroy": 40790
+     },
+     "cold": null,
+     "vm": "vm-721"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 175326,
+   "dur_ms": 6079,
+   "tokens_in": 26,
+   "tokens_out": 760,
+   "cache_read": 48256,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 181405,
+   "dur_ms": 2354,
+   "tool": "bash",
+   "is_error": false,
+   "command": "pip install --quiet tesserocr 2>&1 | tail -20\npython3 - <<'PY'\ntry:\n import tesserocr; print('tesserocr ok',tesserocr.tesseract_version())\nexcept Exception as e: print('fail',repr(e))\nPY",
+   "timeout": 180,
+   "sandbox": [
+    {
+     "at_ms": 181455,
+     "dur_ms": 2268,
+     "exit": 0,
+     "cpu_ms": 2145.2,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 22684,
+      "mount": 19713,
+      "run": 2203369,
+      "destroy": 41521
+     },
+     "cold": null,
+     "vm": "vm-723"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 183764,
+   "dur_ms": 10667,
+   "tokens_in": 35,
+   "tokens_out": 1642,
+   "cache_read": 49088,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 194431,
+   "dur_ms": 252,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport re,math\nfrom PIL import Image, ImageDraw, ImageOps, ImageFilter\nimport tesserocr\nlines=open('/workspace/text.gcode',errors='ignore').read().splitlines()\nobj=None; z=None; x=y=None; segs=[]\ndef arc_points(x0,y0,x1,y1,i,j,cw=False,steps=12):\n    cx=x0+i; cy=y0+j; r=math.hypot(x0-cx,y0-cy)\n    a0=math.atan2(y0-cy,x0-cx); a1=math.atan2(y1-cy,x1-cx)\n    if cw:\n        while a1>=a0: a1-=2*math.pi\n    else:\n        while a1<=a0: a1+=2*math.pi\n    return [(cx+r*math.cos(a0+(a1-a0)*k/steps),cy+r*math.sin(a0+(a1-a0)*k/steps)) for k in range(1,steps+1)]\nfor l in lines:\n    s=l.strip()\n    if s.startswith('M486'):\n        m=re.match(r'M486 S(-?\\d+)',s)\n        if m: obj=None if int(m.group(1))==-1 else int(m.group(1))\n        continue\n    if not s or s[0]==';': continue\n    t=s.split()[0]\n    if t in ('G0','G1','G2','G3'):\n        d={}\n        for tok in s.split()[1:]:\n            m=re.match(r'([XYZEFIJ])([-+]?\\d*\\.?\\d+)',tok)\n            if m: d[m.group(1)]=float(m.group(2))\n        if 'Z' in d: z=d['Z']\n        if 'X' in d or 'Y' in d:\n            nx=d.get('X',x); ny=d.get('Y',y)\n            if 'E' in d and d['E']>0 and obj==0 and x is not None and y is not None and z is not None and z>=2.9:\n                seq=[(x,y)]+(arc_points(x,y,nx,ny,d.get('I',0),d.get('J',0),cw=(t=='G2')) if t in ('G2','G3') else [(nx,ny)])\n                for (ax,ay),(bx,by) in zip(seq,seq[1:]): segs.append((ax,ay,z,bx,by,z))\n            x,y=nx,ny\n# use robust plane from before (fit all) \nA=0.3331427379140506; B=0.17015711148471718; g=math.hypot(A,B); g2=g*g\ndef wv(p):\n    x,y,z=p\n    return ((A*x+B*y+g2*z)/g, (-B*x+A*y)/g)\nP=[]\nfor ax,ay,az,bx,by,bz in segs:\n    P.append((*wv((ax,ay,az)),*wv((bx,by,bz))))\nws=[v for p in P for v in (p[0],p[2])]; vs=[v for p in P for v in (p[1],p[3])]\nxmin,xmax=min(ws),max(ws);ymin,ymax=min(vs),max(vs)\nprint('wv',xmin,xmax,ymin,ymax)\nscale=15\nmargin=20\nW=int((xmax-xmin)*scale)+2*margin; H=int((ymax-ymin)*scale)+2*margin\ndef make_image(swap=False,flipx=False,flipy=False,thick=3):\n    im=Image.new('L',(W,H),255); dr=ImageDraw.Draw(im)\n    for x0,y0,x1,y1 in P:\n        if swap: x0,y0,x1,y1=y0,x0,y1,x1\n        px0=margin+(x0-xmin)*scale; px1=margin+(x1-xmin)*scale\n        py0=margin+(y0-ymin)*scale; py1=margin+(y1-ymin)*scale\n        if flipx: px0=W-px0; px1=W-px1\n        if flipy: py0=H-py0; py1=H-py1\n        dr.line([px0,py0,px1,py1],fill=0,width=thick)\n    return im\n# Try OCR across orientations and a few psm\nfor swap in [False,True]:\n  for flipx in [False,True]:\n    for flipy in [False,True]:\n      im=make_image(swap,flipx,flipy)\n      im.save(f'/workspace/wv_{int(swap)}{int(flipx)}{int(flipy)}.png')\n      with tesserocr.PyTessBaseAPI(psm=tesserocr.PSM.SINGLE_LINE) as api:\n        api.SetImage(im)\n        txt=api.GetUTF8Text().strip()\n        conf=api.MeanTextConf()\n      print('swap,flipx,flipy',swap,flipx,flipy,'conf',conf,'text',repr(txt))\nPY\nls -l /workspace/wv_*.png | head",
+   "timeout": 240,
+   "sandbox": [
+    {
+     "at_ms": 194481,
+     "dur_ms": 186,
+     "exit": 0,
+     "cpu_ms": 191.0,
+     "phases_us": {
+      "acquire": 107,
+      "resume": 22412,
+      "mount": 19319,
+      "run": 141859,
+      "destroy": 20902
+     },
+     "cold": null,
+     "vm": "vm-725"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 194687,
+   "dur_ms": 6799,
+   "tokens_in": 13,
+   "tokens_out": 1301,
+   "cache_read": 50944,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "model",
+   "at_ms": 205204,
+   "dur_ms": 2512,
+   "tokens_in": 52,
+   "tokens_out": 185,
+   "cache_read": 52288,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "model",
+   "at_ms": 207958,
+   "dur_ms": 2289,
+   "tokens_in": 33,
+   "tokens_out": 265,
+   "cache_read": 52736,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 210248,
+   "dur_ms": 3322,
+   "tool": "bash",
+   "is_error": false,
+   "command": "pip install --quiet --target /workspace/pydeps pillow tesserocr 2>&1 | tail -5\nPYTHONPATH=/workspace/pydeps python3 - <<'PY'\nimport tesserocr,os,glob\nprint(tesserocr.__file__)\nbase=os.path.dirname(tesserocr.__file__)\nprint('files in pkg',os.listdir(base)[:30])\nfor root in [base,'/usr/share/tesseract-ocr','/usr/share','/usr/local/share','/opt','/workspace']:\n print(root, glob.glob(root+'/**/eng.traineddata',recursive=True)[:5])\nPY",
+   "timeout": 240,
+   "sandbox": [
+    {
+     "at_ms": 210296,
+     "dur_ms": 3272,
+     "exit": 0,
+     "cpu_ms": 3069.9,
+     "phases_us": {
+      "acquire": 100,
+      "resume": 20517,
+      "mount": 18389,
+      "run": 3205576,
+      "destroy": 45743
+     },
+     "cold": null,
+     "vm": "vm-734"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 213575,
+   "dur_ms": 2343,
+   "tokens_in": 0,
+   "tokens_out": 378,
+   "cache_read": 53056,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 215918,
+   "dur_ms": 1760,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /etc/apt 2>&1 | head\ncat /etc/apt/sources.list 2>/dev/null; ls /etc/apt/sources.list.d 2>/dev/null; cat /etc/os-release\nls -la /var/lib | head -30\nwhich apt-get dpkg\nmkdir -p /var/lib/dpkg /var/lib/apt/lists/partial /var/cache/apt/archives/partial /var/log/apt\ntouch /var/lib/dpkg/status /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend\napt-get update 2>&1 | tail -20",
+   "timeout": 240,
+   "sandbox": [
+    {
+     "at_ms": 215968,
+     "dur_ms": 1693,
+     "exit": 0,
+     "cpu_ms": 1799.5,
+     "phases_us": {
+      "acquire": 89,
+      "resume": 20912,
+      "mount": 18812,
+      "run": 1642997,
+      "destroy": 28623
+     },
+     "cold": null,
+     "vm": "vm-735"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 217678,
+   "dur_ms": 3592,
+   "tokens_in": 17,
+   "tokens_out": 415,
+   "cache_read": 53632,
+   "cache_write": 512,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "model",
+   "at_ms": 225881,
+   "dur_ms": 2774,
+   "tokens_in": 5,
+   "tokens_out": 394,
+   "cache_read": 54528,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 228656,
+   "dur_ms": 2636,
+   "tool": "bash",
+   "is_error": false,
+   "command": "mkdir -p /var/lib/dpkg /var/lib/apt/lists/partial /var/cache/apt/archives/partial\ntouch /var/lib/dpkg/status\napt-get update -qq >/dev/null 2>&1\ncd /workspace\napt-get download tesseract-ocr-eng >/tmp/dl.log 2>&1 || cat /tmp/dl.log\nls -l /workspace/*.deb\nmkdir -p /workspace/tess\nfor f in /workspace/tesseract-ocr-eng*.deb; do dpkg-deb -x \"$f\" /workspace/tess; done\nfind /workspace/tess -name '*.traineddata' -o -name 'configs' | head",
+   "timeout": 240,
+   "sandbox": [
+    {
+     "at_ms": 228704,
+     "dur_ms": 2552,
+     "exit": 0,
+     "cpu_ms": 2665.1,
+     "phases_us": {
+      "acquire": 17,
+      "resume": 21565,
+      "mount": 19447,
+      "run": 2494641,
+      "destroy": 35942
+     },
+     "cold": null,
+     "vm": "vm-739"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 231298,
+   "dur_ms": 1650,
+   "tokens_in": 31,
+   "tokens_out": 181,
+   "cache_read": 55232,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 232948,
+   "dur_ms": 318,
+   "tool": "bash",
+   "is_error": false,
+   "command": "PYTHONPATH=/workspace/pydeps TESSDATA_PREFIX=/workspace/tess/usr/share/tesseract-ocr/5/tessdata python3 - <<'PY'\nimport tesserocr\nprint(tesserocr.tesseract_version())\nprint(tesserocr.PyTessBaseAPI)\nPY",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 232998,
+     "dur_ms": 265,
+     "exit": 0,
+     "cpu_ms": 277.5,
+     "phases_us": {
+      "acquire": 82,
+      "resume": 21259,
+      "mount": 19041,
+      "run": 211279,
+      "destroy": 31703
+     },
+     "cold": null,
+     "vm": "vm-740"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 233270,
+   "dur_ms": 6858,
+   "tokens_in": 62,
+   "tokens_out": 1297,
+   "cache_read": 55488,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "model",
+   "at_ms": 240251,
+   "dur_ms": 7784,
+   "tokens_in": 28,
+   "tokens_out": 1473,
+   "cache_read": 56896,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 248035,
+   "dur_ms": 5843,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put /workspace/ocr.py <<'EOF'\nimport re,math\nfrom PIL import Image, ImageDraw\nimport tesserocr\nlines=open('/workspace/text.gcode',errors='ignore').read().splitlines()\nobj=None; z=None; x=y=None; segs=[]\ndef arc_points(x0,y0,x1,y1,i,j,cw=False,steps=12):\n    cx=x0+i; cy=y0+j; r=math.hypot(x0-cx,y0-cy)\n    a0=math.atan2(y0-cy,x0-cx); a1=math.atan2(y1-cy,x1-cx)\n    if cw:\n        while a1>=a0: a1-=2*math.pi\n    else:\n        while a1<=a0: a1+=2*math.pi\n    return [(cx+r*math.cos(a0+(a1-a0)*k/steps),cy+r*math.sin(a0+(a1-a0)*k/steps)) for k in range(1,steps+1)]\nfor l in lines:\n    s=l.strip()\n    if s.startswith('M486'):\n        m=re.match(r'M486 S(-?\\d+)',s)\n        if m: obj=None if int(m.group(1))==-1 else int(m.group(1))\n        continue\n    if not s or s[0]==';': continue\n    t=s.split()[0]\n    if t in ('G0','G1','G2','G3'):\n        d={}\n        for tok in s.split()[1:]:\n            m=re.match(r'([XYZEFIJ])([-+]?\\d*\\.?\\d+)',tok)\n            if m: d[m.group(1)]=float(m.group(2))\n        if 'Z' in d: z=d['Z']\n        if 'X' in d or 'Y' in d:\n            nx=d.get('X',x); ny=d.get('Y',y)\n            if 'E' in d and d['E']>0 and obj==0 and x is not None and y is not None and z is not None and z>=2.9:\n                seq=[(x,y)]+(arc_points(x,y,nx,ny,d.get('I',0),d.get('J',0),cw=(t=='G2')) if t in ('G2','G3') else [(nx,ny)])\n                for (ax,ay),(bx,by) in zip(seq,seq[1:]): segs.append((ax,ay,z,bx,by,z))\n            x,y=nx,ny\nA=0.3331427379140506; B=0.17015711148471718; g=math.hypot(A,B); g2=g*g\ndef wv(p):\n    x,y,z=p\n    return ((A*x+B*y+g2*z)/g, (-B*x+A*y)/g)\nP=[]\nfor ax,ay,az,bx,by,bz in segs:\n    P.append((*wv((ax,ay,az)),*wv((bx,by,bz))))\nws=[v for p in P for v in (p[0],p[2])]; vs=[v for p in P for v in (p[1],p[3])]\nxmin,xmax=min(ws),max(ws);ymin,ymax=min(vs),max(vs)\nprint('extents',xmin,xmax,ymin,ymax)\nscale=20; margin=40\nW=int((xmax-xmin)*scale)+2*margin; H=int((ymax-ymin)*scale)+2*margin\ndef make_image(swap=False,flipx=False,flipy=False,thick=4):\n    im=Image.new('L',(W,H),255); dr=ImageDraw.Draw(im)\n    for x0,y0,x1,y1 in P:\n        if swap: x0,y0,x1,y1=y0,x0,y1,x1\n        px0=margin+(x0-xmin)*scale; px1=margin+(x1-xmin)*scale\n        py0=margin+(y0-ymin)*scale; py1=margin+(y1-ymin)*scale\n        if flipx: px0=W-px0; px1=W-px1\n        if flipy: py0=H-py0; py1=H-py1\n        dr.line([px0,py0,px1,py1],fill=0,width=thick)\n    return im\nfor swap in [False,True]:\n  for flipx in [False,True]:\n    for flipy in [False,True]:\n      im=make_image(swap,flipx,flipy)\n      fn=f'/workspace/wv_{int(swap)}{int(flipx)}{int(flipy)}.png'\n      im.save(fn)\n      out=[]\n      for psm in [tesserocr.PSM.SINGLE_LINE,tesserocr.PSM.SINGLE_WORD,tesserocr.PSM.RAW_LINE,tesserocr.PSM.SPARSE_TEXT]:\n        with tesserocr.PyTessBaseAPI(psm=psm) as api:\n          api.SetImage(im)\n          txt=api.GetUTF8Text().strip().replace('\\n','\\\\n')\n          conf=api.MeanTextConf()\n        out.append((psm,conf,txt))\n      print('swap,flipx,flipy',swap,flipx,flipy,out)\nEOF\nsbx run <<'EOF'\nPYTHONPATH=/workspace/pydeps TESSDATA_PREFIX=/workspace/tess/usr/share/tesseract-ocr/5/tessdata python3 /workspace/ocr.py\nEOF",
+   "timeout": 240,
+   "sandbox": [
+    {
+     "at_ms": 248084,
+     "dur_ms": 58,
+     "exit": 0,
+     "cpu_ms": 41.6,
+     "phases_us": {
+      "acquire": 70,
+      "resume": 21376,
+      "mount": 18966,
+      "run": 7183,
+      "destroy": 28696
+     },
+     "cold": null,
+     "vm": "vm-742"
+    },
+    {
+     "at_ms": 248189,
+     "dur_ms": 5681,
+     "exit": 0,
+     "cpu_ms": 5707.7,
+     "phases_us": {
+      "acquire": 34,
+      "resume": 24202,
+      "mount": 20794,
+      "run": 5620098,
+      "destroy": 36288
+     },
+     "cold": null,
+     "vm": "vm-663"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 253882,
+   "dur_ms": 23385,
+   "tokens_in": 20,
+   "tokens_out": 3251,
+   "cache_read": 58432,
+   "cache_write": 640,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 277267,
+   "dur_ms": 117,
+   "tool": "bash",
+   "is_error": false,
+   "command": "grep -a -inE 'thumb|flag|g0d3|chall|text|M862|M555|M486|M74|M73' /workspace/text.gcode | head -100\necho '--- last 100 lines ---'\ntail -100 /workspace/text.gcode",
+   "sandbox": [
+    {
+     "at_ms": 277315,
+     "dur_ms": 51,
+     "exit": 0,
+     "cpu_ms": 42.1,
+     "phases_us": {
+      "acquire": 5,
+      "resume": 22269,
+      "mount": 19197,
+      "run": 6124,
+      "destroy": 22560
+     },
+     "cold": null,
+     "vm": "vm-745"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 277390,
+   "dur_ms": 13884,
+   "tokens_in": 17,
+   "tokens_out": 1970,
+   "cache_read": 62336,
+   "cache_write": 832,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 291274,
+   "dur_ms": 67159,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put /workspace/ocr2.py <<'EOF'\nimport re,math\nfrom PIL import Image, ImageDraw, ImageFilter, ImageOps\nimport tesserocr\nlines=open('/workspace/text.gcode',errors='ignore').read().splitlines()\nobj=None; z=None; x=y=None; segs=[]\ndef arc_points(x0,y0,x1,y1,i,j,cw=False,steps=16):\n    cx=x0+i; cy=y0+j; r=math.hypot(x0-cx,y0-cy)\n    a0=math.atan2(y0-cy,x0-cx); a1=math.atan2(y1-cy,x1-cx)\n    if cw:\n        while a1>=a0: a1-=2*math.pi\n    else:\n        while a1<=a0: a1+=2*math.pi\n    return [(cx+r*math.cos(a0+(a1-a0)*k/steps),cy+r*math.sin(a0+(a1-a0)*k/steps)) for k in range(1,steps+1)]\nfor l in lines:\n    s=l.strip()\n    if s.startswith('M486'):\n        m=re.match(r'M486 S(-?\\d+)',s)\n        if m: obj=None if int(m.group(1))==-1 else int(m.group(1))\n        continue\n    if not s or s[0]==';': continue\n    t=s.split()[0]\n    if t in ('G0','G1','G2','G3'):\n        d={}\n        for tok in s.split()[1:]:\n            m=re.match(r'([XYZEFIJ])([-+]?\\d*\\.?\\d+)',tok)\n            if m: d[m.group(1)]=float(m.group(2))\n        if 'Z' in d: z=d['Z']\n        if 'X' in d or 'Y' in d:\n            nx=d.get('X',x); ny=d.get('Y',y)\n            if 'E' in d and d['E']>0 and obj==0 and x is not None and y is not None and z is not None and z>=2.9:\n                seq=[(x,y)]+(arc_points(x,y,nx,ny,d.get('I',0),d.get('J',0),cw=(t=='G2')) if t in ('G2','G3') else [(nx,ny)])\n                for (ax,ay),(bx,by) in zip(seq,seq[1:]): segs.append((ax,ay,z,bx,by,z))\n            x,y=nx,ny\ndef render(A,B,scale=25,thick=4,flipy=True,margin=40):\n    g=math.hypot(A,B); g2=g*g\n    def wv(p):\n        x,y,z=p\n        return ((A*x+B*y+g2*z)/g, (-B*x+A*y)/g)\n    P=[]\n    for ax,ay,az,bx,by,bz in segs:\n        P.append((*wv((ax,ay,az)),*wv((bx,by,bz))))\n    ws=[v for p in P for v in (p[0],p[2])]; vs=[v for p in P for v in (p[1],p[3])]\n    xmin,xmax=min(ws),max(ws);ymin,ymax=min(vs),max(vs)\n    W=int((xmax-xmin)*scale)+2*margin; H=int((ymax-ymin)*scale)+2*margin\n    im=Image.new('L',(W,H),255); dr=ImageDraw.Draw(im)\n    for x0,y0,x1,y1 in P:\n        px0=margin+(x0-xmin)*scale; px1=margin+(x1-xmin)*scale\n        py0=margin+(y0-ymin)*scale; py1=margin+(y1-ymin)*scale\n        if flipy: py0=H-py0; py1=H-py1\n        dr.line([px0,py0,px1,py1],fill=0,width=thick)\n    return im\nwhitelist='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_{}-!@#$%^&*()'\nfor A,B in [(0.3331427379140506,0.17015711148471718),(0.3412035475193308,0.12516080719866074),(0.3279077020358596,0.1798122174909928),(0.32,0.18),(0.3333,0.1667),(0.35,0.15)]:\n  for scale,thick in [(15,3),(20,4),(25,5),(30,6)]:\n    im=render(A,B,scale,thick)\n    # variants\n    variants={\n      'raw':im,\n      'close':im.filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.MinFilter(3)),\n      'open':im.filter(ImageFilter.MinFilter(3)).filter(ImageFilter.MaxFilter(3)),\n      'erode':im.filter(ImageFilter.MinFilter(3)),\n      'dilate':im.filter(ImageFilter.MaxFilter(3)),\n    }\n    for vn,vim in variants.items():\n      for psm in [tesserocr.PSM.SINGLE_LINE,tesserocr.PSM.RAW_LINE,tesserocr.PSM.SPARSE_TEXT]:\n        with tesserocr.PyTessBaseAPI(psm=psm) as api:\n          api.SetVariable('tessedit_char_whitelist',whitelist)\n          api.SetImage(vim)\n          txt=api.GetUTF8Text().strip().replace('\\n','|')\n          conf=api.MeanTextConf()\n        if conf>40 or 'g0d' in txt.lower() or 'flag' in txt.lower():\n          print(f'A={A:.4f} B={B:.4f} s={scale} t={thick} {vn} psm={psm} conf={conf} {txt!r}')\nEOF\nsbx run <<'EOF'\nPYTHONPATH=/workspace/pydeps TESSDATA_PREFIX=/workspace/tess/usr/share/tesseract-ocr/5/tessdata python3 /workspace/ocr2.py 2>/dev/null\nEOF",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 291325,
+     "dur_ms": 54,
+     "exit": 0,
+     "cpu_ms": 44.6,
+     "phases_us": {
+      "acquire": 4,
+      "resume": 21904,
+      "mount": 19215,
+      "run": 7255,
+      "destroy": 25163
+     },
+     "cold": null,
+     "vm": "vm-752"
+    },
+    {
+     "at_ms": 291426,
+     "dur_ms": 67004,
+     "exit": 0,
+     "cpu_ms": 67019.3,
+     "phases_us": {
+      "acquire": 3,
+      "resume": 21757,
+      "mount": 18783,
+      "run": 66935453,
+      "destroy": 47017
+     },
+     "cold": null,
+     "vm": "vm-744"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 358438,
+   "dur_ms": 17962,
+   "tokens_in": 39,
+   "tokens_out": 2515,
+   "cache_read": 65152,
+   "cache_write": 5632,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 376400,
+   "dur_ms": 336,
+   "tool": "bash",
+   "is_error": false,
+   "command": "PYTHONPATH=/workspace/pydeps python3 - <<'PY'\nimport tesserocr\nprint([x for x in dir(tesserocr.PyTessBaseAPI) if 'Iter' in x or 'Component' in x or 'Word' in x or 'Recog' in x])\nprint([x for x in dir(tesserocr) if 'RIL' in x or 'PT' in x])\nPY",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 376452,
+     "dur_ms": 276,
+     "exit": 0,
+     "cpu_ms": 290.3,
+     "phases_us": {
+      "acquire": 96,
+      "resume": 23440,
+      "mount": 19769,
+      "run": 227624,
+      "destroy": 24799
+     },
+     "cold": null,
+     "vm": "vm-756"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 376741,
+   "dur_ms": 2195,
+   "tokens_in": 56,
+   "tokens_out": 250,
+   "cache_read": 73280,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 378936,
+   "dur_ms": 644,
+   "tool": "bash",
+   "is_error": false,
+   "command": "PYTHONPATH=/workspace/pydeps TESSDATA_PREFIX=/workspace/tess/usr/share/tesseract-ocr/5/tessdata python3 - <<'PY'\nimport tesserocr\nfrom PIL import Image\nim=Image.open('/workspace/wv_001.png')\napi=tesserocr.PyTessBaseAPI(psm=tesserocr.PSM.SINGLE_LINE)\napi.SetImage(im)\napi.Recognize()\nit=api.GetIterator()\nprint(type(it))\nprint([x for x in dir(it) if not x.startswith('__')])\nprint('RIL',[(x,getattr(tesserocr.RIL,x)) for x in dir(tesserocr.RIL) if not x.startswith('_')])\nPY",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 378988,
+     "dur_ms": 558,
+     "exit": 0,
+     "cpu_ms": 579.2,
+     "phases_us": {
+      "acquire": 119,
+      "resume": 25718,
+      "mount": 22874,
+      "run": 498232,
+      "destroy": 33424
+     },
+     "cold": null,
+     "vm": "vm-767"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 379585,
+   "dur_ms": 7355,
+   "tokens_in": 34,
+   "tokens_out": 1373,
+   "cache_read": 73600,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 386940,
+   "dur_ms": 1577,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put /workspace/symbols.py <<'EOF'\nimport re,math\nfrom PIL import Image, ImageDraw, ImageFilter\nimport tesserocr\nlines=open('/workspace/text.gcode',errors='ignore').read().splitlines()\nobj=None; z=None; x=y=None; segs=[]\ndef arc_points(x0,y0,x1,y1,i,j,cw=False,steps=16):\n    cx=x0+i; cy=y0+j; r=math.hypot(x0-cx,y0-cy)\n    a0=math.atan2(y0-cy,x0-cx); a1=math.atan2(y1-cy,x1-cx)\n    if cw:\n        while a1>=a0: a1-=2*math.pi\n    else:\n        while a1<=a0: a1+=2*math.pi\n    return [(cx+r*math.cos(a0+(a1-a0)*k/steps),cy+r*math.sin(a0+(a1-a0)*k/steps)) for k in range(1,steps+1)]\nfor l in lines:\n    s=l.strip()\n    if s.startswith('M486'):\n        m=re.match(r'M486 S(-?\\d+)',s)\n        if m: obj=None if int(m.group(1))==-1 else int(m.group(1))\n        continue\n    if not s or s[0]==';': continue\n    t=s.split()[0]\n    if t in ('G0','G1','G2','G3'):\n        d={}\n        for tok in s.split()[1:]:\n            m=re.match(r'([XYZEFIJ])([-+]?\\d*\\.?\\d+)',tok)\n            if m: d[m.group(1)]=float(m.group(2))\n        if 'Z' in d: z=d['Z']\n        if 'X' in d or 'Y' in d:\n            nx=d.get('X',x); ny=d.get('Y',y)\n            if 'E' in d and d['E']>0 and obj==0 and x is not None and y is not None and z is not None and z>=2.9:\n                seq=[(x,y)]+(arc_points(x,y,nx,ny,d.get('I',0),d.get('J',0),cw=(t=='G2')) if t in ('G2','G3') else [(nx,ny)])\n                for (ax,ay),(bx,by) in zip(seq,seq[1:]): segs.append((ax,ay,z,bx,by,z))\n            x,y=nx,ny\nA=0.35;B=0.15;scale=30;thick=6;flipy=True;margin=40\ng=math.hypot(A,B); g2=g*g\ndef wv(p):\n    x,y,z=p\n    return ((A*x+B*y+g2*z)/g, (-B*x+A*y)/g)\nP=[]\nfor ax,ay,az,bx,by,bz in segs:\n    P.append((*wv((ax,ay,az)),*wv((bx,by,bz))))\nws=[v for p in P for v in (p[0],p[2])]; vs=[v for p in P for v in (p[1],p[3])]\nxmin,xmax=min(ws),max(ws);ymin,ymax=min(vs),max(vs)\nW=int((xmax-xmin)*scale)+2*margin; H=int((ymax-ymin)*scale)+2*margin\nim=Image.new('L',(W,H),255); dr=ImageDraw.Draw(im)\nfor x0,y0,x1,y1 in P:\n    px0=margin+(x0-xmin)*scale; px1=margin+(x1-xmin)*scale\n    py0=margin+(y0-ymin)*scale; py1=margin+(y1-ymin)*scale\n    if flipy: py0=H-py0; py1=H-py1\n    dr.line([px0,py0,px1,py1],fill=0,width=thick)\nim=im.filter(ImageFilter.MinFilter(3)).filter(ImageFilter.MaxFilter(3))\nim.save('/workspace/text_recon.png')\nprint('size',im.size,'extents',xmin,xmax,ymin,ymax)\napi=tesserocr.PyTessBaseAPI(psm=tesserocr.PSM.SINGLE_LINE)\napi.SetVariable('tessedit_char_whitelist','abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_{}')\napi.SetImage(im)\napi.Recognize()\nit=api.GetIterator()\nlevel=tesserocr.RIL.SYMBOL\nif it:\n    ok=True\n    while ok:\n        txt=it.GetUTF8Text(level)\n        bb=it.BoundingBox(level)\n        conf=it.Confidence(level)\n        if txt.strip(): print('SYM',repr(txt),'conf',conf,'bbox',bb)\n        ok=it.Next(level)\nprint('ALL',repr(api.GetUTF8Text().strip()))\nEOF\nsbx run <<'EOF'\nPYTHONPATH=/workspace/pydeps TESSDATA_PREFIX=/workspace/tess/usr/share/tesseract-ocr/5/tessdata python3 /workspace/symbols.py\nEOF",
+   "timeout": 180,
+   "sandbox": [
+    {
+     "at_ms": 386989,
+     "dur_ms": 52,
+     "exit": 0,
+     "cpu_ms": 44.4,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 21616,
+      "mount": 18518,
+      "run": 6866,
+      "destroy": 23130
+     },
+     "cold": null,
+     "vm": "vm-768"
+    },
+    {
+     "at_ms": 387086,
+     "dur_ms": 1428,
+     "exit": 0,
+     "cpu_ms": 1443.3,
+     "phases_us": {
+      "acquire": 32,
+      "resume": 22129,
+      "mount": 18586,
+      "run": 1361451,
+      "destroy": 44392
+     },
+     "cold": null,
+     "vm": "vm-755"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 388523,
+   "dur_ms": 15069,
+   "tokens_in": 4,
+   "tokens_out": 2504,
+   "cache_read": 75264,
+   "cache_write": 896,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 403592,
+   "dur_ms": 384,
+   "tool": "bash",
+   "is_error": false,
+   "command": "PYTHONPATH=/workspace/pydeps python3 - <<'PY'\nfrom PIL import Image\nim=Image.open('/workspace/text_recon.png').convert('L')\nboxes={\n'first_t/f':(38,36,133,318),\n'l1':(175,41,209,318),\n'a':(257,111,452,327),\n'g1':(478,117,673,410),\n'brace':(694,41,834,408),\n'g2':(853,122,1043,416),\n'c1':(1085,123,1267,339),\n'O/0':(1294,64,1494,344),\n'd':(1527,60,1719,347),\n'3/e':(1755,71,1953,351),\n'underscore':(1981,376,2195,396),\n'i/1':(2231,68,2275,348),\n'z':(2311,146,2511,395),\n'c2':(2755,149,2937,365),\n'h':(2974,79,3153,366),\n'4':(3193,94,3395,370),\n'L1':(3442,89,3633,374),\n'L2':(3674,93,3865,378),\n'e':(3893,169,4086,384),\n'n1':(4133,173,4314,382),\n'G/g':(4365,99,4636,392),\n'i2':(4691,108,4732,390),\n'N/n':(4789,108,5031,395),\n'g3':(5074,188,5266,482),\n'brace2':(5340,112,5477,478),\n}\nfor name,bb in boxes.items():\n    x0,y0,x1,y1=bb\n    m=8\n    crop=im.crop((max(0,x0-m),max(0,y0-m),min(im.width,x1+m),min(im.height,y1+m)))\n    # print at 40 cols, preserve aspect approx incl terminal 2:1 -> rows = 40*h/w/2? test\n    W=40; H=max(4,int(40*(crop.height/crop.width)/2))\n    small=crop.resize((W,H))\n    print('\\n===',name,bb,'crop',crop.size,'===')\n    for yy in range(H):\n        print(''.join('#' if small.getpixel((xx,yy))<128 else ' ' for xx in range(W)))\nPY",
+   "timeout": 180,
+   "sandbox": [
+    {
+     "at_ms": 403642,
+     "dur_ms": 324,
+     "exit": 0,
+     "cpu_ms": 335.8,
+     "phases_us": {
+      "acquire": 124,
+      "resume": 22841,
+      "mount": 19454,
+      "run": 279544,
+      "destroy": 21529
+     },
+     "cold": null,
+     "vm": "vm-770"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 403983,
+   "dur_ms": 14414,
+   "tokens_in": 9,
+   "tokens_out": 2742,
+   "cache_read": 78656,
+   "cache_write": 6336,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 418397,
+   "dur_ms": 602,
+   "tool": "bash",
+   "is_error": false,
+   "command": "PYTHONPATH=/workspace/pydeps python3 - <<'PY'\nfrom PIL import Image, ImageChops\nimport math\nim=Image.open('/workspace/text_recon.png').convert('L')\nboxes=[\n('first',(38,36,133,318)),('l1',(175,41,209,318)),('a',(257,111,452,327)),('g1',(478,117,673,410)),('brace',(694,41,834,408)),\n('g2',(853,122,1043,416)),('c1',(1085,123,1267,339)),('O',(1294,64,1494,344)),('d',(1527,60,1719,347)),('3',(1755,71,1953,351)),\n('_1',(1981,376,2195,396)),('i1',(2231,68,2275,348)),('z',(2311,146,2511,395)),('_2',(2514,386,2735,405)),('c2',(2755,149,2937,365)),\n('h',(2974,79,3153,366)),('4',(3193,94,3395,370)),('L1',(3442,89,3633,374)),('L2',(3674,93,3865,378)),('e',(3893,169,4086,384)),\n('n1',(4133,173,4314,382)),('G',(4365,99,4636,392)),('i2',(4691,108,4732,390)),('N',(4789,108,5031,395)),('g3',(5074,188,5266,482)),('brace2',(5340,112,5477,478)),\n]\ndef binimg(bb,size=(64,64)):\n    crop=im.crop(bb)\n    # pad to square? preserve aspect by fitting into square with margin\n    w,h=crop.size\n    s=max(w,h)\n    sq=Image.new('L',(s,s),255); sq.paste(crop,((s-w)//2,(s-h)//2))\n    small=sq.resize(size)\n    return [[1 if small.getpixel((x,y))<128 else 0 for x in range(size[0])] for y in range(size[1])]\nB={n:binimg(bb) for n,bb in boxes}\ndef iou(a,b):\n    inter=sum(x and y for ra,rb in zip(a,b) for x,y in zip(ra,rb))\n    uni=sum(x or y for ra,rb in zip(a,b) for x,y in zip(ra,rb))\n    return inter/uni if uni else 0\nnames=[n for n,_ in boxes]\n# print pair similarities high\npairs=[]\nfor i in range(len(names)):\n for j in range(i+1,len(names)):\n  v=iou(B[names[i]],B[names[j]])\n  pairs.append((v,names[i],names[j]))\nfor v,a,b in sorted(pairs,reverse=True)[:40]:\n print(f'{v:.3f} {a} {b}')\nPY",
+   "timeout": 180,
+   "sandbox": [
+    {
+     "at_ms": 418447,
+     "dur_ms": 514,
+     "exit": 0,
+     "cpu_ms": 506.0,
+     "phases_us": {
+      "acquire": 17,
+      "resume": 21811,
+      "mount": 19119,
+      "run": 456789,
+      "destroy": 35611
+     },
+     "cold": null,
+     "vm": "vm-772"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 419005,
+   "dur_ms": 35959,
+   "tokens_in": 51,
+   "tokens_out": 7274,
+   "cache_read": 87680,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 454964,
+   "dur_ms": 3649,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put /workspace/ocr_all.py <<'EOF'\nimport re,math\nfrom PIL import Image, ImageDraw, ImageFilter\nimport tesserocr\nlines=open('/workspace/text.gcode',errors='ignore').read().splitlines()\nobj=None; z=None; x=y=None; segs=[]\ndef arc_points(x0,y0,x1,y1,i,j,cw=False,steps=16):\n    cx=x0+i; cy=y0+j; r=math.hypot(x0-cx,y0-cy)\n    a0=math.atan2(y0-cy,x0-cx); a1=math.atan2(y1-cy,x1-cx)\n    if cw:\n        while a1>=a0: a1-=2*math.pi\n    else:\n        while a1<=a0: a1+=2*math.pi\n    return [(cx+r*math.cos(a0+(a1-a0)*k/steps),cy+r*math.sin(a0+(a1-a0)*k/steps)) for k in range(1,steps+1)]\nfor l in lines:\n    s=l.strip()\n    if s.startswith('M486'):\n        m=re.match(r'M486 S(-?\\d+)',s)\n        if m: obj=None if int(m.group(1))==-1 else int(m.group(1))\n        continue\n    if not s or s[0]==';': continue\n    t=s.split()[0]\n    if t in ('G0','G1','G2','G3'):\n        d={}\n        for tok in s.split()[1:]:\n            m=re.match(r'([XYZEFIJ])([-+]?\\d*\\.?\\d+)',tok)\n            if m: d[m.group(1)]=float(m.group(2))\n        if 'Z' in d: z=d['Z']\n        if 'X' in d or 'Y' in d:\n            nx=d.get('X',x); ny=d.get('Y',y)\n            if 'E' in d and d['E']>0 and obj==0 and x is not None and y is not None and z is not None:\n                seq=[(x,y)]+(arc_points(x,y,nx,ny,d.get('I',0),d.get('J',0),cw=(t=='G2')) if t in ('G2','G3') else [(nx,ny)])\n                for (ax,ay),(bx,by) in zip(seq,seq[1:]): segs.append((ax,ay,z,bx,by,z))\n            x,y=nx,ny\nfor A,B in [(0.35,0.15),(0.3412035475193308,0.12516080719866074),(0.3331427379140506,0.17015711148471718)]:\n  scale=25; thick=5; margin=40; flipy=True\n  g=math.hypot(A,B); g2=g*g\n  def wv(p):\n      x,y,z=p\n      return ((A*x+B*y+g2*z)/g, (-B*x+A*y)/g)\n  P=[]\n  for ax,ay,az,bx,by,bz in segs:\n      P.append((*wv((ax,ay,az)),*wv((bx,by,bz))))\n  ws=[v for p in P for v in (p[0],p[2])]; vs=[v for p in P for v in (p[1],p[3])]\n  xmin,xmax=min(ws),max(ws);ymin,ymax=min(vs),max(vs)\n  W=int((xmax-xmin)*scale)+2*margin; H=int((ymax-ymin)*scale)+2*margin\n  im=Image.new('L',(W,H),255); dr=ImageDraw.Draw(im)\n  for x0,y0,x1,y1 in P:\n      px0=margin+(x0-xmin)*scale; px1=margin+(x1-xmin)*scale\n      py0=margin+(y0-ymin)*scale; py1=margin+(y1-ymin)*scale\n      if flipy: py0=H-py0; py1=H-py1\n      dr.line([px0,py0,px1,py1],fill=0,width=thick)\n  im2=im.filter(ImageFilter.MinFilter(3)).filter(ImageFilter.MaxFilter(3))\n  fn=f'/workspace/all_{A:.3f}_{B:.3f}.png'; im2.save(fn)\n  print('A,B',A,B,'extents w',xmin,xmax,'v',ymin,ymax,'size',im.size)\n  for psm in [tesserocr.PSM.SINGLE_LINE,tesserocr.PSM.RAW_LINE,tesserocr.PSM.SPARSE_TEXT]:\n    with tesserocr.PyTessBaseAPI(psm=psm) as api:\n      api.SetVariable('tessedit_char_whitelist','abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_{}')\n      api.SetImage(im2)\n      txt=api.GetUTF8Text().strip().replace('\\n','|'); conf=api.MeanTextConf()\n    print('psm',psm,'conf',conf,repr(txt))\nEOF\nsbx run <<'EOF'\nPYTHONPATH=/workspace/pydeps TESSDATA_PREFIX=/workspace/tess/usr/share/tesseract-ocr/5/tessdata python3 /workspace/ocr_all.py\nEOF",
+   "timeout": 240,
+   "sandbox": [
+    {
+     "at_ms": 455014,
+     "dur_ms": 48,
+     "exit": 0,
+     "cpu_ms": 44.8,
+     "phases_us": {
+      "acquire": 67,
+      "resume": 22402,
+      "mount": 19662,
+      "run": 7542,
+      "destroy": 18274
+     },
+     "cold": null,
+     "vm": "vm-774"
+    },
+    {
+     "at_ms": 455108,
+     "dur_ms": 3501,
+     "exit": 0,
+     "cpu_ms": 3524.3,
+     "phases_us": {
+      "acquire": 24,
+      "resume": 23511,
+      "mount": 19985,
+      "run": 3434814,
+      "destroy": 42174
+     },
+     "cold": null,
+     "vm": "vm-769"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 458619,
+   "dur_ms": 10678,
+   "tokens_in": 63,
+   "tokens_out": 1777,
+   "cache_read": 95296,
+   "cache_write": 384,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 469297,
+   "dur_ms": 8007,
+   "tool": "bash",
+   "is_error": false,
+   "command": "mkdir -p /var/lib/dpkg /var/lib/apt/lists/partial /var/cache/apt/archives/partial\ntouch /var/lib/dpkg/status\napt-get update -qq >/dev/null 2>&1\ncd /workspace\nfor p in fonts-dejavu-core fonts-liberation2 fonts-roboto fonts-lato fonts-open-sans fonts-noto-core fonts-freefont-ttf fonts-urw-base35; do apt-get download $p >/dev/null 2>&1 && echo got $p || echo fail $p; done\nmkdir -p /workspace/fonts\nfor f in /workspace/fonts-*.deb /workspace/fonts_*.deb; do [ -f \"$f\" ] && dpkg-deb -x \"$f\" /workspace/fonts; done\nfind /workspace/fonts -name '*.ttf' -o -name '*.otf' | head -100",
+   "timeout": 240,
+   "sandbox": [
+    {
+     "at_ms": 469347,
+     "dur_ms": 7955,
+     "exit": 0,
+     "cpu_ms": 8667.2,
+     "phases_us": {
+      "acquire": 62,
+      "resume": 21959,
+      "mount": 19213,
+      "run": 7890400,
+      "destroy": 42027
+     },
+     "cold": null,
+     "vm": "vm-779"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 477310,
+   "dur_ms": 7842,
+   "tokens_in": 59,
+   "tokens_out": 1121,
+   "cache_read": 97472,
+   "cache_write": 2944,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 485153,
+   "dur_ms": 523,
+   "tool": "bash",
+   "is_error": false,
+   "command": "PYTHONPATH=/workspace/pydeps python3 - <<'PY'\nfrom PIL import Image,ImageFont,ImageDraw\nimport glob,os\nfonts=[]\nfor f in glob.glob('/workspace/fonts/**/*.ttf',recursive=True)+glob.glob('/workspace/fonts/**/*.otf',recursive=True):\n    base=os.path.basename(f).lower()\n    if any(x in base for x in ['italic','bold','light','thin','black','heavy','semibold','medium','cond','mono','serif','display','symbol','italic']): continue\n    fonts.append(f)\n# dedupe by basename\nseen={}\nfor f in fonts: seen.setdefault(os.path.basename(f),f)\nfonts=list(seen.values())\nprint('fonts',len(fonts))\nfor f in sorted(fonts):\n    try:\n        font=ImageFont.truetype(f,200)\n    except Exception as e: continue\n    vals={}\n    for ch in '0OoDQgG':\n        im=Image.new('L',(400,400),0); d=ImageDraw.Draw(im)\n        d.text((50,50),ch,font=font,fill=255)\n        bb=im.getbbox()\n        if bb:\n            w,h=bb[2]-bb[0],bb[3]-bb[1]; vals[ch]=(w,h,round(w/h,3))\n    print(os.path.relpath(f,'/workspace/fonts'), vals)\nPY",
+   "timeout": 180,
+   "sandbox": [
+    {
+     "at_ms": 485205,
+     "dur_ms": 448,
+     "exit": 0,
+     "cpu_ms": 479.9,
+     "phases_us": {
+      "acquire": 112,
+      "resume": 26074,
+      "mount": 23184,
+      "run": 397123,
+      "destroy": 24948
+     },
+     "cold": null,
+     "vm": "vm-786"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 485683,
+   "dur_ms": 12411,
+   "tokens_in": 49,
+   "tokens_out": 1906,
+   "cache_read": 101568,
+   "cache_write": 20992,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 498094,
+   "dur_ms": 127,
+   "tool": "bash",
+   "is_error": false,
+   "command": "printf '%s\\n' 'flag{gc0d3_iz_ch4LLenGiNg}' > /workspace/out.txt\ncat /workspace/out.txt\nls -l /workspace/out.txt",
+   "sandbox": [
+    {
+     "at_ms": 498147,
+     "dur_ms": 60,
+     "exit": 0,
+     "cpu_ms": 45.7,
+     "phases_us": {
+      "acquire": 156,
+      "resume": 25899,
+      "mount": 22461,
+      "run": 6833,
+      "destroy": 26447
+     },
+     "cold": null,
+     "vm": "vm-789"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 498227,
+   "dur_ms": 3898,
+   "tokens_in": 23,
+   "tokens_out": 475,
+   "cache_read": 124480,
+   "cache_write": 64,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 2.875,
+ "calls": 39,
+ "cell": "TB1f",
+ "removed": [
+  {
+   "at_ms": 170102,
+   "dur_ms": 1869,
+   "tool": "bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 201487,
+   "dur_ms": 3717,
+   "tool": "bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 207717,
+   "dur_ms": 237,
+   "tool": "bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 221270,
+   "dur_ms": 4607,
+   "tool": "bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 240129,
+   "dur_ms": 118,
+   "tool": "bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  }
+ ]
+}

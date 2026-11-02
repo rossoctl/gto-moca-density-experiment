@@ -1,0 +1,115 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "constraints-scheduling",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 16222,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 206,
+  "output": 2765,
+  "cacheRead": 22336,
+  "cacheWrite": 1984,
+  "total": 27291
+ },
+ "totals": {
+  "model_calls": 5,
+  "tool_calls": 4,
+  "model_ms": 14844,
+  "tool_ms": 139,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1156,
+   "dur_ms": 618,
+   "tokens_in": 58,
+   "tokens_out": 101,
+   "cache_read": 2048,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1777,
+   "dur_ms": 14,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && ls -la && echo \"---ALICE---\" && cat alice_calendar.ics && echo \"---BOB---\" && cat bob_calendar.ics && echo \"---CAROL---\" && cat carol_calendar.ics"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1792,
+   "dur_ms": 9538,
+   "tokens_in": 26,
+   "tokens_out": 1911,
+   "cache_read": 2176,
+   "cache_write": 1536,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 11330,
+   "dur_ms": 10,
+   "tool": "bash",
+   "is_error": true,
+   "command": "cd /app && cat > meeting_scheduled.ics <<'EOF'\nBEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Terminal-Bench//Scheduled Meeting//EN\nCALSCALE:GREGORIAN\nMETHOD:REQUEST\nBEGIN:VEVENT\nUID:team-planning-20240117@example.com\nDTSTAMP:20240116T000000Z\nDTSTART:20240117T110000Z\nDTEND:20240117T120000Z\nSUMMARY:Team Planning Meeting\nDESCRIPTION:1-hour planning meeting for Alice, Bob, and Carol.\nATTENDEE;CN=Alice;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:alice@example.com\nATTENDEE;CN=Bob;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:bob@example.com\nATTENDEE;CN=Carol;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:carol@example.com\nLOCATION:Conference Room A\nSTATUS:CONFIRMED\nEND:VEVENT\nEND:VCALENDAR\nEOF\n# Ensure CRLF line endings without touching input files\nsed -i 's/$/\\r/' meeting_scheduled.ics\nfile meeting_scheduled.ics && cat -A meeting_scheduled.ics"
+  },
+  {
+   "kind": "model",
+   "at_ms": 11344,
+   "dur_ms": 1441,
+   "tokens_in": 47,
+   "tokens_out": 235,
+   "cache_read": 5632,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 12786,
+   "dur_ms": 56,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nfrom pathlib import Path\np = Path('meeting_scheduled.ics')\ns = p.read_text()\nif 'alice@example.com' not in s:\n    s = s.replace(\n        'ATTENDEE;CN=Bob;',\n        'ATTENDEE;CN=Alice;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:alice@example.com\\r\\nATTENDEE;CN=Bob;'\n    )\n    p.write_text(s)\nprint(p.read_bytes().decode())\nPY\nls -l /app/meeting_scheduled.ics"
+  },
+  {
+   "kind": "model",
+   "at_ms": 12842,
+   "dur_ms": 2388,
+   "tokens_in": 29,
+   "tokens_out": 403,
+   "cache_read": 5888,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 15230,
+   "dur_ms": 59,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nfrom pathlib import Path\np = Path('meeting_scheduled.ics')\ndata = p.read_bytes().replace(b'\\r\\n', b'\\n').replace(b'\\r', b'\\n')\ndata = data.replace(b'\\n', b'\\r\\n')\np.write_bytes(data)\nprint(repr(data[:120]))\nPY\n# validate structure and confirm inputs unchanged\npython3 - <<'PY'\nfrom pathlib import Path\nfor f in ['alice_calendar.ics','bob_calendar.ics','carol_calendar.ics','meeting_scheduled.ics']:\n    b=Path('/app/'+f).read_bytes()\n    print(f, len(b), b.count(b'BEGIN:VEVENT'), 'CRLF' if b.count(b'\\r\\n') else 'LF')\ns=Path('/app/meeting_scheduled.ics').read_text()\nprint('starts', s.startswith('BEGIN:VCALENDAR'), 'ends', s.rstrip().endswith('END:VCALENDAR'))\nprint('attendees', all(x in s for x in ['alice@example.com','bob@example.com','carol@example.com']))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 15289,
+   "dur_ms": 859,
+   "tokens_in": 46,
+   "tokens_out": 115,
+   "cache_read": 6592,
+   "cache_write": 128,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.069,
+ "calls": 4,
+ "cell": "TB1e"
+}

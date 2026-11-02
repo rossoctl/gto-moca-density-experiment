@@ -1,0 +1,218 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "sqlite-db-truncate",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 70681,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 199,
+  "output": 13959,
+  "cacheRead": 123776,
+  "cacheWrite": 5056,
+  "total": 142990
+ },
+ "totals": {
+  "model_calls": 7,
+  "tool_calls": 6,
+  "model_ms": 67127,
+  "tool_ms": 2918,
+  "sandbox_ms": 638
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 507,
+   "dur_ms": 1150
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1657,
+   "dur_ms": 203,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nls -la /app/trunc.db\nfile /app/trunc.db\npython3 -c \"print('py ok')\"\nsqlite3 --version 2>/dev/null || echo \"no sqlite3 cli\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 1739,
+     "dur_ms": 89,
+     "exit": 0,
+     "cpu_ms": 100.0,
+     "phases_us": {
+      "acquire": 88,
+      "resume": 21811,
+      "mount": 19603,
+      "run": 47918,
+      "destroy": 18544
+     },
+     "cold": null,
+     "vm": "vm-95"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 1860,
+   "dur_ms": 1611
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3471,
+   "dur_ms": 132,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nls -la\necho \"--- workspace trunc ---\"\nls -la /workspace/trunc.db 2>/dev/null && file /workspace/trunc.db\necho \"--- hexdump first 256 bytes ---\"\nxxd /app/trunc.db | head -40\necho \"--- strings ---\"\nstrings -a /app/trunc.db | head -50\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 3529,
+     "dur_ms": 61,
+     "exit": 0,
+     "cpu_ms": 60.0,
+     "phases_us": {
+      "acquire": 110,
+      "resume": 21113,
+      "mount": 18967,
+      "run": 18133,
+      "destroy": 21790
+     },
+     "cold": null,
+     "vm": "vm-97"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 3603,
+   "dur_ms": 1606
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5209,
+   "dur_ms": 222,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\ndata = open('/app/trunc.db','rb').read()\nprint(\"len\", len(data))\nprint(\"first 64 hex:\", data[:64].hex())\nprint(repr(data[:128]))\n# print non-zero regions\nimport re\nprint(\"magic:\", data[:16])\n# find printable strings\ns = re.findall(rb'[\\x20-\\x7e]{4,}', data)\nfor x in s[:80]:\n    print(x)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 5265,
+     "dur_ms": 149,
+     "exit": 0,
+     "cpu_ms": 146.2,
+     "phases_us": {
+      "acquire": 52,
+      "resume": 21592,
+      "mount": 19733,
+      "run": 100277,
+      "destroy": 26621
+     },
+     "cold": null,
+     "vm": "vm-99"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 5431,
+   "dur_ms": 7389
+  },
+  {
+   "kind": "tool",
+   "at_ms": 12820,
+   "dur_ms": 156,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\ndata = open('/app/trunc.db','rb').read()\nn=len(data)\n# dump from 0xf00 to end\nfor off in range(0xf00, n, 16):\n    chunk=data[off:off+16]\n    print(f\"{off:04x}  {chunk.hex(' '):<47}  {''.join(chr(b) if 32<=b<127 else '.' for b in chunk)}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 12874,
+     "dur_ms": 73,
+     "exit": 0,
+     "cpu_ms": 83.9,
+     "phases_us": {
+      "acquire": 78,
+      "resume": 21801,
+      "mount": 19521,
+      "run": 35518,
+      "destroy": 15534
+     },
+     "cold": null,
+     "vm": "vm-103"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 12976,
+   "dur_ms": 40488
+  },
+  {
+   "kind": "tool",
+   "at_ms": 53464,
+   "dur_ms": 184,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\necho \"=== /app listing ===\"\nls -la /app\necho \"=== /workspace listing ===\"\nls -la /workspace\npython3 - <<'PY'\nimport struct\ndata=open('/app/trunc.db','rb').read()\nprint(\"size\",len(data))\np=0\nptype=data[0]\nfirst_free=struct.unpack('>H',data[1:3])[0]\nncells=struct.unpack('>H',data[3:5])[0]\ncontent_start=struct.unpack('>H',data[5:7])[0]\nfrag=data[7]\nprint(\"page type\",hex(ptype),\"first_free\",first_free,\"ncells\",ncells,\"content_start\",content_start,\"frag\",frag)\nptrs=[struct.unpack('>H',data[8+2*i:10+2*i])[0] for i in range(ncells)]\nprint(\"cell ptrs:\", [hex(x) for x in ptrs])\n\ndef varint(buf, off):\n    v=0\n    for i in range(9):\n        b=buf[off+i]\n        if i==8:\n            v=(v<<8)|b\n            return v, off+9\n        v=(v<<7)|(b&0x7f)\n        if not (b&0x80):\n            return v, off+i+1\n    raise ValueError\n\ndef serial_len(t):\n    if t==0: return 0, None\n    if t in (1,2,3,4): return t, 'int'\n    if t==5: return 6,'int'\n    if t==6: return 8,'int'\n    if t==7: return 8,'float'\n    if t in (8,9): return 0,'const'\n    if t==10 or t==11: return 0,'reserved'\n    if t>=12:\n        n=(t-12)//2\n        return n, ('blob' if t%2==0 else 'text')\n    raise ValueError\n\ndef decode_record(payload):\n    hsize, p2 = varint(payload,0)\n    types=[]\n    o=p2\n    while o < hsize:\n        t,o = varint(payload,o)\n        types.append(t)\n    body=o\n    cols=[]\n    for t in types:\n        n,kind=serial_len(t)\n        raw=payload[body:body+n]; body+=n\n        if kind is None: val=None\n        elif kind=='int':\n            if t==1: val=struct.unpack('>b',raw)[0]\n            elif t==2: val=struct.unpack('>h',raw)[0]\n            elif t==3: val=int.from_bytes(raw,'big',signed=True)\n            elif t==4: val=struct.unpack('>i',raw)[0]\n            elif t==5: val=struct.unpack('>q',raw)[0]\n            elif t==6: val=struct.unpack('>d',raw)[0]\n            else: val=None\n        elif kind=='float': val=struct.unpack('>d',raw)[0]\n        elif kind=='const': val = 0 if t==8 else 1\n        elif kind=='text': val=raw.decode('utf-8','replace')\n        elif kind=='blob': val=raw.hex()\n        else: val=('reserved',raw.hex())\n        cols.append((t,val))\n    return types,cols\n\nrows=[]\nfor idx,cp in enumerate(ptrs):\n    off=cp\n    plen,o=varint(data,off)\n    rowid,o=varint(data,o)\n    payload=data[o:o+plen]\n    types,cols=decode_record(payload)\n    rows.append((rowid,types,cols,plen,o))\n    print(f\"cell{idx} ptr={cp:#x} payload_len={plen} rowid={rowid} next={o+plen:#x}\")\n    print(\"   types\",types,\"cols\",cols)\n    print(\"   payload hex\",payload.hex(' '))\nprint(\"sorted by rowid:\")\nfor r in sorted(rows):\n    print(r[0], r[2])\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 53529,
+     "dur_ms": 80,
+     "exit": 0,
+     "cpu_ms": 85.6,
+     "phases_us": {
+      "acquire": 58,
+      "resume": 21577,
+      "mount": 19273,
+      "run": 40001,
+      "destroy": 18581
+     },
+     "cold": null,
+     "vm": "vm-106"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 53648,
+   "dur_ms": 12055
+  },
+  {
+   "kind": "tool",
+   "at_ms": 65703,
+   "dur_ms": 2021,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport sqlite3, os, shutil, json\n\nraw = open('/app/trunc.db','rb').read()\n\n# --- Independent verification: graft recovered page into a valid sqlite db ---\ntmp='/tmp/verify.db'\nif os.path.exists(tmp): os.remove(tmp)\ncon=sqlite3.connect(tmp)\ncon.execute('PRAGMA page_size=4096')\ncon.execute('CREATE TABLE words(x, word, value)')\ncon.commit()\nroot=con.execute(\"SELECT rootpage FROM sqlite_master WHERE name='words'\").fetchone()[0]\nprint(\"rootpage:\", root, \"page_count:\", con.execute('PRAGMA page_count').fetchone()[0])\ncon.close()\n\nbuf=bytearray(open(tmp,'rb').read())\noff=(root-1)*4096\nif len(buf) < off+4096: buf.extend(b'\\x00'*(off+4096-len(buf)))\nbuf[off:off+4096]=raw\nopen(tmp,'wb').write(bytes(buf))\n\ncon=sqlite3.connect(tmp)\n# disable any page validation leniency? just query\ntry:\n    rows=con.execute('SELECT word, value, typeof(value) FROM words ORDER BY rowid').fetchall()\n    print(\"SQLITE VERIFIED ROWS:\")\n    for r in rows: print(\"  \", r)\nexcept Exception as e:\n    print(\"query error:\", e)\ncon.close()\n\n# --- Write recover.json ---\n# values: keep int as int, float as float\nvals = [\n (\"testword00\", 1),\n (\"testword01\", 2),\n (\"testword02\", 10),\n (\"testword03\", 25),\n (\"testword04\", 42),\n (\"testword05\", 50),\n (\"testword06\", 75),\n (\"testword07\", 99),\n (\"testword08\", 99.99),\n (\"testword09\", 0.5),\n]\nout=[{\"word\":w,\"value\":v} for w,v in vals]\nwith open('/app/recover.json','w') as f:\n    json.dump(out,f)\nprint(\"\\nrecover.json contents:\")\nprint(open('/app/recover.json').read())\nprint(\"\\nvalid json reload:\", json.load(open('/app/recover.json')))\nPY\necho \"--- final listing ---\"\nls -la /app/recover.json\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 67512,
+     "dur_ms": 186,
+     "exit": 0,
+     "cpu_ms": 201.6,
+     "phases_us": {
+      "acquire": 24,
+      "resume": 21760,
+      "mount": 19409,
+      "run": 144781,
+      "destroy": 19596
+     },
+     "cold": null,
+     "vm": "vm-112"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 67724,
+   "dur_ms": 2828
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.107,
+ "calls": 6,
+ "cell": "TB1b"
+}

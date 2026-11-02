@@ -1,0 +1,198 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "feal-linear-cryptanalysis",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 209764,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 305,
+  "output": 10554,
+  "cacheRead": 84544,
+  "cacheWrite": 3776,
+  "total": 99179
+ },
+ "totals": {
+  "model_calls": 9,
+  "tool_calls": 9,
+  "model_ms": 61457,
+  "tool_ms": 147115,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1121,
+   "dur_ms": 1559,
+   "tokens_in": 52,
+   "tokens_out": 169,
+   "cache_read": 1600,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2684,
+   "dur_ms": 11,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && find . -maxdepth 2 -type f | sort"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2684,
+   "dur_ms": 18,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && ls -la && echo \"---feal.c---\" && cat feal.c && echo \"---decrypt.c---\" && cat decrypt.c && echo \"---pairs---\" && head -5 pairs.txt && wc -l pairs.txt && echo \"---ciphertexts---\" && head -5 ciphertexts.txt && wc -l ciphertexts.txt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 2702,
+   "dur_ms": 19032,
+   "tokens_in": 54,
+   "tokens_out": 3162,
+   "cache_read": 1792,
+   "cache_write": 2816,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 21734,
+   "dur_ms": 843,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\n# check expand map uniqueness for 20-bit\nseen={}\ncoll=0\nfor k in range(1<<20):\n    e=(k ^ ((k<<16)&0xffffffff) ^ (k*12345)) & 0xffffffff\n    if e in seen:\n        coll+=1\n        if coll<5: print('collision',hex(k),hex(seen[e]),hex(e))\n    else:\n        seen[e]=k\nprint('distinct',len(seen),'collisions',coll)\n# maybe high bits etc\nPY\nwhich z3 || true; python3 -c 'import z3; print(\"z3 yes\")' 2>/dev/null || echo noz3; which sage || true; gcc --version | head -1; nproc"
+  },
+  {
+   "kind": "model",
+   "at_ms": 22577,
+   "dur_ms": 9174,
+   "tokens_in": 23,
+   "tokens_out": 1234,
+   "cache_read": 7808,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 31751,
+   "dur_ms": 2611,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 -m pip --version && timeout 30 python3 -m pip install z3-solver 2>&1 | tail -20",
+   "timeout": 60
+  },
+  {
+   "kind": "model",
+   "at_ms": 34365,
+   "dur_ms": 7579,
+   "tokens_in": 26,
+   "tokens_out": 1076,
+   "cache_read": 9152,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 41944,
+   "dur_ms": 143181,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && cat > /tmp/solve_z3.py <<'PY'\nfrom z3 import *\nimport sys,time\npairs=[]\nfor line in open('/app/pairs.txt'):\n    a,b=map(int,line.split())\n    pairs.append((a,b))\nN=int(sys.argv[1]) if len(sys.argv)>1 else 3\n\ndef rol2(x):\n    return RotateLeft(x,2)\ndef g(a,b,x):\n    return rol2(a+b+x)\ndef F(inp):\n    x=[Extract(8*i+7,8*i,inp) for i in range(4)]\n    y=[None]*4\n    y[2]=g(x[3]^x[2],x[1]^x[0],BitVecVal(1,8))\n    y[3]=g(x[3],y[2],BitVecVal(0,8))\n    y[1]=g(x[1]^x[0],y[2],BitVecVal(0,8))\n    y[0]=g(x[0],y[1],BitVecVal(1,8))\n    out=BitVecVal(0,32)\n    for i in range(4):\n        out=out | (ZeroExt(24,y[i]) << (8*i))\n    return out\n\ndef expand(k):\n    return k ^ (k<<16) ^ (k*BitVecVal(12345,32))\nseeds=[BitVec(f's{i}',20) for i in range(4)]\nkeys=[expand(ZeroExt(12,s)) for s in seeds]\ns=Solver()\n# maybe set timeout via s.set\ns.set(\"timeout\", 600000)\nfor p,c in pairs[:N]:\n    L=BitVecVal((p>>32)&0xffffffff,32); R=BitVecVal(p&0xffffffff,32)\n    R=R^L\n    for r in range(4):\n        mixed=F(R^keys[r]); temp=R; R=L^mixed; L=temp\n    L=L^R\n    # result merge(R,L)\n    s.add(R==BitVecVal((c>>32)&0xffffffff,32))\n    s.add(L==BitVecVal(c&0xffffffff,32))\nprint('start',N,flush=True)\nt=time.time()\nr=s.check()\nprint('result',r,'time',time.time()-t)\nif r==sat:\n    m=s.model()\n    print([hex(m.eval(x).as_long()) for x in seeds])\n    # verify all pairs\n    ss=[m.eval(x).as_long() for x in seeds]\n    print(ss)\nPY\nfor n in 1 2 3; do echo ====N$n====; timeout 300 python3 /tmp/solve_z3.py $n; done",
+   "timeout": 960
+  },
+  {
+   "kind": "model",
+   "at_ms": 185128,
+   "dur_ms": 2287,
+   "tokens_in": 31,
+   "tokens_out": 440,
+   "cache_read": 10560,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 187416,
+   "dur_ms": 21,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && cat > /tmp/verify.py <<'PY'\nimport sys\nss=[429667,402801,128540,750757]\ndef expand(k):\n    return (k ^ ((k<<16)&0xffffffff) ^ (k*12345)) & 0xffffffff\nkeys=[expand(x&0xfffff) for x in ss]\ndef rol2(x): return ((x<<2)|(x>>6))&0xff\ndef g(a,b,x): return rol2((a+b+x)&0xff)\ndef F(inp):\n    x=[(inp>>(8*i))&0xff for i in range(4)]\n    y=[0]*4\n    y[2]=g(x[3]^x[2],x[1]^x[0],1)\n    y[3]=g(x[3],y[2],0)\n    y[1]=g(x[1]^x[0],y[2],0)\n    y[0]=g(x[0],y[1],1)\n    return sum(y[i]<<(8*i) for i in range(4))\ndef enc(p):\n    L=(p>>32)&0xffffffff; R=p&0xffffffff\n    R^=L\n    for r in range(4):\n        mixed=F(R^keys[r]); R,L=L^mixed,R\n    L^=R\n    return (R<<32)|L\nok=True\nfor line in open('pairs.txt'):\n    p,c=map(int,line.split())\n    e=enc(p)\n    if e!=c:\n        ok=False; print('mismatch',hex(p),hex(c),hex(e))\nprint('all pairs ok?',ok)\nPY\npython3 /tmp/verify.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 187440,
+   "dur_ms": 2277,
+   "tokens_in": 40,
+   "tokens_out": 381,
+   "cache_read": 11200,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 189717,
+   "dur_ms": 11,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && ./decrypt ciphertexts.txt 68e63 62571 1f61c b74a5 > plaintexts.txt && wc -l plaintexts.txt && head -10 plaintexts.txt && echo '---tail---' && tail -10 plaintexts.txt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 189728,
+   "dur_ms": 16073,
+   "tokens_in": 24,
+   "tokens_out": 3445,
+   "cache_read": 11584,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 205802,
+   "dur_ms": 327,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && cat > attack.py <<'PY'\n#!/usr/bin/env python3\n\"\"\"Known-plaintext key recovery for the modified 4-round FEAL cipher.\n\nThe four 20-bit seeds are recovered by solving the bit-vector equations for\na few plaintext/ciphertext pairs with Z3, then the result is verified against\nall 32 pairs before the ciphertext file is decrypted.\n\"\"\"\nimport sys\nfrom z3 import (BitVec, BitVecVal, Extract, ZeroExt, RotateLeft,\n                Solver, sat)\n\nPAIRS_FILE = \"/app/pairs.txt\"\nCIPHERTEXTS_FILE = \"/app/ciphertexts.txt\"\nPLAINTEXTS_FILE = \"/app/plaintexts.txt\"\n\nMASK32 = 0xFFFFFFFF\nMASK20 = 0xFFFFF\n\n\ndef rol2_8(x):\n    return ((x << 2) | (x >> 6)) & 0xFF\n\n\ndef expand_seed(k):\n    \"\"\"C: return k ^ (k << 16) ^ (k * 12345), uint32 arithmetic.\"\"\"\n    return (k ^ ((k << 16) & MASK32) ^ ((k * 12345) & MASK32)) & MASK32\n\n\ndef g_z3(a, b, x):\n    # All operands are 8-bit BitVecs, so + is automatically modulo 256.\n    return RotateLeft(a + b + x, 2)\n\n\ndef f_z3(v):\n    x = [Extract(8 * i + 7, 8 * i, v) for i in range(4)]\n    y = [None] * 4\n    y[2] = g_z3(x[3] ^ x[2], x[1] ^ x[0], BitVecVal(1, 8))\n    y[3] = g_z3(x[3], y[2], BitVecVal(0, 8))\n    y[1] = g_z3(x[1] ^ x[0], y[2], BitVecVal(0, 8))\n    y[0] = g_z3(x[0], y[1], BitVecVal(1, 8))\n    out = BitVecVal(0, 32)\n    for i in range(4):\n        out = out | (ZeroExt(24, y[i]) << (8 * i))\n    return out\n\n\ndef expand_seed_z3(k20):\n    k = ZeroExt(12, k20)\n    return k ^ (k << 16) ^ (k * BitVecVal(12345, 32))\n\n\ndef encrypt_z3(pt, rk):\n    left = BitVecVal((pt >> 32) & MASK32, 32)\n    right = BitVecVal(pt & MASK32, 32)\n    right = right ^ left\n    for r in range(4):\n        mixed = f_z3(right ^ rk[r])\n        left, right = right, left ^ mixed\n    left = left ^ right\n    return (right, left)              # merge(right, left)\n\n\ndef g(a, b, x):\n    return rol2_8((a + b + x) & 0xFF)\n\n\ndef f(v):\n    x = [(v >> (8 * i)) & 0xFF for i in range(4)]\n    y = [0] * 4\n    y[2] = g(x[3] ^ x[2], x[1] ^ x[0], 1)\n    y[3] = g(x[3], y[2], 0)\n    y[1] = g(x[1] ^ x[0], y[2], 0)\n    y[0] = g(x[0], y[1], 1)\n    return sum(y[i] << (8 * i) for i in range(4))\n\n\ndef encrypt(pt, seeds):\n    rk = [expand_seed(k) for k in seeds]\n    left, right = (pt >> 32) & MASK32, pt & MASK32\n    right ^= left\n    for r in range(4):\n        mixed = f(right ^ rk[r])\n        left, right = right, left ^ mixed\n    left ^= right\n    return (right << 32) | left\n\n\ndef decrypt(ct, seeds):\n    rk = [expand_seed(k) for k in seeds]\n    # Encryption returned merge(right, left).\n    left = ct & MASK32\n    right = (ct >> 32) & MASK32\n    left ^= right\n    for r in range(3, -1, -1):\n        temp = left\n        left = right\n        mixed = f(temp ^ rk[r])\n        right = temp\n        left ^= mixed\n    right ^= left\n    return (left << 32) | right\n\n\ndef recover_seeds(pairs, use=4):\n    seeds = [BitVec(f\"seed{i}\", 20) for i in range(4)]\n    rk = [expand_seed_z3(s) for s in seeds]\n    solver = Solver()\n    for pt, ct in pairs[:use]:\n        left, right = encrypt_z3(pt, rk)\n        solver.add(left == BitVecVal((ct >> 32) & MASK32, 32))\n        solver.add(right == BitVecVal(ct & MASK32, 32))\n    if solver.check() != sat:\n        raise RuntimeError(\"no key found\")\n    model = solver.model()\n    return [model.eval(s).as_long() for s in seeds]\n\n\ndef main():\n    pairs = []\n    with open(PAIRS_FILE) as fp:\n        for line in fp:\n            if line.strip():\n                p, c = map(int, line.split())\n                pairs.append((p, c))\n\n    # Two pairs already determine the key; use four for a quick, robust solve.\n    seeds = recover_seeds(pairs, use=4)\n\n    # Verify against every known plaintext/ciphertext pair.\n    for p, c in pairs:\n        if encrypt(p, seeds) != c:\n            raise RuntimeError(\"recovered key failed verification\")\n\n    print(\"Recovered 20-bit seeds: \" +\n          \" \".join(f\"{k:05x}\" for k in seeds))\n    print(\"Recovered expanded round keys: \" +\n          \" \".join(f\"{expand_seed(k):08x}\" for k in seeds))\n\n    plaintexts = []\n    with open(CIPHERTEXTS_FILE) as fp:\n        for line in fp:\n            if line.strip():\n                plaintexts.append(decrypt(int(line), seeds))\n\n    with open(PLAINTEXTS_FILE, \"w\") as fp:\n        for p in plaintexts:\n            fp.write(f\"{p}\\n\")\n\n    print(f\"Wrote {len(plaintexts)} plaintexts to {PLAINTEXTS_FILE}\")\n\n\nif __name__ == \"__main__\":\n    main()\nPY\npython3 attack.py && echo '--- plaintexts head ---' && head -3 plaintexts.txt && wc -l plaintexts.txt",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 206130,
+   "dur_ms": 1582,
+   "tokens_in": 3,
+   "tokens_out": 268,
+   "cache_read": 15232,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 207713,
+   "dur_ms": 92,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport attack\nseeds=[0x68e63,0x62571,0x1f61c,0xb74a5]\ncts=[int(x) for x in open('ciphertexts.txt') if x.strip()]\npts=[int(x) for x in open('plaintexts.txt') if x.strip()]\nassert len(cts)==len(pts)==100\nfor c,p in zip(cts,pts):\n    assert attack.encrypt(p,seeds)==c\nprint('verified: all 100 decrypted plaintexts re-encrypt to the given ciphertexts')\nPY\ndiff <(./decrypt ciphertexts.txt 68e63 62571 1f61c b74a5) plaintexts.txt && echo 'matches decrypt binary output'"
+  },
+  {
+   "kind": "model",
+   "at_ms": 207805,
+   "dur_ms": 1894,
+   "tokens_in": 52,
+   "tokens_out": 379,
+   "cache_read": 15616,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.851,
+ "calls": 9,
+ "cell": "TB1e"
+}

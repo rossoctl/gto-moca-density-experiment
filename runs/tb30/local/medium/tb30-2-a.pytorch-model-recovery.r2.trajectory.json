@@ -1,0 +1,163 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "pytorch-model-recovery",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 158958,
+ "resolved": false,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 345,
+  "output": 10984,
+  "cacheRead": 251520,
+  "cacheWrite": 7680,
+  "total": 270529
+ },
+ "totals": {
+  "model_calls": 10,
+  "tool_calls": 10,
+  "model_ms": 62406,
+  "tool_ms": 98051,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 520,
+   "dur_ms": 1798
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1724,
+   "dur_ms": 2287,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la && python -c \"\nimport torch\nw = torch.load('weights.pt', map_location='cpu')\nprint(type(w))\nif isinstance(w, dict):\n    for k, v in w.items():\n        if hasattr(v, 'shape'):\n            print(k, tuple(v.shape), v.dtype)\n        else:\n            print(k, type(v), v)\n\""
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2318,
+   "dur_ms": 3377,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python -c \"\nimport torch\nd = torch.load('dataset.pt', map_location='cpu')\nprint(type(d))\nif isinstance(d, dict):\n    for k, v in d.items():\n        print(k, type(v), getattr(v,'shape',None), getattr(v,'dtype',None))\nelif isinstance(d, (list,tuple)):\n    print(len(d))\n    for i,x in enumerate(d):\n        print(i, type(x), getattr(x,'shape',None), getattr(x,'dtype',None))\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 5695,
+   "dur_ms": 7947
+  },
+  {
+   "kind": "tool",
+   "at_ms": 13642,
+   "dur_ms": 1999,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python -c \"\nimport torch, math\nw = torch.load('weights.pt', map_location='cpu')\nprint('emb.bias stats', w['embedding.bias'].abs().max().item(), w['embedding.bias'][:5])\npe = w['pos_encoder.pe']\nprint('pe[0,0,:8]', pe[0,0,:8])\nprint('pe[0,1,:8]', pe[0,1,:8])\nprint('pe[0,2,:8]', pe[0,2,:8])\nd=128\npos=torch.arange(2).unsqueeze(1)\ndiv=torch.exp(torch.arange(0,d,2)*(-math.log(10000.0)/d))\nref=torch.zeros(2,d); ref[:,0::2]=torch.sin(pos*div); ref[:,1::2]=torch.cos(pos*div)\nprint('diff vs classic', (ref-pe[0,:2]).abs().max().item())\nprint('pe stats', pe.min().item(), pe.max().item(), pe.abs().sum().item())\nprint({k: (v.mean().item(), v.std().item()) for k,v in list(w.items())[:3]})\nprint('out w', w['output_layer.weight'].mean().item(), w['output_layer.weight'].std().item(), w['output_layer.bias'].mean().item())\n\"\n"
+  },
+  {
+   "kind": "model",
+   "at_ms": 15641,
+   "dur_ms": 4175
+  },
+  {
+   "kind": "tool",
+   "at_ms": 19816,
+   "dur_ms": 57393,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/probe.py <<'EOF'\nimport torch, torch.nn as nn, math, warnings\nwarnings.filterwarnings('ignore')\nw = torch.load('/app/weights.pt', map_location='cpu')\nd = torch.load('/app/dataset.pt', map_location='cpu')\nsrc, tgt = d['src_sequences'], d['tgt_sequences']\nprint(src.shape, tgt.shape)\nprint('src', src.mean().item(), src.std().item(), 'tgt', tgt.mean().item(), tgt.std().item())\n\nclass PosEnc(nn.Module):\n    def __init__(self, d_model, max_len=5000):\n        super().__init__()\n        import math\n        pe = torch.zeros(max_len, d_model)\n        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)\n        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))\n        pe[:, 0::2] = torch.sin(position * div_term)\n        pe[:, 1::2] = torch.cos(position * div_term)\n        pe = pe.unsqueeze(0)\n        self.register_buffer('pe', pe)\n    def forward(self, x):\n        return x + self.pe[:, :x.size(1)]\n\nclass M(nn.Module):\n    def __init__(self, nhead, batch_first):\n        super().__init__()\n        self.embedding = nn.Linear(64, 128)\n        self.pos_encoder = PosEnc(128)\n        el = nn.TransformerEncoderLayer(128, nhead, 256, batch_first=batch_first)\n        self.transformer_encoder = nn.TransformerEncoder(el, 3)\n        dl = nn.TransformerDecoderLayer(128, nhead, 256, batch_first=batch_first)\n        self.transformer_decoder = nn.TransformerDecoder(dl, 1)\n        self.output_layer = nn.Linear(128, 64)\n    def forward(self, s, t, mask=False):\n        s = self.pos_encoder(self.embedding(s))\n        t = self.pos_encoder(self.embedding(t))\n        mem = self.transformer_encoder(s)\n        if mask:\n            L = t.size(1)\n            m = nn.Transformer.generate_square_subsequent_mask(L)\n            out = self.transformer_decoder(t, mem, tgt_mask=m)\n        else:\n            out = self.transformer_decoder(t, mem)\n        return self.output_layer(out)\n\nloss_fn = nn.MSELoss()\nfor bf in [True, False]:\n    for nh in [1,2,4,8,16]:\n        try:\n            m = M(nh, bf); m.load_state_dict(w, strict=True)\n            with torch.no_grad():\n                for mask in [False, True]:\n                    o = m(src, tgt, mask)\n                    print(f'bf={bf} nhead={nh} mask={mask} loss={loss_fn(o,tgt).item():.6f} outstd={o.std().item():.4f}')\n        except Exception as e:\n            print(bf, nh, 'ERR', e)\nEOF\npython /tmp/probe.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 77209,
+   "dur_ms": 21856
+  },
+  {
+   "kind": "tool",
+   "at_ms": 99065,
+   "dur_ms": 11861,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/build.py <<'EOF'\nimport torch, torch.nn as nn, math, warnings\nwarnings.filterwarnings('ignore')\n\nclass PositionalEncoding(nn.Module):\n    def __init__(self, d_model: int, max_len: int = 5000):\n        super().__init__()\n        pe = torch.zeros(max_len, d_model)\n        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)\n        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))\n        pe[:, 0::2] = torch.sin(position * div_term)\n        pe[:, 1::2] = torch.cos(position * div_term)\n        self.register_buffer('pe', pe.unsqueeze(0))\n    def forward(self, x: torch.Tensor) -> torch.Tensor:\n        return x + self.pe[:, :x.size(1)]\n\nclass RecoveredModel(nn.Module):\n    def __init__(self, input_dim=64, d_model=128, nhead=8, num_encoder_layers=3,\n                 num_decoder_layers=1, dim_feedforward=256, output_dim=64):\n        super().__init__()\n        self.embedding = nn.Linear(input_dim, d_model)\n        self.pos_encoder = PositionalEncoding(d_model)\n        enc_layer = nn.TransformerEncoderLayer(d_model, nhead, dim_feedforward, batch_first=True)\n        self.transformer_encoder = nn.TransformerEncoder(enc_layer, num_encoder_layers)\n        dec_layer = nn.TransformerDecoderLayer(d_model, nhead, dim_feedforward, batch_first=True)\n        self.transformer_decoder = nn.TransformerDecoder(dec_layer, num_decoder_layers)\n        self.output_layer = nn.Linear(d_model, output_dim)\n    def forward(self, src: torch.Tensor, tgt: torch.Tensor) -> torch.Tensor:\n        src = self.pos_encoder(self.embedding(src))\n        tgt = self.pos_encoder(self.embedding(tgt))\n        memory = self.transformer_encoder(src)\n        out = self.transformer_decoder(tgt, memory)\n        return self.output_layer(out)\n\nw = torch.load('/app/weights.pt', map_location='cpu')\nm = RecoveredModel()\nmissing, unexpected = m.load_state_dict(w, strict=True), None\nprint('load strict OK')\nfor k, v in m.state_dict().items():\n    assert k in w and w[k].shape == v.shape, k\nprint('keys match:', len(w), len(m.state_dict()))\nd = torch.load('/app/dataset.pt', map_location='cpu')\nsrc, tgt = d['src_sequences'], d['tgt_sequences']\nloss_fn = nn.MSELoss()\nwith torch.no_grad():\n    base = loss_fn(m(src, tgt), tgt).item()\nprint('original MSE', base)\n\n# scripting check\nsm = torch.jit.script(m)\nprint('script OK', type(sm))\nsk = sm.state_dict()\nprint('script state keys equal:', set(sk) == set(w), len(sk))\ntmp = '/tmp/probe_model.pt'\ntorch.jit.save(sm, tmp)\nlm = torch.jit.load(tmp)\nprint('reload OK; load_state_dict strict:', lm.load_state_dict(w))\nwith torch.no_grad():\n    print('reloaded out match:', torch.allclose(lm(src, tgt), m(src, tgt), atol=1e-5))\nEOF\npython /tmp/build.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 110926,
+   "dur_ms": 9838
+  },
+  {
+   "kind": "tool",
+   "at_ms": 120764,
+   "dur_ms": 6824,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /app/solution.py <<'EOF'\n\"\"\"Reconstruct the model implied by weights.pt, tune only output_layer, save TorchScript.\"\"\"\nimport math\nimport torch\nimport torch.nn as nn\n\n\nclass PositionalEncoding(nn.Module):\n    def __init__(self, d_model: int, max_len: int = 5000):\n        super().__init__()\n        pe = torch.zeros(max_len, d_model)\n        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)\n        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))\n        pe[:, 0::2] = torch.sin(position * div_term)\n        pe[:, 1::2] = torch.cos(position * div_term)\n        self.register_buffer('pe', pe.unsqueeze(0))  # (1, max_len, d_model)\n\n    def forward(self, x: torch.Tensor) -> torch.Tensor:\n        return x + self.pe[:, :x.size(1)]\n\n\nclass RecoveredModel(nn.Module):\n    \"\"\"Linear(64->128) -> PE -> TransformerEncoder(3) -> TransformerDecoder(1) -> Linear(128->64).\"\"\"\n\n    def __init__(self, input_dim: int = 64, d_model: int = 128, nhead: int = 8,\n                 num_encoder_layers: int = 3, num_decoder_layers: int = 1,\n                 dim_feedforward: int = 256, output_dim: int = 64):\n        super().__init__()\n        self.embedding = nn.Linear(input_dim, d_model)\n        self.pos_encoder = PositionalEncoding(d_model)\n        enc_layer = nn.TransformerEncoderLayer(d_model, nhead, dim_feedforward,\n                                               dropout=0.0, batch_first=True)\n        self.transformer_encoder = nn.TransformerEncoder(enc_layer, num_encoder_layers)\n        dec_layer = nn.TransformerDecoderLayer(d_model, nhead, dim_feedforward,\n                                               dropout=0.0, batch_first=True)\n        self.transformer_decoder = nn.TransformerDecoder(dec_layer, num_decoder_layers)\n        self.output_layer = nn.Linear(d_model, output_dim)\n\n    def forward(self, src: torch.Tensor, tgt: torch.Tensor) -> torch.Tensor:\n        src = self.pos_encoder(self.embedding(src))\n        tgt = self.pos_encoder(self.embedding(tgt))\n        memory = self.transformer_encoder(src)\n        out = self.transformer_decoder(tgt, memory)\n        return self.output_layer(out)\n\n\ndef main():\n    torch.manual_seed(0)\n    weights = torch.load('/app/weights.pt', map_location='cpu')\n    data = torch.load('/app/dataset.pt', map_location='cpu')\n    src, tgt = data['src_sequences'], data['tgt_sequences']\n\n    model = RecoveredModel()\n    model.load_state_dict(weights, strict=True)\n    model.eval()\n    loss_fn = nn.MSELoss()\n\n    with torch.no_grad():\n        original_loss = loss_fn(model(src, tgt), tgt).item()\n    print(f'Original MSE: {original_loss:.6f}')\n\n    # Freeze everything except output_layer.\n    for name, p in model.named_parameters():\n        p.requires_grad = name.startswith('output_layer.')\n\n    # Features entering output_layer are fixed (all upstream layers frozen),\n    # so solve the output_layer least-squares problem exactly.\n    features = []\n    def hook(module, inp, out):\n        features.append(inp[0].detach())\n    h = model.output_layer.register_forward_hook(hook)\n    with torch.no_grad():\n        model(src, tgt)\n    h.remove()\n\n    X = features[0].reshape(-1, features[0].shape[-1])       # (B*T, 128)\n    Y = tgt.reshape(-1, tgt.shape[-1])                       # (B*T, 64)\n    Xa = torch.cat([X, torch.ones(X.size(0), 1)], dim=1)     # bias column\n    sol = torch.linalg.lstsq(Xa, Y).solution                 # (129, 64)\n\n    with torch.no_grad():\n        model.output_layer.weight.copy_(sol[:-1].t().contiguous())\n        model.output_layer.bias.copy_(sol[-1].contiguous())\n\n    with torch.no_grad():\n        tuned_loss = loss_fn(model(src, tgt), tgt).item()\n    print(f'Tuned MSE:    {tuned_loss:.6f}')\n    assert tuned_loss < original_loss\n\n    # Everything except output_layer must be bit-identical to weights.pt.\n    new_sd = model.state_dict()\n    for k, v in weights.items():\n        if not k.startswith('output_layer.'):\n            assert torch.equal(new_sd[k], v), f'frozen param changed: {k}'\n\n    scripted = torch.jit.script(model)\n    scripted.eval()\n    torch.jit.save(scripted, '/app/model.pt')\n\n    # Verification: TorchScript artifact loads original weights and runs.\n    loaded = torch.jit.load('/app/model.pt')\n    loaded.load_state_dict(weights, strict=True)\n    loaded.eval()\n    with torch.no_grad():\n        ref_loss = loss_fn(loaded(src, tgt), tgt).item()\n    print(f'Reloaded original-weights MSE: {ref_loss:.6f}')\n    print('Saved /app/model.pt')\n\n\nif __name__ == '__main__':\n    main()\nEOF\ncd /app && python solution.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 127588,
+   "dur_ms": 3951
+  },
+  {
+   "kind": "tool",
+   "at_ms": 131539,
+   "dur_ms": 4790,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'EOF'\nimport torch, torch.nn as nn, warnings, hashlib\nwarnings.filterwarnings('ignore')\nW = torch.load('/app/weights.pt', map_location='cpu')\nd = torch.load('/app/dataset.pt', map_location='cpu')\nsrc, tgt = d['src_sequences'], d['tgt_sequences']\nloss = nn.MSELoss()\n\nm = torch.jit.load('/app/model.pt')\nm.eval()\nsd = m.state_dict()\n\n# 1. loads original weights with no errors (strict)\nres = m.load_state_dict(W, strict=True)\nprint('1) strict load of original weights:', res)\n\n# 2. only output_layer differs\ndiff = [k for k in W if not torch.equal(W[k], sd[k])]\nprint('2) differing keys:', diff)\nprint('   all diffs in output_layer:', all(k.startswith('output_layer.') for k in diff))\nprint('   same key set / shapes:', set(W)==set(sd) and all(W[k].shape==sd[k].shape for k in W))\n\n# original loss (with original weights loaded)\nwith torch.no_grad():\n    orig = loss(m(src, tgt), tgt).item()\nprint('   MSE with original weights loaded:', orig)\n\n# 3. tuned loss from saved artifact\nm2 = torch.jit.load('/app/model.pt'); m2.eval()\nwith torch.no_grad():\n    tuned = loss(m2(src, tgt), tgt).item()\nprint('3) MSE with saved tuned weights:', tuned, '| lower:', tuned < orig)\n\n# per-layer check that only output_layer tensors were touched\nprint('   output_layer.weight allclose orig?', torch.allclose(W['output_layer.weight'], sd['output_layer.weight']))\nprint('   output_layer.bias   allclose orig?', torch.allclose(W['output_layer.bias'], sd['output_layer.bias']))\nprint('   model.pt size:', __import__('os').path.getsize('/app/model.pt'))\nEOF\nmd5sum /app/weights.pt /app/model.pt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 136329,
+   "dur_ms": 5515
+  },
+  {
+   "kind": "tool",
+   "at_ms": 141844,
+   "dur_ms": 4555,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'EOF'\nimport torch, torch.nn as nn, warnings\nwarnings.filterwarnings('ignore')\nW = torch.load('/app/weights.pt', map_location='cpu')\nd = torch.load('/app/dataset.pt', map_location='cpu')\nsrc, tgt = d['src_sequences'], d['tgt_sequences']\nloss = nn.MSELoss()\n\n# Fresh load from file -> its state dict contains the TUNED output_layer\ntuned_m = torch.jit.load('/app/model.pt'); tuned_m.eval()\nsd = {k: v.clone() for k, v in tuned_m.state_dict().items()}\n\ndiff = [k for k in W if not torch.equal(W[k], sd[k])]\nprint('2) differing keys:', diff)\nprint('   only output_layer differs:', set(diff) <= {'output_layer.weight','output_layer.bias'})\nprint('   key set equal:', set(W) == set(sd))\n\nwith torch.no_grad():\n    tuned = loss(tuned_m(src, tgt), tgt).item()\n\n# 1) Original weights load strictly into the saved TorchScript model\nfresh = torch.jit.load('/app/model.pt'); fresh.eval()\nprint('1) strict load:', fresh.load_state_dict(W, strict=True))\nwith torch.no_grad():\n    orig = loss(fresh(src, tgt), tgt).item()\nprint('   MSE original weights:', orig)\nprint('3) MSE tuned weights:', tuned, '| lower:', tuned < orig)\n\n# also check the non-scripted reconstruction path matches\nimport importlib.util\nspec = importlib.util.spec_from_file_location('sol', '/app/solution.py')\nsol = importlib.util.module_from_spec(spec); spec.loader.exec_module(sol)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 146399,
+   "dur_ms": 3081
+  },
+  {
+   "kind": "tool",
+   "at_ms": 149480,
+   "dur_ms": 4939,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'EOF'\nimport torch, torch.nn as nn, warnings\nwarnings.filterwarnings('ignore')\nd = torch.load('/app/dataset.pt', map_location='cpu'); src, tgt = d['src_sequences'], d['tgt_sequences']\nW = torch.load('/app/weights.pt', map_location='cpu')\nm = torch.jit.load('/app/model.pt')\nloss = nn.MSELoss()\nprint('default training flag:', m.training)\nwith torch.no_grad():\n    t = loss(m(src, tgt), tgt).item()\nm.eval()\nwith torch.no_grad():\n    e = loss(m(src, tgt), tgt).item()\nprint('train-mode MSE:', t, '| eval-mode MSE:', e, '| identical:', t == e)\n# repeat for determinism\nwith torch.no_grad():\n    print('re-run identical:', loss(m(src,tgt), tgt).item() == e)\nEOF\nrm -f /tmp/probe_model.pt /tmp/probe.py /tmp/build.py\nls -la /app"
+  },
+  {
+   "kind": "model",
+   "at_ms": 154419,
+   "dur_ms": 1082
+  },
+  {
+   "kind": "tool",
+   "at_ms": 155501,
+   "dur_ms": 26,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "rm -rf /app/__pycache__ && ls -la /app"
+  },
+  {
+   "kind": "model",
+   "at_ms": 155527,
+   "dur_ms": 3163
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 2.67,
+ "calls": 10,
+ "cell": "TB1a"
+}

@@ -1,0 +1,274 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-d",
+ "instance_id": "model-extraction-relu-logits",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 86592,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 1484,
+  "output": 15707,
+  "cacheRead": 104000,
+  "cacheWrite": 0,
+  "total": 121191
+ },
+ "totals": {
+  "model_calls": 8,
+  "tool_calls": 7,
+  "model_ms": 81531,
+  "tool_ms": 4298,
+  "sandbox_ms": 3691
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 133,
+   "dur_ms": 10536,
+   "tokens_in": 40,
+   "tokens_out": 73,
+   "cache_read": 5696,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 10669,
+   "dur_ms": 207,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -la /workspace\nfind /workspace -maxdepth 2 -type f -printf '%p\\n' | sort\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 10780,
+     "dur_ms": 57,
+     "exit": 0,
+     "cpu_ms": 42.8,
+     "phases_us": {
+      "acquire": 66,
+      "resume": 21565,
+      "mount": 18573,
+      "run": 6695,
+      "destroy": 28735
+     },
+     "cold": null,
+     "vm": "vm-121"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 10934,
+   "dur_ms": 770,
+   "tokens_in": 165,
+   "tokens_out": 84,
+   "cache_read": 6976,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 11704,
+   "dur_ms": 330,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncat /workspace/forward.py\npython3 - <<'PY'\nimport sys\nsys.path.insert(0,'/workspace')\nimport forward\nprint(forward.forward)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 11757,
+     "dur_ms": 230,
+     "exit": 0,
+     "cpu_ms": 351.6,
+     "phases_us": {
+      "acquire": 84,
+      "resume": 20427,
+      "mount": 18254,
+      "run": 180861,
+      "destroy": 28754
+     },
+     "cold": null,
+     "vm": "vm-127"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 12051,
+   "dur_ms": 12330,
+   "tokens_in": 370,
+   "tokens_out": 90,
+   "cache_read": 7168,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 24381,
+   "dur_ms": 127,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -ld /app /workspace 2>/dev/null || true\nreadlink -f /app 2>/dev/null || true\nreadlink -f /workspace 2>/dev/null || true\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 24434,
+     "dur_ms": 49,
+     "exit": 0,
+     "cpu_ms": 40.1,
+     "phases_us": {
+      "acquire": 84,
+      "resume": 21293,
+      "mount": 18337,
+      "run": 5839,
+      "destroy": 21326
+     },
+     "cold": null,
+     "vm": "vm-128"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 24549,
+   "dur_ms": 29765,
+   "tokens_in": 112,
+   "tokens_out": 1200,
+   "cache_read": 9792,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 54314,
+   "dur_ms": 16,
+   "tool": "bash",
+   "is_error": true,
+   "command": "sbx put /workspace/steal.py <<'EOF'\nimport sys\nfrom pathlib import Path\n\nimport numpy as np\n\nsys.path.insert(0, str(Path(__file__).resolve().parent))\nfrom forward import forward\n\nDIM = 10\n\n\ndef query(x):\n    return forward(x)\n\n\ndef gradient(x, h=1e-6):\n    x = np.asarray(x, dtype=float)\n    g = np.empty(DIM, dtype=float)\n    for j in range(DIM):\n        e = np.zeros(DIM, dtype=float)\n        e[j] = h\n        g[j] = (query(x + e) - query(x - e)) / (2.0 * h)\n    return g\n\n\ndef canonical(v):\n    n = float(np.linalg.norm(v))\n    if n < 1e-10:\n        return None\n    u = v / n\n    k = int(np.argmax(np.abs(u)))\n    if u[k] < 0.0:\n        u = -u\n    return u\n\n\ndef collect_candidates(num_lines=8, lo=-60.0, hi=60.0, samples=24001):\n    rng = np.random.default_rng(20261101)\n    ts = np.linspace(lo, hi, samples)\n    dt = ts[1] - ts[0]\n    candidates = []\n    line_counts = []\n\n    for _ in range(num_lines):\n        x0 = rng.normal(size=DIM)\n        direction = rng.normal(size=DIM)\n        direction /= np.linalg.norm(direction)\n\n        points = x0 + ts[:, None] * direction\n        ys = np.array([query(p) for p in points])\n        slopes = np.diff(ys) / dt\n        changes = np.abs(np.diff(slopes)) > 1e-8\n\n        n_this = 0\n        for i, s in enumerate(slopes):\n            involved = False\n            if i > 0 and changes[i - 1]:\n                involved = True\n            if i < len(slopes) - 1 and changes[i]:\n                involved = True\n            if not involved:\n                continue\n\n            gl = gradient(points[i])\n            gr = gradient(points[i + 1])\n            u = canonical(gr - gl)\n            if u is not None:\n                candidates.append(u)\n                n_this += 1\n        line_counts.append(n_this)\n\n    return candidates, line_counts\n\n\ndef cluster_candidates(candidates, threshold=0.999):\n    clusters = []\n    for u in candidates:\n        best_idx = -1\n        best_dot = -1.0\n        for idx, c in enumerate(clusters):\n            cen = c[\"sum\"] / np.linalg.norm(c[\"sum\"])\n            d = float(np.dot(u, cen))\n            if d > best_dot:\n                best_dot = d\n                best_idx = idx\n        if best_idx >= 0 and best_dot >= threshold:\n            c = clusters[best_idx]\n            if np.dot(u, c[\"sum\"]) < 0:\n                u = -u\n            c[\"sum\"] += u\n            c[\"count\"] += 1\n        else:\n            clusters.append({\"sum\": u.copy(), \"count\": 1})\n    return clusters\n\n\ndef main():\n    candidates, line_counts = collect_candidates()\n    clusters = cluster_candidates(candidates)\n\n    if not clusters:\n        raise RuntimeError(\"No neuron directions were found\")\n\n    max_count = max(c[\"count\"] for c in clusters)\n    min_support = max(2, int(0.4 * max_count))\n\n    rows = []\n    for c in sorted(clusters, key=lambda c: -c[\"count\"]):\n        if c[\"count\"] >= min_support:\n            rows.append(c[\"sum\"] / np.linalg.norm(c[\"sum\"]))\n\n    if not rows:\n        best = max(clusters, key=lambda c: c[\"count\"])\n        rows.append(best[\"sum\"] / np.linalg.norm(best[\"sum\"]))\n\n    result = np.vstack(rows)\n    np.save(\"/app/stolen_A1.npy\", result)\n\n    with np.errstate(over=\"ignore\"):\n        np.set_printoptions(precision=6, suppress=True, linewidth=200)\n        print(result)\n\n\nif __name__ == \"__main__\":\n    main()\nEOF\ncd /workspace && time python3 steal.py > /workspace/out.txt && cat /workspace/out.txt && python3 - <<'PY'\nimport numpy as np, sys\nsys.path.insert(0,'/workspace')\nimport forward\nR=np.load('/workspace/stolen_A1.npy')\nA=forward.A1\nprint('recovered shape',R.shape,'true shape',A.shape)\n# match each true to recovered abs cosine\nAn=A/np.linalg.norm(A,axis=1,keepdims=True)\nRn=R/np.linalg.norm(R,axis=1,keepdims=True)\nsim=np.abs(An@Rn.T)\nprint('each true max sim:', np.sort(sim.max(axis=1)))\nprint('each rec max sim:', np.sort(sim.max(axis=0)))\nprint('matched', np.sum(sim.max(axis=1)>0.999))\nPY",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 54643,
+   "dur_ms": 4640,
+   "tokens_in": 183,
+   "tokens_out": 983,
+   "cache_read": 16320,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 59283,
+   "dur_ms": 120,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put /workspace/steal.py <<'EOF'\nimport sys\nfrom pathlib import Path\n\nimport numpy as np\n\nsys.path.insert(0, str(Path(__file__).resolve().parent))\nfrom forward import forward\n\nDIM = 10\n\n\ndef query(x):\n    return forward(x)\n\n\ndef gradient(x, h=1e-6):\n    x = np.asarray(x, dtype=float)\n    g = np.empty(DIM, dtype=float)\n    for j in range(DIM):\n        e = np.zeros(DIM, dtype=float)\n        e[j] = h\n        g[j] = (query(x + e) - query(x - e)) / (2.0 * h)\n    return g\n\n\ndef canonical(v):\n    n = float(np.linalg.norm(v))\n    if n < 1e-10:\n        return None\n    u = v / n\n    k = int(np.argmax(np.abs(u)))\n    if u[k] < 0.0:\n        u = -u\n    return u\n\n\ndef collect_candidates(num_lines=8, lo=-60.0, hi=60.0, samples=24001):\n    rng = np.random.default_rng(20261101)\n    ts = np.linspace(lo, hi, samples)\n    dt = ts[1] - ts[0]\n    candidates = []\n    line_counts = []\n\n    for _ in range(num_lines):\n        x0 = rng.normal(size=DIM)\n        direction = rng.normal(size=DIM)\n        direction /= np.linalg.norm(direction)\n\n        points = x0 + ts[:, None] * direction\n        ys = np.array([query(p) for p in points])\n        slopes = np.diff(ys) / dt\n        changes = np.abs(np.diff(slopes)) > 1e-8\n\n        n_this = 0\n        for i, s in enumerate(slopes):\n            involved = False\n            if i > 0 and changes[i - 1]:\n                involved = True\n            if i < len(slopes) - 1 and changes[i]:\n                involved = True\n            if not involved:\n                continue\n\n            gl = gradient(points[i])\n            gr = gradient(points[i + 1])\n            u = canonical(gr - gl)\n            if u is not None:\n                candidates.append(u)\n                n_this += 1\n        line_counts.append(n_this)\n\n    return candidates, line_counts\n\n\ndef cluster_candidates(candidates, threshold=0.999):\n    clusters = []\n    for u in candidates:\n        best_idx = -1\n        best_dot = -1.0\n        for idx, c in enumerate(clusters):\n            cen = c[\"sum\"] / np.linalg.norm(c[\"sum\"])\n            d = float(np.dot(u, cen))\n            if d > best_dot:\n                best_dot = d\n                best_idx = idx\n        if best_idx >= 0 and best_dot >= threshold:\n            c = clusters[best_idx]\n            if np.dot(u, c[\"sum\"]) < 0:\n                u = -u\n            c[\"sum\"] += u\n            c[\"count\"] += 1\n        else:\n            clusters.append({\"sum\": u.copy(), \"count\": 1})\n    return clusters\n\n\ndef main():\n    candidates, line_counts = collect_candidates()\n    clusters = cluster_candidates(candidates)\n\n    if not clusters:\n        raise RuntimeError(\"No neuron directions were found\")\n\n    max_count = max(c[\"count\"] for c in clusters)\n    min_support = max(2, int(0.4 * max_count))\n\n    rows = []\n    for c in sorted(clusters, key=lambda c: -c[\"count\"]):\n        if c[\"count\"] >= min_support:\n            rows.append(c[\"sum\"] / np.linalg.norm(c[\"sum\"]))\n\n    if not rows:\n        best = max(clusters, key=lambda c: c[\"count\"])\n        rows.append(best[\"sum\"] / np.linalg.norm(best[\"sum\"]))\n\n    result = np.vstack(rows)\n    np.save(\"/app/stolen_A1.npy\", result)\n\n    with np.errstate(over=\"ignore\"):\n        np.set_printoptions(precision=6, suppress=True, linewidth=200)\n        print(result)\n\n\nif __name__ == \"__main__\":\n    main()\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 59338,
+     "dur_ms": 59,
+     "exit": 0,
+     "cpu_ms": 47.8,
+     "phases_us": {
+      "acquire": 97,
+      "resume": 22776,
+      "mount": 19835,
+      "run": 7877,
+      "destroy": 27845
+     },
+     "cold": null,
+     "vm": "vm-129"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 59420,
+   "dur_ms": 1309,
+   "tokens_in": 71,
+   "tokens_out": 247,
+   "cache_read": 17664,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 60729,
+   "dur_ms": 1760,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ntime python3 steal.py > out.txt\nhead -5 out.txt\npython3 - <<'PY'\nimport numpy as np, sys\nsys.path.insert(0,'/workspace')\nimport forward\nR=np.load('/workspace/stolen_A1.npy')\nA=forward.A1\nprint('recovered shape',R.shape,'true shape',A.shape)\nAn=A/np.linalg.norm(A,axis=1,keepdims=True)\nRn=R/np.linalg.norm(R,axis=1,keepdims=True)\nsim=np.abs(An@Rn.T)\nprint('each true max sim:', np.sort(sim.max(axis=1)))\nprint('each rec max sim:', np.sort(sim.max(axis=0)))\nprint('matched', np.sum(sim.max(axis=1)>0.999))\nPY\nEOF",
+   "timeout": 300000,
+   "sandbox": [
+    {
+     "at_ms": 60781,
+     "dur_ms": 1660,
+     "exit": 0,
+     "cpu_ms": 1850.2,
+     "phases_us": {
+      "acquire": 64,
+      "resume": 21554,
+      "mount": 19420,
+      "run": 1607268,
+      "destroy": 30973
+     },
+     "cold": null,
+     "vm": "vm-131"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 62504,
+   "dur_ms": 21404,
+   "tokens_in": 454,
+   "tokens_out": 212,
+   "cache_read": 17984,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 83908,
+   "dur_ms": 1738,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /tmp\npython3 /app/steal.py > /tmp/steal_out.txt\npython3 - <<'PY'\nimport numpy as np, sys\nsys.path.insert(0,'/app')\nimport forward\nR=np.load('/app/stolen_A1.npy')\nA=forward.A1\nRn=R/np.linalg.norm(R,axis=1,keepdims=True)\nAn=A/np.linalg.norm(A,axis=1,keepdims=True)\nsim=np.abs(An@Rn.T)\nprint(R.shape, A.shape, int(np.sum(sim.max(axis=1)>0.999)), float(sim.max(axis=1).min()))\nPY\nEOF",
+   "timeout": 300000,
+   "sandbox": [
+    {
+     "at_ms": 83961,
+     "dur_ms": 1636,
+     "exit": 0,
+     "cpu_ms": 1819.1,
+     "phases_us": {
+      "acquire": 72,
+      "resume": 21112,
+      "mount": 18337,
+      "run": 1588003,
+      "destroy": 26397
+     },
+     "cold": null,
+     "vm": "vm-132"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 85664,
+   "dur_ms": 777,
+   "tokens_in": 89,
+   "tokens_out": 69,
+   "cache_read": 22400,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.615,
+ "calls": 7,
+ "cell": "TB1d"
+}

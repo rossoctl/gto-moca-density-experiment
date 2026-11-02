@@ -1,0 +1,361 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "llm-inference-batching-scheduler",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 373907,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 705,
+  "output": 37874,
+  "cacheRead": 1058944,
+  "cacheWrite": 20352,
+  "total": 1117875
+ },
+ "totals": {
+  "model_calls": 23,
+  "tool_calls": 24,
+  "model_ms": 208333,
+  "tool_ms": 164932,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 564,
+   "dur_ms": 1100
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1481,
+   "dur_ms": 60,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "find /app/task_file -type f | head -50 && echo \"---\" && ls -la /app/task_file/input_data/ /app/task_file/output_data/ 2>/dev/null"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1664,
+   "dur_ms": 22,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/task_file/scripts/cost_model.py"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 1686,
+   "dur_ms": 1799
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2411,
+   "dur_ms": 10,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/task_file/scripts/baseline_packer.py"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3485,
+   "dur_ms": 180,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app/task_file && head -3 input_data/requests_bucket_1.jsonl && echo \"---\" && head -3 input_data/requests_bucket_2.jsonl && echo \"--- counts\" && wc -l input_data/*.jsonl && python3 -c \"\nimport json,statistics\nfor f in ['input_data/requests_bucket_1.jsonl','input_data/requests_bucket_2.jsonl']:\n    rs=[json.loads(l) for l in open(f)]\n    p=[r['prompt_len'] for r in rs]; g=[r['gen_len'] for r in rs]\n    print(f, len(rs))\n    print(' prompt min/max/mean', min(p), max(p), statistics.mean(p))\n    print(' gen min/max/mean', min(g), max(g), statistics.mean(g))\n    from collections import Counter\n    print(' gen top', Counter(g).most_common(10))\n    print(' prompt aligned top', Counter(((x+63)//64)*64 for x in p).most_common(10))\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 3665,
+   "dur_ms": 27866
+  },
+  {
+   "kind": "tool",
+   "at_ms": 31531,
+   "dur_ms": 177,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "mkdir -p /app/work && cd /app/task_file/scripts && python3 -c \"\nimport json,sys\nsys.path.insert(0,'.')\nfrom cost_model import *\nfor f in ['../input_data/requests_bucket_1.jsonl','../input_data/requests_bucket_2.jsonl']:\n    rs=[json.loads(l) for l in open(f)]\n    real=sum(r['prompt_len']+r['gen_len'] for r in rs)\n    pp=sum(align(r['prompt_len'],64)-r['prompt_len'] for r in rs)\n    print(f)\n    print(' n',len(rs),'real',real,'prefill_pad',pp,'ratio',pp/real)\n    # ideal singleton decode cost\n    cm=CostModel(64)\n    ideal=sum(cm.batch_metrics([r])['cost'] for r in rs)\n    pre=sum(cm._prefill_cost(r['prompt_len']) for r in rs)\n    print(' prefill cost', pre/1e9,'e9', 'ideal decode', ideal/1e9,'e9', 'ideal total', (pre+ideal)/1e9)\n    print(' ideal singleton lat max', max(cm.batch_metrics([r])['latencies'][0] for r in rs))\n\"\n"
+  },
+  {
+   "kind": "model",
+   "at_ms": 31708,
+   "dur_ms": 11380
+  },
+  {
+   "kind": "tool",
+   "at_ms": 43088,
+   "dur_ms": 91,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "python3 -c \"\nimport json,sys\nfrom collections import Counter\nsys.path.insert(0,'.')\nfrom cost_model import *\nfor f in ['../input_data/requests_bucket_1.jsonl','../input_data/requests_bucket_2.jsonl']:\n    rs=[json.loads(l) for l in open(f)]\n    G=[r['gen_len'] for r in rs]; S=[align(r['prompt_len'],64) for r in rs]\n    print('====',f)\n    print('unique G', len(set(G)), 'unique S', len(set(S)), 'unique (S,G)', len(set(zip(S,G))))\n    print('S counts', sorted(Counter(S).items()))\n    import statistics\n    print('G deciles', [sorted(G)[int(i*len(G)/10)] for i in range(11)])\n    print('G>200 count', sum(1 for g in G if g>200), 'G>400', sum(1 for g in G if g>400), 'G>700',sum(1 for g in G if g>700))\n\"\n"
+  },
+  {
+   "kind": "model",
+   "at_ms": 43179,
+   "dur_ms": 2908
+  },
+  {
+   "kind": "tool",
+   "at_ms": 46087,
+   "dur_ms": 66,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport json,sys\nfrom collections import Counter\nsys.path.insert(0,'.')\nfrom cost_model import *\nfor f in ['../input_data/requests_bucket_1.jsonl','../input_data/requests_bucket_2.jsonl']:\n    rs=[json.loads(l) for l in open(f)]\n    G=sorted(r['gen_len'] for r in rs); S=[align(r['prompt_len'],64) for r in rs]\n    print('====',f)\n    print('G deciles', [G[min(len(G)-1,int(i*len(G)/10))] for i in range(10)], 'max',G[-1])\n    print('G>200', sum(1 for g in G if g>200), 'G>400', sum(1 for g in G if g>400), 'G>700',sum(1 for g in G if g>700))\n    print('S counts', sorted(Counter(S).items()))\n    # distribution of prompt within same aligned\n\"\n"
+  },
+  {
+   "kind": "model",
+   "at_ms": 46153,
+   "dur_ms": 21282
+  },
+  {
+   "kind": "tool",
+   "at_ms": 67435,
+   "dur_ms": 62,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport json,sys\nfrom collections import Counter,defaultdict\nsys.path.insert(0,'.')\nfrom cost_model import *\nfor f in ['../input_data/requests_bucket_1.jsonl','../input_data/requests_bucket_2.jsonl']:\n    rs=[json.loads(l) for l in open(f)]\n    print('====',f)\n    # cross tab of G buckets vs S\n    for lo,hi in [(0,64),(64,200),(200,400),(400,700),(700,1100),(1100,1300)]:\n        sub=[r for r in rs if lo<r['gen_len']<=hi]\n        print(f' G in ({lo},{hi}] n={len(sub)} S values {sorted(Counter(align(r[\\\"prompt_len\\\"],64) for r in sub).items())}')\n\"\n"
+  },
+  {
+   "kind": "model",
+   "at_ms": 67497,
+   "dur_ms": 10988
+  },
+  {
+   "kind": "tool",
+   "at_ms": 78485,
+   "dur_ms": 16,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/work/opt.py",
+    "content": "#!/usr/bin/env python3\n\"\"\"Optimizer for shape-aware batching.\"\"\"\nimport json, math, sys, os, argparse\nfrom collections import defaultdict, Counter\n\nsys.path.insert(0, '/app/task_file/scripts')\nfrom cost_model import CostModel, align, HEADS, HIDDEN, CostConsts\n\nGRAN = 64\nMAX_SHAPES = 8\nK_BATCH = 10_000_000.0\nMASK = 2**64 - 1\n\ndef load(path):\n    return [json.loads(l) for l in open(path)]\n\n\nclass Ctx:\n    def __init__(self, reqs):\n        self.reqs = reqs\n        self.n = len(reqs)\n        self.S = [align(r['prompt_len'], GRAN) for r in reqs]\n        self.G = [r['gen_len'] for r in reqs]\n        self.cm = CostModel(GRAN)\n        # precompute f(S,G) = cost per request multiplier\n        self.fcache = {}\n    def f(self, S, G):\n        key = (S, G)\n        v = self.fcache.get(key)\n        if v is None:\n            # = A*sum_sq + B*sum_lin with A=1, B=2048\n            a, n = S, G\n            sum_sq = n*(a*a) + a*n*(n-1) + (n*(n-1)*(2*n-1))//6\n            sum_lin = n*a + n*(n-1)/2\n            v = 1.0*sum_sq + 2048.0*sum_lin\n            self.fcache[key] = v\n        return v\n    def prefill_cost(self, S):\n        return 2.0*(S**2) + 1.0*(S*HIDDEN)\n    def prefill_lat(self, S):\n        return 0.002*(S**2) + 0.0015*(S*HIDDEN)\n\n\ndef batch_cost(ctx, idxs):\n    S = max(ctx.S[i] for i in idxs)\n    G = max(ctx.G[i] for i in idxs)\n    return len(idxs) * ctx.f(S, G)\n\n\ndef s_bands_dp(ctx, idxs, Gmax, batch_pen=K_BATCH):\n    \"\"\"Partition a set of requests all sharing the same G group into S bands.\n    Returns list of lists of indices. Cost = n_band * f(Smax_band, Gmax) + batch_pen.\n    \"\"\"\n    byS = defaultdict(list)\n    for i in idxs:\n        byS[ctx.S[i]].append(i)\n    Ss = sorted(byS)\n    m = len(Ss)\n    # prefix counts\n    pref = [0]\n    for s in Ss:\n        pref.append(pref[-1] + len(byS[s]))\n    INF = float('inf')\n    dp = [INF]*(m+1)\n    par = [-1]*(m+1)\n    dp[0] = 0.0\n    for j in range(1, m+1):\n        cnt = 0\n        for i in range(j-1, -1, -1):\n            cnt = pref[j]-pref[i]\n            c = dp[i] + cnt*ctx.f(Ss[j-1], Gmax) + batch_pen\n            if c < dp[j]:\n                dp[j] = c; par[j] = i\n    # reconstruct\n    bands = []\n    j = m\n    while j > 0:\n        i = par[j]\n        idxs_b = []\n        for k in range(i, j):\n            idxs_b.extend(byS[Ss[k]])\n        bands.append(idxs_b)\n        j = i\n    bands.reverse()\n    return bands, dp[m]\n\n\ndef build_plan_exact_g(ctx, batch_pen=K_BATCH):\n    byG = defaultdict(list)\n    for i, g in enumerate(ctx.G):\n        byG[g].append(i)\n    batches = []\n    for g in sorted(byG):\n        bands, _ = s_bands_dp(ctx, byG[g], g, batch_pen)\n        batches.extend(bands)\n    return batches\n\n\ndef evaluate(ctx, batches, verbose=True):\n    # Build plan records\n    reqs = ctx.reqs\n    # one shape for all: global max aligned S (min compile cost, 1 unique shape)\n    shapeS = max(ctx.S)\n    plan = []\n    for b, idxs in enumerate(batches):\n        bid = f\"b-{b:04d}\"\n        for i in idxs:\n            plan.append({'request_id': reqs[i]['request_id'], 'batch_id': bid,\n                         'shape': {'seq_align': shapeS, 'heads_align': HEADS, 'hidden_align': HIDDEN}})\n    reqmap = {r['request_id']: r for r in reqs}\n    m = ctx.cm.plan_metrics(reqmap, plan)\n    if verbose:\n        print(f\"  batches={len(batches)} cost={m['cost']:.4e} pad_ratio={m['pad_ratio']:.5f} \"\n              f\"p95={m['p95_latency_ms']:.4e} seq={m['sequential_timecost']:.4e}\")\n    return m\n\n\nif __name__ == '__main__':\n    for name in ['1', '2']:\n        path = f'/app/task_file/input_data/requests_bucket_{name}.jsonl'\n        reqs = load(path)\n        ctx = Ctx(reqs)\n        print(f'=== bucket {name}')\n        bs = build_plan_exact_g(ctx)\n        evaluate(ctx, bs)\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 78501,
+   "dur_ms": 781
+  },
+  {
+   "kind": "tool",
+   "at_ms": 79282,
+   "dur_ms": 100,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app/work && time python3 opt.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 79382,
+   "dur_ms": 4355
+  },
+  {
+   "kind": "tool",
+   "at_ms": 83737,
+   "dur_ms": 167,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nfrom opt import *\nfor name in ['1','2']:\n    reqs=load(f'/app/task_file/input_data/requests_bucket_{name}.jsonl'); ctx=Ctx(reqs)\n    print('=== bucket',name)\n    for pen in [1e7,5e7,1e8,2e8,5e8,1e9,2e9,5e9,1e10]:\n        bs=build_plan_exact_g(ctx,pen)\n        m=evaluate(ctx,bs,verbose=False)\n        print(f'  pen={pen:.1e} B={len(bs):4d} cost={m[\\\"cost\\\"]:.4e} pad={m[\\\"pad_ratio\\\"]:.5f} p95={m[\\\"p95_latency_ms\\\"]:.4e} seq={m[\\\"sequential_timecost\\\"]:.4e}')\n\"\n"
+  },
+  {
+   "kind": "model",
+   "at_ms": 83904,
+   "dur_ms": 9658
+  },
+  {
+   "kind": "tool",
+   "at_ms": 93562,
+   "dur_ms": 75,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nfrom opt import *\nimport statistics\nfor name in ['1','2']:\n    reqs=load(f'/app/task_file/input_data/requests_bucket_{name}.jsonl'); ctx=Ctx(reqs)\n    bs=build_plan_exact_g(ctx,1e10)\n    rows=[]\n    for b in bs:\n        S=max(ctx.S[i] for i in b); G=max(ctx.G[i] for i in b)\n        P=max(ctx.prefill_lat(ctx.S[i]) for i in b)\n        D=ctx.cm._decode_step_lat(S)*0 if False else (0.0012*sum_sq if False else None)\n        # decode lat\n        a,n=S,G\n        sumsq=n*(a*a)+a*n*(n-1)+(n*(n-1)*(2*n-1))//6\n        sumlin=n*a+n*(n-1)/2\n        D=0.0012*sumsq+0.0015*HIDDEN*sumlin\n        rows.append((P+D,len(b),S,G,P,D))\n    rows.sort(reverse=True)\n    tot=sum(r[0] for r in rows)\n    print('=== bucket',name,'B',len(bs),'seqsum',tot)\n    print(' top10:')\n    for r in rows[:10]: print(f'  L={r[0]:.3e} n={r[1]} S={r[2]} G={r[3]} P={r[4]:.3e} D={r[5]:.3e}')\n    print(' sum top40', sum(r[0] for r in rows[:40]), 'rest', tot-sum(r[0] for r in rows[:40]))\n    print(' n batches by Gmax bands:')\n    for lo,hi in [(0,64),(64,200),(200,400),(400,700),(700,1100),(1100,1300)]:\n        sub=[r for r in rows if lo<r[3]<=hi]\n        print(f'   G({lo},{hi}] nb={len(sub)} sumL={sum(x[0] for x in sub):.3e}')\n\"\n"
+  },
+  {
+   "kind": "model",
+   "at_ms": 93637,
+   "dur_ms": 32681
+  },
+  {
+   "kind": "tool",
+   "at_ms": 126318,
+   "dur_ms": 18,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/work/dp.py",
+    "content": "#!/usr/bin/env python3\n\"\"\"Joint DP optimizer: segments over sorted gen_len, S-bands inside each segment.\n\nObjective: cost + lam * sequential_timecost, subject to total decode pad <= pad_budget.\n\"\"\"\nimport json, sys, math, itertools\nfrom collections import defaultdict, Counter\n\nsys.path.insert(0, '/app/task_file/scripts')\nfrom cost_model import CostModel, align, HEADS, HIDDEN\n\nGRAN = 64\nK_BATCH = 10_000_000.0\n\n\ndef load(path):\n    return [json.loads(l) for l in open(path)]\n\n\ndef sumsq_sumlin(S, G):\n    a, n = S, G\n    sumsq = n*(a*a) + a*n*(n-1) + (n*(n-1)*(2*n-1))//6\n    sumlin = n*a + n*(n-1)/2\n    return sumsq, sumlin\n\n\nclass Model:\n    def __init__(self, reqs):\n        self.reqs = reqs\n        self.S = [align(r['prompt_len'], GRAN) for r in reqs]\n        self.G = [r['gen_len'] for r in reqs]\n        self._fc = {}\n        self._dc = {}\n        self._pc = {}\n        self._pl = {}\n        self.Smax_global = max(self.S)\n        self.prefill_pad = sum(align(r['prompt_len'], GRAN)-r['prompt_len'] for r in reqs)\n        self.real = sum(r['prompt_len']+r['gen_len'] for r in reqs)\n        # compile cost single shape\n        S = self.Smax_global\n        self.compile_cost = 500.0*(S**2) + 2.0*S*HIDDEN\n\n    def f(self, S, G):\n        k = (S, G)\n        v = self._fc.get(k)\n        if v is None:\n            sq, ln = sumsq_sumlin(S, G)\n            v = sq + 2048.0*ln\n            self._fc[k] = v\n        return v\n\n    def D(self, S, G):\n        k = (S, G)\n        v = self._dc.get(k)\n        if v is None:\n            sq, ln = sumsq_sumlin(S, G)\n            v = 0.0012*sq + 2.4576*ln\n            self._dc[k] = v\n        return v\n\n    def P(self, S):\n        v = self._pl.get(S)\n        if v is None:\n            v = 0.002*(S**2) + 6.144*S\n            self._pl[S] = v\n        return v\n\n\ndef solve(model, lam, pad_budget, verbose=False, max_states=200000):\n    \"\"\"DP. Returns list of batches (lists of request indices).\"\"\"\n    # group by G\n    groups = defaultdict(list)\n    for i, g in enumerate(model.G):\n        groups[g].append(i)\n    gvals = sorted(groups)\n    m = len(gvals)\n    # prefix over groups\n    cnt_pref = [0]*(m+1)\n    sumG_pref = [0]*(m+1)\n    for k, g in enumerate(gvals):\n        cnt_pref[k+1] = cnt_pref[k] + len(groups[g])\n        sumG_pref[k+1] = sumG_pref[k] + g*len(groups[g])\n\n    # For each j (end group index), compute inner dp for each start i.\n    # inner_solve(j, i): set of requests in groups i..j (0-based inclusive); Gmax=gvals[j]\n    # returns (obj, batches) minimal over S-band partition.\n    # We'll compute per j incrementally adding group i downward, maintaining S->count.\n    # Cache results for reconstruction: store partition as list of (Smax, [group-local?]) -> better store band boundaries in S.\n    INF = float('inf')\n\n    def inner_all(j):\n        gmax = gvals[j]\n        scount = Counter()\n        res = [None]*(j+1)  # res[i] for start group i\n        for i in range(j, -1, -1):\n            for idx in groups[gvals[i]]:\n                scount[model.S[idx]] += 1\n            Ss = sorted(scount)\n            ns = len(Ss)\n            # dp over S positions\n            dp = [INF]*(ns+1); par = [-1]*(ns+1); dp[0] = 0.0\n            for b in range(1, ns+1):\n                cnt = 0\n                Smax = Ss[b-1]\n                band_const_D = lam*(model.P(Smax) + model.D(Smax, gmax) + 8.0)\n                fval = model.f(Smax, gmax)\n                for a in range(b-1, -1, -1):\n                    cnt += scount[Ss[a]]\n                    c = dp[a] + cnt*fval + band_const_D + K_BATCH\n                    if c < dp[b]:\n                        dp[b] = c; par[b] = a\n            # reconstruct band S-boundaries\n            bands = []\n            b = ns\n            while b > 0:\n                a = par[b]\n                bands.append((a, b))  # S indices [a, b)\n                b = a\n            bands.reverse()\n            res[i] = (dp[ns], bands, Ss)\n        return res\n\n    # Outer DP over j with pad states.\n    # state after processing groups 0..j-1: dict pad -> (obj, prev_pad, start_group_i)\n    # We process end j (groups 0..j inclusive).\n    dp_states = [None]*(m+1)\n    dp_states[0] = {0: (0.0, None, None)}  # pad -> (obj, prev_j, start_i)\n    best_final = None\n    for j in range(m):\n        res = inner_all(j)\n        cur = {}\n        for i in range(j, -1, -1):\n            seg_n = cnt_pref[j+1]-cnt_pref[i]\n            seg_sumG = sumG_pref[j+1]-sumG_pref[i]\n            pad_inc = seg_n*gvals[j] - seg_sumG\n            if pad_inc > pad_budget:\n                continue\n            iobj = res[i][0]\n            if iobj == INF:\n                continue\n            prev = dp_states[i]  # states after groups 0..i-1\n            if prev is None:\n                continue\n            for pad, (obj, pj, pi) in prev.items():\n                npad = pad + pad_inc\n                if npad > pad_budget:\n                    continue\n                nobj = obj + iobj\n                old = cur.get(npad)\n                if old is None or nobj < old[0]:\n                    cur[npad] = (nobj, i, res[i][1])\n        dp_states[j+1] = cur\n        if verbose and (j % 25 == 0 or j == m-1):\n            print(f'   j={j} states={len(cur)} best={min((v[0] for v in cur.values()), default=INF):.4e}')\n    # pick best final state\n    final = dp_states[m]\n    if not final:\n        raise RuntimeError('no feasible plan')\n    best_pad, best = min(final.items(), key=lambda kv: kv[1][0])\n    # reconstruct segments\n    segs = []  # (i, j, pad, bands)\n    j = m\n    pad = best_pad\n    while j > 0:\n        obj, i, bands = dp_states[j][pad]\n        segs.append((i, j, bands))\n        # prev pad\n        prev = dp_states[i]\n        # find pad_prev such that prev + inc = pad ... we stored only obj; recompute\n        seg_n = cnt_pref[j]-cnt_pref[i]\n        seg_sumG = sumG_pref[j]-sumG_pref[i]\n        pad_inc = seg_n*gvals[j-1]-seg_sumG\n        pad = pad - pad_inc\n        j = i\n    segs.reverse()\n    # build batches\n    batches = []\n    for (i, j, bands) in segs:\n        gmax = gvals[j-1]\n        # collect S->idx for the segment\n        scount = defaultdict(list)\n        for k in range(i, j):\n            for idx in groups[gvals[k]]:\n                scount[model.S[idx]].append(idx)\n        Ss = sorted(scount)\n        for (a, b) in bands:\n            idxs = []\n            for k in range(a, b):\n                idxs.extend(scount[Ss[k]])\n            batches.append(idxs)\n    return batches, best[0]\n\n\ndef make_records(model, batches):\n    shapeS = model.Smax_global\n    recs = []\n    for b, idxs in enumerate(batches):\n        bid = f\"b-{b:04d}\"\n        for i in idxs:\n            recs.append({'request_id': model.reqs[i]['request_id'], 'batch_id': bid,\n                         'shape': {'seq_align': shapeS, 'heads_align': HEADS, 'hidden_align': HIDDEN}})\n    return recs\n\n\ndef evaluate(model, batches):\n    cm = CostModel(GRAN)\n    recs = make_records(model, batches)\n    reqmap = {r['request_id']: r for r in model.reqs}\n    return cm.plan_metrics(reqmap, recs)\n\n\ndef check(model, m, targets):\n    ok = True\n    for k, (op, lim) in targets.items():\n        val = m[k]\n        good = (val <= lim) if op == '<=' else (val >= lim)\n        ok &= good\n        print(f'   {k}: {val:.5e} {op} {lim:.5e} {\"OK\" if good else \"FAIL\"}')\n    return ok\n\n\nif __name__ == '__main__':\n    T = {\n        '1': {'cost': ('<=', 3.0e11), 'pad_ratio': ('<=', 0.055), 'p95_latency_ms': ('<=', 2.1e6), 'sequential_timecost': ('<=', 2.7e8)},\n        '2': {'cost': ('<=', 4.8e10), 'pad_ratio': ('<=', 0.15), 'p95_latency_ms': ('<=', 2.1e5), 'sequential_timecost': ('<=', 3.2e7)},\n    }\n    for name in ['1', '2']:\n        reqs = load(f'/app/task_file/input_data/requests_bucket_{name}.jsonl')\n        model = Model(reqs)\n        print(f'=== bucket {name}: prefill_pad_ratio={model.prefill_pad/model.real:.5f} real={model.real} comp={model.compile_cost:.3e}')\n        t = T[name]\n        pad_budget = int(t['pad_ratio'][1]*model.real) - model.prefill_pad\n        print(f'   pad budget = {pad_budget}')\n        for lam in [1e2, 1e3, 1e4, 5e4, 1e5, 5e5]:\n            batches, obj = solve(model, lam, pad_budget)\n            m = evaluate(model, batches)\n            print(f'  lam={lam:.0e} B={len(batches)} cost={m[\"cost\"]:.4e} pad={m[\"pad_ratio\"]:.5f} p95={m[\"p95_latency_ms\"]:.4e} seq={m[\"sequential_timecost\"]:.4e}')\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 126336,
+   "dur_ms": 1275
+  },
+  {
+   "kind": "tool",
+   "at_ms": 127611,
+   "dur_ms": 44185,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "time python3 dp.py 2>&1 | tail -40"
+  },
+  {
+   "kind": "model",
+   "at_ms": 171796,
+   "dur_ms": 16027
+  },
+  {
+   "kind": "tool",
+   "at_ms": 187823,
+   "dur_ms": 53596,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nfrom dp import *\nfrom collections import Counter\nfor name in ['1','2']:\n    reqs=load(f'/app/task_file/input_data/requests_bucket_{name}.jsonl'); model=Model(reqs)\n    T={'1':0.055,'2':0.15}[name]\n    pb=int(T*model.real)-model.prefill_pad\n    for lam in [30,50,70,100,130,160,200,300]:\n        bs,obj=solve(model,lam,pb)\n        m=evaluate(model,bs)\n        smax=Counter(max(model.S[i] for i in b) for b in bs)\n        print(f'b{name} lam={lam:4d} B={len(bs):4d} cost={m[\\\"cost\\\"]:.4e} pad={m[\\\"pad_ratio\\\"]:.5f} p95={m[\\\"p95_latency_ms\\\"]:.4e} seq={m[\\\"sequential_timecost\\\"]:.4e} uniqSmax={len(smax)}')\n    print()\n\" 2>&1 | grep -v '^ *j='"
+  },
+  {
+   "kind": "model",
+   "at_ms": 241419,
+   "dur_ms": 17150
+  },
+  {
+   "kind": "tool",
+   "at_ms": 258569,
+   "dur_ms": 13,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/work/make_plans.py",
+    "content": "#!/usr/bin/env python3\nimport json, os, sys, hashlib\nsys.path.insert(0, '/app/task_file/scripts')\nsys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))\nfrom cost_model import CostModel, align, HEADS, HIDDEN\nfrom dp import Model, solve, make_records, load, GRAN\n\nROOT = '/app/task_file'\nCFG = {\n    '1': dict(lam=100.0, pad_ratio_lim=0.055),\n    '2': dict(lam=200.0, pad_ratio_lim=0.15),\n}\nTARGETS = {\n    '1': {'cost': 3.0e11, 'pad_ratio': 0.055, 'p95_latency_ms': 2.1e6, 'sequential_timecost': 2.7e8},\n    '2': {'cost': 4.8e10, 'pad_ratio': 0.15, 'p95_latency_ms': 2.1e5, 'sequential_timecost': 3.2e7},\n}\n\ndef sha(p):\n    return hashlib.sha256(open(p, 'rb').read()).hexdigest()\n\ndef main():\n    os.makedirs(f'{ROOT}/output_data', exist_ok=True)\n    summary = {}\n    for name in ['1', '2']:\n        inp = f'{ROOT}/input_data/requests_bucket_{name}.jsonl'\n        out = f'{ROOT}/output_data/plan_b{name}.jsonl'\n        h_before = sha(inp)\n        reqs = load(inp)\n        model = Model(reqs)\n        cfg = CFG[name]\n        pad_budget = int(cfg['pad_ratio_lim'] * model.real) - model.prefill_pad\n        batches, _ = solve(model, cfg['lam'], pad_budget)\n        recs = make_records(model, batches)\n        with open(out, 'w') as fo:\n            for r in recs:\n                fo.write(json.dumps(r) + '\\n')\n        assert sha(inp) == h_before, 'input changed!'\n\n        # ---------- validation ----------\n        plan = load(out)\n        reqmap = {r['request_id']: r for r in reqs}\n        ids = [p['request_id'] for p in plan]\n        assert len(ids) == len(set(ids)), 'duplicate request ids'\n        assert set(ids) == set(reqmap), 'missing/extra request ids'\n        shapes_by_batch = {}\n        for p in plan:\n            sh = p['shape']\n            assert sh['heads_align'] == HEADS and sh['hidden_align'] == HIDDEN\n            sa = sh['seq_align']\n            assert sa % 64 == 0 and sa >= ((reqmap[p['request_id']]['prompt_len'] + 63)//64)*64, 'bad shape'\n            prev = shapes_by_batch.setdefault(p['batch_id'], sa)\n            assert prev == sa, 'shape mismatch in batch'\n        uniq = set(shapes_by_batch.values())\n        assert len(uniq) <= 8, f'too many shapes {len(uniq)}'\n\n        m = CostModel(GRAN).plan_metrics(reqmap, plan)\n        print(f'=== bucket {name}: batches={len(shapes_by_batch)} unique_shapes={len(uniq)} shapes={sorted(uniq)}')\n        ok = True\n        for k, lim in TARGETS[name].items():\n            v = m[k]\n            good = v <= lim\n            ok &= good\n            ratio = v / lim\n            print(f'   {k:22s} = {v:.6e}  limit {lim:.3e}  ({ratio*100:.1f}% of limit)  {\"OK\" if good else \"FAIL\"}')\n        print(f'   ALL PASS: {ok}')\n        summary[name] = (m, ok)\n    return summary\n\nif __name__ == '__main__':\n    s = main()\n    assert all(v[1] for v in s.values())\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 258582,
+   "dur_ms": 1058
+  },
+  {
+   "kind": "tool",
+   "at_ms": 259640,
+   "dur_ms": 6987,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "time python3 make_plans.py 2>&1 | grep -v '^ *j='"
+  },
+  {
+   "kind": "model",
+   "at_ms": 266627,
+   "dur_ms": 9349
+  },
+  {
+   "kind": "tool",
+   "at_ms": 275976,
+   "dur_ms": 41,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport json,sys\nsys.path.insert(0,'.')\nfrom dp import *\nfrom cost_model import CostModel\nfor name,lam in [('1',100.0),('2',200.0)]:\n    reqs=load(f'/app/task_file/input_data/requests_bucket_{name}.jsonl'); model=Model(reqs)\n    lim=0.055 if name=='1' else 0.15\n    pb=int(lim*model.real)-model.prefill_pad\n    bs,_=solve(model,lam,pb)\n    m=evaluate(model,bs)\n    lats=sorted(m['latencies'],reverse=True)\n    print('=== b'+name,'p95',m['p95_latency_ms'])\n    print(' top 50 lats:',[round(x/1e6,3) if name=='1' else round(x/1e3,1) for x in lats[:50]])\n    thr=2.1e6 if name=='1' else 2.1e5\n    print(' count > limit:',sum(1 for x in lats if x>thr),'  41st..45th:',lats[40:45])\n    # singleton theoretical min lat per request\n    cm=CostModel(64)\n    mins=sorted((cm._prefill_lat(model.S[i])+cm._decode_step_lat(0) if False else\n                 cm._prefill_lat(model.S[i])+ (cm.batch_metrics([reqs[i]])['latencies'][0]-cm._prefill_lat(model.S[i])) ) for i in range(len(reqs)),reverse=True)\n    print(' singleton-plan p95:',sorted(mins)[40], ' count above lim:',sum(1 for x in mins if x>thr))\n\" 2>&1 | grep -v '^ *j='"
+  },
+  {
+   "kind": "model",
+   "at_ms": 276017,
+   "dur_ms": 2254
+  },
+  {
+   "kind": "tool",
+   "at_ms": 278271,
+   "dur_ms": 6585,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport json,sys\nsys.path.insert(0,'.')\nfrom dp import *\nfrom cost_model import CostModel\ncm=CostModel(64)\nfor name,lam in [('1',100.0),('2',200.0)]:\n    reqs=load(f'/app/task_file/input_data/requests_bucket_{name}.jsonl'); model=Model(reqs)\n    lim=0.055 if name=='1' else 0.15\n    pb=int(lim*model.real)-model.prefill_pad\n    bs,_=solve(model,lam,pb)\n    m=evaluate(model,bs)\n    lats=sorted(m['latencies'],reverse=True)\n    thr=2.1e6 if name=='1' else 2.1e5\n    print('=== b'+name,'p95',m['p95_latency_ms'],' 41st..45th',[round(x,1) for x in lats[40:45]])\n    print(' count > limit:',sum(1 for x in lats if x>thr))\n    mins=[]\n    for r in reqs:\n        d=cm.batch_metrics([r])['latencies'][0]\n        mins.append(d)\n    mins.sort(reverse=True)\n    print(' singleton 41st:',round(mins[40],1),' count above lim:',sum(1 for x in mins if x>thr))\n\" 2>&1 | grep -v '^ *j='"
+  },
+  {
+   "kind": "model",
+   "at_ms": 284856,
+   "dur_ms": 12973
+  },
+  {
+   "kind": "tool",
+   "at_ms": 297829,
+   "dur_ms": 45535,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport sys; sys.path.insert(0,'.')\nfrom dp import *\nT={'1':dict(cost=3.0e11,pad_ratio=0.055,p95_latency_ms=2.1e6,sequential_timecost=2.7e8),\n   '2':dict(cost=4.8e10,pad_ratio=0.15,p95_latency_ms=2.1e5,sequential_timecost=3.2e7)}\nfor name,lams in [('1',[40,55,70,85,100,115,130]),('2',[150,170,190,210,230,250])]:\n    reqs=load(f'/app/task_file/input_data/requests_bucket_{name}.jsonl'); model=Model(reqs)\n    pb=int(T[name]['pad_ratio']*model.real)-model.prefill_pad\n    print('=== b'+name)\n    best=None\n    for lam in lams:\n        bs,_=solve(model,lam,pb); m=evaluate(model,bs)\n        utils={k:m[k]/v for k,v in T[name].items()}\n        worst=max(utils.values()); wk=max(utils,key=utils.get)\n        print(f'  lam={lam:4d} B={len(bs):4d} worst_util={worst*100:5.1f}% ({wk})  '+' '.join(f'{k[:3]}={u*100:.1f}' for k,u in utils.items()))\n        if best is None or worst<best[0]: best=(worst,lam)\n    print('  BEST lam',best)\n\" 2>&1 | grep -v '^ *j='"
+  },
+  {
+   "kind": "model",
+   "at_ms": 343364,
+   "dur_ms": 7528
+  },
+  {
+   "kind": "tool",
+   "at_ms": 350892,
+   "dur_ms": 23,
+   "tool": "Edit",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/work/make_plans.py",
+    "old_string": "    '1': dict(lam=100.0, pad_ratio_lim=0.055),\n    '2': dict(lam=200.0, pad_ratio_lim=0.15),",
+    "new_string": "    '1': dict(lam=100.0, pad_ratio_lim=0.055),\n    '2': dict(lam=150.0, pad_ratio_lim=0.15),",
+    "replace_all": false
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 350915,
+   "dur_ms": 1441
+  },
+  {
+   "kind": "tool",
+   "at_ms": 352356,
+   "dur_ms": 6761,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 make_plans.py 2>&1 | grep -v '^ *j=' && echo \"--- input hashes (unchanged, no writes):\" && sha256sum /app/task_file/input_data/*.jsonl && echo \"--- outputs:\" && ls -l /app/task_file/output_data/ && head -2 /app/task_file/output_data/plan_b1.jsonl && head -2 /app/task_file/output_data/plan_b2.jsonl"
+  },
+  {
+   "kind": "model",
+   "at_ms": 359117,
+   "dur_ms": 4641
+  },
+  {
+   "kind": "tool",
+   "at_ms": 363758,
+   "dur_ms": 14,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/work/validate.py",
+    "content": "#!/usr/bin/env python3\n\"\"\"Independent validator: reads ONLY input/output files + provided cost_model.\"\"\"\nimport json, sys\nsys.path.insert(0, '/app/task_file/scripts')\nfrom cost_model import CostModel, align, HEADS, HIDDEN\n\nROOT = '/app/task_file'\nLIMITS = {\n    '1': {'cost': 3.0e11, 'pad_ratio': 0.055, 'p95_latency_ms': 2.1e6, 'sequential_timecost': 2.7e8},\n    '2': {'cost': 4.8e10, 'pad_ratio': 0.15, 'p95_latency_ms': 2.1e5, 'sequential_timecost': 3.2e7},\n}\nGRAN = 64\n\ndef jl(p):\n    return [json.loads(l) for l in open(p)]\n\nok_all = True\nglobal_shapes = set()\nfor name in ['1', '2']:\n    reqs = jl(f'{ROOT}/input_data/requests_bucket_{name}.jsonl')\n    plan = jl(f'{ROOT}/output_data/plan_b{name}.jsonl')\n    reqmap = {r['request_id']: r for r in reqs}\n    errs = []\n\n    # 1. exactly once\n    ids = [p['request_id'] for p in plan]\n    if len(ids) != len(set(ids)):\n        errs.append('duplicate request_id')\n    if set(ids) != set(reqmap):\n        errs.append(f'missing={len(set(reqmap)-set(ids))} extra={len(set(ids)-set(reqmap))}')\n\n    # 2. per-batch shape consistency + shape validity\n    batch_shape = {}\n    for p in plan:\n        sh = p['shape']\n        sa, ha, hid = int(sh['seq_align']), int(sh['heads_align']), int(sh['hidden_align'])\n        if ha != HEADS or hid != HIDDEN:\n            errs.append(f\"bad heads/hidden {ha},{hid}\")\n        if sa % GRAN != 0:\n            errs.append(f'seq_align {sa} not multiple of {GRAN}')\n        need = align(reqmap[p['request_id']]['prompt_len'], GRAN)\n        if sa < need:\n            errs.append(f\"seq_align {sa} < required {need} for {p['request_id']}\")\n        if p['batch_id'] in batch_shape and batch_shape[p['batch_id']] != (sa, ha, hid):\n            errs.append(f\"shape mismatch in batch {p['batch_id']}\")\n        batch_shape[p['batch_id']] = (sa, ha, hid)\n\n    shapes = set(batch_shape.values())\n    global_shapes |= shapes\n    if len(shapes) > 8:\n        errs.append(f'too many unique shapes: {len(shapes)}')\n\n    m = CostModel(GRAN).plan_metrics(reqmap, plan)\n    print(f'=== bucket {name}: requests={len(reqs)} plan_rows={len(plan)} batches={len(batch_shape)} unique_shapes={len(shapes)}')\n    for k, lim in LIMITS[name].items():\n        v = m[k]\n        good = v <= lim\n        if not good:\n            errs.append(f'{k} {v:.4e} > {lim:.4e}')\n        print(f'   {k:22s} {v:.6e} <= {lim:.3e}  {\"OK\" if good else \"FAIL\"}')\n    if errs:\n        ok_all = False\n        print('   ERRORS:', errs)\n    else:\n        print('   VALID')\n\nprint(f'\\nUnique shapes across BOTH buckets: {sorted(global_shapes)} (n={len(global_shapes)})')\nok_all &= len(global_shapes) <= 8\nprint('ALL VALID' if ok_all else 'FAILURES PRESENT')\nsys.exit(0 if ok_all else 1)\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 363772,
+   "dur_ms": 1512
+  },
+  {
+   "kind": "tool",
+   "at_ms": 365284,
+   "dur_ms": 148,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 validate.py; echo \"exit=$?\"; echo \"--- also run baseline's cost model path check (import style) ---\"; cd /app/task_file && python3 -c \"\nimport json,sys\nsys.path.insert(0,'scripts')\nfrom cost_model import CostModel\nfor n in ['1','2']:\n    reqs={json.loads(l)['request_id']:json.loads(l) for l in open(f'input_data/requests_bucket_{n}.jsonl')}\n    plan=[json.loads(l) for l in open(f'output_data/plan_b{n}.jsonl')]\n    print('bucket',n,CostModel(64).plan_metrics(reqs,plan)['cost'])\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 365432,
+   "dur_ms": 8327
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 6.676,
+ "calls": 24,
+ "cell": "TB1a"
+}

@@ -1,0 +1,239 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "large-scale-text-editing",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 231595,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 428,
+  "output": 10385,
+  "cacheRead": 340224,
+  "cacheWrite": 3904,
+  "total": 354941
+ },
+ "totals": {
+  "model_calls": 14,
+  "tool_calls": 15,
+  "model_ms": 61036,
+  "tool_ms": 171176,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 549,
+   "dur_ms": 1331
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1539,
+   "dur_ms": 59,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la && head -5 input.csv && echo \"---EXPECTED---\" && head -5 expected.csv"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1880,
+   "dur_ms": 88,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "wc -l input.csv expected.csv && echo \"---\" && file input.csv expected.csv"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1968,
+   "dur_ms": 6809
+  },
+  {
+   "kind": "tool",
+   "at_ms": 7754,
+   "dur_ms": 1200,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport collections\nwith open('input.csv','rb') as f:\n    data=f.read()\nprint('size',len(data))\nprint('CR count',data.count(b'\\r'))\nprint('ends with newline:',data.endswith(b'\\n'))\nlines=data.split(b'\\n')\nprint('num split parts',len(lines))\nif lines and lines[-1]==b'': lines=lines[:-1]\nprint('num lines',len(lines))\nc=collections.Counter(l.count(b',') for l in lines)\nprint('comma counts',c.most_common(20))\nprint('quote count lines', sum(1 for l in lines if b'\\\"' in l))\nprint('tab count lines', sum(1 for l in lines if b'\\t' in l))\nprint('empty lines', sum(1 for l in lines if l.strip()==b''))\n\"\n"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 8777,
+   "dur_ms": 560,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nwith open('expected.csv','rb') as f: d=f.read()\nprint('size',len(d),'CR',d.count(b'\\r'),'ends nl',d.endswith(b'\\n'))\nlines=d.split(b'\\n')\nif lines[-1]==b'':lines=lines[:-1]\nprint('lines',len(lines))\nimport collections\nprint(collections.Counter(l.count(b';') for l in lines).most_common())\nfor l in lines[:5]: print(repr(l))\nprint('...')\nfor l in lines[-5:]: print(repr(l))\n# sample random\nimport random\nrandom.seed(1)\nfor i in random.sample(range(len(lines)),10): print(repr(lines[i]))\n\"\n"
+  },
+  {
+   "kind": "model",
+   "at_ms": 9337,
+   "dur_ms": 2168
+  },
+  {
+   "kind": "tool",
+   "at_ms": 11505,
+   "dur_ms": 3844,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\ninp=open('input.csv','rb').read().split(b'\\n')\nexp=open('expected.csv','rb').read().split(b'\\n')\nif inp[-1]==b'':inp=inp[:-1]\nif exp[-1]==b'':exp=exp[:-1]\nbad=0\nspace_inside=0\nempty_field=0\nfor i,(a,b) in enumerate(zip(inp,exp)):\n    parts=a.split(b',')\n    if len(parts)!=3: bad+=1; continue\n    st=[p.strip() for p in parts]\n    if any(b' ' in x for x in st): space_inside+=1\n    if any(x==b'' for x in st): empty_field+=1\n    out=(b';'.join([st[2].upper(),st[1].upper(),st[0].upper()])+b';OK')\n    if out!=b:\n        bad+=1\n        if bad<6: print('MISMATCH',i,repr(a),repr(out),repr(b))\nprint('bad',bad,'space_inside',space_inside,'empty',empty_field)\n\"\n"
+  },
+  {
+   "kind": "model",
+   "at_ms": 15349,
+   "dur_ms": 15445
+  },
+  {
+   "kind": "tool",
+   "at_ms": 30794,
+   "dur_ms": 41,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "head -20 input.csv > /tmp/test.csv && cat > /tmp/t.vim <<'EOF'\ncall setreg('a', \":s/ //g\\<CR>\")\ncall setreg('b', \":s/\\\\v([^,]+),([^,]+),([^,]+)/\\\\3;\\\\2;\\\\1/\\<CR>\")\ncall setreg('c', \"gUUA;OK\\<Esc>\")\n:%normal! @a\n:%normal! @b\n:%normal! @c\nwq\nEOF\nvim -Nu NONE -n -Es /tmp/test.csv -S /tmp/t.vim; echo \"exit=$?\"; echo '--- result'; cat -A /tmp/test.csv; echo '--- expected head'; head -20 expected.csv | cat -A"
+  },
+  {
+   "kind": "model",
+   "at_ms": 30835,
+   "dur_ms": 6770
+  },
+  {
+   "kind": "tool",
+   "at_ms": 37605,
+   "dur_ms": 3982,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport collections\nc=collections.Counter()\nnospace=0\nwith open('input.csv','rb') as f:\n    for line in f:\n        line=line.rstrip(b'\\n')\n        c.update(line)\n        if b' ' not in line: nospace+=1\nprint('charset:',sorted(c))\nprint('lines with no space:',nospace)\nprint('total distinct',len(c))\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 41587,
+   "dur_ms": 4850
+  },
+  {
+   "kind": "tool",
+   "at_ms": 46437,
+   "dur_ms": 21,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/apply_macros.vim",
+    "content": "call setreg('a', \":s/ //ge\\<CR>\")\ncall setreg('b', \":s/\\\\v([^,]+),([^,]+),([^,]+)/\\\\3;\\\\2;\\\\1/e\\<CR>\")\ncall setreg('c', \"gUUA;OK\\<Esc>\")\n:%normal! @a\n:%normal! @b\n:%normal! @c\nwq\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 46458,
+   "dur_ms": 1811
+  },
+  {
+   "kind": "tool",
+   "at_ms": 48269,
+   "dur_ms": 32190,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cp input.csv /tmp/input.orig.csv && python3 -c \"\n# compute keystroke counts of the decoded macro contents\na=':s/ //ge\\r'; b=':s/\\\\\\\\v([^,]+),([^,]+),([^,]+)/\\\\\\\\3;\\\\\\\\2;\\\\\\\\1/e\\r'; c='gUUA;OK\\x1b'\nprint('a',len(a),'b',len(b),'c',len(c),'total',len(a)+len(b)+len(c))\n\" && time vim -Nu NONE -n -Es /app/input.csv -S /app/apply_macros.vim; echo \"vim_exit=$?\"",
+   "timeout": 600000
+  },
+  {
+   "kind": "model",
+   "at_ms": 80459,
+   "dur_ms": 1278
+  },
+  {
+   "kind": "tool",
+   "at_ms": 81737,
+   "dur_ms": 190,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cmp /app/input.csv /app/expected.csv && echo \"IDENTICAL\"; md5sum /app/input.csv /app/expected.csv; ls -l /app/input.csv /app/expected.csv; wc -l /app/input.csv"
+  },
+  {
+   "kind": "model",
+   "at_ms": 81927,
+   "dur_ms": 4079
+  },
+  {
+   "kind": "tool",
+   "at_ms": 86006,
+   "dur_ms": 17,
+   "tool": "Edit",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/apply_macros.vim",
+    "old_string": "wq",
+    "new_string": ":wq",
+    "replace_all": false
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 86023,
+   "dur_ms": 1503
+  },
+  {
+   "kind": "tool",
+   "at_ms": 87526,
+   "dur_ms": 31252,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cp /tmp/input.orig.csv /tmp/full_test.csv && vim -Nu NONE -n -Es /tmp/full_test.csv -S /app/apply_macros.vim; echo \"exit=$?\"; cmp /tmp/full_test.csv /app/expected.csv && echo \"COPY MATCHES EXPECTED\"; echo '--- script contents ---'; cat -A /app/apply_macros.vim; echo '--- final cmp ---'; cmp /app/input.csv /app/expected.csv && echo \"INPUT MATCHES EXPECTED\"",
+   "timeout": 600000
+  },
+  {
+   "kind": "model",
+   "at_ms": 118778,
+   "dur_ms": 8509
+  },
+  {
+   "kind": "tool",
+   "at_ms": 127287,
+   "dur_ms": 20,
+   "tool": "Edit",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/apply_macros.vim",
+    "old_string": "call setreg('c', \"gUUA;OK\\<Esc>\")",
+    "new_string": "call setreg('c', \":s/;OK$//e\\<CR>gUUA;OK\\<Esc>\")",
+    "replace_all": false
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 127307,
+   "dur_ms": 2952
+  },
+  {
+   "kind": "tool",
+   "at_ms": 130259,
+   "dur_ms": 97661,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cp /tmp/input.orig.csv /tmp/full2.csv\nvim -Nu NONE -n -Es /tmp/full2.csv -S /app/apply_macros.vim; echo \"run1_exit=$?\"\ncmp /tmp/full2.csv /app/expected.csv && echo \"run1 MATCHES\"\nvim -Nu NONE -n -Es /tmp/full2.csv -S /app/apply_macros.vim; echo \"run2_exit=$?\"\ncmp /tmp/full2.csv /app/expected.csv && echo \"run2 idempotent MATCHES\"\nvim -Nu NONE -n -Es /app/input.csv -S /app/apply_macros.vim; echo \"rerun_on_final_exit=$?\"\ncmp /app/input.csv /app/expected.csv && echo \"FINAL input.csv MATCHES expected.csv\"\npython3 -c \"\na=':s/ //ge\\r'; b=':s/\\\\\\\\v([^,]+),([^,]+),([^,]+)/\\\\\\\\3;\\\\\\\\2;\\\\\\\\1/e\\r'; c=':s/;OK\\$//e\\rgUUA;OK\\x1b'\nprint('keystrokes a,b,c =',len(a),len(b),len(c),'total =',len(a)+len(b)+len(c))\n\"",
+   "timeout": 600000
+  },
+  {
+   "kind": "model",
+   "at_ms": 227920,
+   "dur_ms": 1396
+  },
+  {
+   "kind": "tool",
+   "at_ms": 229316,
+   "dur_ms": 51,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat /app/apply_macros.vim; echo '---'; cmp /app/input.csv /app/expected.csv && echo OK; ls -l /app/apply_macros.vim /app/input.csv /app/expected.csv"
+  },
+  {
+   "kind": "model",
+   "at_ms": 229367,
+   "dur_ms": 2135
+  }
+ ],
+ "class": "long",
+ "weight_s_per_command": 17.611,
+ "calls": 15,
+ "cell": "TB1a"
+}

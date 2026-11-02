@@ -1,0 +1,169 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "large-scale-text-editing",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 111268,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 253,
+  "output": 6847,
+  "cacheRead": 42752,
+  "cacheWrite": 1856,
+  "total": 51708
+ },
+ "totals": {
+  "model_calls": 8,
+  "tool_calls": 7,
+  "model_ms": 37267,
+  "tool_ms": 72800,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1130,
+   "dur_ms": 674,
+   "tokens_in": 38,
+   "tokens_out": 89,
+   "cache_read": 1792,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1809,
+   "dur_ms": 70,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && ls -la && wc -l input.csv expected.csv && head -5 input.csv && echo \"---EXPECTED---\" && head -5 expected.csv"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1879,
+   "dur_ms": 688,
+   "tokens_in": 21,
+   "tokens_out": 91,
+   "cache_read": 1792,
+   "cache_write": 384,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2568,
+   "dur_ms": 101,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && sed -n '1,20p' input.csv | cat -A && echo \"---EXPECTED---\" && sed -n '1,20p' expected.csv | cat -A"
+  },
+  {
+   "kind": "model",
+   "at_ms": 2669,
+   "dur_ms": 12492,
+   "tokens_in": 36,
+   "tokens_out": 2457,
+   "cache_read": 2240,
+   "cache_write": 640,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 15162,
+   "dur_ms": 138,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && awk -F',' 'NF!=3 {print NR\": \"$0; c++} END{print \"bad_field_count=\"c+0}' input.csv | head -20 && echo \"---\" && awk -F',' 'NF!=4 {print NR\": \"$0; c++} END{print \"expected_bad=\"c+0}' expected.csv | head -20 && echo \"--- trailing/newline check ---\" && tail -c 50 input.csv | cat -A && tail -c 50 expected.csv | cat -A"
+  },
+  {
+   "kind": "model",
+   "at_ms": 15300,
+   "dur_ms": 1575,
+   "tokens_in": 61,
+   "tokens_out": 256,
+   "cache_read": 5312,
+   "cache_write": 384,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 16876,
+   "dur_ms": 1435,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport csv\nwith open('input.csv', newline='') as fi, open('expected.csv', newline='') as fe:\n    for i,(li,le) in enumerate(zip(fi,fe),1):\n        parts=[p.strip() for p in li.rstrip('\\n').split(',')]\n        got=';'.join([parts[2].upper(),parts[1].upper(),parts[0].upper(),'OK'])+'\\n'\n        if got!=le:\n            print('mismatch',i,repr(li),repr(le),repr(got)); break\n    else:\n        print('all match')\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 18313,
+   "dur_ms": 8502,
+   "tokens_in": 11,
+   "tokens_out": 1498,
+   "cache_read": 5952,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 26815,
+   "dur_ms": 35713,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && cat > /tmp/test_macros.vim <<'VIM'\ncall setreg('a', \":s/ //g\\<CR>gUU:s/,/;/g\\<CR>\")\ncall setreg('b', \"A;OK\\<Esc>\")\ncall setreg('c', \":s/\\\\([^;]*\\\\);\\\\([^;]*\\\\);\\\\([^;]*\\\\)/\\\\3;\\\\2;\\\\1/\\<CR>\")\n:%normal! @a\n:%normal! @b\n:%normal! @c\nwq\nVIM\ncp input.csv /tmp/test.csv\nvim -Nu NONE -n -Es /tmp/test.csv -S /tmp/test_macros.vim\necho \"exit=$?\"\ncmp /tmp/test.csv expected.csv && echo MATCH || { echo MISMATCH; head -5 /tmp/test.csv; }"
+  },
+  {
+   "kind": "model",
+   "at_ms": 62528,
+   "dur_ms": 3899,
+   "tokens_in": 55,
+   "tokens_out": 712,
+   "cache_read": 7488,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 66427,
+   "dur_ms": 35305,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && cat > apply_macros.vim <<'VIM'\ncall setreg('a', \":s/ //g\\<CR>gUU:s/,/;/g\\<CR>\")\ncall setreg('b', \"A;OK\\<Esc>\")\ncall setreg('c', \":s/\\\\([^;]*\\\\);\\\\([^;]*\\\\);\\\\([^;]*\\\\)/\\\\3;\\\\2;\\\\1/\\<CR>\")\n:%normal! @a\n:%normal! @b\n:%normal! @c\n:wq\nVIM\ncp input.csv /tmp/input.orig.csv\ncat -A apply_macros.vim\necho \"--- running ---\"\nvim -Nu NONE -n -Es /app/input.csv -S /app/apply_macros.vim\necho \"exit=$?\"\ncmp /app/input.csv /app/expected.csv && echo BYTE_MATCH || echo NOT_MATCH"
+  },
+  {
+   "kind": "model",
+   "at_ms": 101732,
+   "dur_ms": 8666,
+   "tokens_in": 4,
+   "tokens_out": 1638,
+   "cache_read": 8192,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 110398,
+   "dur_ms": 38,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && echo \"Script lines:\" && nl -ba apply_macros.vim && echo \"--- validation ---\" && awk '!/^call setreg\\('\\''[abc]'\\'', \".*\"\\)$/ && !/^:%normal! @[abc]$/ && !/^:wq$/ {print \"DISALLOWED: \"$0; bad=1} END{if(!bad) print \"all lines allowed\"}' apply_macros.vim && echo \"--- final check ---\" && cmp input.csv expected.csv && echo \"input.csv == expected.csv\" && wc -c input.csv expected.csv"
+  },
+  {
+   "kind": "model",
+   "at_ms": 110436,
+   "dur_ms": 771,
+   "tokens_in": 27,
+   "tokens_out": 106,
+   "cache_read": 9984,
+   "cache_write": 192,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "long",
+ "weight_s_per_command": 17.611,
+ "calls": 7,
+ "cell": "TB1e"
+}

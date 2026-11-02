@@ -1,0 +1,683 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "cobol-modernization",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 264442,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 705,
+  "output": 49891,
+  "cacheRead": 889280,
+  "cacheWrite": 27968,
+  "total": 967844
+ },
+ "totals": {
+  "model_calls": 21,
+  "tool_calls": 20,
+  "model_ms": 239977,
+  "tool_ms": 23825,
+  "sandbox_ms": 13346
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 523,
+   "dur_ms": 1302
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1825,
+   "dur_ms": 162,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\necho \"=== TREE ===\"\nfind . -type f | head -100\necho \"=== PROGRAM ===\"\ncat src/program.cbl\necho \"=== INPUT.DAT (hexdump) ===\"\nxxd src/INPUT.DAT | head -50\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 1907,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 44.2,
+     "phases_us": {
+      "acquire": 83,
+      "resume": 21365,
+      "mount": 19175,
+      "run": 7931,
+      "destroy": 25984
+     },
+     "cold": null,
+     "vm": "vm-134"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 1987,
+   "dur_ms": 1553
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3540,
+   "dur_ms": 132,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\necho \"=== ls -la ===\"\nls -la src data\necho \"=== INPUT.DAT od ===\"\nod -c src/INPUT.DAT\necho \"=== ACCOUNTS.DAT od ===\"\nod -c data/ACCOUNTS.DAT\necho \"=== BOOKS.DAT od ===\"\nod -c data/BOOKS.DAT\necho \"=== TRANSACTIONS.DAT od ===\"\nod -c data/TRANSACTIONS.DAT\necho \"=== sizes ===\"\nwc -c src/INPUT.DAT data/*.DAT\necho \"=== cobc ===\"\nwhich cobc && cobc --version | head -2\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 3596,
+     "dur_ms": 64,
+     "exit": 0,
+     "cpu_ms": 72.2,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 21709,
+      "mount": 19203,
+      "run": 22415,
+      "destroy": 19958
+     },
+     "cold": null,
+     "vm": "vm-136"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 3672,
+   "dur_ms": 4196
+  },
+  {
+   "kind": "tool",
+   "at_ms": 7868,
+   "dur_ms": 333,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nmkdir -p /tmp/orig && cp data/*.DAT /tmp/orig/ && cp src/INPUT.DAT /tmp/orig/\ncobc -xo /tmp/prog src/program.cbl 2>&1\necho \"=== RUN ===\"\n/tmp/prog 2>&1\necho \"=== ACCOUNTS after ===\"\nod -c data/ACCOUNTS.DAT\necho \"=== BOOKS after ===\"\nod -c data/BOOKS.DAT\necho \"=== TRANSACTIONS after ===\"\nod -c data/TRANSACTIONS.DAT\necho \"=== sizes ===\"\nwc -c data/*.DAT\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 7922,
+     "dur_ms": 263,
+     "exit": 0,
+     "cpu_ms": 331.9,
+     "phases_us": {
+      "acquire": 82,
+      "resume": 21705,
+      "mount": 19384,
+      "run": 212421,
+      "destroy": 28162
+     },
+     "cold": null,
+     "vm": "vm-139"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 8201,
+   "dur_ms": 6506
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14707,
+   "dur_ms": 1041,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncobc -xo /tmp/prog src/program.cbl 2>/dev/null\n\nrun_case() {\n  name=\"$1\"; input=\"$2\"\n  rm -rf data && cp -r /tmp/orig data\n  printf '%s' \"$input\" > src/INPUT.DAT\n  echo \"##### CASE: $name  input=[$input] len=${#input}\"\n  /tmp/prog 2>&1\n  echo \"--- ACCOUNTS ---\"; od -An -c data/ACCOUNTS.DAT | tail -5\n  echo \"--- BOOKS ---\"; od -An -c data/BOOKS.DAT | tail -4\n  echo \"--- TRANSACTIONS ---\"; od -An -c data/TRANSACTIONS.DAT | tail -4\n  echo\n}\n\nrun_case \"full valid 22\" \"U002U001B0010000000200\"\nrun_case \"short valid 15\" \"U002U001B001200\"\nrun_case \"zero amount full\" \"U002U001B0010000000000\"\nrun_case \"buyer=seller full\" \"U002U002B0010000000100\"\nrun_case \"big amount overflow\" \"U002U001B0010000001800\"\nrun_case \"amount 9999999999\" \"U002U001B0019999999999\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 15430,
+     "dur_ms": 303,
+     "exit": 0,
+     "cpu_ms": 392.0,
+     "phases_us": {
+      "acquire": 6,
+      "resume": 22315,
+      "mount": 19129,
+      "run": 246204,
+      "destroy": 34391
+     },
+     "cold": null,
+     "vm": "vm-143"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 15748,
+   "dur_ms": 2893
+  },
+  {
+   "kind": "tool",
+   "at_ms": 18641,
+   "dur_ms": 338,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\necho \"=== /workspace ===\"; ls -la /workspace /workspace/data /workspace/src 2>&1\necho \"=== /app ===\"; ls -la /app /app/data /app/src 2>&1\necho \"=== find DAT ===\"; find / -name '*.DAT' 2>/dev/null | head -30\necho \"=== find program.cbl ===\"; find / -name 'program.cbl' 2>/dev/null | head\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 18695,
+     "dur_ms": 268,
+     "exit": 0,
+     "cpu_ms": 266.4,
+     "phases_us": {
+      "acquire": 63,
+      "resume": 21978,
+      "mount": 19581,
+      "run": 213142,
+      "destroy": 32988
+     },
+     "cold": null,
+     "vm": "vm-147"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 18979,
+   "dur_ms": 2065
+  },
+  {
+   "kind": "tool",
+   "at_ms": 21044,
+   "dur_ms": 132,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nmkdir -p data\ncp /opt/testbed-src/data/ACCOUNTS.DAT /opt/testbed-src/data/BOOKS.DAT /opt/testbed-src/data/TRANSACTIONS.DAT data/\ncp /opt/testbed-src/src/INPUT.DAT src/INPUT.DAT\necho \"=== INPUT ===\"; od -c src/INPUT.DAT\necho \"=== ACCOUNTS ===\"; od -c data/ACCOUNTS.DAT\necho \"=== BOOKS ===\"; od -c data/BOOKS.DAT\necho \"=== TRANSACTIONS ===\"; od -c data/TRANSACTIONS.DAT\nmkdir -p .orig && cp data/*.DAT .orig/ && cp src/INPUT.DAT .orig/\necho restored\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 21098,
+     "dur_ms": 61,
+     "exit": 0,
+     "cpu_ms": 54.3,
+     "phases_us": {
+      "acquire": 61,
+      "resume": 21396,
+      "mount": 18997,
+      "run": 14946,
+      "destroy": 24071
+     },
+     "cold": null,
+     "vm": "vm-149"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 21176,
+   "dur_ms": 2597
+  },
+  {
+   "kind": "tool",
+   "at_ms": 23773,
+   "dur_ms": 1025,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncobc -xo /tmp/prog src/program.cbl 2>&1\n\nrun_case() {\n  name=\"$1\"; input=\"$2\"\n  rm -rf data && cp -r .orig data && rm -f data/INPUT.DAT\n  printf '%s' \"$input\" > src/INPUT.DAT\n  echo \"##### CASE: $name  len=${#input}\"\n  /tmp/prog 2>&1\n  echo \"--- ACCOUNTS ---\"; od -An -c data/ACCOUNTS.DAT\n  echo \"--- BOOKS ---\"; od -An -c data/BOOKS.DAT\n  echo \"--- TRANSACTIONS ---\"; od -An -c data/TRANSACTIONS.DAT\n  echo\n}\n\nrun_case \"full valid 22\" \"U002U001B0010000000200\"\nrun_case \"short valid 15\" \"U002U001B001200\"\nrun_case \"zero amount full\" \"U002U001B0010000000000\"\nrun_case \"buyer=seller full\" \"U002U002B0010000000100\"\nrun_case \"amount 1800 full\" \"U002U001B0010000001800\"\nrun_case \"amount 9999999999\" \"U002U001B0019999999999\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 24476,
+     "dur_ms": 303,
+     "exit": 0,
+     "cpu_ms": 391.7,
+     "phases_us": {
+      "acquire": 61,
+      "resume": 21616,
+      "mount": 19149,
+      "run": 251298,
+      "destroy": 29671
+     },
+     "cold": null,
+     "vm": "vm-151"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 24798,
+   "dur_ms": 7809
+  },
+  {
+   "kind": "tool",
+   "at_ms": 32607,
+   "dur_ms": 1134,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncobc -xo /tmp/prog src/program.cbl 2>&1\n\nrun_case() {\n  name=\"$1\"; input=\"$2\"\n  rm -rf data && cp -r .orig data && rm -f data/INPUT.DAT\n  printf '%s' \"$input\" > src/INPUT.DAT\n  echo \"##### CASE: $name  len=${#input}\"\n  /tmp/prog 2>&1; echo \"[exit=$?]\"\n  echo \"--- ACCOUNTS ---\"; od -An -c data/ACCOUNTS.DAT | tr -s ' ' | sed 's/^ //'\n  echo \"--- BOOKS ---\"; od -An -c data/BOOKS.DAT | tr -s ' ' | sed 's/^ //'\n  echo \"--- TRANSACTIONS ---\"; od -An -c data/TRANSACTIONS.DAT | tr -s ' ' | sed 's/^ //'\n  echo\n}\n\nrun_case \"valid full 22\" \"U001U002B0010000000200\"\nrun_case \"valid short 15\" \"U001U002B001200\"\nrun_case \"buyer not exist\" \"U009U002B0010000000200\"\nrun_case \"seller not exist\" \"U001U009B0010000000200\"\nrun_case \"book not exist\" \"U001U002B0090000000200\"\nrun_case \"seller not owner\" \"U001U003B0010000000200\"\nrun_case \"negative balance\" \"U001U002B0010000001800\"\nrun_case \"amount 9999999999\" \"U001U002B0019999999999\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 33379,
+     "dur_ms": 335,
+     "exit": 0,
+     "cpu_ms": 440.2,
+     "phases_us": {
+      "acquire": 96,
+      "resume": 22145,
+      "mount": 19599,
+      "run": 282294,
+      "destroy": 30577
+     },
+     "cold": null,
+     "vm": "vm-153"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 33741,
+   "dur_ms": 17385
+  },
+  {
+   "kind": "tool",
+   "at_ms": 51126,
+   "dur_ms": 1028,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncobc -xo /tmp/prog src/program.cbl 2>&1\n\nrun_case() {\n  name=\"$1\"; input=\"$2\"\n  rm -rf data && cp -r .orig data && rm -f data/INPUT.DAT\n  printf '%s' \"$input\" > src/INPUT.DAT\n  echo \"##### $name len=${#input}\"\n  /tmp/prog 2>&1; echo \"[exit=$?]\"\n  echo -n \"U001 bal: \"; dd if=data/ACCOUNTS.DAT bs=34 skip=0 count=1 2>/dev/null | od -An -c | tr -d '\\n'; echo\n  echo -n \"U002 bal: \"; dd if=data/ACCOUNTS.DAT bs=34 skip=1 count=1 2>/dev/null | od -An -c | tr -d '\\n'; echo\n  echo -n \"last trans: \"; tail -c 22 data/TRANSACTIONS.DAT | od -An -c | tr -d '\\n'; echo\n  echo -n \"B001 rec: \"; dd if=data/BOOKS.DAT bs=28 count=1 2>/dev/null | od -An -c | tr -d '\\n'; echo\n  echo\n}\n# 22 bytes: 4+4+4+10\nrun_case \"amount 200 + 7 spaces\" \"U001U002B001200       \"\nrun_case \"amount 200 + 7 NULs\" \"$(printf 'U001U002B001200\\0\\0\\0\\0\\0\\0\\0')\"\nrun_case \"amount 200 + 7 x\" \"U001U002B001200xxxxxxx\"\nrun_case \"amount 0000000200\" \"U001U002B0010000000200\"\nrun_case \"short amount '1'\" \"U001U002B0011\"\nrun_case \"short amount '12'\" \"U001U002B00112\"\nrun_case \"short 12 no amount\" \"U001U002B001\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 51785,
+     "dur_ms": 344,
+     "exit": 0,
+     "cpu_ms": 433.3,
+     "phases_us": {
+      "acquire": 53,
+      "resume": 22171,
+      "mount": 19670,
+      "run": 294945,
+      "destroy": 26129
+     },
+     "cold": null,
+     "vm": "vm-155"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 52154,
+   "dur_ms": 33454
+  },
+  {
+   "kind": "tool",
+   "at_ms": 85608,
+   "dur_ms": 929,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncobc -xo /tmp/prog src/program.cbl 2>&1\n\nrun_case() {\n  name=\"$1\"; input=\"$2\"\n  rm -rf data && cp -r .orig data && rm -f data/INPUT.DAT\n  printf '%s' \"$input\" > src/INPUT.DAT\n  echo \"##### $name len=${#input}\"\n  /tmp/prog 2>&1 | tail -1\n  echo -n \"trans last22 hex: \"; tail -c 22 data/TRANSACTIONS.DAT | od -An -t x1 | tr -d '\\n'; echo\n  echo -n \"trans last22 chr: \"; tail -c 22 data/TRANSACTIONS.DAT | od -An -c | tr -d '\\n'; echo\n}\nrun_case \"short 200\" \"U001U002B001200\"\nrun_case \"short 1\" \"U001U002B0011\"\nrun_case \"short 1x\" \"U001U002B0011x\"\nrun_case \"full 200+7sp\" \"U001U002B001200       \"\nrun_case \"full 1 + 9sp\" \"U001U002B0011         \"\nrun_case \"full 1 + 9 zeros\" \"U001U002B0011000000000\"\nrun_case \"full 200+7A\" \"U001U002B001200AAAAAAA\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 86214,
+     "dur_ms": 313,
+     "exit": 0,
+     "cpu_ms": 414.2,
+     "phases_us": {
+      "acquire": 102,
+      "resume": 22089,
+      "mount": 19531,
+      "run": 259465,
+      "destroy": 31420
+     },
+     "cold": null,
+     "vm": "vm-159"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 86537,
+   "dur_ms": 23142
+  },
+  {
+   "kind": "tool",
+   "at_ms": 109679,
+   "dur_ms": 507,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncat > probe.cbl <<'CBL'\n       IDENTIFICATION DIVISION.\n       PROGRAM-ID. PROBE.\n       ENVIRONMENT DIVISION.\n       INPUT-OUTPUT SECTION.\n       FILE-CONTROL.\n           SELECT IN-F ASSIGN TO \"data/INPUT.DAT\"\n               ORGANIZATION IS SEQUENTIAL.\n           SELECT OUT-F ASSIGN TO \"probe.out\"\n               ORGANIZATION IS SEQUENTIAL.\n       DATA DIVISION.\n       FILE SECTION.\n       FD IN-F.\n       01 R PIC X(22).\n       FD OUT-F.\n       01 O PIC X(22).\n       PROCEDURE DIVISION.\n       MAIN.\n           OPEN INPUT IN-F\n           OPEN OUTPUT OUT-F\n           READ IN-F\n               AT END DISPLAY \"AT-END\"\n               NOT AT END\n                   MOVE R TO O\n                   WRITE O\n           END-READ\n           CLOSE IN-F OUT-F\n           STOP RUN.\nCBL\ncobc -xo /tmp/probe probe.cbl 2>&1\nfor s in \"AB\" \"ABCD\" \"ABCDEFGHIJ\" \"U001U002B0011\"; do\n  printf '%s' \"$s\" > data/INPUT.DAT\n  rm -f probe.out\n  /tmp/probe >/dev/null 2>&1\n  echo \"input=[$s] len=${#s}\"\n  echo -n \"  out hex: \"; od -An -t x1 probe.out | tr -d '\\n'; echo\ndone\n# Also probe reading a truncated ACCOUNTS file (34-byte records) for padding\ncat > probe2.cbl <<'CBL'\n       IDENTIFICATION DIVISION.\n       PROGRAM-ID. PROBE2.\n       ENVIRONMENT DIVISION.\n       INPUT-OUTPUT SECTION.\n       FILE-CONTROL.\n           SELECT IN-F ASSIGN TO \"data/ACCOUNTS.DAT\"\n               ORGANIZATION IS SEQUENTIAL.\n           SELECT OUT-F ASSIGN TO \"probe2.out\"\n               ORGANIZATION IS SEQUENTIAL.\n       DATA DIVISION.\n       FILE SECTION.\n       FD IN-F.\n       01 R PIC X(34).\n       FD OUT-F.\n       01 O PIC X(34).\n       WORKING-STORAGE SECTION.\n       01 EOFX PIC X VALUE 'N'.\n       PROCEDURE DIVISION.\n       MAIN.\n           OPEN INPUT IN-F\n           OPEN OUTPUT OUT-F\n           PERFORM UNTIL EOFX = 'Y'\n             READ IN-F\n               AT END MOVE 'Y' TO EOFX\n               NOT AT END\n                 MOVE R TO O\n                 WRITE O\n             END-READ\n           END-PERFORM\n           CLOSE IN-F OUT-F\n           STOP RUN.\nCBL\ncobc -xo /tmp/probe2 probe2.cbl 2>&1\n# restore accounts then truncate last record to 10 bytes\ncp .orig/ACCOUNTS.DAT data/ACCOUNTS.DAT\ntruncate -s $((34*2+10)) data/ACCOUNTS.DAT\nrm -f probe2.out\n/tmp/probe2 2>&1\necho \"truncated ACCOUNTS probe out size: $(wc -c < probe2.out)\"\nod -An -c probe2.out\n# restore\ncp .orig/ACCOUNTS.DAT data/ACCOUNTS.DAT\nrm -f probe.cbl probe2.cbl probe.out probe2.out\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 109734,
+     "dur_ms": 403,
+     "exit": 0,
+     "cpu_ms": 478.6,
+     "phases_us": {
+      "acquire": 65,
+      "resume": 21756,
+      "mount": 19225,
+      "run": 343450,
+      "destroy": 37723
+     },
+     "cold": null,
+     "vm": "vm-163"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 110186,
+   "dur_ms": 12379
+  },
+  {
+   "kind": "tool",
+   "at_ms": 122565,
+   "dur_ms": 1331,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncobc -xo /tmp/prog src/program.cbl 2>&1\n\n# input: buyer U001 seller U002 book B001 + 10-byte amount where only last byte = c\nrun_lastbyte() {\n  label=\"$1\"; c=\"$2\"\n  rm -rf data && cp -r .orig data && rm -f data/INPUT.DAT\n  printf 'U001U002B001000000000%s' \"$c\" > src/INPUT.DAT\n  out=$(/tmp/prog 2>&1 | tail -1)\n  b1=$(dd if=data/ACCOUNTS.DAT bs=34 skip=0 count=1 2>/dev/null | tail -c 10)\n  b2=$(dd if=data/ACCOUNTS.DAT bs=34 skip=1 count=1 2>/dev/null | tail -c 10)\n  echo \"c=[$label] -> U001=$b1 U002=$b2  ($out)\"\n}\nrun_lastbyte \"slash /\" \"/\"\nrun_lastbyte \"colon :\" \":\"\nrun_lastbyte \"A\" \"A\"\nrun_lastbyte \"z\" \"z\"\nrun_lastbyte \"minus -\" \"-\"\nrun_lastbyte \"plus +\" \"+\"\nrun_lastbyte \"space\" \" \"\nrun_lastbyte \"digit 7\" \"7\"\n\n# leading sign cases, amount = sign + 9 zeros\nrun_sign() {\n  label=\"$1\"; amt=\"$2\"\n  rm -rf data && cp -r .orig data && rm -f data/INPUT.DAT\n  printf 'U001U002B001%s' \"$amt\" > src/INPUT.DAT\n  out=$(/tmp/prog 2>&1 | tail -1)\n  b1=$(dd if=data/ACCOUNTS.DAT bs=34 skip=0 count=1 2>/dev/null | tail -c 10)\n  b2=$(dd if=data/ACCOUNTS.DAT bs=34 skip=1 count=1 2>/dev/null | tail -c 10)\n  tr=$(tail -c 22 data/TRANSACTIONS.DAT)\n  echo \"amt=[$label] -> U001=$b1 U002=$b2 trans=[$tr] ($out)\"\n}\nrun_sign \"-000000001\" \"-000000001\"\nrun_sign \"+000000001\" \"+000000001\"\nrun_sign \"-000000123\" \"-000000123\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 123528,
+     "dur_ms": 342,
+     "exit": 0,
+     "cpu_ms": 463.4,
+     "phases_us": {
+      "acquire": 89,
+      "resume": 21736,
+      "mount": 19269,
+      "run": 291898,
+      "destroy": 28473
+     },
+     "cold": null,
+     "vm": "vm-165"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 123896,
+   "dur_ms": 15246
+  },
+  {
+   "kind": "tool",
+   "at_ms": 139142,
+   "dur_ms": 377,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncobc -xo /tmp/prog src/program.cbl 2>&1\n\n# buyer==seller valid: U002 is owner of B001\nrm -rf data && cp -r .orig data && rm -f data/INPUT.DAT\nprintf 'U002U002B0010000000100' > src/INPUT.DAT\necho \"=== buyer==seller valid ===\"\n/tmp/prog; echo \"[exit=$?]\"\necho -n \"accounts: \"; od -An -c data/ACCOUNTS.DAT | tr -d '\\n'; echo\necho -n \"books:    \"; od -An -c data/BOOKS.DAT | tr -d '\\n'; echo\necho -n \"trans sz: \"; wc -c < data/TRANSACTIONS.DAT\n\n# buyer==seller but the matching account is U001 (not owner) -> validation fail\nrm -rf data && cp -r .orig data && rm -f data/INPUT.DAT\nprintf 'U001U001B0010000000100' > src/INPUT.DAT\necho \"=== buyer==seller not owner ===\"\n/tmp/prog; echo \"[exit=$?]\"\n\n# Amount readable / normal complete example for sanity\nrm -rf data && cp -r .orig data && rm -f data/INPUT.DAT\nprintf 'U001U002B0010000000050' > src/INPUT.DAT\necho \"=== normal 50 ===\"\n/tmp/prog; echo \"[exit=$?]\"\ntail -c 22 data/TRANSACTIONS.DAT | od -An -c\n\n# truncated ACCOUNTS last record + valid txn that touches U003? make seller U003 owned book? B003 owner U002.\n# Use buyer U003 to see rewrite of partial record\necho \"=== truncated accounts, buyer U003 rewrite ===\"\nrm -rf data && cp -r .orig data && rm -f data/INPUT.DAT\ntruncate -s $((34*2+10)) data/ACCOUNTS.DAT\nprintf 'U003U002B0010000000100' > src/INPUT.DAT\n/tmp/prog; echo \"[exit=$?]\"\necho -n \"accounts size: \"; wc -c < data/ACCOUNTS.DAT\nod -An -c data/ACCOUNTS.DAT | tail -6\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 139196,
+     "dur_ms": 287,
+     "exit": 0,
+     "cpu_ms": 362.2,
+     "phases_us": {
+      "acquire": 70,
+      "resume": 21797,
+      "mount": 19317,
+      "run": 234965,
+      "destroy": 30326
+     },
+     "cold": null,
+     "vm": "vm-169"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 139519,
+   "dur_ms": 39131
+  },
+  {
+   "kind": "tool",
+   "at_ms": 178650,
+   "dur_ms": 2884,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncobc -xo /tmp/prog src/program.cbl 2>&1\nrun() {\n  rm -rf data && cp -r .orig data && rm -f data/INPUT.DAT\n  printf '%s' \"$2\" > src/INPUT.DAT\n  /tmp/prog >/dev/null 2>&1\n  b1=$(dd if=data/ACCOUNTS.DAT bs=34 skip=0 count=1 2>/dev/null | tail -c 10)\n  b2=$(dd if=data/ACCOUNTS.DAT bs=34 skip=1 count=1 2>/dev/null | tail -c 10)\n  echo \"$1: U001=$b1 U002=$b2 trans_last22=[$(tail -c 22 data/TRANSACTIONS.DAT)]\"\n}\nrun \"leading 7sp+200\" \"U001U002B001       200\"\nrun \"mid sp 20 0   \" \"U001U002B00120 0      \"\nrun \"all spaces\" \"U001U002B001          \"\nrun \"leading zeros 200\" \"U001U002B0010000000200\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 181210,
+     "dur_ms": 292,
+     "exit": 0,
+     "cpu_ms": 371.3,
+     "phases_us": {
+      "acquire": 108,
+      "resume": 21745,
+      "mount": 19134,
+      "run": 237880,
+      "destroy": 32353
+     },
+     "cold": null,
+     "vm": "vm-170"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 181534,
+   "dur_ms": 25582
+  },
+  {
+   "kind": "tool",
+   "at_ms": 207116,
+   "dur_ms": 128,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx put program.py <<'PYEOF'\n#!/usr/bin/env python3\n\"\"\"Python re-implementation of src/program.cbl (BOOKFORUM).\n\nReads one transaction from src/INPUT.DAT, validates buyer/seller/book\nagainst data/ACCOUNTS.DAT and data/BOOKS.DAT, and if valid updates the\naccount balances, transfers book ownership, and appends a record to\ndata/TRANSACTIONS.DAT.\n\nAll files use GnuCOBOL fixed-length, display-numeric sequential records:\n  ACCOUNT     : id X(4) | name X(20) | balance 9(10)        = 34 bytes\n  BOOK        : id X(4) | title X(20) | owner X(4)          = 28 bytes\n  TRANSACTION : book X(4) | amount 9(10) | seller X(4) | buyer X(4) = 22 bytes\n  INPUT       : buyer X(4) | seller X(4) | book X(4) | amount 9(10) = 22 bytes\n\"\"\"\n\nimport sys\n\nACCOUNT_LEN = 34\nBOOK_LEN = 28\nTRANSACTION_LEN = 22\nINPUT_LEN = 22\n\nACCOUNTS_PATH = \"data/ACCOUNTS.DAT\"\nBOOKS_PATH = \"data/BOOKS.DAT\"\nTRANSACTIONS_PATH = \"data/TRANSACTIONS.DAT\"\nINPUT_PATH = \"src/INPUT.DAT\"\n\n\n# ---------------------------------------------------------------------------\n# GnuCOBOL DISPLAY numeric helpers\n# ---------------------------------------------------------------------------\ndef _digit(byte):\n    \"\"\"Value of one byte in a DISPLAY numeric field, as GnuCOBOL sees it.\n\n    Digits are their face value; space and NUL are treated as zero.  Any\n    other byte falls back to the (byte - '0') arithmetic GnuCOBOL performs\n    when numeric checking is not enabled.\n    \"\"\"\n    if 0x30 <= byte <= 0x39:\n        return byte - 0x30\n    if byte == 0x20 or byte == 0x00:\n        return 0\n    return byte - 0x30\n\n\ndef parse_display_int(data):\n    \"\"\"Convert an unsigned DISPLAY numeric byte string to an integer.\"\"\"\n    value = 0\n    for byte in data:\n        value = value * 10 + _digit(byte)\n    return value\n\n\ndef format_display_int(value, width):\n    \"\"\"Store an integer into an unsigned DISPLAY field of `width` digits.\n\n    COBOL drops the sign for unsigned targets and keeps the low-order\n    digits when the magnitude exceeds the field width.\n    \"\"\"\n    return (\"%0*d\" % (width, abs(value) % (10 ** width))).encode(\"ascii\")\n\n\n# ---------------------------------------------------------------------------\n# Fixed-length sequential file emulation\n# ---------------------------------------------------------------------------\nclass SequentialReader:\n    \"\"\"Emulates GnuCOBOL sequential READ on fixed-length records.\n\n    A final short record is still returned (READ status 04); the bytes\n    beyond the data read are left over from the previous record, exactly\n    as GnuCOBOL leaves its record area untouched.  The buffer starts\n    zero-filled, which is the state of a fresh FILE SECTION record area.\n    \"\"\"\n\n    def __init__(self, data, record_len):\n        self._data = data\n        self._record_len = record_len\n        self._buffer = bytearray(record_len)\n        self._offset = 0\n        self._start = 0\n\n    def read(self):\n        \"\"\"Return (record_bytes, partial) or None at end of file.\"\"\"\n        if self._offset >= len(self._data):\n            return None\n        self._start = self._offset\n        chunk = self._data[self._offset:self._offset + self._record_len]\n        self._buffer[:len(chunk)] = chunk\n        self._offset += len(chunk)\n        return bytes(self._buffer), len(chunk) < self._record_len\n\n\n# ---------------------------------------------------------------------------\n# Main program\n# ---------------------------------------------------------------------------\ndef read_input():\n    \"\"\"OPEN INPUT / READ / CLOSE, returning the first record or None.\"\"\"\n    try:\n        with open(INPUT_PATH, \"rb\") as handle:\n            data = handle.read()\n    except OSError as exc:\n        sys.stderr.write(\"libcob: error: %s for file INPUT-FILE ('%s')\\n\"\n                         % (exc.strerror, INPUT_PATH))\n        sys.exit(1)\n\n    if not data:\n        return None\n    # The record area is zero-filled and a short read leaves the rest 0x00.\n    return data[:INPUT_LEN].ljust(INPUT_LEN, b\"\\x00\")\n\n\ndef validate(buyer_id, seller_id, book_id):\n    \"\"\"VALIDATE-USERS-AND-BOOK.\"\"\"\n    buyer_found = False\n    seller_found = False\n    book_found = False\n    valid_owner = False\n\n    try:\n        with open(ACCOUNTS_PATH, \"rb\") as handle:\n            accounts = handle.read()\n    except OSError as exc:\n        sys.stderr.write(\"libcob: error: %s for file ACCOUNTS-FILE ('%s')\\n\"\n                         % (exc.strerror, ACCOUNTS_PATH))\n        sys.exit(1)\n\n    reader = SequentialReader(accounts, ACCOUNT_LEN)\n    while True:\n        item = reader.read()\n        if item is None:\n            break\n        record = item[0]\n        if record[0:4] == buyer_id:\n            buyer_found = True\n        if record[0:4] == seller_id:\n            seller_found = True\n\n    try:\n        with open(BOOKS_PATH, \"rb\") as handle:\n            books = handle.read()\n    except OSError as exc:\n        sys.stderr.write(\"libcob: error: %s for file BOOKS-FILE ('%s')\\n\"\n                         % (exc.strerror, BOOKS_PATH))\n        sys.exit(1)\n\n    reader = SequentialReader(books, BOOK_LEN)\n    while True:\n        item = reader.read()\n        if item is None:\n            break\n        record = item[0]\n        if record[0:4] == book_id:\n            book_found = True\n            if record[24:28] == seller_id:\n                valid_owner = True\n\n    # DISPLAY \" \" at the end of VALIDATE-USERS-AND-BOOK\n    print(\" \")\n    return buyer_found and seller_found and book_found and valid_owner\n\n\ndef _load(path, record_len):\n    try:\n        with open(path, \"rb\") as handle:\n            return bytearray(handle.read())\n    except OSError as exc:\n        sys.stderr.write(\"libcob: error: %s for file '%s'\\n\"\n                         % (exc.strerror, path))\n        sys.exit(1)\n\n\ndef _abort_rewrite(path, raw):\n    \"\"\"Emulate a libcob status-43 REWRITE failure: flush prior rewrites.\"\"\"\n    with open(path, \"wb\") as handle:\n        handle.write(raw)\n    sys.stderr.write(\"libcob: error: READ must be executed first (status = 43) \"\n                     \"for file '%s'\\n\" % path)\n    sys.stderr.write(\"libcob: warning: implicit CLOSE of '%s'\\n\" % path)\n    sys.exit(1)\n\n\ndef process_transaction(buyer_id, seller_id, book_id, amount_bytes):\n    \"\"\"PROCESS-TRANSACTION.\"\"\"\n    amount = parse_display_int(amount_bytes)\n\n    # --- ACCOUNTS: subtract from buyer, add to seller (single pass) ---\n    raw = _load(ACCOUNTS_PATH, ACCOUNT_LEN)\n    reader = SequentialReader(raw, ACCOUNT_LEN)\n    buffer = bytearray(ACCOUNT_LEN)\n    offset = 0\n    while True:\n        item = reader.read()\n        if item is None:\n            break\n        record, partial = item\n        start = offset\n        offset += len(raw[start:start + ACCOUNT_LEN]) if False else 0  # placeholder\n        # Track the file position of this record (same logic as the reader).\n        # Recompute explicitly below for clarity.\n        is_buyer = record[0:4] == buyer_id\n        is_seller = record[0:4] == seller_id\n\n        if is_buyer:\n            if partial:\n                # REWRITE after a short (status 04) READ fails.\n                _abort_rewrite(ACCOUNTS_PATH, bytes(raw))\n            balance = parse_display_int(record[24:34])\n            record = (record[:24]\n                      + format_display_int(balance - amount, 10)\n                      + record[34:])\n            buffer[:] = record\n            raw[_record_start: _record_start + ACCOUNT_LEN] = record\n\n        if is_seller:\n            if partial or is_buyer:\n                # Same record was already rewritten: REWRITE without READ.\n                _abort_rewrite(ACCOUNTS_PATH, bytes(raw))\n            balance = parse_display_int(record[24:34])\n            record = (record[:24]\n                      + format_display_int(balance + amount, 10)\n                      + record[34:])\n            buffer[:] = record\n            raw[_record_start: _record_start + ACCOUNT_LEN] = record\n    # unreachable placeholder\nPYEOF\necho \"written (draft placeholder)\"; wc -l program.py",
+   "sandbox": [
+    {
+     "at_ms": 207178,
+     "dur_ms": 53,
+     "exit": 0,
+     "cpu_ms": 47.2,
+     "phases_us": {
+      "acquire": 4,
+      "resume": 22242,
+      "mount": 19697,
+      "run": 7520,
+      "destroy": 23381
+     },
+     "cold": null,
+     "vm": "vm-180"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 207244,
+   "dur_ms": 17193
+  },
+  {
+   "kind": "tool",
+   "at_ms": 224437,
+   "dur_ms": 419,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put program.py <<'PYEOF'\n#!/usr/bin/env python3\n\"\"\"Python re-implementation of src/program.cbl (BOOKFORUM).\n\nReads one transaction from src/INPUT.DAT, validates the buyer, seller and\nbook against data/ACCOUNTS.DAT and data/BOOKS.DAT, and, when valid, moves\nthe amount between accounts, transfers book ownership and appends a record\nto data/TRANSACTIONS.DAT.\n\nAll files are GnuCOBOL fixed-length sequential records using DISPLAY data:\n\n  ACCOUNT     : id X(4) | name X(20) | balance 9(10)               = 34\n  BOOK        : id X(4) | title X(20) | owner X(4)                 = 28\n  TRANSACTION : book X(4) | amount 9(10) | seller X(4) | buyer X(4) = 22\n  INPUT       : buyer X(4) | seller X(4) | book X(4) | amount 9(10) = 22\n\"\"\"\n\nimport sys\n\nACCOUNT_LEN = 34\nBOOK_LEN = 28\nTRANSACTION_LEN = 22\nINPUT_LEN = 22\n\nACCOUNTS_PATH = \"data/ACCOUNTS.DAT\"\nBOOKS_PATH = \"data/BOOKS.DAT\"\nTRANSACTIONS_PATH = \"data/TRANSACTIONS.DAT\"\nINPUT_PATH = \"src/INPUT.DAT\"\n\n\n# ---------------------------------------------------------------------------\n# DISPLAY numeric handling (matching GnuCOBOL without numeric checks)\n# ---------------------------------------------------------------------------\ndef _digit(byte):\n    \"\"\"Value of one byte inside a DISPLAY numeric field.\n\n    Digits are their face value; space and NUL count as zero; any other\n    byte is treated as (byte - ord('0')), which is what GnuCOBOL does when\n    the field is not validated.\n    \"\"\"\n    if 0x30 <= byte <= 0x39:\n        return byte - 0x30\n    if byte in (0x20, 0x00):\n        return 0\n    return byte - 0x30\n\n\ndef parse_display_int(data):\n    \"\"\"Convert an unsigned DISPLAY numeric byte string to an integer.\"\"\"\n    value = 0\n    for byte in data:\n        value = value * 10 + _digit(byte)\n    return value\n\n\ndef format_display_int(value, width):\n    \"\"\"Store an integer in an unsigned DISPLAY field of `width` digits.\n\n    COBOL drops the sign for an unsigned target and keeps the low-order\n    digits when the magnitude exceeds the field width.\n    \"\"\"\n    value = abs(value) % (10 ** width)\n    return str(value).rjust(width, \"0\").encode(\"ascii\")\n\n\ndef format_amount_for_transaction(data):\n    \"\"\"MOVE WS-AMOUNT (9(10)V99) TO TRANS-AMOUNT (9(10)).\n\n    The intermediate move into WS-AMOUNT turns spaces/NULs into '0' and\n    adds two decimal digits; moving back to a 9(10) field drops those two\n    digits, leaving the ten original bytes with spaces/NULs zero-filled.\n    \"\"\"\n    return bytes(0x30 if byte in (0x20, 0x00) else byte for byte in data)\n\n\n# ---------------------------------------------------------------------------\n# Fixed-length sequential file emulation\n# ---------------------------------------------------------------------------\nclass SequentialReader:\n    \"\"\"Emulates GnuCOBOL sequential READ on fixed-length records.\n\n    A final short record is still returned (READ status 04); bytes beyond\n    the data actually read are left over from the previous record, because\n    GnuCOBOL does not clear its record area between reads.  The buffer\n    starts zero-filled, the state of a fresh FILE SECTION record area.\n    \"\"\"\n\n    def __init__(self, data, record_len):\n        self._data = data\n        self._record_len = record_len\n        self._buffer = bytearray(record_len)\n        self._offset = 0\n\n    def read(self):\n        \"\"\"Return (record, short_record, file_offset) or None at EOF.\"\"\"\n        if self._offset >= len(self._data):\n            return None\n        start = self._offset\n        chunk = self._data[start:start + self._record_len]\n        self._buffer[:len(chunk)] = chunk\n        self._offset += len(chunk)\n        return bytes(self._buffer), len(chunk) < self._record_len, start\n\n\ndef _load(path):\n    try:\n        with open(path, \"rb\") as handle:\n            return bytearray(handle.read())\n    except OSError as exc:\n        sys.stderr.write(\"libcob: error: %s for file '%s'\\n\"\n                         % (exc.strerror, path))\n        sys.exit(1)\n\n\ndef _save(path, raw):\n    with open(path, \"wb\") as handle:\n        handle.write(raw)\n\n\ndef _abort_rewrite(path, raw, label):\n    \"\"\"Flush earlier rewrites, then emulate a libcob status-43 failure.\"\"\"\n    _save(path, raw)\n    sys.stderr.write(\"libcob: error: READ must be executed first \"\n                     \"(status = 43) for file %s ('%s')\\n\" % (label, path))\n    sys.stderr.write(\"libcob: warning: implicit CLOSE of %s ('%s')\\n\"\n                     % (label, path))\n    sys.exit(1)\n\n\n# ---------------------------------------------------------------------------\n# Program paragraphs\n# ---------------------------------------------------------------------------\ndef read_input_record():\n    \"\"\"MAIN-PARA: OPEN/READ/CLOSE of INPUT-FILE, first record only.\"\"\"\n    try:\n        with open(INPUT_PATH, \"rb\") as handle:\n            data = handle.read()\n    except OSError as exc:\n        sys.stderr.write(\"libcob: error: %s for file INPUT-FILE ('%s')\\n\"\n                         % (exc.strerror, INPUT_PATH))\n        sys.exit(1)\n\n    if not data:\n        return None\n    # Zero-filled record area: a short read leaves the tail as 0x00.\n    return data[:INPUT_LEN].ljust(INPUT_LEN, b\"\\x00\")\n\n\ndef validate_users_and_book(buyer_id, seller_id, book_id):\n    \"\"\"VALIDATE-USERS-AND-BOOK paragraph.\"\"\"\n    buyer_found = False\n    seller_found = False\n    book_found = False\n    valid_owner = False\n\n    accounts = _load(ACCOUNTS_PATH)\n    reader = SequentialReader(accounts, ACCOUNT_LEN)\n    while True:\n        item = reader.read()\n        if item is None:\n            break\n        record = item[0]\n        if record[0:4] == buyer_id:\n            buyer_found = True\n        if record[0:4] == seller_id:\n            seller_found = True\n\n    books = _load(BOOKS_PATH)\n    reader = SequentialReader(books, BOOK_LEN)\n    while True:\n        item = reader.read()\n        if item is None:\n            break\n        record = item[0]\n        if record[0:4] == book_id:\n            book_found = True\n            if record[24:28] == seller_id:\n                valid_owner = True\n\n    # DISPLAY \" \" at the end of the paragraph.\n    print(\" \")\n    return buyer_found and seller_found and book_found and valid_owner\n\n\ndef process_transaction(buyer_id, seller_id, book_id, amount_bytes):\n    \"\"\"PROCESS-TRANSACTION paragraph.\"\"\"\n    amount = parse_display_int(amount_bytes)\n\n    # --- Update accounts in a single sequential pass ---------------------\n    accounts = _load(ACCOUNTS_PATH)\n    reader = SequentialReader(accounts, ACCOUNT_LEN)\n    while True:\n        item = reader.read()\n        if item is None:\n            break\n        record, short_record, start = item\n        is_buyer = record[0:4] == buyer_id\n        is_seller = record[0:4] == seller_id\n\n        if is_buyer:\n            if short_record:\n                # REWRITE is not allowed after a status-04 read.\n                _abort_rewrite(ACCOUNTS_PATH, accounts, \"ACCOUNTS-FILE\")\n            balance = parse_display_int(record[24:34])\n            record = (record[:24]\n                      + format_display_int(balance - amount, 10)\n                      + record[34:])\n            accounts[start:start + ACCOUNT_LEN] = record\n\n        if is_seller:\n            # If buyer and seller are the same account, the buyer's REWRITE\n            # above cleared the read state, so this second REWRITE fails.\n            if short_record or is_buyer:\n                _abort_rewrite(ACCOUNTS_PATH, accounts, \"ACCOUNTS-FILE\")\n            balance = parse_display_int(record[24:34])\n            record = (record[:24]\n                      + format_display_int(balance + amount, 10)\n                      + record[34:])\n            accounts[start:start + ACCOUNT_LEN] = record\n\n    _save(ACCOUNTS_PATH, accounts)\n\n    # --- Transfer book ownership ----------------------------------------\n    books = _load(BOOKS_PATH)\n    reader = SequentialReader(books, BOOK_LEN)\n    while True:\n        item = reader.read()\n        if item is None:\n            break\n        record, short_record, start = item\n        if record[0:4] == book_id:\n            if short_record:\n                _abort_rewrite(BOOKS_PATH, books, \"BOOKS-FILE\")\n            record = record[:24] + buyer_id + record[28:]\n            books[start:start + BOOK_LEN] = record\n\n    _save(BOOKS_PATH, books)\n\n    # --- Append the transaction -----------------------------------------\n    transaction = (book_id\n                   + format_amount_for_transaction(amount_bytes)\n                   + seller_id\n                   + buyer_id)\n    try:\n        with open(TRANSACTIONS_PATH, \"ab\") as handle:\n            handle.write(transaction)\n    except OSError as exc:\n        sys.stderr.write(\"libcob: error: %s for file '%s'\\n\"\n                         % (exc.strerror, TRANSACTIONS_PATH))\n        sys.exit(1)\n\n\ndef main():\n    record = read_input_record()\n    if record is None:\n        print(\"Error: Input file is empty\")\n        return 0\n\n    buyer_id = record[0:4]\n    seller_id = record[4:8]\n    book_id = record[8:12]\n    amount_bytes = record[12:22]\n\n    valid = validate_users_and_book(buyer_id, seller_id, book_id)\n    if valid:\n        process_transaction(buyer_id, seller_id, book_id, amount_bytes)\n        print(\"Transaction completed successfully\")\n    else:\n        print(\"Transaction failed due to validation errors\")\n    return 0\n\n\nif __name__ == \"__main__\":\n    sys.exit(main())\nPYEOF\nsbx run <<'EOF'\ncd /workspace\necho \"=== where is program.py ===\"\nls -la /workspace/program.py ./program.py 2>&1\necho \"=== syntax check ===\"\npython3 -m py_compile program.py && echo OK\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 224497,
+     "dur_ms": 52,
+     "exit": 0,
+     "cpu_ms": 41.8,
+     "phases_us": {
+      "acquire": 51,
+      "resume": 22084,
+      "mount": 19491,
+      "run": 7417,
+      "destroy": 22732
+     },
+     "cold": null,
+     "vm": "vm-189"
+    },
+    {
+     "at_ms": 224595,
+     "dur_ms": 236,
+     "exit": 0,
+     "cpu_ms": 238.2,
+     "phases_us": {
+      "acquire": 7,
+      "resume": 22044,
+      "mount": 19516,
+      "run": 188199,
+      "destroy": 25498
+     },
+     "cold": null,
+     "vm": "vm-131"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 224856,
+   "dur_ms": 9888
+  },
+  {
+   "kind": "tool",
+   "at_ms": 234744,
+   "dur_ms": 5336,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put diff_test.py <<'PYEOF'\nimport os, random, shutil, subprocess, sys\n\nWS = \"/workspace\"\nos.chdir(WS)\nDATA_FILES = [\"ACCOUNTS.DAT\", \"BOOKS.DAT\", \"TRANSACTIONS.DAT\"]\n\ndef reset():\n    os.makedirs(\"data\", exist_ok=True)\n    for f in DATA_FILES:\n        shutil.copyfile(os.path.join(\".orig\", f), os.path.join(\"data\", f))\n\ndef snapshot():\n    return {f: open(os.path.join(\"data\", f), \"rb\").read() for f in DATA_FILES}\n\ndef run(cmd):\n    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)\n    return p.returncode, p.stdout, p.stderr\n\ndef one_case(name, inp, verbose=False):\n    reset()\n    with open(\"src/INPUT.DAT\", \"wb\") as h: h.write(inp)\n    rc1, out1, err1 = run([\"/tmp/prog\"])\n    snap1 = snapshot()\n    reset()\n    with open(\"src/INPUT.DAT\", \"wb\") as h: h.write(inp)\n    rc2, out2, err2 = run([\"python3\", \"program.py\"])\n    snap2 = snapshot()\n    ok = (snap1 == snap2)\n    # Ignore the libcob status-43 message on abort, but compare exit codes.\n    if rc1 != rc2:\n        ok = False\n    if not ok:\n        print(\"MISMATCH:\", name, \"input=\", inp)\n        print(\"  rc:\", rc1, rc2)\n        print(\"  cobol stdout:\", out1, \"stderr:\", err1[:200])\n        print(\"  py    stdout:\", out2, \"stderr:\", err2[:200])\n        for f in DATA_FILES:\n            if snap1[f] != snap2[f]:\n                print(\"  \", f, \"cobol=\", snap1[f], \"py=\", snap2[f])\n        return False\n    if verbose:\n        print(\"ok:\", name, \"rc=\", rc1)\n    return True\n\ncases = []\nORIG = open(os.path.join(\".orig\", \"INPUT.DAT\"), \"rb\").read()\ncases.append((\"original 15-byte\", ORIG))\ncases.append((\"empty\", b\"\"))\nfor n in range(1, 23):\n    cases.append((\"trunc first %d\" % n, ORIG[:n]))\ncases.append((\"valid 200\", b\"U001U002B0010000000200\"))\ncases.append((\"valid 50\", b\"U001U002B0010000000050\"))\ncases.append((\"valid zero\", b\"U001U002B0010000000000\"))\ncases.append((\"seller not owner\", b\"U001U003B0010000000200\"))\ncases.append((\"book missing\", b\"U001U002B0090000000200\"))\ncases.append((\"buyer missing\", b\"U009U002B0010000000200\"))\ncases.append((\"seller missing\", b\"U001U009B0010000000200\"))\ncases.append((\"buyer=seller valid\", b\"U002U002B0010000000100\"))\ncases.append((\"buyer=seller zero\", b\"U002U002B0010000000000\"))\ncases.append((\"negative result\", b\"U001U002B0010000001800\"))\ncases.append((\"max amount\", b\"U001U002B0019999999999\"))\ncases.append((\"leading spaces\", b\"U001U002B001       200\"))\ncases.append((\"trailing spaces\", b\"U001U002B001200       \"))\ncases.append((\"mid space\", b\"U001U002B00120 0      \"))\ncases.append((\"all spaces amount\", b\"U001U002B001          \"))\ncases.append((\"extra records after\", b\"U001U002B0010000000050\" + b\"U001U002B0010000000099\"))\ncases.append((\"B002 transfer\", b\"U003U002B0020000000123\"))\ncases.append((\"B003 transfer\", b\"U001U002B0030000000456\"))\ncases.append((\"unpadded amount 7\", b\"U001U002B0017\"))\ncases.append((\"unpadded amount 123\", b\"U001U002B001123\"))\ncases.append((\"unpadded amount 50\", b\"U001U002B00150\"))\ncases.append((\"short id seller\", b\"U001U00\"))\ncases.append((\"only buyer\", b\"U001\"))\n\nrandom.seed(1234)\nids = [b\"U001\", b\"U002\", b\"U003\", b\"U004\", b\"U999\", b\"    \", b\"U00 \"]\nbooks = [b\"B001\", b\"B002\", b\"B003\", b\"B009\", b\"    \"]\namounts = []\nfor _ in range(160):\n    kind = random.randrange(6)\n    digits = bytes(random.choice(b\"0123456789\") for _ in range(random.randrange(0, 11)))\n    if kind == 0:\n        a = digits.rjust(10, b\"0\")\n    elif kind == 1:\n        a = digits.rjust(10, b\" \")\n    elif kind == 2:\n        a = digits.ljust(10, b\" \")\n    elif kind == 3:\n        a = digits  # short record\n    elif kind == 4:\n        a = bytes(random.choice(b\"0123456789 \") for _ in range(10))\n    else:\n        a = bytes(random.choice(b\"0123456789\") for _ in range(10))\n    buyer = random.choice(ids); seller = random.choice(ids); book = random.choice(books)\n    cases.append((\"rand\", buyer + seller + book + a))\n\nfails = 0\nfor name, inp in cases:\n    if not one_case(name, inp):\n        fails += 1\n        if fails > 12:\n            print(\"... stopping after too many failures\")\n            break\nprint(\"TOTAL:\", len(cases), \"FAILS:\", fails)\nsys.exit(1 if fails else 0)\nPYEOF\nsbx run <<'EOF'\ncd /workspace\ncobc -xo /tmp/prog src/program.cbl 2>&1\npython3 diff_test.py 2>&1 | tail -40\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 235462,
+     "dur_ms": 58,
+     "exit": 0,
+     "cpu_ms": 48.9,
+     "phases_us": {
+      "acquire": 74,
+      "resume": 24558,
+      "mount": 21173,
+      "run": 8562,
+      "destroy": 24741
+     },
+     "cold": null,
+     "vm": "vm-192"
+    },
+    {
+     "at_ms": 235565,
+     "dur_ms": 4491,
+     "exit": 0,
+     "cpu_ms": 4800.7,
+     "phases_us": {
+      "acquire": 40,
+      "resume": 21237,
+      "mount": 18857,
+      "run": 4442349,
+      "destroy": 27212
+     },
+     "cold": null,
+     "vm": "vm-191"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 240080,
+   "dur_ms": 7098
+  },
+  {
+   "kind": "tool",
+   "at_ms": 247178,
+   "dur_ms": 6291,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put diff_test2.py <<'PYEOF'\nimport os, shutil, subprocess, sys\n\nWS = \"/workspace\"\nos.chdir(WS)\nFILES = [\"ACCOUNTS.DAT\", \"BOOKS.DAT\", \"TRANSACTIONS.DAT\"]\norig = {f: open(os.path.join(\".orig\", f), \"rb\").read() for f in FILES}\n\ndef reset(data):\n    os.makedirs(\"data\", exist_ok=True)\n    for f in FILES:\n        with open(os.path.join(\"data\", f), \"wb\") as h:\n            h.write(data[f])\n\ndef snap():\n    return {f: open(os.path.join(\"data\", f), \"rb\").read() for f in FILES}\n\ndef run(cmd):\n    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)\n    return p.returncode\n\ndef case(name, data, inp):\n    reset(data); open(\"src/INPUT.DAT\",\"wb\").write(inp)\n    rc1 = run([\"/tmp/prog\"]); s1 = snap()\n    reset(data); open(\"src/INPUT.DAT\",\"wb\").write(inp)\n    rc2 = run([\"python3\",\"program.py\"]); s2 = snap()\n    if s1 != s2 or rc1 != rc2:\n        print(\"MISMATCH\", name, inp, \"rc\", rc1, rc2)\n        for f in FILES:\n            if s1[f] != s2[f]:\n                print(\"  \", f, \"\\n   cobol\", s1[f], \"\\n   py   \", s2[f])\n        return False\n    return True\n\ninputs = [\n    b\"U001U002B0010000000050\",\n    b\"U001U002B0010000001800\",\n    b\"U002U002B0010000000100\",\n    b\"U001U002B00150\",\n    b\"U001U003B0010000000200\",\n    b\"U001U002B0090000000200\",\n    b\"X\",\n    b\"\",\n]\nvariants = {}\nvariants[\"orig\"] = dict(orig)\nfor n in [0, 5, 10, 33, 34, 40, 67, 100]:\n    d = dict(orig); d[\"ACCOUNTS.DAT\"] = orig[\"ACCOUNTS.DAT\"][:n]; variants[\"acc_trunc_%d\"%n] = d\nfor n in [0, 4, 27, 28, 40, 60, 83]:\n    d = dict(orig); d[\"BOOKS.DAT\"] = orig[\"BOOKS.DAT\"][:n]; variants[\"book_trunc_%d\"%n] = d\nfor n in [0, 22, 23, 40, 65]:\n    d = dict(orig); d[\"TRANSACTIONS.DAT\"] = orig[\"TRANSACTIONS.DAT\"][:n]; variants[\"trx_trunc_%d\"%n] = d\nd = dict(orig); d[\"ACCOUNTS.DAT\"] += b\"U004Extra Account       0000000500\"; variants[\"acc_extra\"] = d\nd = dict(orig); d[\"BOOKS.DAT\"] += b\"B004Extra Book            U003\"; variants[\"book_extra\"] = d\nd = dict(orig)\nd[\"ACCOUNTS.DAT\"] = b\"U001Buyer One          0000000500U002Seller Two         0000001000U003Third Person         0000002000\"\nvariants[\"acc_reformatted\"] = d\nd = dict(orig)\nd[\"BOOKS.DAT\"] = b\"B001Book One              U002B002Book Two              U003B003Book Three            U001\"\nvariants[\"book_reformatted\"] = d\nd = dict(orig); d[\"ACCOUNTS.DAT\"] = b\"\"; variants[\"acc_empty\"] = d\nd = dict(orig); d[\"BOOKS.DAT\"] = b\"\"; variants[\"book_empty\"] = d\n\nfails = total = 0\nfor vn, vd in variants.items():\n    for inp in inputs:\n        total += 1\n        if not case(vn, vd, inp):\n            fails += 1\nprint(\"TOTAL\", total, \"FAILS\", fails)\nsys.exit(1 if fails else 0)\nPYEOF\nsbx run <<'EOF'\ncd /workspace\ncobc -xo /tmp/prog src/program.cbl 2>&1\npython3 diff_test2.py 2>&1 | tail -40\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 248709,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 43.2,
+     "phases_us": {
+      "acquire": 84,
+      "resume": 21632,
+      "mount": 19239,
+      "run": 7617,
+      "destroy": 26582
+     },
+     "cold": null,
+     "vm": "vm-195"
+    },
+    {
+     "at_ms": 248811,
+     "dur_ms": 4632,
+     "exit": 0,
+     "cpu_ms": 4900.4,
+     "phases_us": {
+      "acquire": 16,
+      "resume": 21524,
+      "mount": 19193,
+      "run": 4587088,
+      "destroy": 22743
+     },
+     "cold": null,
+     "vm": "vm-194"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 253469,
+   "dur_ms": 4852
+  },
+  {
+   "kind": "tool",
+   "at_ms": 258321,
+   "dur_ms": 173,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\n# Restore pristine data + input\ncp .orig/ACCOUNTS.DAT .orig/BOOKS.DAT .orig/TRANSACTIONS.DAT data/\ncp .orig/INPUT.DAT src/INPUT.DAT\n# Remove all test artifacts\nrm -rf .orig __pycache__ diff_test.py diff_test2.py probe.cbl probe2.cbl probe.out probe2.out\nfind . -maxdepth 2 -type f | sort\necho \"=== original input ===\"; od -c src/INPUT.DAT\necho \"=== checksums before ===\"; md5sum data/*.DAT\necho \"=== run python with provided input ===\"\npython3 program.py; echo \"[exit=$?]\"\necho \"=== checksums after (should be identical) ===\"; md5sum data/*.DAT\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 258373,
+     "dur_ms": 90,
+     "exit": 0,
+     "cpu_ms": 98.6,
+     "phases_us": {
+      "acquire": 66,
+      "resume": 21715,
+      "mount": 19277,
+      "run": 46707,
+      "destroy": 21585
+     },
+     "cold": null,
+     "vm": "vm-199"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 258494,
+   "dur_ms": 2392
+  },
+  {
+   "kind": "tool",
+   "at_ms": 260886,
+   "dur_ms": 125,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\necho \"=== vs pristine testbed-src ===\"\nmd5sum data/*.DAT src/INPUT.DAT src/program.cbl\nmd5sum /opt/testbed-src/data/*.DAT /opt/testbed-src/src/INPUT.DAT /opt/testbed-src/src/program.cbl\necho \"=== /app/program.py ===\"\nls -l /app/program.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 260939,
+     "dur_ms": 44,
+     "exit": 0,
+     "cpu_ms": 42.7,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 21574,
+      "mount": 19273,
+      "run": 7905,
+      "destroy": 14345
+     },
+     "cold": null,
+     "vm": "vm-204"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 261011,
+   "dur_ms": 3314
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.998,
+ "calls": 20,
+ "cell": "TB1b"
+}

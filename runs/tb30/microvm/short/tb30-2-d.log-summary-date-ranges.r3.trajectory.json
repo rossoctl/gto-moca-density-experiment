@@ -1,0 +1,269 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-d",
+ "instance_id": "log-summary-date-ranges",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 16391,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 6126,
+  "output": 2050,
+  "cacheRead": 75840,
+  "cacheWrite": 0,
+  "total": 84016
+ },
+ "totals": {
+  "model_calls": 8,
+  "tool_calls": 7,
+  "model_ms": 14606,
+  "tool_ms": 1395,
+  "sandbox_ms": 922
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 100,
+   "dur_ms": 3430,
+   "tokens_in": 19,
+   "tokens_out": 82,
+   "cache_read": 5952,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3530,
+   "dur_ms": 63,
+   "tool": "bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\nls -la /app/logs && echo '---' && for f in /app/logs/*.log; do echo \"== $f\"; head -3 \"$f\"; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3633,
+   "dur_ms": 867,
+   "tokens_in": 141,
+   "tokens_out": 78,
+   "cache_read": 6016,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4500,
+   "dur_ms": 3,
+   "tool": "bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\nls -la /app/logs; echo ---; for f in /app/logs/*.log; do echo \"== $f\"; cat \"$f\"; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 4548,
+   "dur_ms": 1135,
+   "tokens_in": 99,
+   "tokens_out": 49,
+   "cache_read": 6272,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5683,
+   "dur_ms": 135,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run 'ls -la /app/logs'",
+   "sandbox": [
+    {
+     "at_ms": 5737,
+     "dur_ms": 49,
+     "exit": 0,
+     "cpu_ms": 40.5,
+     "phases_us": {
+      "acquire": 80,
+      "resume": 21700,
+      "mount": 19372,
+      "run": 8800,
+      "destroy": 18584
+     },
+     "cold": null,
+     "vm": "vm-76"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 5834,
+   "dur_ms": 936,
+   "tokens_in": 4865,
+   "tokens_out": 130,
+   "cache_read": 6528,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6770,
+   "dur_ms": 123,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run 'echo \"== api\"; head -5 /app/logs/2025-08-12_api.log; echo \"== app\"; head -5 /app/logs/2025-08-12_app.log; echo \"== auth\"; head -5 /app/logs/2025-08-12_auth.log; echo \"== db\"; head -5 /app/logs/2025-08-12_db.log'",
+   "sandbox": [
+    {
+     "at_ms": 6821,
+     "dur_ms": 58,
+     "exit": 0,
+     "cpu_ms": 41.2,
+     "phases_us": {
+      "acquire": 64,
+      "resume": 20811,
+      "mount": 18583,
+      "run": 6480,
+      "destroy": 31006
+     },
+     "cold": null,
+     "vm": "vm-82"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 6908,
+   "dur_ms": 3409,
+   "tokens_in": 482,
+   "tokens_out": 482,
+   "cache_read": 11520,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 10317,
+   "dur_ms": 547,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put /app/analyze_logs.py <<'EOF'\nimport glob, os, re, csv\nfrom datetime import date, timedelta\n\nref = date(2025, 8, 12)\nranges = [\n    (\"today\", ref, ref),\n    (\"last_7_days\", ref - timedelta(days=6), ref),\n    (\"last_30_days\", ref - timedelta(days=29), ref),\n    (\"month_to_date\", ref.replace(day=1), ref),\n]\nseverities = [\"ERROR\", \"WARNING\", \"INFO\"]\ncounts = {name: {s: 0 for s in severities} for name, _, _ in ranges}\ncounts[\"total\"] = {s: 0 for s in severities}\n\npat = re.compile(r\"^\\d{4}-\\d{2}-\\d{2}.*?\\[(ERROR|WARNING|INFO)\\]\")\nfor path in glob.glob(\"/app/logs/*.log\"):\n    m = re.match(r\"(\\d{4}-\\d{2}-\\d{2})_\", os.path.basename(path))\n    if not m:\n        continue\n    d = date.fromisoformat(m.group(1))\n    with open(path) as f:\n        for line in f:\n            sm = pat.search(line)\n            if not sm:\n                continue\n            sev = sm.group(1)\n            counts[\"total\"][sev] += 1\n            for name, start, end in ranges:\n                if start <= d <= end:\n                    counts[name][sev] += 1\n\nwith open(\"/app/summary.csv\", \"w\", newline=\"\") as f:\n    w = csv.writer(f)\n    w.writerow([\"period\", \"severity\", \"count\"])\n    for name, _, _ in ranges + [(\"total\", None, None)]:\n        for s in severities:\n            w.writerow([name, s, counts[name][s]])\nEOF\nsbx run 'python3 /app/analyze_logs.py && cat /app/summary.csv'",
+   "sandbox": [
+    {
+     "at_ms": 10370,
+     "dur_ms": 57,
+     "exit": 0,
+     "cpu_ms": 39.3,
+     "phases_us": {
+      "acquire": 77,
+      "resume": 23099,
+      "mount": 20834,
+      "run": 7634,
+      "destroy": 26076
+     },
+     "cold": null,
+     "vm": "vm-83"
+    },
+    {
+     "at_ms": 10475,
+     "dur_ms": 369,
+     "exit": 0,
+     "cpu_ms": 377.8,
+     "phases_us": {
+      "acquire": 29,
+      "resume": 20922,
+      "mount": 18730,
+      "run": 322024,
+      "destroy": 25510
+     },
+     "cold": null,
+     "vm": "vm-73"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 10879,
+   "dur_ms": 2003,
+   "tokens_in": 217,
+   "tokens_out": 211,
+   "cache_read": 12672,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 12882,
+   "dur_ms": 400,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run 'python3 - <<PY\nimport glob,re,collections\nc=collections.Counter(); unmatched=collections.Counter(); total=0\nfor p in glob.glob(\"/app/logs/*.log\"):\n    for ln in open(p):\n        total+=1\n        m=re.match(r\"^\\d{4}-\\d{2}-\\d{2}.*?\\[(ERROR|WARNING|INFO)\\]\",ln)\n        if m: c[m.group(1)]+=1\n        else:\n            mm=re.search(r\"\\[([A-Z]+)\\]\",ln)\n            unmatched[mm.group(1) if mm else \"NOBRACKET\"]+=1\nprint(\"total lines\",total)\nprint(\"matched\",c,sum(c.values()))\nprint(\"unmatched\",unmatched)\nPY'",
+   "sandbox": [
+    {
+     "at_ms": 12934,
+     "dur_ms": 338,
+     "exit": 0,
+     "cpu_ms": 341.3,
+     "phases_us": {
+      "acquire": 54,
+      "resume": 21067,
+      "mount": 18864,
+      "run": 284615,
+      "destroy": 32398
+     },
+     "cold": null,
+     "vm": "vm-87"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 13295,
+   "dur_ms": 2245,
+   "tokens_in": 115,
+   "tokens_out": 61,
+   "cache_read": 13184,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 15540,
+   "dur_ms": 124,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run 'rm -f /app/analyze_logs.py && cat /app/summary.csv'",
+   "sandbox": [
+    {
+     "at_ms": 15591,
+     "dur_ms": 51,
+     "exit": 0,
+     "cpu_ms": 38.5,
+     "phases_us": {
+      "acquire": 73,
+      "resume": 20969,
+      "mount": 18822,
+      "run": 5312,
+      "destroy": 24430
+     },
+     "cold": null,
+     "vm": "vm-91"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 15680,
+   "dur_ms": 581,
+   "tokens_in": 188,
+   "tokens_out": 48,
+   "cache_read": 13696,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.192,
+ "calls": 7,
+ "cell": "TB1d"
+}

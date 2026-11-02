@@ -1,0 +1,134 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "large-scale-text-editing",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 140783,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 309,
+  "output": 7504,
+  "cacheRead": 181632,
+  "cacheWrite": 3776,
+  "total": 193221
+ },
+ "totals": {
+  "model_calls": 8,
+  "tool_calls": 7,
+  "model_ms": 51553,
+  "tool_ms": 88611,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 529,
+   "dur_ms": 1108
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1637,
+   "dur_ms": 138,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la && head -c 2000 input.csv && echo \"---EXPECTED---\" && head -c 2000 expected.csv && echo \"---WC---\" && wc -l input.csv expected.csv"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1775,
+   "dur_ms": 2148
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3923,
+   "dur_ms": 191,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "awk -F',' 'NF!=3{print NR\": NF=\"NF\": \"$0; c++} END{print \"bad lines:\",c+0}' input.csv | head -20; echo \"---\"; grep -c ';' input.csv; echo \"---tabs/CR---\"; grep -c $'\\r' input.csv; grep -c $'\\t' input.csv; echo \"---expected sample tail---\"; tail -3 expected.csv | cat -A"
+  },
+  {
+   "kind": "model",
+   "at_ms": 4114,
+   "dur_ms": 26177
+  },
+  {
+   "kind": "tool",
+   "at_ms": 30291,
+   "dur_ms": 44,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /tmp && head -5 /app/input.csv > s.csv && head -5 /app/expected.csv > se.csv && cat > t.vim <<'EOF'\ncall setreg('a', \":s/\\\\v\\\\s*,\\\\s*/;/g\\r:s/\\\\v^\\\\s+//\\r:s/\\\\v\\\\s+$//\\r\")\ncall setreg('b', \"gUU\")\ncall setreg('c', \":s/\\\\v([^;]+);([^;]+);([^;]+)/\\\\3;\\\\2;\\\\1;OK/\\r\")\n%normal! @a\n%normal! @b\n%normal! @c\nwq\nEOF\ncp s.csv s2.csv && vim -Nu NONE -n -Es s2.csv -S t.vim; echo \"exit=$?\"; cat -A s2.csv; echo \"---diff---\"; diff s2.csv se.csv && echo MATCH"
+  },
+  {
+   "kind": "model",
+   "at_ms": 30335,
+   "dur_ms": 7406
+  },
+  {
+   "kind": "tool",
+   "at_ms": 37741,
+   "dur_ms": 3960,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /tmp && cat > len.vim <<'EOF'\ncall setreg('a', \":s/\\\\v\\\\s*,\\\\s*/;/g\\r:s/\\\\v^\\\\s+//\\r:s/\\\\v\\\\s+$//\\r\")\ncall setreg('b', \"gUU\")\ncall setreg('c', \":s/\\\\v([^;]+);([^;]+);([^;]+)/\\\\3;\\\\2;\\\\1;OK/\\r\")\ncall writefile([string(len(getreg('a'))), string(len(getreg('b'))), string(len(getreg('c'))), string(len(getreg('a'))+len(getreg('b'))+len(getreg('c')))], '/tmp/lens.txt')\nqa!\nEOF\nvim -Nu NONE -n -Es -S len.vim; cat /tmp/lens.txt\necho \"--- perf 100k ---\"\nhead -100000 /app/input.csv > p.csv && time vim -Nu NONE -n -Es p.csv -S t.vim; echo exit=$?; wc -l p.csv; head -1 p.csv"
+  },
+  {
+   "kind": "model",
+   "at_ms": 41701,
+   "dur_ms": 6889
+  },
+  {
+   "kind": "tool",
+   "at_ms": 48590,
+   "dur_ms": 41908,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /tmp && cp /app/input.csv full.csv && time vim -Nu NONE -n -Es full.csv -S t.vim; echo \"exit=$?\"; cmp full.csv /app/expected.csv && echo \"BYTE-FOR-BYTE MATCH\" || echo \"MISMATCH\"; ls -l full.csv /app/expected.csv",
+   "timeout": 600000
+  },
+  {
+   "kind": "model",
+   "at_ms": 90498,
+   "dur_ms": 2997
+  },
+  {
+   "kind": "tool",
+   "at_ms": 93495,
+   "dur_ms": 13,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/apply_macros.vim",
+    "content": "call setreg('a', \":s/\\\\v\\\\s*,\\\\s*/;/g\\r:s/\\\\v^\\\\s+//\\r:s/\\\\v\\\\s+$//\\r\")\ncall setreg('b', \"gUU\")\ncall setreg('c', \":s/\\\\v([^;]+);([^;]+);([^;]+)/\\\\3;\\\\2;\\\\1;OK/\\r\")\n:%normal! @a\n:%normal! @b\n:%normal! @c\n:wq\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 93508,
+   "dur_ms": 1432
+  },
+  {
+   "kind": "tool",
+   "at_ms": 94940,
+   "dur_ms": 42357,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /tmp && rm -f verify.csv && cp /app/input.csv verify.csv && vim -Nu NONE -n -Es /tmp/verify.csv -S /app/apply_macros.vim; echo \"vim exit=$?\"; cmp /tmp/verify.csv /app/expected.csv && echo \"BYTE-FOR-BYTE MATCH\"; echo \"--- script contents ---\"; cat -A /app/apply_macros.vim; echo \"--- input untouched? ---\"; cmp /app/input.csv <(git 2>/dev/null; true) >/dev/null 2>&1; md5sum /app/input.csv | cut -d' ' -f1; head -1 /app/input.csv",
+   "timeout": 600000
+  },
+  {
+   "kind": "model",
+   "at_ms": 137297,
+   "dur_ms": 3396
+  }
+ ],
+ "class": "long",
+ "weight_s_per_command": 17.611,
+ "calls": 7,
+ "cell": "TB1a"
+}

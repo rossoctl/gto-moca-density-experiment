@@ -1,0 +1,1110 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "cobol-modernization",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 350119,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 1844,
+  "output": 55079,
+  "cacheRead": 2993984,
+  "cacheWrite": 44992,
+  "total": 3095899
+ },
+ "totals": {
+  "model_calls": 57,
+  "tool_calls": 60,
+  "model_ms": 322254,
+  "tool_ms": 26521,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1142,
+   "dur_ms": 949,
+   "tokens_in": 31,
+   "tokens_out": 108,
+   "cache_read": 1792,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2096,
+   "dur_ms": 8,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "path": "/app/src/program.cbl"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2096,
+   "dur_ms": 15,
+   "tool": "bash",
+   "is_error": false,
+   "command": "find /app -maxdepth 3 -type f | sort && echo \"---\" && ls -la /app /app/src /app/data"
+  },
+  {
+   "kind": "model",
+   "at_ms": 2112,
+   "dur_ms": 1237,
+   "tokens_in": 2,
+   "tokens_out": 191,
+   "cache_read": 1920,
+   "cache_write": 1856,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3349,
+   "dur_ms": 7,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && for f in src/INPUT.DAT data/*.DAT; do echo \"=== $f ===\"; xxd \"$f\"; echo; done"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3350,
+   "dur_ms": 25,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && cat -A src/INPUT.DAT; echo '--- accounts'; cat -A data/ACCOUNTS.DAT; echo '--- books'; cat -A data/BOOKS.DAT; echo '--- trans'; cat -A data/TRANSACTIONS.DAT; echo; which cobc; cobc --version | head -5; python3 --version"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3376,
+   "dur_ms": 2704,
+   "tokens_in": 60,
+   "tokens_out": 506,
+   "cache_read": 3968,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6081,
+   "dur_ms": 183,
+   "tool": "bash",
+   "is_error": false,
+   "command": "rm -rf /tmp/cobtest && mkdir -p /tmp/cobtest/src /tmp/cobtest/data && cp /app/src/* /tmp/cobtest/src/ && cp /app/data/* /tmp/cobtest/data/ && cd /tmp/cobtest && cobc -x -o program src/program.cbl && ./program; echo \"EXIT=$?\"; echo '--- accounts'; od -An -c data/ACCOUNTS.DAT; echo '--- books'; od -An -c data/BOOKS.DAT; echo '--- trans'; od -An -c data/TRANSACTIONS.DAT; ls -l data"
+  },
+  {
+   "kind": "model",
+   "at_ms": 6264,
+   "dur_ms": 9291,
+   "tokens_in": 55,
+   "tokens_out": 1609,
+   "cache_read": 4736,
+   "cache_write": 512,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 15556,
+   "dur_ms": 638,
+   "tool": "bash",
+   "is_error": false,
+   "command": "run_case() {\n  name=\"$1\"; input=\"$2\"\n  rm -rf /tmp/case && mkdir -p /tmp/case/src /tmp/case/data\n  cp /app/src/program.cbl /tmp/case/src/\n  cp /app/data/* /tmp/case/data/\n  printf '%s' \"$input\" > /tmp/case/src/INPUT.DAT\n  cd /tmp/case && cobc -x -o program src/program.cbl >/dev/null 2>&1\n  ./program > /tmp/case/out.txt 2>&1\n  echo \"=== $name (input len $(wc -c < /tmp/case/src/INPUT.DAT)) ===\"\n  cat /tmp/case/out.txt\n  echo \"-- accounts:\"; od -An -c /tmp/case/data/ACCOUNTS.DAT\n  echo \"-- books:\"; od -An -c /tmp/case/data/BOOKS.DAT\n  echo \"-- trans:\"; od -An -c /tmp/case/data/TRANSACTIONS.DAT\n}\nrun_case short_valid 'U001U002B001200'\nrun_case full_valid 'U001U002B0010000000200'\nrun_case spaces_amount 'U001U002B001           '\nrun_case zero_padded 'U001U002B0010000000000'\n",
+   "timeout": 60
+  },
+  {
+   "kind": "model",
+   "at_ms": 16194,
+   "dur_ms": 3762,
+   "tokens_in": 40,
+   "tokens_out": 677,
+   "cache_read": 6848,
+   "cache_write": 1920,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 19956,
+   "dur_ms": 276,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp/case 2>/dev/null || true\n# rerun short in separate dir, then parse\nrm -rf /tmp/case2 && mkdir -p /tmp/case2/src /tmp/case2/data && cp /app/src/program.cbl /tmp/case2/src/ && cp /app/data/* /tmp/case2/data/ && printf 'U001U002B001200' > /tmp/case2/src/INPUT.DAT && cd /tmp/case2 && cobc -x -o program src/program.cbl >/dev/null 2>&1 && ./program\npython3 - <<'PY'\nfrom pathlib import Path\nfor fn, lens in [('ACCOUNTS.DAT',[4,20,10]),('BOOKS.DAT',[4,20,4]),('TRANSACTIONS.DAT',[4,10,4,4])]:\n    b=Path('/tmp/case2/data/'+fn).read_bytes()\n    print(fn,len(b))\n    off=0\n    while off<len(b):\n        parts=[]; o=off\n        for l in lens:\n            parts.append(b[o:o+l]); o+=l\n        print(parts)\n        off=o\nPY",
+   "timeout": 60
+  },
+  {
+   "kind": "model",
+   "at_ms": 20232,
+   "dur_ms": 7519,
+   "tokens_in": 54,
+   "tokens_out": 1434,
+   "cache_read": 9472,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 27752,
+   "dur_ms": 2088,
+   "tool": "bash",
+   "is_error": false,
+   "command": "test_amount() {\n  label=\"$1\"; amt=\"$2\"\n  rm -rf /tmp/casex && mkdir -p /tmp/casex/src /tmp/casex/data\n  cp /app/src/program.cbl /tmp/casex/src/; cp /app/data/* /tmp/casex/data/\n  python3 -c 'import sys; open(\"/tmp/casex/src/INPUT.DAT\",\"wb\").write(sys.argv[1].encode())' \"U001U002B001${amt}\"\n  cd /tmp/casex && cobc -x -o program src/program.cbl >/dev/null 2>&1 && ./program >/dev/null 2>&1\n  python3 - \"$label\" <<'PY'\nimport sys\nfrom pathlib import Path\na=Path('/tmp/casex/data/ACCOUNTS.DAT').read_bytes()\nt=Path('/tmp/casex/data/TRANSACTIONS.DAT').read_bytes()\nprint(sys.argv[1], 'amtlen', len(open('/tmp/casex/src/INPUT.DAT','rb').read()), 'acct1', a[24:34], 'transamt', t[-18:-8])\nPY\n}\ntest_amount 'full_200' '2000000000'\ntest_amount '3digits_7spaces' '200       '\ntest_amount '3digits_7zeros' '2000000000'\ntest_amount '1digit_9spaces' '1         '\ntest_amount '1digit_9zeros' '1000000000'\ntest_amount 'letters' 'abcdefghij'\ntest_amount '3digits_partial' '200'\ntest_amount '1digit_partial' '1'\ntest_amount '10letters' 'ABCDEFGHIJ'\ntest_amount 'mixed' '12A4567890'\ntest_amount 'sign' '-000000200'\n",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 29843,
+   "dur_ms": 3702,
+   "tokens_in": 11,
+   "tokens_out": 591,
+   "cache_read": 9984,
+   "cache_write": 1472,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 33545,
+   "dur_ms": 46,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la / /opt /app; find / -maxdepth 3 \\( -name '*test*' -o -name '*grader*' -o -name 'run*' \\) 2>/dev/null | head -100"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 33545,
+   "dur_ms": 89,
+   "tool": "bash",
+   "is_error": false,
+   "command": "find / -maxdepth 4 -type f \\( -name 'INPUT.DAT' -o -name 'program.py' -o -name '*.cbl' \\) 2>/dev/null | sort"
+  },
+  {
+   "kind": "model",
+   "at_ms": 33636,
+   "dur_ms": 3287,
+   "tokens_in": 16,
+   "tokens_out": 463,
+   "cache_read": 12032,
+   "cache_write": 896,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 36924,
+   "dur_ms": 16,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls /usr/include/libcob* 2>/dev/null; dpkg -L gnucobol 2>/dev/null | head -50; dpkg -l | grep -i cobol"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 36924,
+   "dur_ms": 39,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp/casex && cobc -C -o /tmp/prog.c src/program.cbl 2>/dev/null && grep -n \"INPUT_AMOUNT\\|WS_AMOUNT\\|cob_move\\|cob_add\\|cob_sub\" /tmp/prog.c | head -80"
+  },
+  {
+   "kind": "model",
+   "at_ms": 36965,
+   "dur_ms": 1207,
+   "tokens_in": 49,
+   "tokens_out": 82,
+   "cache_read": 13376,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 38172,
+   "dur_ms": 11,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sed -n '1,220p' /tmp/prog.c; echo '---main'; sed -n '300,620p' /tmp/prog.c"
+  },
+  {
+   "kind": "model",
+   "at_ms": 38184,
+   "dur_ms": 779,
+   "tokens_in": 49,
+   "tokens_out": 62,
+   "cache_read": 13696,
+   "cache_write": 4416,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 38964,
+   "dur_ms": 5,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat /tmp/prog.c.h | sed -n '1,260p'"
+  },
+  {
+   "kind": "model",
+   "at_ms": 38971,
+   "dur_ms": 642,
+   "tokens_in": 23,
+   "tokens_out": 55,
+   "cache_read": 18176,
+   "cache_write": 576,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 39613,
+   "dur_ms": 6,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat /tmp/prog.c.l.h | sed -n '1,300p'"
+  },
+  {
+   "kind": "model",
+   "at_ms": 39622,
+   "dur_ms": 14865,
+   "tokens_in": 41,
+   "tokens_out": 2586,
+   "cache_read": 18816,
+   "cache_write": 1024,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 54487,
+   "dur_ms": 2039,
+   "tool": "bash",
+   "is_error": false,
+   "command": "test_amt2() {\n  label=\"$1\"; amt=\"$2\"\n  rm -rf /tmp/casey && mkdir -p /tmp/casey/src /tmp/casey/data\n  cp /app/src/program.cbl /tmp/casey/src/; cp /app/data/* /tmp/casey/data/\n  python3 -c 'open(\"/tmp/casey/src/INPUT.DAT\",\"wb\").write((\"U001U002B001\"+__import__(\"sys\").argv[1]).encode())' \"$amt\"\n  cd /tmp/casey && cobc -x -o program src/program.cbl >/dev/null 2>&1 && ./program >/dev/null 2>&1\n  python3 - \"$label\" <<'PY'\nimport sys\nfrom pathlib import Path\na=Path('/tmp/casey/data/ACCOUNTS.DAT').read_bytes()\nt=Path('/tmp/casey/data/TRANSACTIONS.DAT').read_bytes()\nprint(sys.argv[1], 'acct1', a[24:34], 'acct2', a[58:68], 'transamt', t[-18:-8])\nPY\n}\ntest_amt2 '0000000001' '0000000001'\ntest_amt2 '0000001180' '0000001180'\ntest_amt2 '0000001181' '0000001181'\ntest_amt2 '9999999999' '9999999999'\ntest_amt2 '9999999998' '9999999998'\ntest_amt2 '4294967296' '4294967296'\ntest_amt2 '2147483648' '2147483648'\ntest_amt2 '1000000000' '1000000000'\ntest_amt2 '2000000000' '2000000000'\ntest_amt2 '999999999' '0999999999'\ntest_amt2 '1234567890' '1234567890'\n",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 56529,
+   "dur_ms": 7265,
+   "tokens_in": 56,
+   "tokens_out": 1485,
+   "cache_read": 22464,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 63795,
+   "dur_ms": 1365,
+   "tool": "bash",
+   "is_error": false,
+   "command": "test_raw() {\n  label=\"$1\"; hex=\"$2\"\n  rm -rf /tmp/casez && mkdir -p /tmp/casez/src /tmp/casez/data\n  cp /app/src/program.cbl /tmp/casez/src/; cp /app/data/* /tmp/casez/data/\n  python3 -c 'import sys; open(\"/tmp/casez/src/INPUT.DAT\",\"wb\").write(bytes.fromhex(sys.argv[1]))' \"$hex\"\n  cd /tmp/casez && cobc -x -o program src/program.cbl >/dev/null 2>&1 && ./program >/dev/null 2>&1\n  python3 - \"$label\" <<'PY'\nimport sys\nfrom pathlib import Path\na=Path('/tmp/casez/data/ACCOUNTS.DAT').read_bytes()\nt=Path('/tmp/casez/data/TRANSACTIONS.DAT').read_bytes()\ni=open('/tmp/casez/src/INPUT.DAT','rb').read()\nprint(sys.argv[1], 'inlen', len(i), 'acct1', a[24:34], 'transamt', t[-18:-8])\nPY\n}\n# U001U002B001 then amount variants\ntest_raw '200_nl' \"$(printf 'U001U002B001200\\n' | od -An -tx1 | tr -d ' \\n')\"\ntest_raw '200_crlf' \"$(printf 'U001U002B001200\\r\\n' | od -An -tx1 | tr -d ' \\n')\"\ntest_raw '200_space_nl' \"$(printf 'U001U002B001200 \\n' | od -An -tx1 | tr -d ' \\n')\"\ntest_raw 'lead_space_200' \"$(printf 'U001U002B001       200' | od -An -tx1 | tr -d ' \\n')\"\ntest_raw 'digits_letter' \"$(printf 'U001U002B00100000002X0' | od -An -tx1 | tr -d ' \\n')\"\ntest_raw 'digits_dot' \"$(printf 'U001U002B00100000002.0' | od -An -tx1 | tr -d ' \\n')\"\ntest_raw 'plus' \"$(printf 'U001U002B001+000000200' | od -An -tx1 | tr -d ' \\n')\"\n",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 65162,
+   "dur_ms": 6446,
+   "tokens_in": 12,
+   "tokens_out": 1026,
+   "cache_read": 24320,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 71608,
+   "dur_ms": 109,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /usr/share/doc/libcob4* /usr/share/doc/gnucobol3* 2>/dev/null; find /usr -path '*libcob*' -type f | head -100; nm -D /usr/lib/x86_64-linux-gnu/libcob.so.4 | grep -E 'cob_(move|add|sub|decimal|get|put|set)' | head -100"
+  },
+  {
+   "kind": "model",
+   "at_ms": 71718,
+   "dur_ms": 4133,
+   "tokens_in": 17,
+   "tokens_out": 643,
+   "cache_read": 25536,
+   "cache_write": 1728,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 75851,
+   "dur_ms": 14,
+   "tool": "bash",
+   "is_error": false,
+   "command": "nm -D /usr/lib/x86_64-linux-gnu/libcob.so.4 | grep -i display; nm -D /usr/lib/x86_64-linux-gnu/libcob.so.4 | grep decimal | sort"
+  },
+  {
+   "kind": "model",
+   "at_ms": 75865,
+   "dur_ms": 1597,
+   "tokens_in": 28,
+   "tokens_out": 188,
+   "cache_read": 27904,
+   "cache_write": 384,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 77462,
+   "dur_ms": 14,
+   "tool": "bash",
+   "is_error": false,
+   "command": "objdump -d --start-address=0x22110 --stop-address=0x22940 /usr/lib/x86_64-linux-gnu/libcob.so.4.1.0 | sed -n '1,260p'"
+  },
+  {
+   "kind": "model",
+   "at_ms": 77477,
+   "dur_ms": 6458,
+   "tokens_in": 21,
+   "tokens_out": 975,
+   "cache_read": 28480,
+   "cache_write": 6208,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 83936,
+   "dur_ms": 18,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\ndef fast(bs):\n    v=0\n    for b in bs:\n        v=v*10+(b-0x30)\n    return v\nfor s in [b'200       ',b'1         ',b'200\\x00\\x00\\x00\\x00\\x00\\x00\\x00',b'0000000200',b'       200']:\n    print(s,fast(s))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 83957,
+   "dur_ms": 7357,
+   "tokens_in": 48,
+   "tokens_out": 1301,
+   "cache_read": 35648,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 91315,
+   "dur_ms": 18,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\ndef fast(bs):\n v=0\n for b in bs: v=v*10+(b-0x30)\n return v\nfor b in [b'200\\n000000',b'200\\r\\n00000',b'2000\\n00000']:\n print(b,fast(b))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 91337,
+   "dur_ms": 5919,
+   "tokens_in": 56,
+   "tokens_out": 1123,
+   "cache_read": 37056,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 97257,
+   "dur_ms": 115,
+   "tool": "bash",
+   "is_error": true,
+   "command": "rm -rf /tmp/inspect && mkdir -p /tmp/inspect && cd /tmp/inspect && cat > t.cbl <<'EOF'\n       IDENTIFICATION DIVISION.\n       PROGRAM-ID. T.\n       ENVIRONMENT DIVISION.\n       INPUT-OUTPUT SECTION.\n       FILE-CONTROL.\n           SELECT INPUT-FILE ASSIGN TO \"INPUT.DAT\"\n               ORGANIZATION IS SEQUENTIAL.\n       DATA DIVISION.\n       FILE SECTION.\n       FD INPUT-FILE.\n       01 INPUT-RECORD.\n           05 INPUT-BUYER-ID   PIC X(4).\n           05 INPUT-SELLER-ID  PIC X(4).\n           05 INPUT-BOOK-ID    PIC X(4).\n           05 INPUT-AMOUNT     PIC 9(10).\n       WORKING-STORAGE SECTION.\n       01 WS-AMOUNT           PIC 9(10)V99.\n       01 WS-DISP             PIC X(12).\n       01 WS-NUM              PIC 9(10).\n       PROCEDURE DIVISION.\n           OPEN INPUT INPUT-FILE\n           READ INPUT-FILE\n               AT END CONTINUE\n               NOT AT END\n                   MOVE INPUT-AMOUNT TO WS-AMOUNT\n                   MOVE WS-AMOUNT TO WS-DISP\n                   MOVE WS-AMOUNT TO WS-NUM\n                   DISPLAY \"RAW=\" WS-DISP\n                   DISPLAY \"NUM=\" WS-NUM\n           END-READ\n           CLOSE INPUT-FILE\n           STOP RUN.\nEOF\ncobc -x -o t t.cbl\nfor h in \"$(printf 'U001U002B001200' | od -An -tx1 | tr -d ' \\n')\" \"$(printf 'U001U002B001200       ' | od -An -tx1 | tr -d ' \\n')\" \"$(printf 'U001U002B001200\\n' | od -An -tx1 | tr -d ' \\n')\" \"$(printf 'U001U002B001       200' | od -An -tx1 | tr -d ' \\n')\" \"$(printf 'U001U002B00112A4567890' | od -An -tx1 | tr -d ' \\n')\"; do\n  python3 -c 'import sys; open(\"INPUT.DAT\",\"wb\").write(bytes.fromhex(sys.argv[1]))' \"$h\"\n  echo \"--- input $(od -An -tx1 INPUT.DAT | tr -d '\\n')\"\n  ./t\ndone",
+   "timeout": 60
+  },
+  {
+   "kind": "model",
+   "at_ms": 97372,
+   "dur_ms": 1449,
+   "tokens_in": 27,
+   "tokens_out": 194,
+   "cache_read": 38208,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 98822,
+   "dur_ms": 6,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp/inspect && nl -ba t.cbl | sed -n '20,30p'"
+  },
+  {
+   "kind": "model",
+   "at_ms": 98832,
+   "dur_ms": 2483,
+   "tokens_in": 41,
+   "tokens_out": 516,
+   "cache_read": 38720,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 101315,
+   "dur_ms": 38,
+   "tool": "bash",
+   "is_error": true,
+   "command": "cd /tmp/inspect && python3 - <<'PY'\np='t.cbl'\ns=open(p).read()\ns=s.replace('       01 WS-AMOUNT           PIC 9(10)V99.\\n       01 WS-DISP             PIC X(12).','       01 WS-AMOUNT           PIC 9(10)V99.\\n       01 WS-DISP             REDEFINES WS-AMOUNT PIC X(12).')\nopen(p,'w').write(s)\nPY\ncobc -x -o t t.cbl && for h in \"$(printf 'U001U002B001200' | od -An -tx1 | tr -d ' \\n')\" \"$(printf 'U001U002B001200       ' | od -An -tx1 | tr -d ' \\n')\" \"$(printf 'U001U002B001200\\n' | od -An -tx1 | tr -d ' \\n')\" \"$(printf 'U001U002B001       200' | od -An -tx1 | tr -d ' \\n')\" \"$(printf 'U001U002B00112A4567890' | od -An -tx1 | tr -d ' \\n')\"; do\n  python3 -c 'import sys; open(\"INPUT.DAT\",\"wb\").write(bytes.fromhex(sys.argv[1]))' \"$h\"\n  echo \"--- input $(od -An -tx1 INPUT.DAT | tr -d '\\n')\"\n  ./t | od -An -c\ndone",
+   "timeout": 60
+  },
+  {
+   "kind": "model",
+   "at_ms": 101357,
+   "dur_ms": 2603,
+   "tokens_in": 11,
+   "tokens_out": 65,
+   "cache_read": 39360,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 103960,
+   "dur_ms": 7,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp/inspect && sed -n '14,30p' t.cbl"
+  },
+  {
+   "kind": "model",
+   "at_ms": 103970,
+   "dur_ms": 2810,
+   "tokens_in": 9,
+   "tokens_out": 464,
+   "cache_read": 39488,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 106781,
+   "dur_ms": 226,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp/inspect && sed -i '/MOVE WS-AMOUNT TO WS-DISP/d; s/DISPLAY \"RAW=\" WS-DISP/DISPLAY \"RAW=\" WS-AMOUNT/' t.cbl && cobc -x -o t t.cbl && for h in \"$(printf 'U001U002B001200' | od -An -tx1 | tr -d ' \\n')\" \"$(printf 'U001U002B001200       ' | od -An -tx1 | tr -d ' \\n')\" \"$(printf 'U001U002B001200\\n' | od -An -tx1 | tr -d ' \\n')\" \"$(printf 'U001U002B001       200' | od -An -tx1 | tr -d ' \\n')\" \"$(printf 'U001U002B00112A4567890' | od -An -tx1 | tr -d ' \\n')\"; do\n  python3 -c 'import sys; open(\"INPUT.DAT\",\"wb\").write(bytes.fromhex(sys.argv[1]))' \"$h\"\n  echo \"--- input $(od -An -tx1 INPUT.DAT | tr -d '\\n')\"\n  ./t | od -An -c\ndone",
+   "timeout": 60
+  },
+  {
+   "kind": "model",
+   "at_ms": 107007,
+   "dur_ms": 5199,
+   "tokens_in": 27,
+   "tokens_out": 895,
+   "cache_read": 40128,
+   "cache_write": 576,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 112206,
+   "dur_ms": 14,
+   "tool": "bash",
+   "is_error": false,
+   "command": "objdump -d --start-address=0x1e3b0 --stop-address=0x1ef00 /usr/lib/x86_64-linux-gnu/libcob.so.4.1.0 | sed -n '1,320p'"
+  },
+  {
+   "kind": "model",
+   "at_ms": 112221,
+   "dur_ms": 13147,
+   "tokens_in": 25,
+   "tokens_out": 2214,
+   "cache_read": 41600,
+   "cache_write": 8576,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 125368,
+   "dur_ms": 12,
+   "tool": "bash",
+   "is_error": false,
+   "command": "grep -n \"typedef struct.*cob_field\\|struct cob_field\\|cob_field_attr\\|COB_TYPE_NUMERIC_DISPLAY\\|COB_TYPE_DISPLAY\\|cob_init\\|cob_move\\|cob_add\\|cob_sub\" /usr/include/libcob/common.h | head -80; grep -n \"cob_field_attr\" -A30 /usr/include/libcob/common.h | head -120"
+  },
+  {
+   "kind": "model",
+   "at_ms": 125381,
+   "dur_ms": 4733,
+   "tokens_in": 55,
+   "tokens_out": 703,
+   "cache_read": 52352,
+   "cache_write": 1472,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 130114,
+   "dur_ms": 33,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport ctypes\nfrom ctypes import *\nlib=CDLL('libcob.so.4')\nclass Attr(Structure):\n    _fields_=[('type',c_ushort),('digits',c_ushort),('scale',c_short),('flags',c_ushort),('pic',c_void_p)]\nclass Field(Structure):\n    _fields_=[('size',c_size_t),('data',POINTER(c_ubyte)),('attr',POINTER(Attr))]\nlib.cob_init.argtypes=[c_int,POINTER(c_char_p)]\n# maybe init\ntry:\n    lib.cob_init(0,None)\n    print('init ok')\nexcept Exception as e: print('init err',e)\na_in=Attr(0x10,10,0,0,None)\na_ws=Attr(0x10,12,2,0,None)\na_out=Attr(0x10,10,0,0,None)\nfor srcbytes in [b'200'+b'\\x00'*7, b'200       ', b'200\\n'+b'\\x00'*6, b'       200', b'12A4567890', b'0000000200', b'200\\r\\n'+b'\\x00'*5]:\n    sbuf=(c_ubyte*10).from_buffer_copy(srcbytes)\n    wbuf=(c_ubyte*12)()\n    obuf=(c_ubyte*10)()\n    f_in=Field(10,sbuf,pointer(a_in))\n    f_ws=Field(12,wbuf,pointer(a_ws))\n    f_out=Field(10,obuf,pointer(a_out))\n    lib.cob_move(byref(f_in),byref(f_ws))\n    lib.cob_move(byref(f_ws),byref(f_out))\n    print(srcbytes, 'ws=',bytes(wbuf), 'out=',bytes(obuf))\n    # add to balance 1180\n    bal=(c_ubyte*10).from_buffer_copy(b'0000001180')\n    f_bal=Field(10,bal,pointer(a_out))\n    lib.cob_sub(byref(f_bal),byref(f_ws),0)\n    print('  sub=',bytes(bal))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 130151,
+   "dur_ms": 18529,
+   "tokens_in": 26,
+   "tokens_out": 2903,
+   "cache_read": 54528,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 148680,
+   "dur_ms": 18,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\ndef fast(bs):\n v=0\n for b in bs: v=v*10+(b-0x30)\n return v\nfor s in [b'200\\n00000000', b'200\\r\\n0000000', b'12A456789000']:\n print(s, fast(s))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 148702,
+   "dur_ms": 3371,
+   "tokens_in": 38,
+   "tokens_out": 516,
+   "cache_read": 57728,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 152074,
+   "dur_ms": 17,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\ndef fast(bs):\n v=0\n for b in bs: v=v*10+(b-0x30)\n return v\nfor s in [b'00000002X000',b'00000002.000',b'+00000020000',b'-00000020000']:\n v=fast(s); print(s,v, int(v/100), abs(int(v/100))%10**10)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 152095,
+   "dur_ms": 3182,
+   "tokens_in": 2,
+   "tokens_out": 548,
+   "cache_read": 58304,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 155278,
+   "dur_ms": 25,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport ctypes\nfrom ctypes import *\nlib=CDLL('libcob.so.4'); lib.cob_init(0,None)\nclass A(Structure): _fields_=[('type',c_ushort),('digits',c_ushort),('scale',c_short),('flags',c_ushort),('pic',c_void_p)]\nclass F(Structure): _fields_=[('size',c_size_t),('data',POINTER(c_ubyte)),('attr',POINTER(A))]\nai=A(0x10,10,0,0,None); aw=A(0x10,12,2,0,None); ao=A(0x10,10,0,0,None)\nfor src in [b'+000000200',b'-000000200',b'00000002X0',b'00000002.0',b'ABCDEFGHIJ',b'123456789A',b'123456789+',b'         1',b'1         ']:\n    sb=(c_ubyte*10).from_buffer_copy(src); wb=(c_ubyte*12)(); ob=(c_ubyte*10)()\n    fi=F(10,sb,pointer(ai)); fw=F(12,wb,pointer(aw)); fo=F(10,ob,pointer(ao))\n    lib.cob_move(byref(fi),byref(fw)); lib.cob_move(byref(fw),byref(fo))\n    b=(c_ubyte*10).from_buffer_copy(b'0000001180'); fb=F(10,b,pointer(ao))\n    lib.cob_sub(byref(fb),byref(fw),0)\n    print(src,'ws=',bytes(wb),'out=',bytes(ob),'bal=',bytes(b))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 155307,
+   "dur_ms": 8382,
+   "tokens_in": 33,
+   "tokens_out": 1435,
+   "cache_read": 58944,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 163689,
+   "dur_ms": 20,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\ndef fast(bs):\n v=0\n for b in bs: v=v*10+(b-0x30)\n return v\nfor s in [b'123456789A00',b'123456789+00',b'ABCDEFGHIJ00']:\n v=fast(s); print(s,v, v//100, int(v/100))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 163713,
+   "dur_ms": 2654,
+   "tokens_in": 15,
+   "tokens_out": 385,
+   "cache_read": 60672,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 166367,
+   "dur_ms": 21,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\ndef fast(bs):\n v=0\n for b in bs: v=v*10+(b-0x30)\n return v\nfor s in [b'+00000020000',b'-00000020000']:\n v=fast(s); print(s,v, int(v/100), abs(int(v/100))%10**10)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 166392,
+   "dur_ms": 17715,
+   "tokens_in": 8,
+   "tokens_out": 3061,
+   "cache_read": 61184,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 184108,
+   "dur_ms": 7,
+   "tool": "bash",
+   "is_error": false,
+   "command": "grep -n \"cob_get_field_str\\|cob_field_display\\|cob_get_field_str_buffered\\|cob_get_int\" /usr/include/libcob/common.h | head -30"
+  },
+  {
+   "kind": "model",
+   "at_ms": 184119,
+   "dur_ms": 1914,
+   "tokens_in": 45,
+   "tokens_out": 314,
+   "cache_read": 64256,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 186033,
+   "dur_ms": 24,
+   "tool": "bash",
+   "is_error": true,
+   "command": "python3 - <<'PY'\nimport ctypes\nfrom ctypes import *\nlib=CDLL('libcob.so.4'); lib.cob_init(0,None)\nclass A(Structure): _fields_=[('type',c_ushort),('digits',c_ushort),('scale',c_short),('flags',c_ushort),('pic',c_void_p)]\nclass F(Structure): _fields_=[('size',c_size_t),('data',POINTER(c_ubyte)),('attr',POINTER(A))]\naw=A(0x10,12,2,0,None)\nlib.cob_get_field_str.argtypes=[POINTER(F),c_char_p,c_size_t]; lib.cob_get_field_str.restype=c_char_p\nfor src in [b'+00000020000',b'-00000020000',b'200000000000',b'123456789A00',b'ABCDEFGHIJ00',b'000000000100']:\n wb=(c_ubyte*12).from_buffer_copy(src); fw=F(12,wb,pointer(aw))\n buf=create_string_buffer(200)\n r=lib.cob_get_field_str(byref(fw),buf,200)\n print(src, r)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 186061,
+   "dur_ms": 2845,
+   "tokens_in": 5,
+   "tokens_out": 378,
+   "cache_read": 64704,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 188906,
+   "dur_ms": 31,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport ctypes\nfrom ctypes import *\nlib=CDLL('libcob.so.4'); lib.cob_init(0,None)\nclass A(Structure): _fields_=[('type',c_ushort),('digits',c_ushort),('scale',c_short),('flags',c_ushort),('pic',c_void_p)]\nclass F(Structure): _fields_=[('size',c_size_t),('data',POINTER(c_ubyte)),('attr',POINTER(A))]\naw=A(0x10,12,2,0,None); a30=A(0x10,30,0,0,None)\nfor src in [b'+00000020000',b'-00000020000',b'200000000000',b'123456789A00',b'ABCDEFGHIJ00',b'000000000100',b'AA0000000000']:\n wb=(c_ubyte*12).from_buffer_copy(src); fw=F(12,wb,pointer(aw))\n tb=(c_ubyte*30).from_buffer_copy(b'0'*30); ft=F(30,tb,pointer(a30))\n lib.cob_add(byref(ft),byref(fw),0)\n print(src,'sum=',bytes(tb))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 188941,
+   "dur_ms": 3345,
+   "tokens_in": 38,
+   "tokens_out": 477,
+   "cache_read": 65088,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 192286,
+   "dur_ms": 19,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nvals=[184467435737095716,184467437737095716]\nfor v in vals:\n print(v,2**64-v, v-(2**64))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 192309,
+   "dur_ms": 2335,
+   "tokens_in": 60,
+   "tokens_out": 360,
+   "cache_read": 65792,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 194644,
+   "dur_ms": 19,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nfor a in [499999980000,499999990000,4999999800,5000000000]:\n print(a,(2**64-a)//100,(2**64-a)%100)\nprint((2**64)//100)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 194667,
+   "dur_ms": 3687,
+   "tokens_in": 46,
+   "tokens_out": 588,
+   "cache_read": 66176,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 198354,
+   "dur_ms": 19,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nfor rawv in [-499999980000,-299999980000]:\n v=rawv % (2**64)\n # value numerator over 100\n num=1180*100 - v\n # trunc toward zero\n q=abs(num)//100 * (1 if num>=0 else -1)\n print(rawv,v,num,q,abs(q)%10**10)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 198377,
+   "dur_ms": 6638,
+   "tokens_in": 8,
+   "tokens_out": 876,
+   "cache_read": 66816,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 205016,
+   "dur_ms": 31,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport ctypes\nfrom ctypes import *\nlib=CDLL('libcob.so.4'); lib.cob_init(0,None)\nclass A(Structure): _fields_=[('type',c_ushort),('digits',c_ushort),('scale',c_short),('flags',c_ushort),('pic',c_void_p)]\nclass F(Structure): _fields_=[('size',c_size_t),('data',POINTER(c_ubyte)),('attr',POINTER(A))]\nai=A(0x10,10,0,0,None); aw=A(0x10,12,2,0,None)\ndef move(src):\n sb=(c_ubyte*10).from_buffer_copy(src); wb=(c_ubyte*12)()\n fi=F(10,sb,pointer(ai)); fw=F(12,wb,pointer(aw))\n lib.cob_move(byref(fi),byref(fw)); return bytes(wb)\ndef pred(src): return bytes((0x30 if b in (0,0x20) else b) for b in src)+b'00'\nfor pos in [0,5,9]:\n mismatches=[]\n for b in range(256):\n  src=bytearray(b'0'*10); src[pos]=b; src=bytes(src)\n  got=move(src); want=pred(src)\n  if got!=want: mismatches.append((b,got,want))\n print('pos',pos,'mismatches',len(mismatches))\n for m in mismatches[:30]: print(' ',m)\nPY",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 205052,
+   "dur_ms": 4330,
+   "tokens_in": 23,
+   "tokens_out": 804,
+   "cache_read": 67776,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 209382,
+   "dur_ms": 92,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport ctypes, random\nfrom ctypes import *\nlib=CDLL('libcob.so.4'); lib.cob_init(0,None)\nclass A(Structure): _fields_=[('type',c_ushort),('digits',c_ushort),('scale',c_short),('flags',c_ushort),('pic',c_void_p)]\nclass F(Structure): _fields_=[('size',c_size_t),('data',POINTER(c_ubyte)),('attr',POINTER(A))]\nai=A(0x10,10,0,0,None); aw=A(0x10,12,2,0,None); ao=A(0x10,10,0,0,None)\ndef move(src):\n sb=(c_ubyte*10).from_buffer_copy(src); wb=(c_ubyte*12)()\n fi=F(10,sb,pointer(ai)); fw=F(12,wb,pointer(aw))\n lib.cob_move(byref(fi),byref(fw)); return bytes(wb)\ndef oracle(ws, B, op):\n wb=(c_ubyte*12).from_buffer_copy(ws); fw=F(12,wb,pointer(aw))\n bb=(c_ubyte*10).from_buffer_copy(f'{B:010d}'.encode()); fb=F(10,bb,pointer(ao))\n (lib.cob_sub if op=='-' else lib.cob_add)(byref(fb),byref(fw),0)\n return bytes(bb)\ndef parse(raw):\n n=len(raw); i=0\n while i<n-1 and (raw[i]&0xf)==0: i+=1\n v=0\n for b in raw[i:]: v=v*10+(b-0x30)\n if v<0: v%=2**64\n return v\ndef tdiv(n,d): return n//d if n>=0 else -((-n)//d)\ndef pure(ws,B,op):\n v=parse(ws)\n if op=='-': num=B*100-v\n else: num=B*100+v\n q=tdiv(num,100)\n q=abs(q)%(10**10)\n return f'{q:010d}'.encode()\nrandom.seed(1)\nbad=0\nfor t in range(2000):\n src=bytes(random.randrange(256) for _ in range(10))\n ws=move(src)\n B=random.randrange(10**10)\n for op in '-+':\n  a=oracle(ws,B,op); b=pure(ws,B,op)\n  if a!=b:\n   bad+=1\n   if bad<10: print('BAD',src,ws,B,op,a,b)\nprint('bad',bad)\nPY",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 209478,
+   "dur_ms": 2083,
+   "tokens_in": 36,
+   "tokens_out": 250,
+   "cache_read": 68608,
+   "cache_write": 640,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 211561,
+   "dur_ms": 7,
+   "tool": "bash",
+   "is_error": false,
+   "command": "objdump -d --start-address=0x22550 --stop-address=0x22600 /usr/lib/x86_64-linux-gnu/libcob.so.4.1.0"
+  },
+  {
+   "kind": "model",
+   "at_ms": 211573,
+   "dur_ms": 25077,
+   "tokens_in": 1,
+   "tokens_out": 4544,
+   "cache_read": 69504,
+   "cache_write": 1280,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 236651,
+   "dur_ms": 112,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport ctypes, random\nfrom ctypes import *\nlib=CDLL('libcob.so.4'); lib.cob_init(0,None)\nclass A(Structure): _fields_=[('type',c_ushort),('digits',c_ushort),('scale',c_short),('flags',c_ushort),('pic',c_void_p)]\nclass F(Structure): _fields_=[('size',c_size_t),('data',POINTER(c_ubyte)),('attr',POINTER(A))]\nai=A(0x10,10,0,0,None); aw=A(0x10,12,2,0,None); ao=A(0x10,10,0,0,None)\ndef move(src):\n sb=(c_ubyte*10).from_buffer_copy(src); wb=(c_ubyte*12)()\n fi=F(10,sb,pointer(ai)); fw=F(12,wb,pointer(aw))\n lib.cob_move(byref(fi),byref(fw)); return bytes(wb)\ndef oracle(ws, B, op):\n wb=(c_ubyte*12).from_buffer_copy(ws); fw=F(12,wb,pointer(aw))\n bb=(c_ubyte*10).from_buffer_copy(f'{B:010d}'.encode()); fb=F(10,bb,pointer(ao))\n (lib.cob_sub if op=='-' else lib.cob_add)(byref(fb),byref(fw),0)\n return bytes(bb)\ndef parse(raw):\n if raw and raw[0]==0xff: return 10**len(raw)\n if raw and raw[0]==0x00: return -(10**len(raw))\n n=len(raw); i=0\n while i<n-1 and (raw[i]&0xf)==0: i+=1\n v=0\n for b in raw[i:]: v=v*10+(b-0x30)\n if v<0: v%=2**64\n return v\ndef tdiv(n,d): return n//d if n>=0 else -((-n)//d)\ndef pure(ws,B,op):\n v=parse(ws)\n num=B*100-v if op=='-' else B*100+v\n q=tdiv(num,100)\n q=abs(q)%(10**10)\n return f'{q:010d}'.encode()\nrandom.seed(2); bad=0\nfor t in range(3000):\n src=bytes(random.randrange(256) for _ in range(10))\n ws=move(src); B=random.randrange(10**10)\n for op in '-+':\n  a=oracle(ws,B,op); b=pure(ws,B,op)\n  if a!=b:\n   bad+=1\n   if bad<10: print('BAD',src,ws,B,op,a,b)\nprint('bad',bad)\nPY",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 236767,
+   "dur_ms": 18632,
+   "tokens_in": 16,
+   "tokens_out": 3537,
+   "cache_read": 75328,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 255401,
+   "dur_ms": 1,
+   "tool": "write",
+   "is_error": false,
+   "input": {
+    "path": "/app/program.py",
+    "content": "#!/usr/bin/env python3\n\"\"\"Python re-implementation of src/program.cbl (GnuCOBOL BOOKFORUM).\"\"\"\n\nfrom pathlib import Path\n\nBASE_DIR = Path(__file__).resolve().parent\nINPUT_PATH = BASE_DIR / \"src\" / \"INPUT.DAT\"\nDATA_DIR = BASE_DIR / \"data\"\nACCOUNTS_PATH = DATA_DIR / \"ACCOUNTS.DAT\"\nBOOKS_PATH = DATA_DIR / \"BOOKS.DAT\"\nTRANSACTIONS_PATH = DATA_DIR / \"TRANSACTIONS.DAT\"\n\nACCOUNT_LEN = 34\nBOOK_LEN = 28\nTRANSACTION_LEN = 22\nINPUT_LEN = 22\n\n\ndef parse_display_number(raw: bytes) -> int:\n    \"\"\"Mimic GnuCOBOL's conversion of an unsigned DISPLAY numeric field.\n\n    The 0xff/0x00 tests reproduce GnuCOBOL's special handling for those\n    bytes in the first position.  The rest mirrors its DISPLAY parser:\n    leading bytes whose low nibble is zero are skipped, then the remaining\n    bytes are accumulated as (byte - ord('0')) digits.  A negative result\n    is interpreted as an unsigned 64-bit value by the runtime.\n    \"\"\"\n    if raw and raw[0] == 0xFF:\n        return 10 ** len(raw)\n    if raw and raw[0] == 0x00:\n        return -(10 ** len(raw))\n\n    start = 0\n    last = len(raw) - 1\n    while start < last and (raw[start] & 0x0F) == 0:\n        start += 1\n\n    value = 0\n    for byte in raw[start:]:\n        value = value * 10 + (byte - 0x30)\n\n    if value < 0:\n        value %= 1 << 64\n    return value\n\n\ndef amount_field_to_ws(amount_field: bytes) -> bytes:\n    \"\"\"MOVE INPUT-AMOUNT (9(10)) TO WS-AMOUNT (9(10)V99).\"\"\"\n    # GnuCOBOL's display-to-display move maps NUL and space to '0' in\n    # place and appends two zero digits for the extra decimal scale.\n    mapped = bytes(0x30 if byte in (0x00, 0x20) else byte\n                   for byte in amount_field)\n    return mapped + b\"00\"\n\n\ndef trunc_div_100(value: int) -> int:\n    if value >= 0:\n        return value // 100\n    return -((-value) // 100)\n\n\ndef apply_balance_arithmetic(balance: int, ws_amount: int,\n                             subtract: bool) -> int:\n    \"\"\"Apply ADD/SUBTRACT to a 10-digit unsigned account balance.\"\"\"\n    if subtract:\n        numerator = balance * 100 - ws_amount\n    else:\n        numerator = balance * 100 + ws_amount\n\n    result = trunc_div_100(numerator)\n    # The receiving field is unsigned and has ten digits.\n    return abs(result) % (10 ** 10)\n\n\ndef format_balance(balance: int) -> bytes:\n    return f\"{balance:010d}\".encode(\"ascii\")\n\n\ndef read_records(data: bytes, record_len: int):\n    \"\"\"Yield (offset, record) like a fixed-length sequential COBOL READ.\n\n    The COBOL record area is zero-initialised and is reused for each read,\n    so a final partial record keeps the unread bytes from the previous read.\n    \"\"\"\n    record_area = bytearray(record_len)\n    offset = 0\n    while offset < len(data):\n        chunk = data[offset:offset + record_len]\n        record_area[:len(chunk)] = chunk\n        yield offset, bytes(record_area)\n        offset += record_len\n\n\ndef read_input_record():\n    data = INPUT_PATH.read_bytes()\n    if not data:\n        return None\n\n    record = data[:INPUT_LEN]\n    if len(record) < INPUT_LEN:\n        record += b\"\\x00\" * (INPUT_LEN - len(record))\n    return record\n\n\ndef validate(buyer_id: bytes, seller_id: bytes, book_id: bytes):\n    buyer_found = False\n    seller_found = False\n    book_found = False\n    valid_owner = False\n\n    accounts_data = ACCOUNTS_PATH.read_bytes()\n    for _, record in read_records(accounts_data, ACCOUNT_LEN):\n        account_id = record[0:4]\n        if account_id == buyer_id:\n            buyer_found = True\n        if account_id == seller_id:\n            seller_found = True\n\n    books_data = BOOKS_PATH.read_bytes()\n    for _, record in read_records(books_data, BOOK_LEN):\n        if record[0:4] == book_id:\n            book_found = True\n            if record[24:28] == seller_id:\n                valid_owner = True\n\n    return buyer_found, seller_found, book_found, valid_owner\n\n\ndef process_accounts(buyer_id: bytes, seller_id: bytes,\n                     ws_amount: int) -> bytes:\n    data = ACCOUNTS_PATH.read_bytes()\n    output = bytearray(data)\n\n    for offset, record in read_records(data, ACCOUNT_LEN):\n        balance = parse_display_number(record[24:34])\n        changed = False\n\n        if record[0:4] == buyer_id:\n            balance = apply_balance_arithmetic(balance, ws_amount, True)\n            changed = True\n        if record[0:4] == seller_id:\n            balance = apply_balance_arithmetic(balance, ws_amount, False)\n            changed = True\n\n        if changed:\n            new_record = record[0:24] + format_balance(balance)\n            output[offset:offset + ACCOUNT_LEN] = new_record\n\n    return bytes(output)\n\n\ndef process_books(book_id: bytes, buyer_id: bytes) -> bytes:\n    data = BOOKS_PATH.read_bytes()\n    output = bytearray(data)\n\n    for offset, record in read_records(data, BOOK_LEN):\n        if record[0:4] == book_id:\n            new_record = record[0:24] + buyer_id + record[28:BOOK_LEN]\n            output[offset:offset + BOOK_LEN] = new_record\n\n    return bytes(output)\n\n\ndef main():\n    input_record = read_input_record()\n    if input_record is None:\n        print(\"Error: Input file is empty\")\n        return\n\n    buyer_id = input_record[0:4]\n    seller_id = input_record[4:8]\n    book_id = input_record[8:12]\n    amount_field = input_record[12:22]\n\n    ws_amount_bytes = amount_field_to_ws(amount_field)\n    ws_amount = parse_display_number(ws_amount_bytes)\n\n    buyer_found, seller_found, book_found, valid_owner = validate(\n        buyer_id, seller_id, book_id\n    )\n\n    print(\" \")\n\n    if not (buyer_found and seller_found and book_found and valid_owner):\n        print(\"Transaction failed due to validation errors\")\n        return\n\n    accounts_output = process_accounts(buyer_id, seller_id, ws_amount)\n    books_output = process_books(book_id, buyer_id)\n\n    # MOVE WS-AMOUNT (scale 2) TO TRANS-AMOUNT (scale 0) keeps the first\n    # ten bytes of the display representation.  This is the mapped input\n    # amount field.\n    transaction_amount = ws_amount_bytes[0:10]\n    transaction_record = (\n        book_id + transaction_amount + seller_id + buyer_id\n    )\n\n    ACCOUNTS_PATH.write_bytes(accounts_output)\n    BOOKS_PATH.write_bytes(books_output)\n    with TRANSACTIONS_PATH.open(\"ab\") as transactions_file:\n        transactions_file.write(transaction_record)\n\n    print(\"Transaction completed successfully\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 255407,
+   "dur_ms": 1701,
+   "tokens_in": 57,
+   "tokens_out": 165,
+   "cache_read": 78848,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 257108,
+   "dur_ms": 103,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 -m py_compile program.py && echo OK || true; grep -n \"def process_books\" -A2 program.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 257211,
+   "dur_ms": 7770,
+   "tokens_in": 19,
+   "tokens_out": 1455,
+   "cache_read": 79040,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 264981,
+   "dur_ms": 2056,
+   "tool": "bash",
+   "is_error": false,
+   "command": "set -e\nrm -rf /tmp/refcomp /tmp/harness && mkdir -p /tmp/refcomp/src /tmp/refcomp/data /tmp/harness\ncp /app/src/program.cbl /tmp/refcomp/src/\ncd /tmp/refcomp && cobc -x -o /tmp/refcomp/program src/program.cbl\ncat > /tmp/harness/test.py <<'PY'\nimport subprocess, shutil, os, sys, random\nfrom pathlib import Path\nBASE=Path('/app')\nREF=Path('/tmp/refcomp/program')\norig={f: (BASE/'data'/f).read_bytes() for f in ['ACCOUNTS.DAT','BOOKS.DAT','TRANSACTIONS.DAT']}\n\ndef run_case(label, inp_bytes, data_overrides=None):\n    root=Path('/tmp/harness/case'); shutil.rmtree(root,ignore_errors=True)\n    (root/'src').mkdir(parents=True); (root/'data').mkdir()\n    for f,b in orig.items(): (root/'data'/f).write_bytes((data_overrides or {}).get(f,b))\n    (root/'src'/'INPUT.DAT').write_bytes(inp_bytes)\n    # cobol\n    c=subprocess.run([str(REF)],cwd=root,capture_output=True)\n    cob={f:(root/'data'/f).read_bytes() for f in orig}\n    # reset and python\n    for f,b in orig.items(): (root/'data'/f).write_bytes((data_overrides or {}).get(f,b))\n    shutil.copy('/app/program.py', root/'program.py')\n    p=subprocess.run([sys.executable,str(root/'program.py')],cwd=root,capture_output=True)\n    py={f:(root/'data'/f).read_bytes() for f in orig}\n    ok=all(cob[f]==py[f] for f in orig)\n    print(('OK  ' if ok else 'FAIL'),repr(label),'inlen',len(inp_bytes))\n    if not ok:\n        for f in orig:\n            if cob[f]!=py[f]:\n                print(' ',f,'cob=',cob[f],'py=',py[f])\n        print(' cobout',c.stdout,c.stderr)\n        print(' pyout',p.stdout,p.stderr)\n    return ok\n\ncases=[]\ndef c(label, s): cases.append((label, s if isinstance(s,bytes) else s.encode('latin1')))\nc('original sample', b'U001U002B007200')\nc('valid short 200', b'U001U002B001200')\nc('valid full 200', b'U001U002B0010000000200')\nc('valid short 50', b'U003U002B00250')\nc('valid full 50', b'U003U002B0020000000050')\nc('valid full 1', b'U001U002B0010000000001')\nc('buyer seller same', b'U001U001B0010000000100')\nc('zero amount', b'U001U002B0010000000000')\nc('invalid buyer', b'U999U002B0010000000200')\nc('invalid seller', b'U001U999B0010000000200')\nc('invalid book', b'U001U002B9990000000200')\nc('not owner', b'U001U003B0010000000200')\nc('short 999', b'U003U002B002999')\nc('huge 9999999999', b'U001U002B0019999999999')\nc('huge 0000001181', b'U001U002B0010000001181')\nc('trailing spaces amount', b'U001U002B001200       ')\nc('leading spaces amount', b'U001U002B001       200')\nc('newline amount', b'U001U002B001200\\n')\nc('crlf amount', b'U001U002B001200\\r\\n')\nc('plus amount', b'U001U002B001+000000200')\nc('minus amount', b'U001U002B001-000000200')\nc('letters amount', b'U001U002B001ABCDEFGHIJ')\nc('dot amount', b'U001U002B00100000002.0')\nc('extra data after first record', b'U001U002B001200XXXXX')\nc('full 22 with junk after', b'U001U002B0010000000200trailing')\nc('empty input', b'')\nallok=True\nfor label,s in cases:\n    allok &= run_case(label,s)\n# random amount fields (valid digits mostly)\nfor i in range(30):\n    buyer=random.choice(['U001','U002','U003'])\n    seller=random.choice(['U001','U002','U003'])\n    book=random.choice(['B001','B002','B003'])\n    amt=''.join(random.choice('0123456789') for _ in range(random.choice([1,3,5,10])))\n    inp=(buyer+seller+book+amt).encode()\n    allok &= run_case(f'random {i} {buyer}{seller}{book}{amt}',inp)\nprint('ALL OK' if allok else 'SOME FAILED')\nPY\npython3 /tmp/harness/test.py",
+   "timeout": 300
+  },
+  {
+   "kind": "model",
+   "at_ms": 267043,
+   "dur_ms": 11343,
+   "tokens_in": 52,
+   "tokens_out": 1971,
+   "cache_read": 80576,
+   "cache_write": 2112,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 278386,
+   "dur_ms": 78,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/harness/test_same.py <<'PY'\nimport subprocess, shutil\nfrom pathlib import Path\nBASE=Path('/app'); REF=Path('/tmp/refcomp/program')\norig={f:(BASE/'data'/f).read_bytes() for f in ['ACCOUNTS.DAT','BOOKS.DAT','TRANSACTIONS.DAT']}\ndef run(label,inp,overrides=None):\n root=Path('/tmp/harness/same'); shutil.rmtree(root,ignore_errors=True); (root/'src').mkdir(parents=True); (root/'data').mkdir()\n for f,b in orig.items(): (root/'data'/f).write_bytes((overrides or {}).get(f,b))\n (root/'src'/'INPUT.DAT').write_bytes(inp)\n c=subprocess.run([str(REF)],cwd=root,capture_output=True)\n print('===',label,'rc',c.returncode,'stdout',c.stdout,'stderr',c.stderr)\n for f in orig: print(f,(root/'data'/f).read_bytes())\nrun('same U002 amount0', b'U002U002B0010000000000')\nrun('same U002 amount200', b'U002U002B0010000000200')\nrun('same U002 short200', b'U002U002B001200')\nrun('same U002 invalid owner book B002?', b'U002U002B0020000000200')\n# duplicate accounts, same seller/buyer with target second record\nacc=orig['ACCOUNTS.DAT']+b'U002Dup                0000001000'+b'U002Dup2               0000002000'\nrun('duplicate same target second+third', b'U002U002B0010000000200', {'ACCOUNTS.DAT':acc})\n# duplicate accounts buyer != seller\nrun('dup buyer U001 seller U002', b'U001U002B0010000000200', {'ACCOUNTS.DAT':acc})\nPY\npython3 /tmp/harness/test_same.py",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 278470,
+   "dur_ms": 8588,
+   "tokens_in": 41,
+   "tokens_out": 1869,
+   "cache_read": 84672,
+   "cache_write": 1152,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 287058,
+   "dur_ms": 65,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nfrom pathlib import Path\np=Path('program.py')\ns=p.read_text()\nold='''def process_accounts(buyer_id: bytes, seller_id: bytes,\n                     ws_amount: int) -> bytes:\n    data = ACCOUNTS_PATH.read_bytes()\n    output = bytearray(data)\n\n    for offset, record in read_records(data, ACCOUNT_LEN):\n        balance = parse_display_number(record[24:34])\n        changed = False\n\n        if record[0:4] == buyer_id:\n            balance = apply_balance_arithmetic(balance, ws_amount, True)\n            changed = True\n        if record[0:4] == seller_id:\n            balance = apply_balance_arithmetic(balance, ws_amount, False)\n            changed = True\n\n        if changed:\n            new_record = record[0:24] + format_balance(balance)\n            output[offset:offset + ACCOUNT_LEN] = new_record\n\n    return bytes(output)\n'''\nnew='''def process_accounts(buyer_id: bytes, seller_id: bytes,\n                     ws_amount: int):\n    data = ACCOUNTS_PATH.read_bytes()\n    output = bytearray(data)\n\n    for offset, record in read_records(data, ACCOUNT_LEN):\n        account_id = record[0:4]\n\n        if account_id == buyer_id:\n            balance = parse_display_number(record[24:34])\n            balance = apply_balance_arithmetic(balance, ws_amount, True)\n            new_record = record[0:24] + format_balance(balance)\n            output[offset:offset + ACCOUNT_LEN] = new_record\n\n            # If buyer and seller are the same account, the COBOL program\n            # tries to REWRITE the record a second time without an\n            # intervening READ.  GnuCOBOL raises status 43 and terminates\n            # the run here, leaving the subtracted balance on disk.\n            if account_id == seller_id:\n                return bytes(output), True\n        elif account_id == seller_id:\n            balance = parse_display_number(record[24:34])\n            balance = apply_balance_arithmetic(balance, ws_amount, False)\n            new_record = record[0:24] + format_balance(balance)\n            output[offset:offset + ACCOUNT_LEN] = new_record\n\n    return bytes(output), False\n'''\nassert old in s\ns=s.replace(old,new)\nold2='''    accounts_output = process_accounts(buyer_id, seller_id, ws_amount)\n    books_output = process_books(book_id, buyer_id)\n\n    # MOVE WS-AMOUNT (scale 2) TO TRANS-AMOUNT (scale 0) keeps the first\n    # ten bytes of the display representation.  This is the mapped input\n    # amount field.\n    transaction_amount = ws_amount_bytes[0:10]\n    transaction_record = (\n        book_id + transaction_amount + seller_id + buyer_id\n    )\n\n    ACCOUNTS_PATH.write_bytes(accounts_output)\n    BOOKS_PATH.write_bytes(books_output)\n    with TRANSACTIONS_PATH.open(\"ab\") as transactions_file:\n        transactions_file.write(transaction_record)\n\n    print(\"Transaction completed successfully\")\n'''\nnew2='''    accounts_output, aborted = process_accounts(\n        buyer_id, seller_id, ws_amount\n    )\n    ACCOUNTS_PATH.write_bytes(accounts_output)\n    if aborted:\n        return\n\n    books_output = process_books(book_id, buyer_id)\n\n    # MOVE WS-AMOUNT (scale 2) TO TRANS-AMOUNT (scale 0) keeps the first\n    # ten bytes of the display representation.  This is the mapped input\n    # amount field.\n    transaction_amount = ws_amount_bytes[0:10]\n    transaction_record = (\n        book_id + transaction_amount + seller_id + buyer_id\n    )\n\n    BOOKS_PATH.write_bytes(books_output)\n    with TRANSACTIONS_PATH.open(\"ab\") as transactions_file:\n        transactions_file.write(transaction_record)\n\n    print(\"Transaction completed successfully\")\n'''\nassert old2 in s\ns=s.replace(old2,new2)\np.write_text(s)\nPY\npython3 -m py_compile program.py && echo compiled"
+  },
+  {
+   "kind": "model",
+   "at_ms": 287128,
+   "dur_ms": 1128,
+   "tokens_in": 4,
+   "tokens_out": 72,
+   "cache_read": 87680,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 288257,
+   "dur_ms": 1860,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 /tmp/harness/test.py | tail -25",
+   "timeout": 300
+  },
+  {
+   "kind": "model",
+   "at_ms": 290122,
+   "dur_ms": 7962,
+   "tokens_in": 59,
+   "tokens_out": 1650,
+   "cache_read": 87808,
+   "cache_write": 448,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 298084,
+   "dur_ms": 4913,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/harness/test_random_data.py <<'PY'\nimport subprocess, shutil, random, sys\nfrom pathlib import Path\nBASE=Path('/app'); REF=Path('/tmp/refcomp/program')\ndef rec_account(id,name,bal): return id.ljust(4).encode()[:4]+name.ljust(20).encode()[:20]+f'{bal:010d}'.encode()\ndef rec_book(id,title,owner): return id.ljust(4).encode()[:4]+title.ljust(20).encode()[:20]+owner.ljust(4).encode()[:4]\ndef rec_tran(book,amt,seller,buyer): return book.ljust(4).encode()[:4]+f'{amt:010d}'.encode()+seller.ljust(4).encode()[:4]+buyer.ljust(4).encode()[:4]\ndef run_case(label, inp, acc, books, trans):\n root=Path('/tmp/harness/rd'); shutil.rmtree(root,ignore_errors=True); (root/'src').mkdir(parents=True); (root/'data').mkdir()\n ini={'ACCOUNTS.DAT':acc,'BOOKS.DAT':books,'TRANSACTIONS.DAT':trans}\n for f,b in ini.items(): (root/'data'/f).write_bytes(b)\n (root/'src'/'INPUT.DAT').write_bytes(inp)\n c=subprocess.run([str(REF)],cwd=root,capture_output=True)\n cob={f:(root/'data'/f).read_bytes() for f in ini}\n for f,b in ini.items(): (root/'data'/f).write_bytes(b)\n shutil.copy('/app/program.py',root/'program.py')\n p=subprocess.run([sys.executable,str(root/'program.py')],cwd=root,capture_output=True)\n py={f:(root/'data'/f).read_bytes() for f in ini}\n ok=all(cob[f]==py[f] for f in ini)\n if not ok:\n  print('FAIL',label,'inp',inp)\n  for f in ini:\n   if cob[f]!=py[f]: print(' ',f,'len',len(cob[f]),len(py[f]),'\\n  cob',cob[f],'\\n  py ',py[f])\n  print(' c',c.returncode,c.stdout,c.stderr,' p',p.returncode,p.stdout,p.stderr)\n return ok\nrandom.seed(42)\nids=['U001','U002','U003','U004','U005','U00A']\ntitles=['Book One','Book Two','Book Three','Cobol','Python']\nallok=True\nfor t in range(150):\n # random accounts with duplicates possible\n accounts=[]\n n=random.randint(1,7)\n for i in range(n):\n  aid=random.choice(ids)\n  accounts.append(rec_account(aid,random.choice(['Alice','Bob','Jane','X','Long Name Here']),random.choice([0,1,5,1180,9999999999,random.randrange(10**10)])))\n acc=b''.join(accounts)\n # books\n books=[]\n for i in range(random.randint(1,6)):\n  bid=random.choice(['B001','B002','B003','B004'])\n  owner=random.choice(ids)\n  books.append(rec_book(bid,random.choice(titles),owner))\n book=b''.join(books)\n # transactions\n trans=b''.join(rec_tran(random.choice(['B001','B002']),random.randrange(1000),random.choice(ids),random.choice(ids)) for _ in range(random.randint(0,3)))\n buyer=random.choice(ids); seller=random.choice(ids); bk=random.choice(['B001','B002','B003','B004','B999'])\n amt_style=random.choice(['short','full','spaces'])\n amt=str(random.randrange(10**random.choice([1,3,10])))\n if amt_style=='short': inp=(buyer+seller+bk+amt).encode()\n elif amt_style=='full': inp=(buyer+seller+bk+amt.zfill(10)).encode()\n else: inp=(buyer+seller+bk+amt.rjust(10)).encode()\n allok &= run_case(f'case{t}',inp,acc,book,trans)\nprint('RANDOM DATA ALL OK' if allok else 'RANDOM DATA FAILED')\nPY\npython3 /tmp/harness/test_random_data.py | tail -30",
+   "timeout": 300
+  },
+  {
+   "kind": "model",
+   "at_ms": 303006,
+   "dur_ms": 4257,
+   "tokens_in": 63,
+   "tokens_out": 909,
+   "cache_read": 89920,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 307263,
+   "dur_ms": 259,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/harness/test_partial.py <<'PY'\nimport subprocess, shutil, sys\nfrom pathlib import Path\nBASE=Path('/app'); REF=Path('/tmp/refcomp/program')\norig={f:(BASE/'data'/f).read_bytes() for f in ['ACCOUNTS.DAT','BOOKS.DAT','TRANSACTIONS.DAT']}\ndef run(label,inp,ov):\n root=Path('/tmp/harness/pr'); shutil.rmtree(root,ignore_errors=True); (root/'src').mkdir(parents=True); (root/'data').mkdir()\n ini={f:ov.get(f,orig[f]) for f in orig}\n for f,b in ini.items(): (root/'data'/f).write_bytes(b)\n (root/'src'/'INPUT.DAT').write_bytes(inp)\n c=subprocess.run([str(REF)],cwd=root,capture_output=True)\n cob={f:(root/'data'/f).read_bytes() for f in ini}\n for f,b in ini.items(): (root/'data'/f).write_bytes(b)\n shutil.copy('/app/program.py',root/'program.py')\n p=subprocess.run([sys.executable,str(root/'program.py')],cwd=root,capture_output=True)\n py={f:(root/'data'/f).read_bytes() for f in ini}\n ok=all(cob[f]==py[f] for f in ini)\n print(('OK  ' if ok else 'FAIL'),label,'rc',c.returncode)\n if not ok:\n  for f in ini:\n   if cob[f]!=py[f]: print(' ',f,'len',len(cob[f]),len(py[f]),'\\n  cob',cob[f],'\\n  py ',py[f])\n  print(' c',c.stdout,c.stderr,' p',p.stdout,p.stderr)\n return ok\nallok=True\n# trailing newline on accounts\nallok &= run('accounts trailing newline', b'U001U002B0010000000200', {'ACCOUNTS.DAT':orig['ACCOUNTS.DAT']+b'\\n'})\nallok &= run('books trailing newline', b'U001U002B0010000000200', {'BOOKS.DAT':orig['BOOKS.DAT']+b'\\n'})\nallok &= run('trans trailing newline', b'U001U002B0010000000200', {'TRANSACTIONS.DAT':orig['TRANSACTIONS.DAT']+b'\\n'})\n# partial account record matching U001\nallok &= run('partial first account 20 bytes', b'U001U002B0010000000200', {'ACCOUNTS.DAT':orig['ACCOUNTS.DAT'][:20]})\nallok &= run('partial account matching U001', b'U001U002B0010000000200', {'ACCOUNTS.DAT':orig['ACCOUNTS.DAT'][:34]+orig['ACCOUNTS.DAT'][34:45]})\n# partial book record\nallok &= run('partial book matching B001', b'U001U002B0010000000200', {'BOOKS.DAT':orig['BOOKS.DAT'][:28]+orig['BOOKS.DAT'][28:35]})\n# odd transaction file\nallok &= run('odd transactions 5 bytes', b'U001U002B0010000000200', {'TRANSACTIONS.DAT':b'ABCDE'})\nprint('PARTIAL ALL OK' if allok else 'PARTIAL FAILED')\nPY\npython3 /tmp/harness/test_partial.py",
+   "timeout": 180
+  },
+  {
+   "kind": "model",
+   "at_ms": 307528,
+   "dur_ms": 9216,
+   "tokens_in": 28,
+   "tokens_out": 1666,
+   "cache_read": 90880,
+   "cache_write": 384,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 316744,
+   "dur_ms": 59,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/harness/inspect_partial.py <<'PY'\nimport subprocess, shutil\nfrom pathlib import Path\nBASE=Path('/app'); REF=Path('/tmp/refcomp/program')\norig={f:(BASE/'data'/f).read_bytes() for f in ['ACCOUNTS.DAT','BOOKS.DAT','TRANSACTIONS.DAT']}\ndef run(label,ov):\n root=Path('/tmp/harness/ip'); shutil.rmtree(root,ignore_errors=True); (root/'src').mkdir(parents=True); (root/'data').mkdir()\n for f,b in ov.items(): (root/'data'/f).write_bytes(b)\n for f,b in orig.items():\n  if f not in ov: (root/'data'/f).write_bytes(b)\n (root/'src'/'INPUT.DAT').write_bytes(b'U001U002B0010000000200')\n c=subprocess.run([str(REF)],cwd=root,capture_output=True)\n print('===',label,'rc',c.returncode,'stdout',c.stdout,'stderr',c.stderr)\n for f in orig: print(f,len((root/'data'/f).read_bytes()),(root/'data'/f).read_bytes())\nrun('partial first 20', {'ACCOUNTS.DAT':orig['ACCOUNTS.DAT'][:20]})\nrun('full first + partial second 11', {'ACCOUNTS.DAT':orig['ACCOUNTS.DAT'][:34]+orig['ACCOUNTS.DAT'][34:45]})\nrun('full first + partial second 33', {'ACCOUNTS.DAT':orig['ACCOUNTS.DAT'][:34]+orig['ACCOUNTS.DAT'][34:67]})\nrun('single full U002', {'ACCOUNTS.DAT':orig['ACCOUNTS.DAT'][34:68]})\nPY\npython3 /tmp/harness/inspect_partial.py",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 316813,
+   "dur_ms": 6176,
+   "tokens_in": 11,
+   "tokens_out": 1216,
+   "cache_read": 92928,
+   "cache_write": 640,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 322989,
+   "dur_ms": 54,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/harness/test_partial_rewrite.py <<'PY'\nimport subprocess, shutil\nfrom pathlib import Path\nBASE=Path('/app'); REF=Path('/tmp/refcomp/program')\norig={f:(BASE/'data'/f).read_bytes() for f in ['ACCOUNTS.DAT','BOOKS.DAT','TRANSACTIONS.DAT']}\ndef run(label,inp,ov):\n root=Path('/tmp/harness/tpr'); shutil.rmtree(root,ignore_errors=True); (root/'src').mkdir(parents=True); (root/'data').mkdir()\n for f,b in orig.items(): (root/'data'/f).write_bytes(ov.get(f,b))\n (root/'src'/'INPUT.DAT').write_bytes(inp)\n c=subprocess.run([str(REF)],cwd=root,capture_output=True)\n print('===',label,'rc',c.returncode,'stdout',c.stdout,'stderr',c.stderr)\n for f in orig: print(f,len((root/'data'/f).read_bytes()),(root/'data'/f).read_bytes())\nrun('accounts partial U002 same buyer seller', b'U002U002B0010000000200', {'ACCOUNTS.DAT':orig['ACCOUNTS.DAT'][34:54]})\nrun('accounts partial U002 buyer only', b'U002U001B0010000000200', {'ACCOUNTS.DAT':orig['ACCOUNTS.DAT'][34:54]})\nrun('books partial B002 matching', b'U001U002B0020000000200', {'BOOKS.DAT':orig['BOOKS.DAT'][:28]+orig['BOOKS.DAT'][28:35]})\nPY\npython3 /tmp/harness/test_partial_rewrite.py",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 323049,
+   "dur_ms": 8479,
+   "tokens_in": 47,
+   "tokens_out": 2128,
+   "cache_read": 94784,
+   "cache_write": 448,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 331528,
+   "dur_ms": 7192,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nfrom pathlib import Path\np=Path('program.py'); s=p.read_text()\ns=s.replace('''    record_area = bytearray(record_len)\n    offset = 0\n    while offset < len(data):\n        chunk = data[offset:offset + record_len]\n        record_area[:len(chunk)] = chunk\n        yield offset, bytes(record_area)\n        offset += record_len\n''','''    record_area = bytearray(record_len)\n    offset = 0\n    while offset < len(data):\n        chunk = data[offset:offset + record_len]\n        record_area[:len(chunk)] = chunk\n        yield offset, bytes(record_area), len(chunk)\n        offset += record_len\n''')\ns=s.replace('''    accounts_data = ACCOUNTS_PATH.read_bytes()\n    for _, record in read_records(accounts_data, ACCOUNT_LEN):\n        account_id = record[0:4]\n''','''    accounts_data = ACCOUNTS_PATH.read_bytes()\n    for _, record, _ in read_records(accounts_data, ACCOUNT_LEN):\n        account_id = record[0:4]\n''')\ns=s.replace('''    books_data = BOOKS_PATH.read_bytes()\n    for _, record in read_records(books_data, BOOK_LEN):\n        if record[0:4] == book_id:\n''','''    books_data = BOOKS_PATH.read_bytes()\n    for _, record, _ in read_records(books_data, BOOK_LEN):\n        if record[0:4] == book_id:\n''')\nold='''    for offset, record in read_records(data, ACCOUNT_LEN):\n        account_id = record[0:4]\n\n        if account_id == buyer_id:\n            balance = parse_display_number(record[24:34])\n            balance = apply_balance_arithmetic(balance, ws_amount, True)\n            new_record = record[0:24] + format_balance(balance)\n            output[offset:offset + ACCOUNT_LEN] = new_record\n\n            # If buyer and seller are the same account, the COBOL program\n            # tries to REWRITE the record a second time without an\n            # intervening READ.  GnuCOBOL raises status 43 and terminates\n            # the run here, leaving the subtracted balance on disk.\n            if account_id == seller_id:\n                return bytes(output), True\n        elif account_id == seller_id:\n            balance = parse_display_number(record[24:34])\n            balance = apply_balance_arithmetic(balance, ws_amount, False)\n            new_record = record[0:24] + format_balance(balance)\n            output[offset:offset + ACCOUNT_LEN] = new_record\n\n    return bytes(output), False\n'''\nnew='''    for offset, record, actual_length in read_records(data, ACCOUNT_LEN):\n        account_id = record[0:4]\n\n        if account_id in (buyer_id, seller_id):\n            # GnuCOBOL cannot REWRITE a record that was only partially read.\n            if actual_length < ACCOUNT_LEN:\n                return bytes(output), True\n\n            if account_id == buyer_id:\n                balance = parse_display_number(record[24:34])\n                balance = apply_balance_arithmetic(balance, ws_amount, True)\n                new_record = record[0:24] + format_balance(balance)\n                output[offset:offset + ACCOUNT_LEN] = new_record\n\n                # If buyer and seller are the same account, the COBOL\n                # program tries to REWRITE the record a second time without\n                # an intervening READ.  GnuCOBOL raises status 43 and\n                # terminates the run here, leaving the subtracted balance.\n                if account_id == seller_id:\n                    return bytes(output), True\n            else:\n                balance = parse_display_number(record[24:34])\n                balance = apply_balance_arithmetic(\n                    balance, ws_amount, False\n                )\n                new_record = record[0:24] + format_balance(balance)\n                output[offset:offset + ACCOUNT_LEN] = new_record\n\n    return bytes(output), False\n'''\nassert old in s\ns=s.replace(old,new)\nold2='''def process_books(book_id: bytes, buyer_id: bytes) -> bytes:\n    data = BOOKS_PATH.read_bytes()\n    output = bytearray(data)\n\n    for offset, record in read_records(data, BOOK_LEN):\n        if record[0:4] == book_id:\n            new_record = record[0:24] + buyer_id + record[28:BOOK_LEN]\n            output[offset:offset + BOOK_LEN] = new_record\n\n    return bytes(output)\n'''\nnew2='''def process_books(book_id: bytes, buyer_id: bytes):\n    data = BOOKS_PATH.read_bytes()\n    output = bytearray(data)\n\n    for offset, record, actual_length in read_records(data, BOOK_LEN):\n        if record[0:4] == book_id:\n            # GnuCOBOL cannot REWRITE a partially read record.\n            if actual_length < BOOK_LEN:\n                return bytes(output), True\n\n            new_record = record[0:24] + buyer_id + record[28:BOOK_LEN]\n            output[offset:offset + BOOK_LEN] = new_record\n\n    return bytes(output), False\n'''\nassert old2 in s\ns=s.replace(old2,new2)\nold3='''    books_output = process_books(book_id, buyer_id)\n\n    # MOVE WS-AMOUNT (scale 2) TO TRANS-AMOUNT (scale 0) keeps the first\n    # ten bytes of the display representation.  This is the mapped input\n    # amount field.\n    transaction_amount = ws_amount_bytes[0:10]\n    transaction_record = (\n        book_id + transaction_amount + seller_id + buyer_id\n    )\n\n    BOOKS_PATH.write_bytes(books_output)\n    with TRANSACTIONS_PATH.open(\"ab\") as transactions_file:\n        transactions_file.write(transaction_record)\n'''\nnew3='''    books_output, aborted = process_books(book_id, buyer_id)\n    BOOKS_PATH.write_bytes(books_output)\n    if aborted:\n        return\n\n    # MOVE WS-AMOUNT (scale 2) TO TRANS-AMOUNT (scale 0) keeps the first\n    # ten bytes of the display representation.  This is the mapped input\n    # amount field.\n    transaction_amount = ws_amount_bytes[0:10]\n    transaction_record = (\n        book_id + transaction_amount + seller_id + buyer_id\n    )\n\n    with TRANSACTIONS_PATH.open(\"ab\") as transactions_file:\n        transactions_file.write(transaction_record)\n'''\nassert old3 in s\ns=s.replace(old3,new3)\np.write_text(s)\nPY\npython3 -m py_compile program.py && python3 /tmp/harness/test_partial.py && python3 /tmp/harness/test.py | tail -3 && python3 /tmp/harness/test_random_data.py | tail -3",
+   "timeout": 300
+  },
+  {
+   "kind": "model",
+   "at_ms": 338726,
+   "dur_ms": 1162,
+   "tokens_in": 13,
+   "tokens_out": 58,
+   "cache_read": 97344,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 339889,
+   "dur_ms": 1,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "path": "/app/program.py"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 339896,
+   "dur_ms": 2983,
+   "tokens_in": 46,
+   "tokens_out": 270,
+   "cache_read": 97600,
+   "cache_write": 1920,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 342879,
+   "dur_ms": 13,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && find . -maxdepth 2 -type f -printf '%p %s\\n' | sort && find . -maxdepth 2 -type d -print"
+  },
+  {
+   "kind": "model",
+   "at_ms": 342892,
+   "dur_ms": 1941,
+   "tokens_in": 32,
+   "tokens_out": 217,
+   "cache_read": 99776,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 344833,
+   "dur_ms": 79,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && rm -rf __pycache__ && python3 - <<'PY'\nfrom pathlib import Path\np=Path('program.py'); s=p.read_text()\ns=s.replace('TRANSACTION_LEN = 22\\n','')\ns=s.replace('''    \"\"\"Yield (offset, record) like a fixed-length sequential COBOL READ.\n''','''    \"\"\"Yield (offset, record, bytes_read) like a sequential COBOL READ.\n''')\np.write_text(s)\nPY\nchmod +x program.py && python3 -m py_compile program.py && rm -rf __pycache__ && ls -la /app && head -15 program.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 344913,
+   "dur_ms": 1678,
+   "tokens_in": 63,
+   "tokens_out": 161,
+   "cache_read": 100096,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 346591,
+   "dur_ms": 1846,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 /tmp/harness/test.py | tail -4 && find /app -maxdepth 1 -type f -printf '%f\\n' | sort",
+   "timeout": 300
+  },
+  {
+   "kind": "model",
+   "at_ms": 348437,
+   "dur_ms": 1608,
+   "tokens_in": 45,
+   "tokens_out": 140,
+   "cache_read": 100544,
+   "cache_write": 64,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.998,
+ "calls": 60,
+ "cell": "TB1e"
+}

@@ -1,0 +1,422 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "portfolio-optimization",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 339929,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 313,
+  "output": 19628,
+  "cacheRead": 322944,
+  "cacheWrite": 13760,
+  "total": 356645
+ },
+ "totals": {
+  "model_calls": 12,
+  "tool_calls": 11,
+  "model_ms": 90431,
+  "tool_ms": 248815,
+  "sandbox_ms": 244308
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 577,
+   "dur_ms": 1007
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1584,
+   "dur_ms": 165,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -la /workspace\necho \"=== portfolio_baseline.py ===\"\ncat /workspace/portfolio_baseline.py\necho \"=== portfolio_optimized.py ===\"\ncat /workspace/portfolio_optimized.py\necho \"=== portfolio_optimized.c ===\"\ncat /workspace/portfolio_optimized.c\necho \"=== setup.py ===\"\ncat /workspace/setup.py\necho \"=== benchmark.py ===\"\ncat /workspace/benchmark.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 1665,
+     "dur_ms": 60,
+     "exit": 0,
+     "cpu_ms": 45.2,
+     "phases_us": {
+      "acquire": 79,
+      "resume": 21851,
+      "mount": 19426,
+      "run": 9118,
+      "destroy": 28920
+     },
+     "cold": null,
+     "vm": "vm-61"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 1749,
+   "dur_ms": 14084
+  },
+  {
+   "kind": "tool",
+   "at_ms": 15833,
+   "dur_ms": 850,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put portfolio_optimized.c <<'EOF'\n/*\n * High-performance portfolio calculations using C extension\n *\n * portfolio_risk   = sqrt(x^T * S * x)\n * portfolio_return = x^T * r\n *\n * Uses the NumPy C API for zero-copy access to contiguous float64 arrays.\n */\n\n#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION\n#include <Python.h>\n#include <numpy/arrayobject.h>\n#include <math.h>\n#include <stdlib.h>\n\n/*\n * Convert an arbitrary input object into a C-contiguous, native-endian\n * float64 ndarray.  If the input already is one, no data is copied.\n */\nstatic PyArrayObject* as_f64_contiguous(PyObject *obj, const char *name) {\n    PyArrayObject *arr = (PyArrayObject *)PyArray_FROM_OTF(\n        obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);\n    if (arr == NULL) {\n        PyErr_Format(PyExc_TypeError,\n                     \"%s could not be converted to a float64 array\", name);\n        return NULL;\n    }\n    return arr;\n}\n\nstatic PyObject* portfolio_risk_c(PyObject *self, PyObject *args) {\n    PyObject *weights_obj, *cov_obj;\n\n    if (!PyArg_ParseTuple(args, \"OO\", &weights_obj, &cov_obj))\n        return NULL;\n\n    PyArrayObject *weights_array = as_f64_contiguous(weights_obj, \"weights\");\n    if (weights_array == NULL)\n        return NULL;\n\n    PyArrayObject *cov_array = as_f64_contiguous(cov_obj, \"cov_matrix\");\n    if (cov_array == NULL) {\n        Py_DECREF(weights_array);\n        return NULL;\n    }\n\n    if (PyArray_NDIM(weights_array) != 1) {\n        PyErr_SetString(PyExc_ValueError, \"weights must be a 1D array\");\n        goto fail;\n    }\n    if (PyArray_NDIM(cov_array) != 2) {\n        PyErr_SetString(PyExc_ValueError, \"cov_matrix must be a 2D array\");\n        goto fail;\n    }\n\n    const npy_intp n = PyArray_DIM(weights_array, 0);\n    if (PyArray_DIM(cov_array, 0) != n || PyArray_DIM(cov_array, 1) != n) {\n        PyErr_SetString(PyExc_ValueError,\n                        \"cov_matrix must be an n x n matrix matching weights\");\n        goto fail;\n    }\n\n    const double *restrict x = (const double *)PyArray_DATA(weights_array);\n    const double *restrict s = (const double *)PyArray_DATA(cov_array);\n\n    /*\n     * Step 1: temp = S * x, accumulated in index order just like the\n     * Python baseline.  Step 2: risk_squared = x . temp.\n     * Fusing the two steps avoids materialising temp and is\n     * mathematically identical.\n     */\n    double risk_squared = 0.0;\n    for (npy_intp i = 0; i < n; ++i) {\n        const double *restrict row = s + i * n;\n        double row_sum = 0.0;\n        for (npy_intp j = 0; j < n; ++j)\n            row_sum += row[j] * x[j];\n        risk_squared += x[i] * row_sum;\n    }\n\n    Py_DECREF(weights_array);\n    Py_DECREF(cov_array);\n\n    if (risk_squared < 0.0)\n        risk_squared = 0.0;\n    return PyFloat_FromDouble(sqrt(risk_squared));\n\nfail:\n    Py_DECREF(weights_array);\n    Py_DECREF(cov_array);\n    return NULL;\n}\n\nstatic PyObject* portfolio_return_c(PyObject *self, PyObject *args) {\n    PyObject *weights_obj, *returns_obj;\n\n    if (!PyArg_ParseTuple(args, \"OO\", &weights_obj, &returns_obj))\n        return NULL;\n\n    PyArrayObject *weights_array = as_f64_contiguous(weights_obj, \"weights\");\n    if (weights_array == NULL)\n        return NULL;\n\n    PyArrayObject *returns_array = as_f64_contiguous(returns_obj,\n                                                     \"expected_returns\");\n    if (returns_array == NULL) {\n        Py_DECREF(weights_array);\n        return NULL;\n    }\n\n    if (PyArray_NDIM(weights_array) != 1 || PyArray_NDIM(returns_array) != 1) {\n        PyErr_SetString(PyExc_ValueError,\n                        \"weights and expected_returns must be 1D arrays\");\n        goto fail;\n    }\n\n    const npy_intp n = PyArray_DIM(weights_array, 0);\n    if (PyArray_DIM(returns_array, 0) != n) {\n        PyErr_SetString(PyExc_ValueError,\n                        \"weights and expected_returns must have equal length\");\n        goto fail;\n    }\n\n    const double *restrict x = (const double *)PyArray_DATA(weights_array);\n    const double *restrict r = (const double *)PyArray_DATA(returns_array);\n\n    double total_return = 0.0;\n    for (npy_intp i = 0; i < n; ++i)\n        total_return += x[i] * r[i];\n\n    Py_DECREF(weights_array);\n    Py_DECREF(returns_array);\n    return PyFloat_FromDouble(total_return);\n\nfail:\n    Py_DECREF(weights_array);\n    Py_DECREF(returns_array);\n    return NULL;\n}\n\nstatic PyMethodDef module_methods[] = {\n    {\"portfolio_risk_c\", portfolio_risk_c, METH_VARARGS, \"Calculate portfolio risk\"},\n    {\"portfolio_return_c\", portfolio_return_c, METH_VARARGS, \"Calculate portfolio return\"},\n    {NULL, NULL, 0, NULL}\n};\n\nstatic struct PyModuleDef moduledef = {\n    PyModuleDef_HEAD_INIT,\n    \"portfolio_optimized_c\",\n    \"Optimized portfolio calculations\",\n    -1,\n    module_methods\n};\n\nPyMODINIT_FUNC PyInit_portfolio_optimized_c(void) {\n    import_array();  // Initialize NumPy C API\n    return PyModule_Create(&moduledef);\n}\nEOF\n\nsbx put portfolio_optimized.py <<'EOF'\n\"\"\"\nPython wrapper for portfolio optimization C extension.\n\"\"\"\n\nimport numpy as np\n\nfrom portfolio_optimized_c import (\n    portfolio_return_c as _portfolio_return_c,\n    portfolio_risk_c as _portfolio_risk_c,\n)\n\n\ndef portfolio_risk_c(weights, cov_matrix):\n    \"\"\"\n    Calculate portfolio risk using C extension: sqrt(x^T * S * x)\n\n    Args:\n        weights: Portfolio weights (1D array)\n        cov_matrix: Covariance matrix (2D array)\n    Returns:\n        Portfolio risk (scalar)\n    \"\"\"\n    w = np.ascontiguousarray(weights, dtype=np.float64)\n    cov = np.ascontiguousarray(cov_matrix, dtype=np.float64)\n    return _portfolio_risk_c(w, cov)\n\n\ndef portfolio_return_c(weights, expected_returns):\n    \"\"\"\n    Calculate expected portfolio return using C extension: weights^T * returns\n\n    Args:\n        weights: Portfolio weights (1D array)\n        expected_returns: Expected returns (1D array)\n    Returns:\n        Expected return (scalar)\n    \"\"\"\n    w = np.ascontiguousarray(weights, dtype=np.float64)\n    r = np.ascontiguousarray(expected_returns, dtype=np.float64)\n    return _portfolio_return_c(w, r)\n\n\n__all__ = ['portfolio_risk_c', 'portfolio_return_c']\nEOF\n\necho \"files written\"",
+   "sandbox": [
+    {
+     "at_ms": 16525,
+     "dur_ms": 45,
+     "exit": 0,
+     "cpu_ms": 44.1,
+     "phases_us": {
+      "acquire": 81,
+      "resume": 21416,
+      "mount": 18936,
+      "run": 7400,
+      "destroy": 16065
+     },
+     "cold": null,
+     "vm": "vm-65"
+    },
+    {
+     "at_ms": 16618,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 42.1,
+     "phases_us": {
+      "acquire": 37,
+      "resume": 20807,
+      "mount": 18208,
+      "run": 7149,
+      "destroy": 27621
+     },
+     "cold": null,
+     "vm": "vm-58"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 16683,
+   "dur_ms": 1040
+  },
+  {
+   "kind": "tool",
+   "at_ms": 17723,
+   "dur_ms": 81197,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace && python3 setup.py build_ext --inplace 2>&1 | tail -20 && python3 benchmark.py\nEOF",
+   "timeout": 600000,
+   "sandbox": [
+    {
+     "at_ms": 17778,
+     "dur_ms": 81132,
+     "exit": 0,
+     "cpu_ms": 81284.5,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 21324,
+      "mount": 19048,
+      "run": 80948249,
+      "destroy": 162509
+     },
+     "cold": null,
+     "vm": "vm-74"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 98920,
+   "dur_ms": 12545
+  },
+  {
+   "kind": "tool",
+   "at_ms": 111465,
+   "dur_ms": 21852,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace && python3 - <<'PY'\nimport time, numpy as np\nfrom portfolio_baseline import generate_test_data\nfrom portfolio_optimized import portfolio_risk_c\nfrom portfolio_optimized_c import portfolio_risk_c as raw\n\nn = 8000\nw, cov, r = generate_test_data(n)\n\nt=time.perf_counter(); a=np.ascontiguousarray(cov, dtype=np.float64); t_conv=time.perf_counter()-t\nt=time.perf_counter(); b=np.ascontiguousarray(w, dtype=np.float64); t_conv2=time.perf_counter()-t\nt=time.perf_counter(); raw( b, a ); t_raw=time.perf_counter()-t\nprint(f\"convert cov (list->np): {t_conv:.3f}s\")\nprint(f\"convert weights:        {t_conv2:.4f}s\")\nprint(f\"raw C call (np inputs): {t_raw:.4f}s\")\nt=time.perf_counter(); raw( b, a ); t_raw=time.perf_counter()-t\nprint(f\"raw C call 2:           {t_raw:.4f}s\")\nPY\nEOF",
+   "timeout": 600000,
+   "sandbox": [
+    {
+     "at_ms": 111520,
+     "dur_ms": 21788,
+     "exit": 0,
+     "cpu_ms": 21694.0,
+     "phases_us": {
+      "acquire": 22132,
+      "resume": 21307,
+      "mount": 19552,
+      "run": 21520150,
+      "destroy": 224688
+     },
+     "cold": "parked",
+     "vm": "vm-82"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 133317,
+   "dur_ms": 33506
+  },
+  {
+   "kind": "tool",
+   "at_ms": 166823,
+   "dur_ms": 61276,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put portfolio_optimized.c <<'EOF'\n/*\n * High-performance portfolio calculations using C extension\n *\n * portfolio_risk   = sqrt(x^T * S * x)\n * portfolio_return = x^T * r\n *\n * Two data paths:\n *   1. Fast path for nested Python sequences (list/tuple of list/tuple of\n *      numbers, i.e. exactly what the baseline produces).  The matrix is\n *      traversed in place, which avoids numpy's costly generic\n *      nested-sequence conversion and a full copy of the n x n matrix.\n *   2. Generic path for anything else, via the NumPy C API with\n *      zero-copy access to C-contiguous float64 arrays.\n *\n * Both paths accumulate in the same order as the Python baseline:\n *   temp[i] = sum_j cov[i][j] * x[j],  risk^2 = sum_i x[i] * temp[i].\n */\n\n#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION\n#include <Python.h>\n#include <numpy/arrayobject.h>\n#include <math.h>\n#include <stdlib.h>\n#include <string.h>\n\n/* ---------- small sequence helpers ---------- */\n\nstatic inline int is_seq(PyObject *o) {\n    return PyList_Check(o) || PyTuple_Check(o);\n}\n\nstatic inline Py_ssize_t seq_len(PyObject *o) {\n    return PyList_Check(o) ? PyList_GET_SIZE(o) : PyTuple_GET_SIZE(o);\n}\n\nstatic inline PyObject *seq_item(PyObject *o, Py_ssize_t i) {\n    return PyList_Check(o) ? PyList_GET_ITEM(o, i) : PyTuple_GET_ITEM(o, i);\n}\n\n/* Convert one Python object to a double.  Returns 0 on success, -1 on error. */\nstatic inline int to_double(PyObject *item, double *out) {\n    if (PyFloat_CheckExact(item)) {\n        *out = PyFloat_AS_DOUBLE(item);\n        return 0;\n    }\n    double v = PyFloat_AsDouble(item);\n    if (v == -1.0 && PyErr_Occurred())\n        return -1;\n    *out = v;\n    return 0;\n}\n\n/* Copy a 1D Python sequence of numbers into a freshly malloc'd buffer. */\nstatic int seq_to_doubles(PyObject *obj, Py_ssize_t *n_out, double **buf_out) {\n    Py_ssize_t n = seq_len(obj);\n    double *buf = (double *)malloc(sizeof(double) * (size_t)(n > 0 ? n : 1));\n    if (buf == NULL) {\n        PyErr_NoMemory();\n        return -1;\n    }\n    for (Py_ssize_t i = 0; i < n; ++i) {\n        if (to_double(seq_item(obj, i), &buf[i]) < 0) {\n            free(buf);\n            return -1;\n        }\n    }\n    *n_out = n;\n    *buf_out = buf;\n    return 0;\n}\n\n/*\n * Fast path for portfolio risk with a nested-sequence covariance matrix.\n * Writes the result to *result and returns 1 if handled, 0 if the inputs are\n * not in the expected form (caller should use the generic path), -1 on error.\n */\nstatic int risk_fast_path(PyObject *w_obj, PyObject *cov_obj,\n                          PyObject **result) {\n    if (!is_seq(cov_obj))\n        return 0;\n\n    const Py_ssize_t n = seq_len(cov_obj);\n    double *x = NULL;\n\n    if (is_seq(w_obj)) {\n        Py_ssize_t wn;\n        if (seq_to_doubles(w_obj, &wn, &x) < 0)\n            return -1;\n        if (wn != n) {\n            free(x);\n            PyErr_SetString(PyExc_ValueError,\n                            \"cov_matrix must be an n x n matrix matching weights\");\n            return -1;\n        }\n    } else if (PyArray_Check(w_obj)) {\n        PyArrayObject *wa = (PyArrayObject *)PyArray_FROM_OTF(\n            w_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);\n        if (wa == NULL)\n            return -1;\n        if (PyArray_NDIM(wa) != 1 || PyArray_DIM(wa, 0) != n) {\n            Py_DECREF(wa);\n            PyErr_SetString(PyExc_ValueError,\n                            \"cov_matrix must be an n x n matrix matching weights\");\n            return -1;\n        }\n        x = (double *)malloc(sizeof(double) * (size_t)(n > 0 ? n : 1));\n        if (x == NULL) {\n            Py_DECREF(wa);\n            PyErr_NoMemory();\n            return -1;\n        }\n        memcpy(x, PyArray_DATA(wa), sizeof(double) * (size_t)n);\n        Py_DECREF(wa);\n    } else {\n        return 0;\n    }\n\n    /* Validate the matrix shape before touching any elements. */\n    for (Py_ssize_t i = 0; i < n; ++i) {\n        PyObject *row = seq_item(cov_obj, i);\n        if (!is_seq(row) || seq_len(row) != n) {\n            free(x);\n            return 0;   /* let the generic path produce the proper result/error */\n        }\n    }\n\n    /*\n     * Fused S*x then x.(S*x).  Row sums are accumulated in index order,\n     * matching the baseline's arithmetic exactly.\n     */\n    double risk_squared = 0.0;\n    for (Py_ssize_t i = 0; i < n; ++i) {\n        PyObject *row = seq_item(cov_obj, i);\n        double row_sum = 0.0;\n        if (PyList_Check(row)) {\n            for (Py_ssize_t j = 0; j < n; ++j) {\n                PyObject *item = PyList_GET_ITEM(row, j);\n                double v;\n                if (PyFloat_CheckExact(item)) {\n                    v = PyFloat_AS_DOUBLE(item);\n                } else if (to_double(item, &v) < 0) {\n                    free(x);\n                    return -1;\n                }\n                row_sum += v * x[j];\n            }\n        } else {\n            for (Py_ssize_t j = 0; j < n; ++j) {\n                PyObject *item = PyTuple_GET_ITEM(row, j);\n                double v;\n                if (PyFloat_CheckExact(item)) {\n                    v = PyFloat_AS_DOUBLE(item);\n                } else if (to_double(item, &v) < 0) {\n                    free(x);\n                    return -1;\n                }\n                row_sum += v * x[j];\n            }\n        }\n        risk_squared += x[i] * row_sum;\n    }\n    free(x);\n\n    if (risk_squared < 0.0)\n        risk_squared = 0.0;\n    *result = PyFloat_FromDouble(sqrt(risk_squared));\n    return *result != NULL ? 1 : -1;\n}\n\n/* Fast path for portfolio return with Python sequences. */\nstatic int return_fast_path(PyObject *w_obj, PyObject *r_obj,\n                            PyObject **result) {\n    if (!is_seq(w_obj) || !is_seq(r_obj))\n        return 0;\n\n    const Py_ssize_t n = seq_len(w_obj);\n    if (seq_len(r_obj) != n) {\n        PyErr_SetString(PyExc_ValueError,\n                        \"weights and expected_returns must have equal length\");\n        return -1;\n    }\n\n    double total = 0.0;\n    for (Py_ssize_t i = 0; i < n; ++i) {\n        double w, r;\n        if (to_double(seq_item(w_obj, i), &w) < 0)\n            return -1;\n        if (to_double(seq_item(r_obj, i), &r) < 0)\n            return -1;\n        total += w * r;\n    }\n    *result = PyFloat_FromDouble(total);\n    return *result != NULL ? 1 : -1;\n}\n\n/* ---------- generic NumPy path ---------- */\n\nstatic PyArrayObject *as_f64_contiguous(PyObject *obj) {\n    return (PyArrayObject *)PyArray_FROM_OTF(obj, NPY_DOUBLE,\n                                             NPY_ARRAY_IN_ARRAY);\n}\n\nstatic PyObject *risk_numpy_path(PyObject *w_obj, PyObject *cov_obj) {\n    PyArrayObject *weights_array = as_f64_contiguous(w_obj);\n    if (weights_array == NULL)\n        return NULL;\n\n    PyArrayObject *cov_array = as_f64_contiguous(cov_obj);\n    if (cov_array == NULL) {\n        Py_DECREF(weights_array);\n        return NULL;\n    }\n\n    if (PyArray_NDIM(weights_array) != 1) {\n        PyErr_SetString(PyExc_ValueError, \"weights must be a 1D array\");\n        goto fail;\n    }\n    if (PyArray_NDIM(cov_array) != 2) {\n        PyErr_SetString(PyExc_ValueError, \"cov_matrix must be a 2D array\");\n        goto fail;\n    }\n\n    const npy_intp n = PyArray_DIM(weights_array, 0);\n    if (PyArray_DIM(cov_array, 0) != n || PyArray_DIM(cov_array, 1) != n) {\n        PyErr_SetString(PyExc_ValueError,\n                        \"cov_matrix must be an n x n matrix matching weights\");\n        goto fail;\n    }\n\n    const double *restrict x = (const double *)PyArray_DATA(weights_array);\n    const double *restrict s = (const double *)PyArray_DATA(cov_array);\n\n    double risk_squared = 0.0;\n    for (npy_intp i = 0; i < n; ++i) {\n        const double *restrict row = s + (npy_intp)i * n;\n        double row_sum = 0.0;\n        for (npy_intp j = 0; j < n; ++j)\n            row_sum += row[j] * x[j];\n        risk_squared += x[i] * row_sum;\n    }\n\n    Py_DECREF(weights_array);\n    Py_DECREF(cov_array);\n\n    if (risk_squared < 0.0)\n        risk_squared = 0.0;\n    return PyFloat_FromDouble(sqrt(risk_squared));\n\nfail:\n    Py_DECREF(weights_array);\n    Py_DECREF(cov_array);\n    return NULL;\n}\n\nstatic PyObject *return_numpy_path(PyObject *w_obj, PyObject *r_obj) {\n    PyArrayObject *weights_array = as_f64_contiguous(w_obj);\n    if (weights_array == NULL)\n        return NULL;\n\n    PyArrayObject *returns_array = as_f64_contiguous(r_obj);\n    if (returns_array == NULL) {\n        Py_DECREF(weights_array);\n        return NULL;\n    }\n\n    if (PyArray_NDIM(weights_array) != 1 || PyArray_NDIM(returns_array) != 1) {\n        PyErr_SetString(PyExc_ValueError,\n                        \"weights and expected_returns must be 1D arrays\");\n        goto fail;\n    }\n\n    const npy_intp n = PyArray_DIM(weights_array, 0);\n    if (PyArray_DIM(returns_array, 0) != n) {\n        PyErr_SetString(PyExc_ValueError,\n                        \"weights and expected_returns must have equal length\");\n        goto fail;\n    }\n\n    const double *restrict x = (const double *)PyArray_DATA(weights_array);\n    const double *restrict r = (const double *)PyArray_DATA(returns_array);\n\n    double total_return = 0.0;\n    for (npy_intp i = 0; i < n; ++i)\n        total_return += x[i] * r[i];\n\n    Py_DECREF(weights_array);\n    Py_DECREF(returns_array);\n    return PyFloat_FromDouble(total_return);\n\nfail:\n    Py_DECREF(weights_array);\n    Py_DECREF(returns_array);\n    return NULL;\n}\n\n/* ---------- Python entry points ---------- */\n\nstatic PyObject* portfolio_risk_c(PyObject *self, PyObject *args) {\n    PyObject *w_obj, *cov_obj;\n    if (!PyArg_ParseTuple(args, \"OO\", &w_obj, &cov_obj))\n        return NULL;\n\n    PyObject *result = NULL;\n    int status = risk_fast_path(w_obj, cov_obj, &result);\n    if (status != 0)\n        return result;          /* 1: handled, -1: error (result == NULL) */\n\n    return risk_numpy_path(w_obj, cov_obj);\n}\n\nstatic PyObject* portfolio_return_c(PyObject *self, PyObject *args) {\n    PyObject *w_obj, *r_obj;\n    if (!PyArg_ParseTuple(args, \"OO\", &w_obj, &r_obj))\n        return NULL;\n\n    PyObject *result = NULL;\n    int status = return_fast_path(w_obj, r_obj, &result);\n    if (status != 0)\n        return result;\n\n    return return_numpy_path(w_obj, r_obj);\n}\n\nstatic PyMethodDef module_methods[] = {\n    {\"portfolio_risk_c\", portfolio_risk_c, METH_VARARGS, \"Calculate portfolio risk\"},\n    {\"portfolio_return_c\", portfolio_return_c, METH_VARARGS, \"Calculate portfolio return\"},\n    {NULL, NULL, 0, NULL}\n};\n\nstatic struct PyModuleDef moduledef = {\n    PyModuleDef_HEAD_INIT,\n    \"portfolio_optimized_c\",\n    \"Optimized portfolio calculations\",\n    -1,\n    module_methods\n};\n\nPyMODINIT_FUNC PyInit_portfolio_optimized_c(void) {\n    import_array();  // Initialize NumPy C API\n    return PyModule_Create(&moduledef);\n}\nEOF\n\nsbx put portfolio_optimized.py <<'EOF'\n\"\"\"\nPython wrapper for portfolio optimization C extension.\n\nThe C extension accepts the inputs as given: plain nested Python sequences\n(list/tuple of list/tuple of numbers) are traversed directly without an\nup-front copy, while anything else is converted through the NumPy C API.\n\"\"\"\n\nfrom portfolio_optimized_c import (\n    portfolio_return_c as _portfolio_return_c,\n    portfolio_risk_c as _portfolio_risk_c,\n)\n\n\ndef portfolio_risk_c(weights, cov_matrix):\n    \"\"\"\n    Calculate portfolio risk using C extension: sqrt(x^T * S * x)\n\n    Args:\n        weights: Portfolio weights (1D array)\n        cov_matrix: Covariance matrix (2D array)\n    Returns:\n        Portfolio risk (scalar)\n    \"\"\"\n    return _portfolio_risk_c(weights, cov_matrix)\n\n\ndef portfolio_return_c(weights, expected_returns):\n    \"\"\"\n    Calculate expected portfolio return using C extension: weights^T * returns\n\n    Args:\n        weights: Portfolio weights (1D array)\n        expected_returns: Expected returns (1D array)\n    Returns:\n        Expected return (scalar)\n    \"\"\"\n    return _portfolio_return_c(weights, expected_returns)\n\n\n__all__ = ['portfolio_risk_c', 'portfolio_return_c']\nEOF\n\nsbx run <<'EOF'\ncd /workspace && python3 setup.py build_ext --inplace 2>&1 | grep -Ei \"warning|error\" ; python3 benchmark.py\nEOF",
+   "timeout": 600000,
+   "sandbox": [
+    {
+     "at_ms": 169776,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 43.1,
+     "phases_us": {
+      "acquire": 80,
+      "resume": 21451,
+      "mount": 18756,
+      "run": 8274,
+      "destroy": 26321
+     },
+     "cold": null,
+     "vm": "vm-89"
+    },
+    {
+     "at_ms": 169880,
+     "dur_ms": 52,
+     "exit": 0,
+     "cpu_ms": 44.1,
+     "phases_us": {
+      "acquire": 4,
+      "resume": 21353,
+      "mount": 18762,
+      "run": 7579,
+      "destroy": 23262
+     },
+     "cold": null,
+     "vm": "vm-88"
+    },
+    {
+     "at_ms": 169980,
+     "dur_ms": 58107,
+     "exit": 0,
+     "cpu_ms": 58343.8,
+     "phases_us": {
+      "acquire": 19059,
+      "resume": 20720,
+      "mount": 18686,
+      "run": 57903867,
+      "destroy": 162763
+     },
+     "cold": "exhausted",
+     "vm": "vm-93"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 228099,
+   "dur_ms": 5629
+  },
+  {
+   "kind": "tool",
+   "at_ms": 233728,
+   "dur_ms": 322,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\ncd /workspace && python3 - <<'PY'\nimport math, random, numpy as np\nfrom portfolio_baseline import portfolio_risk_python, portfolio_return_python, generate_test_data\nfrom portfolio_optimized import portfolio_risk_c, portfolio_return_c\n\nrandom.seed(7)\n\ndef check(n, kind):\n    w, cov, r = generate_test_data(n)\n    if kind == \"numpy\":\n        w, cov, r = np.array(w), np.array(cov), np.array(r)\n    elif kind == \"tuple\":\n        w, cov, r = tuple(w), tuple(tuple(x) for x in cov), tuple(r)\n    elif kind == \"fortran\":\n        w, cov, r = np.array(w), np.asfortranarray(np.array(cov)), np.array(r)\n    elif kind == \"float32\":\n        w, cov, r = np.array(w, np.float32), np.array(cov, np.float32), np.array(r, np.float32)\n    elif kind == \"listmix\":\n        w, cov, r = [float(x) for x in w], cov, r\n    # baseline uses the original python data, so compare against that\n    w0, cov0, r0 = generate_test_data(n)\n    rp, rr = portfolio_risk_python(w0, cov0), portfolio_return_python(w0, r0)\n    rc, rc2 = portfolio_risk_c(w, cov), portfolio_return_c(w, r)\n    ok = abs(rp-rc) < 1e-10 and abs(rr-rc2) < 1e-10\n    print(f\"n={n:5d} {kind:8s} risk diff={abs(rp-rc):.2e} ret diff={abs(rr-rc2):.2e} {'OK' if ok else 'FAIL'}\")\n    assert ok\n\nfor n in (0, 1, 2, 3, 10, 137, 1000):\n    for kind in (\"list\", \"numpy\", \"tuple\", \"fortran\"):\n        check(n, kind)\ncheck(200, \"float32\")\ncheck(200, \"listmix\")\n\n# integer weights/returns (exact ints go through to_double)\nprint(\"ints:\", portfolio_return_c([1,2,3], [0.5,0.25,0.125]))\n# numpy scalar / mixed\nprint(\"mixed:\", portfolio_return_c([1, np.float64(2.0), 3.0], [1.0, 2.0, 3.0]))\n\n# error cases\ndef expect(fn, *a):\n    try:\n        fn(*a); print(\"  NO ERROR (bad)\")\n    except Exception as e:\n        print(\"  raised:\", type(e).__name__, \"-\", e)\n\nprint(\"mismatch n:\"); expect(portfolio_risk_c, [0.5,0.5], [[1.0,0.0],[0.0,1.0],[0.0,0.0]])\nprint(\"non-square rows:\"); expect(portfolio_risk_c, [0.5,0.5], [[1.0],[0.0,1.0]])\nprint(\"ragged:\"); expect(portfolio_risk_c, [0.5,0.5], [[1.0,0.0],[0.0]])\nprint(\"bad type:\"); expect(portfolio_risk_c, [\"a\",\"b\"], [[1.0,0.0],[0.0,1.0]])\nprint(\"ret len mismatch:\"); expect(portfolio_return_c, [0.5,0.5], [1.0])\nprint(\"1d cov:\"); expect(portfolio_risk_c, np.array([0.5,0.5]), np.array([1.0,2.0]))\nprint(\"scalar weights:\"); expect(portfolio_risk_c, 1.0, [[1.0]])\n\n# 2D numpy C-contig vs list result equality on a big-ish case\nw, cov, r = generate_test_data(1500)\na = portfolio_risk_c(w, cov); b = portfolio_risk_c(np.array(w), np.array(cov))\nprint(\"list vs numpy same:\", a == b, a, b)\nPY\nEOF",
+   "timeout": 600000,
+   "sandbox": [
+    {
+     "at_ms": 233786,
+     "dur_ms": 221,
+     "exit": 1,
+     "cpu_ms": 329.2,
+     "phases_us": {
+      "acquire": 75,
+      "resume": 24375,
+      "mount": 21756,
+      "run": 164106,
+      "destroy": 32577
+     },
+     "cold": null,
+     "vm": "vm-95"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 234050,
+   "dur_ms": 5173
+  },
+  {
+   "kind": "tool",
+   "at_ms": 239223,
+   "dur_ms": 128,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\ncd /workspace && python3 - <<'PY'\nimport math, numpy as np\nfrom portfolio_baseline import portfolio_risk_python, portfolio_return_python, generate_test_data\nfrom portfolio_optimized import portfolio_risk_c, portfolio_return_c\n\ndef check(n, kind):\n    w, cov, r = generate_test_data(n)\n    if kind == \"numpy\":\n        w, cov, r = np.array(w), np.array(cov).reshape(n, n), np.array(r)\n    elif kind == \"tuple\":\n        w, cov, r = tuple(w), tuple(tuple(x) for x in cov), tuple(r)\n    elif kind == \"fortran\":\n        w, cov, r = np.array(w), np.asfortranarray(np.array(cov).reshape(n, n)), np.array(r)\n    elif kind == \"float32\":\n        w, cov, r = (np.array(w, np.float32), np.array(cov, np.float32).reshape(n, n),\n                     np.array(r, np.float32))\n        # baseline on the same (rounded) values\n        w, cov, r = [float(x) for x in w], [list(map(float, row)) for row in cov], [float(x) for x in r]\n    elif kind == \"listmix\":\n        w, cov, r = [x for x in w], cov, r\n    rp, rr = portfolio_risk_python(w, cov), portfolio_return_python(w, r)\n    rc, rc2 = portfolio_risk_c(w, cov), portfolio_return_c(w, r)\n    ok = abs(rp-rc) < 1e-10 and abs(rr-rc2) < 1e-10\n    print(f\"n={n:5d} {kind:8s} risk diff={abs(rp-rc):.2e} ret diff={abs(rr-rc2):.2e} {'OK' if ok else 'FAIL'}\")\n    assert ok\n\nfor n in (0, 1, 2, 3, 10, 137, 1000):\n    for kind in (\"list\", \"numpy\", \"tuple\", \"fortran\"):\n        check(n, kind)\ncheck(200, \"float32\")\ncheck(200, \"listmix\")\n\nprint(\"ints:\", portfolio_return_c([1,2,3], [0.5,0.25,0.125]))\nprint(\"mixed:\", portfolio_return_c([1, np.float64(2.0), 3.0], [1.0, 2.0, 3.0]))\n\ndef expect(label, fn, *a):\n    try:\n        print(f\"  {label}: NO ERROR -> {fn(*a)}\")\n    except Exception as e:\n        print(f\"  {label}: {type(e).__name__} - {e}\")\n\nprint(\"error cases:\")\nexpect(\"mismatch n\", portfolio_risk_c, [0.5,0.5], [[1.0,0.0],[0.0,1.0],[0.0,0.0]])\nexpect(\"non-square rows\", portfolio_risk_c, [0.5,0.5], [[1.0],[0.0,1.0]])\nexpect(\"ragged\", portfolio_risk_c, [0.5,0.5], [[1.0,0.0],[0.0]])\nexpect(\"bad type\", portfolio_risk_c, [\"a\",\"b\"], [[1.0,0.0],[0.0,1.0]])\nexpect(\"ret len mismatch\", portfolio_return_c, [0.5,0.5], [1.0])\nexpect(\"1d cov\", portfolio_risk_c, np.array([0.5,0.5]), np.array([1.0,2.0]))\nexpect(\"scalar weights\", portfolio_risk_c, 1.0, [[1.0]])\n\nw, cov, r = generate_test_data(1500)\na = portfolio_risk_c(w, cov); b = portfolio_risk_c(np.array(w), np.array(cov))\nprint(\"list vs numpy identical:\", a == b, repr(a), repr(b))\nEOF",
+   "timeout": 600000,
+   "sandbox": [
+    {
+     "at_ms": 239279,
+     "dur_ms": 40,
+     "exit": 2,
+     "cpu_ms": 31.2,
+     "phases_us": {
+      "acquire": 84,
+      "resume": 21493,
+      "mount": 18867,
+      "run": 1419,
+      "destroy": 17289
+     },
+     "cold": null,
+     "vm": "vm-102"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 239351,
+   "dur_ms": 4530
+  },
+  {
+   "kind": "tool",
+   "at_ms": 243881,
+   "dur_ms": 2337,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'OUTER'\ncd /workspace && python3 - <<'PY'\nimport numpy as np\nfrom portfolio_baseline import portfolio_risk_python, portfolio_return_python, generate_test_data\nfrom portfolio_optimized import portfolio_risk_c, portfolio_return_c\n\ndef check(n, kind):\n    w, cov, r = generate_test_data(n)\n    if kind == \"numpy\":\n        w, cov, r = np.array(w), np.array(cov).reshape(n, n), np.array(r)\n    elif kind == \"tuple\":\n        w, cov, r = tuple(w), tuple(tuple(x) for x in cov), tuple(r)\n    elif kind == \"fortran\":\n        w, cov, r = np.array(w), np.asfortranarray(np.array(cov).reshape(n, n)), np.array(r)\n    elif kind == \"float32\":\n        w, cov, r = (np.array(w, np.float32), np.array(cov, np.float32).reshape(n, n),\n                     np.array(r, np.float32))\n        w, cov, r = [float(x) for x in w], [list(map(float, row)) for row in cov], [float(x) for x in r]\n    rp, rr = portfolio_risk_python(w, cov), portfolio_return_python(w, r)\n    rc, rc2 = portfolio_risk_c(w, cov), portfolio_return_c(w, r)\n    ok = abs(rp-rc) < 1e-10 and abs(rr-rc2) < 1e-10\n    print(f\"n={n:5d} {kind:8s} risk diff={abs(rp-rc):.2e} ret diff={abs(rr-rc2):.2e} {'OK' if ok else 'FAIL'}\")\n    assert ok\n\nfor n in (0, 1, 2, 3, 10, 137, 1000):\n    for kind in (\"list\", \"numpy\", \"tuple\", \"fortran\"):\n        check(n, kind)\ncheck(200, \"float32\")\n\nprint(\"ints:\", portfolio_return_c([1,2,3], [0.5,0.25,0.125]))\nprint(\"mixed:\", portfolio_return_c([1, np.float64(2.0), 3.0], [1.0, 2.0, 3.0]))\n\ndef expect(label, fn, *a):\n    try:\n        print(f\"  {label}: NO ERROR -> {fn(*a)}\")\n    except Exception as e:\n        print(f\"  {label}: {type(e).__name__} - {e}\")\n\nprint(\"error cases:\")\nexpect(\"mismatch n\", portfolio_risk_c, [0.5,0.5], [[1.0,0.0],[0.0,1.0],[0.0,0.0]])\nexpect(\"non-square rows\", portfolio_risk_c, [0.5,0.5], [[1.0],[0.0,1.0]])\nexpect(\"ragged\", portfolio_risk_c, [0.5,0.5], [[1.0,0.0],[0.0]])\nexpect(\"bad type\", portfolio_risk_c, [\"a\",\"b\"], [[1.0,0.0],[0.0,1.0]])\nexpect(\"ret len mismatch\", portfolio_return_c, [0.5,0.5], [1.0])\nexpect(\"1d cov\", portfolio_risk_c, np.array([0.5,0.5]), np.array([1.0,2.0]))\nexpect(\"scalar weights\", portfolio_risk_c, 1.0, [[1.0]])\n\nw, cov, r = generate_test_data(1500)\na = portfolio_risk_c(w, cov); b = portfolio_risk_c(np.array(w), np.array(cov))\nprint(\"list vs numpy identical:\", a == b, repr(a), repr(b))\nPY\nOUTER",
+   "timeout": 600000,
+   "sandbox": [
+    {
+     "at_ms": 243938,
+     "dur_ms": 2266,
+     "exit": 0,
+     "cpu_ms": 2350.0,
+     "phases_us": {
+      "acquire": 101,
+      "resume": 22061,
+      "mount": 19553,
+      "run": 2199711,
+      "destroy": 44187
+     },
+     "cold": null,
+     "vm": "vm-103"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 246218,
+   "dur_ms": 5245
+  },
+  {
+   "kind": "tool",
+   "at_ms": 251463,
+   "dur_ms": 1572,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx run <<'OUTER'\ncd /workspace && rm -rf build *.so && python3 setup.py build_ext --inplace 2>&1 | tail -8\necho \"--- warnings check ---\"\ncd /workspace && python3 setup.py build_ext --inplace --force 2>&1 | grep -i \"warning\" || echo \"no warnings\"\necho \"--- memory + repeat timing at n=8000 ---\"\ncd /workspace && /usr/bin/time -v python3 -c \"\nfrom portfolio_baseline import generate_test_data\nfrom portfolio_optimized import portfolio_risk_c, portfolio_return_c\nimport time\nw,cov,r = generate_test_data(8000)\nts=[]\nfor _ in range(3):\n    t=time.perf_counter(); v=portfolio_risk_c(w,cov); ts.append(time.perf_counter()-t)\nprint('risk', v, 'times(ms)', [round(x*1000,1) for x in ts])\nt=time.perf_counter(); print('ret', portfolio_return_c(w,r), 'ms', round((time.perf_counter()-t)*1000,3))\n\" 2>&1 | grep -E \"risk|ret|Maximum resident\"\nOUTER",
+   "timeout": 600000,
+   "sandbox": [
+    {
+     "at_ms": 251517,
+     "dur_ms": 1502,
+     "exit": 1,
+     "cpu_ms": 1827.9,
+     "phases_us": {
+      "acquire": 86,
+      "resume": 21411,
+      "mount": 18580,
+      "run": 1449804,
+      "destroy": 30774
+     },
+     "cold": null,
+     "vm": "vm-104"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 253035,
+   "dur_ms": 2561
+  },
+  {
+   "kind": "tool",
+   "at_ms": 255596,
+   "dur_ms": 22162,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'OUTER'\ncd /workspace && python3 -c \"\nimport resource, time\nfrom portfolio_baseline import generate_test_data, portfolio_risk_python\nfrom portfolio_optimized import portfolio_risk_c, portfolio_return_c\nw,cov,r = generate_test_data(8000)\nbase = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss\nt=time.perf_counter(); rb=portfolio_risk_python(w,cov); pb=time.perf_counter()-t\nts=[]\nfor _ in range(3):\n    t=time.perf_counter(); v=portfolio_risk_c(w,cov); ts.append(time.perf_counter()-t)\npeak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss\nprint('baseline', round(pb*1000,1),'ms   C times', [round(x*1000,1) for x in ts], 'ms')\nprint('speedup(min C)', round(pb/min(ts),2), 'x')\nprint('risk identical to baseline:', v==rb)\nprint('peak RSS growth during C calls: %.1f MB (base %.1f MB, peak %.1f MB)' % ((peak-base)/1024, base/1024, peak/1024))\nt=time.perf_counter(); print('return:', portfolio_return_c(w,r), 'in', round((time.perf_counter()-t)*1000,3),'ms')\n\"\nOUTER",
+   "timeout": 600000,
+   "sandbox": [
+    {
+     "at_ms": 255653,
+     "dur_ms": 22094,
+     "exit": 0,
+     "cpu_ms": 22125.1,
+     "phases_us": {
+      "acquire": 92,
+      "resume": 21524,
+      "mount": 19340,
+      "run": 21935485,
+      "destroy": 137172
+     },
+     "cold": null,
+     "vm": "vm-105"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 277758,
+   "dur_ms": 2141
+  },
+  {
+   "kind": "tool",
+   "at_ms": 279899,
+   "dur_ms": 56954,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'OUTER'\ncd /workspace && python3 benchmark.py\nOUTER",
+   "timeout": 600000,
+   "sandbox": [
+    {
+     "at_ms": 279953,
+     "dur_ms": 56889,
+     "exit": 0,
+     "cpu_ms": 56877.4,
+     "phases_us": {
+      "acquire": 91,
+      "resume": 21431,
+      "mount": 19170,
+      "run": 56698863,
+      "destroy": 168712
+     },
+     "cold": null,
+     "vm": "vm-110"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 336853,
+   "dur_ms": 2970
+  }
+ ],
+ "class": "long",
+ "weight_s_per_command": 17.454,
+ "calls": 11,
+ "cell": "TB1b"
+}

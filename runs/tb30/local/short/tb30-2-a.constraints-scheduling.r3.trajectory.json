@@ -1,0 +1,115 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "constraints-scheduling",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 26516,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 181,
+  "output": 4286,
+  "cacheRead": 103808,
+  "cacheWrite": 3328,
+  "total": 111603
+ },
+ "totals": {
+  "model_calls": 5,
+  "tool_calls": 6,
+  "model_ms": 25659,
+  "tool_ms": 201,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 576,
+   "dur_ms": 1117
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1310,
+   "dur_ms": 15,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/alice_calendar.ics"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1506,
+   "dur_ms": 8,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/bob_calendar.ics"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1693,
+   "dur_ms": 16,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/carol_calendar.ics"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 1709,
+   "dur_ms": 18173
+  },
+  {
+   "kind": "tool",
+   "at_ms": 19882,
+   "dur_ms": 105,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat << 'EOF' > /tmp/solve.py\nfrom datetime import datetime, timedelta\n\ndef parse(fn):\n    ev=[]; s=e=None\n    for line in open(fn):\n        line=line.strip()\n        if line.startswith('DTSTART:'): s=datetime.strptime(line[8:],'%Y%m%dT%H%M%SZ')\n        elif line.startswith('DTEND:'): e=datetime.strptime(line[6:],'%Y%m%dT%H%M%SZ')\n        elif line=='END:VEVENT': ev.append((s,e)); s=e=None\n    return ev\n\nalice=parse('/app/alice_calendar.ics'); bob=parse('/app/bob_calendar.ics'); carol=parse('/app/carol_calendar.ics')\n\ndef overlap(a,b,c,d): return a<c<b or a<d<b or (c<=a and b<=d) or (a<=c and d<=b)\n\ndef alice_ok(s,e):\n    return s.hour*60+s.minute>=9*60 and (e.hour*60+e.minute)<=14*60\ndef bob_ok(s,e):\n    if s.hour<10: return False\n    if s.weekday() in (1,3) and (e.hour*60+e.minute)>16*60+30: return False\n    return True\ndef carol_ok(s,e):\n    # avail 9-17, lunch 12:00-12:30, buffer after meetings ending >=16:45 (none). Also new meeting itself within avail\n    if s.hour<9 or (e.hour*60+e.minute)>17*60: return False\n    lunch_s=s.replace(hour=12,minute=0); lunch_e=s.replace(hour=12,minute=30)\n    if overlap(s,e,lunch_s,lunch_e): return False\n    # buffer: if any existing carol meeting ends >=16:45, unavailable 15 min after\n    for (cs,ce) in carol:\n        if ce.hour*60+ce.minute>=16*60+45 and overlap(s,e,ce,ce+timedelta(minutes=15)):\n            return False\n    return True\ndef busy(evs,s,e): return any(overlap(s,e,a,b) for a,b in evs)\n\nvalid=[]\nfor day in range(15,20):\n    base=datetime(2024,1,day)\n    for m in range(9*60,18*60):\n        s=base+timedelta(minutes=m); e=s+timedelta(hours=1)\n        if e>base+timedelta(hours=18): continue\n        if not s.weekday()<5: continue\n        if not (alice_ok(s,e) and bob_ok(s,e) and carol_ok(s,e)): continue\n        if busy(alice,s,e) or busy(bob,s,e) or busy(carol,s,e): continue\n        valid.append(s)\nprint(\"valid starts:\", [v.strftime('%a %Y-%m-%d %H:%M') for v in valid])\n# tie-break: avoid Monday, then earliest\nnonmon=[v for v in valid if v.weekday()!=0]\nprint(\"chosen:\", (nonmon or valid)[0].strftime('%Y-%m-%d %H:%M UTC'))\nEOF\npython3 /tmp/solve.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 19987,
+   "dur_ms": 2127
+  },
+  {
+   "kind": "tool",
+   "at_ms": 22114,
+   "dur_ms": 17,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/meeting_scheduled.ics",
+    "content": "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Terminal-Bench//Meeting Scheduler//EN\nCALSCALE:GREGORIAN\nMETHOD:PUBLISH\nBEGIN:VEVENT\nUID:team-planning-meeting-20240117@example.com\nDTSTAMP:20240110T000000Z\nDTSTART:20240117T110000Z\nDTEND:20240117T120000Z\nSUMMARY:Team Planning Meeting\nDESCRIPTION:1-hour planning meeting for Alice, Bob, and Carol.\nLOCATION:Conference Room\nORGANIZER:mailto:alice@example.com\nATTENDEE;CN=Alice;ROLE=REQ-PARTICIPANT:mailto:alice@example.com\nATTENDEE;CN=Bob;ROLE=REQ-PARTICIPANT:mailto:bob@example.com\nATTENDEE;CN=Carol;ROLE=REQ-PARTICIPANT:mailto:carol@example.com\nSTATUS:CONFIRMED\nEND:VEVENT\nEND:VCALENDAR\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 22131,
+   "dur_ms": 2363
+  },
+  {
+   "kind": "tool",
+   "at_ms": 24494,
+   "dur_ms": 40,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - << 'EOF'\nimport re\nt=open('/app/meeting_scheduled.ics').read()\nchecks={\n 'starts BEGIN:VCALENDAR': t.startswith('BEGIN:VCALENDAR'),\n 'ends END:VCALENDAR': t.rstrip().endswith('END:VCALENDAR'),\n 'VERSION:2.0': 'VERSION:2.0' in t,\n 'PRODID': 'PRODID:' in t,\n 'VEVENT': 'BEGIN:VEVENT' in t and 'END:VEVENT' in t,\n 'UTC times': bool(re.search(r'DTSTART:\\d{8}T\\d{6}Z',t)) and bool(re.search(r'DTEND:\\d{8}T\\d{6}Z',t)),\n 'attendees': all(x in t for x in ['alice@example.com','bob@example.com','carol@example.com']),\n 'summary': 'SUMMARY:Team Planning Meeting' in t,\n}\nfor k,v in checks.items(): print(('OK  ' if v else 'FAIL'),k)\nprint('DTSTART/DTEND:', re.findall(r'DT(?:START|END):\\S+',t))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 24534,
+   "dur_ms": 1879
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.069,
+ "calls": 6,
+ "cell": "TB1a"
+}

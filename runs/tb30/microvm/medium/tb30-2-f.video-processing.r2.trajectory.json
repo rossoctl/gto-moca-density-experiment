@@ -1,0 +1,1528 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-f",
+ "instance_id": "video-processing",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 766796,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 1170,
+  "output": 63438,
+  "cacheRead": 2577088,
+  "cacheWrite": 42304,
+  "total": 2684000
+ },
+ "totals": {
+  "model_calls": 43,
+  "tool_calls": 42,
+  "model_ms": 382249,
+  "tool_ms": 383064,
+  "sandbox_ms": 380545
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1163,
+   "dur_ms": 1163,
+   "tokens_in": 10,
+   "tokens_out": 193,
+   "cache_read": 1408,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2330,
+   "dur_ms": 119,
+   "tool": "bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\nls -la /workspace\npython3 -c \"\nimport cv2\ncap = cv2.VideoCapture('/workspace/example_video.mp4')\nprint('opened', cap.isOpened())\nprint('frames', cap.get(cv2.CAP_PROP_FRAME_COUNT))\nprint('fps', cap.get(cv2.CAP_PROP_FPS))\nprint('w', cap.get(cv2.CAP_PROP_FRAME_WIDTH))\nprint('h', cap.get(cv2.CAP_PROP_FRAME_HEIGHT))\nret, f = cap.read()\nprint('first', ret, f.shape if ret else None)\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 2380,
+     "dur_ms": 46,
+     "exit": 2,
+     "cpu_ms": 32.9,
+     "phases_us": {
+      "acquire": 95,
+      "resume": 21613,
+      "mount": 19055,
+      "run": 1230,
+      "destroy": 21928
+     },
+     "cold": null,
+     "vm": "vm-181"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 2451,
+   "dur_ms": 1358,
+   "tokens_in": 52,
+   "tokens_out": 233,
+   "cache_read": 1408,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3809,
+   "dur_ms": 457,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\nls -la /workspace\npython3 - <<'PYEOF'\nimport cv2\ncap = cv2.VideoCapture('/workspace/example_video.mp4')\nprint('opened', cap.isOpened())\nprint('frames', cap.get(cv2.CAP_PROP_FRAME_COUNT))\nprint('fps', cap.get(cv2.CAP_PROP_FPS))\nprint('w', cap.get(cv2.CAP_PROP_FRAME_WIDTH))\nprint('h', cap.get(cv2.CAP_PROP_FRAME_HEIGHT))\nret, f = cap.read()\nprint('first', ret, f.shape if ret else None)\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 3859,
+     "dur_ms": 370,
+     "exit": 0,
+     "cpu_ms": 574.8,
+     "phases_us": {
+      "acquire": 17,
+      "resume": 20650,
+      "mount": 18563,
+      "run": 325012,
+      "destroy": 24347
+     },
+     "cold": null,
+     "vm": "vm-183"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 4268,
+   "dur_ms": 3299,
+   "tokens_in": 43,
+   "tokens_out": 509,
+   "cache_read": 1856,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 7568,
+   "dur_ms": 1247,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nbg=None\ni=0\nrows=[]\nwhile True:\n    ret,fr=cap.read()\n    if not ret: break\n    if bg is None:\n        bg=fr.copy()\n        i+=1\n        continue\n    d=cv2.absdiff(fr,bg)\n    g=cv2.cvtColor(d,cv2.COLOR_BGR2GRAY)\n    # threshold\n    for th in (20,30,40,50):\n        m=(g>th).astype(np.uint8)\n        m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n        n,lab,stats,cents=cv2.connectedComponentsWithStats(m,8)\n        if n>1:\n            # largest non-bg\n            idx=1+np.argmax(stats[1:,cv2.CC_STAT_AREA])\n            x,y,w,h,a=stats[idx]\n            c=cents[idx]\n            if th==30: rows.append((i,x,y,w,h,a,c[0],c[1]))\n        else:\n            if th==30: rows.append((i,-1,-1,-1,-1,0,0,0))\n    i+=1\nprint('idx x y w h area cx cy')\nfor r in rows:\n    print('%3d %4d %4d %3d %3d %6d %6.1f %6.1f'%r)\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 7616,
+     "dur_ms": 1190,
+     "exit": 0,
+     "cpu_ms": 1969.0,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 21247,
+      "mount": 18365,
+      "run": 1129334,
+      "destroy": 39382
+     },
+     "cold": null,
+     "vm": "vm-184"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 8820,
+   "dur_ms": 8880,
+   "tokens_in": 7,
+   "tokens_out": 1271,
+   "cache_read": 2496,
+   "cache_write": 2560,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 17700,
+   "dur_ms": 763,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    r,f=cap.read()\n    if not r: break\n    frames.append(f)\nprint(len(frames))\nbg=frames[0]\ng=cv2.cvtColor(bg,cv2.COLOR_BGR2GRAY)\n# ascii downsample 120x? average\nH,W=g.shape\nfor y in range(0,H,10):\n    line=''\n    for x in range(0,W,10):\n        v=g[y:y+10,x:x+10].mean()\n        chars=' .:-=+*#%@'\n        line+=chars[min(9,int(v/256*10))]\n    print(line)\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 17749,
+     "dur_ms": 699,
+     "exit": 0,
+     "cpu_ms": 964.7,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 21575,
+      "mount": 18519,
+      "run": 638896,
+      "destroy": 38591
+     },
+     "cold": null,
+     "vm": "vm-190"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 18466,
+   "dur_ms": 7503,
+   "tokens_in": 59,
+   "tokens_out": 1397,
+   "cache_read": 6272,
+   "cache_write": 1408,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 25970,
+   "dur_ms": 1336,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    r,f=cap.read()\n    if not r: break\n    frames.append(f)\nbg=frames[0].astype(np.int16)\nfor idx in [47,50,52,53,54,55,56,57,58,59,60,61,62,63,65,68,70,72,74]:\n    fr=frames[idx].astype(np.int16)\n    d=np.abs(fr-bg).max(axis=2)\n    m=(d>25).astype(np.uint8)\n    m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((3,3),np.uint8))\n    m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n    # downscale mask to 96x54 blocks: any pixel\n    print('\\nFRAME',idx)\n    H,W=m.shape\n    for y in range(0,H,10):\n        line=''\n        for x in range(0,W,10):\n            c=m[y:y+10,x:x+10].sum()\n            line += '#' if c>=30 else ('+' if c>=10 else ('.' if c>0 else ' '))\n        print(line)\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 26018,
+     "dur_ms": 1272,
+     "exit": 0,
+     "cpu_ms": 1550.1,
+     "phases_us": {
+      "acquire": 3,
+      "resume": 21784,
+      "mount": 18719,
+      "run": 1213860,
+      "destroy": 35783
+     },
+     "cold": null,
+     "vm": "vm-194"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 27309,
+   "dur_ms": 6085,
+   "tokens_in": 32,
+   "tokens_out": 1059,
+   "cache_read": 9088,
+   "cache_write": 9152,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 33394,
+   "dur_ms": 2854,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    r,f=cap.read()\n    if not r: break\n    frames.append(f)\nprint('n',len(frames))\n# median bg\nstack=np.stack(frames).astype(np.uint8)\nmed=np.median(stack,axis=0).astype(np.uint8)\n# save median\ncv2.imwrite('median.png',med)\n# per frame diff vs median\nfor idx in [45,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,65,67,69,70,72,74]:\n    d=cv2.absdiff(frames[idx],med)\n    g=d.max(axis=2)\n    m=(g>30).astype(np.uint8)\n    m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n    m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((5,5),np.uint8))\n    # only track below y=200\n    mm=m.copy(); mm[:200]=0\n    n,lab,stats,cents=cv2.connectedComponentsWithStats(mm,8)\n    comps=[]\n    for j in range(1,n):\n        x,y,w,h,a=stats[j]\n        if a>50: comps.append((a,x,y,w,h))\n    comps.sort(reverse=True)\n    print('\\nF',idx,'comps',comps[:6])\n    # ascii lower region y200-540 x0-960 step10\n    for y in range(200,540,10):\n        line=''\n        for x in range(0,960,10):\n            c=m[y:y+10,x:x+10].sum()\n            line += '#' if c>=30 else ('+' if c>=10 else ('.' if c>0 else ' '))\n        print(line)\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 33443,
+     "dur_ms": 2774,
+     "exit": 0,
+     "cpu_ms": 3047.5,
+     "phases_us": {
+      "acquire": 81,
+      "resume": 22091,
+      "mount": 19016,
+      "run": 2694214,
+      "destroy": 57790
+     },
+     "cold": null,
+     "vm": "vm-196"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 36250,
+   "dur_ms": 18713,
+   "tokens_in": 6,
+   "tokens_out": 3265,
+   "cache_read": 19328,
+   "cache_write": 3008,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 54963,
+   "dur_ms": 1688,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    r,f=cap.read()\n    if not r: break\n    frames.append(f)\nbg=frames[0]\n# noise stats for various boxes over all frames\nboxes=[(700,400,900,520),(0,400,200,520),(300,400,600,520),(600,300,900,400)]\nfor b in boxes:\n    x1,y1,x2,y2=b\n    vals=[]\n    for f in frames:\n        d=cv2.absdiff(f[y1:y2,x1:x2],bg[y1:y2,x1:x2])\n        vals.append((d.max(axis=2)>30).mean())\n    print('box',b,'mean frac>30',np.mean(vals),'max',np.max(vals))\nprint('--- frames track y>=240 ---')\nfor idx in range(44,76):\n    d=cv2.absdiff(frames[idx],bg)\n    g=d.max(axis=2)\n    m=(g>30).astype(np.uint8)\n    m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n    m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((5,5),np.uint8))\n    mm=m.copy(); mm[:240]=0\n    n,lab,stats,cents=cv2.connectedComponentsWithStats(mm,8)\n    comps=[]\n    for j in range(1,n):\n        x,y,w,h,a=stats[j]\n        if a>80: comps.append((int(a),int(x),int(y),int(w),int(h)))\n    comps.sort(reverse=True)\n    # all foreground y>240, x range and min/max y in x band\n    ys,xs=np.nonzero(mm)\n    if len(ys):\n        print('F%3d comps %-70s fg n=%5d x[%d,%d] y[%d,%d]'%(idx,str(comps[:5]),len(ys),xs.min(),xs.max(),ys.min(),ys.max()))\n    else:\n        print('F%3d none'%idx)\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 55012,
+     "dur_ms": 1636,
+     "exit": 0,
+     "cpu_ms": 1968.2,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 20989,
+      "mount": 17676,
+      "run": 1572435,
+      "destroy": 42661
+     },
+     "cold": null,
+     "vm": "vm-199"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 56655,
+   "dur_ms": 8497,
+   "tokens_in": 56,
+   "tokens_out": 1406,
+   "cache_read": 25600,
+   "cache_write": 1536,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 65152,
+   "dur_ms": 1066,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    r,f=cap.read()\n    if not r: break\n    frames.append(f)\nbg=frames[0]\nfor idx in range(52,64):\n    d=cv2.absdiff(frames[idx],bg)\n    g=d.max(axis=2)\n    m=(g>35).astype(np.uint8)\n    m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n    print('\\n==== FRAME',idx,'==== (x 250-850, y 170-380, 5px blocks)')\n    for y in range(170,380,5):\n        line=''\n        for x in range(250,850,5):\n            c=m[y:y+5,x:x+5].sum()\n            line += '#' if c>=12 else ('+' if c>=5 else ('.' if c>0 else ' '))\n        print(line)\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 65200,
+     "dur_ms": 998,
+     "exit": 0,
+     "cpu_ms": 1330.9,
+     "phases_us": {
+      "acquire": 24,
+      "resume": 21633,
+      "mount": 18505,
+      "run": 932596,
+      "destroy": 43768
+     },
+     "cold": null,
+     "vm": "vm-203"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 66220,
+   "dur_ms": 7745,
+   "tokens_in": 31,
+   "tokens_out": 1272,
+   "cache_read": 28544,
+   "cache_write": 3456,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 73965,
+   "dur_ms": 1274,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    r,f=cap.read()\n    if not r: break\n    frames.append(f)\nfor idx in range(47,76):\n    d=cv2.absdiff(frames[idx],frames[idx-1])\n    g=d.max(axis=2)\n    m=(g>25).astype(np.uint8)\n    m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((7,7),np.uint8))\n    m=cv2.dilate(m,np.ones((5,5),np.uint8))\n    mm=m.copy(); mm[:180]=0\n    n,lab,stats,cents=cv2.connectedComponentsWithStats(mm,8)\n    comps=[]\n    for j in range(1,n):\n        x,y,w,h,a=stats[j]\n        if a>200: comps.append((int(a),int(x),int(y),int(w),int(h),int(cents[j][0]),int(cents[j][1])))\n    comps.sort(reverse=True)\n    print('F%3d %s'%(idx,comps[:6]))\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 74016,
+     "dur_ms": 1220,
+     "exit": 0,
+     "cpu_ms": 1619.8,
+     "phases_us": {
+      "acquire": 66,
+      "resume": 27875,
+      "mount": 22985,
+      "run": 1136273,
+      "destroy": 55195
+     },
+     "cold": null,
+     "vm": "vm-206"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 75243,
+   "dur_ms": 6037,
+   "tokens_in": 32,
+   "tokens_out": 861,
+   "cache_read": 33280,
+   "cache_write": 832,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 81280,
+   "dur_ms": 118,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\nfind /workspace -maxdepth 2 -type f -printf '%p %s\\n'\nls -la /app 2>/dev/null || true\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 81329,
+     "dur_ms": 47,
+     "exit": 0,
+     "cpu_ms": 39.2,
+     "phases_us": {
+      "acquire": 64,
+      "resume": 21620,
+      "mount": 18561,
+      "run": 6930,
+      "destroy": 18489
+     },
+     "cold": null,
+     "vm": "vm-210"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 81402,
+   "dur_ms": 2028,
+   "tokens_in": 57,
+   "tokens_out": 267,
+   "cache_read": 34944,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 83431,
+   "dur_ms": 418,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\nstrings example_video.mp4 | head -50\npython3 - <<'PYEOF'\nimport cv2\ncap=cv2.VideoCapture('example_video.mp4')\nfor p in range(0,100):\n    v=cap.get(p)\n    if v not in (0.0,1.0,-1.0): print(p,v)\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 83479,
+     "dur_ms": 338,
+     "exit": 0,
+     "cpu_ms": 459.0,
+     "phases_us": {
+      "acquire": 3,
+      "resume": 21001,
+      "mount": 18916,
+      "run": 282139,
+      "destroy": 34906
+     },
+     "cold": null,
+     "vm": "vm-212"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 83849,
+   "dur_ms": 5921,
+   "tokens_in": 1,
+   "tokens_out": 1096,
+   "cache_read": 35328,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 89771,
+   "dur_ms": 2153,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    r,f=cap.read()\n    if not r: break\n    frames.append(f)\nf0=frames[0]; f119=frames[-1]\nfor name,fr in [('f119',f119),('med',np.median(np.stack(frames),axis=0).astype(np.uint8))]:\n    d=cv2.absdiff(fr,f0)\n    g=d.max(axis=2)\n    print(name,'mean',g.mean(),'p99',np.percentile(g,99),'max',g.max(),'frac>30',(g>30).mean())\n    # region means\n    for b in [(0,0,960,200),(0,200,960,240),(0,240,960,540),(200,240,320,340),(0,240,120,340)]:\n        x1,y1,x2,y2=b\n        print('  ',b,'mean',g[y1:y2,x1:x2].mean(),'frac>30',(g[y1:y2,x1:x2]>30).mean())\n# print actual colors at x260 y240-316 vs f0\nfor y in range(240,320,10):\n    print('y',y,'f0',f0[y,260],'f119',f119[y,260],'diff',np.abs(f0[y,260].astype(int)-f119[y,260].astype(int)))\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 89820,
+     "dur_ms": 2102,
+     "exit": 0,
+     "cpu_ms": 2411.6,
+     "phases_us": {
+      "acquire": 47,
+      "resume": 21486,
+      "mount": 18526,
+      "run": 2010126,
+      "destroy": 70214
+     },
+     "cold": null,
+     "vm": "vm-214"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 91928,
+   "dur_ms": 6135,
+   "tokens_in": 5,
+   "tokens_out": 1048,
+   "cache_read": 36544,
+   "cache_write": 640,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 98063,
+   "dur_ms": 2179,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    r,f=cap.read()\n    if not r: break\n    frames.append(f)\nmed=np.median(np.stack(frames),axis=0).astype(np.uint8)\nfor y in range(240,317,10):\n    print('y',y,'f0',frames[0][y,260],'med',med[y,260],'f50',frames[50][y,260],'f53',frames[53][y,260],'f59',frames[59][y,260],'f65',frames[65][y,260])\nprint('--- around x250-275 y250-320 f0 colors ---')\nfor y in range(250,321,10):\n    print(y,[tuple(map(int,frames[0][y,x])) for x in range(250,281,5)])\nprint('--- diff f53 vs med at x260 region bbox ---')\nd=cv2.absdiff(frames[53],med).max(axis=2)\nys,xs=np.nonzero((d>30) & (np.indices(d.shape)[1]>=255) & (np.indices(d.shape)[1]<270) & (np.indices(d.shape)[0]>=240) & (np.indices(d.shape)[0]<320))\nprint(len(ys), ys.min() if len(ys) else None, ys.max() if len(ys) else None)\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 98112,
+     "dur_ms": 2128,
+     "exit": 0,
+     "cpu_ms": 2446.0,
+     "phases_us": {
+      "acquire": 46,
+      "resume": 21340,
+      "mount": 19006,
+      "run": 2041246,
+      "destroy": 65623
+     },
+     "cold": null,
+     "vm": "vm-216"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 100247,
+   "dur_ms": 14238,
+   "tokens_in": 14,
+   "tokens_out": 2595,
+   "cache_read": 38208,
+   "cache_write": 1024,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 114485,
+   "dur_ms": 5497,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    r,f=cap.read()\n    if not r: break\n    frames.append(f)\nN=len(frames)\nbg=np.median(np.stack(frames),axis=0).astype(np.uint8)\n# precompute bgdiff\nbgs=[cv2.absdiff(f,bg).max(axis=2) for f in frames]\nprev_center=None\nrows=[]\nfor i in range(1,N):\n    d=cv2.absdiff(frames[i],frames[i-1]).max(axis=2)\n    m=(d>20).astype(np.uint8)\n    # remove tiny noise\n    m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n    m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((9,9),np.uint8))\n    m=cv2.dilate(m,np.ones((5,5),np.uint8))\n    mm=m.copy(); mm[:200]=0\n    n,lab,stats,cents=cv2.connectedComponentsWithStats(mm,8)\n    comps=[]\n    for j in range(1,n):\n        x,y,w,h,a=stats[j]\n        if a>200 and w>8 and h>8:\n            comps.append((int(a),int(x),int(y),int(w),int(h),float(cents[j][0]),float(cents[j][1]),j))\n    comps.sort(reverse=True)\n    if not comps:\n        rows.append((i,None,None,None,None)); continue\n    # select near prev center if exists else largest\n    if prev_center is not None:\n        # score distance to predicted (prev - 25)\n        pred=prev_center[0]-25\n        comps2=sorted(comps,key=lambda c:(abs(c[5]-pred) - 0.002*c[0]))\n        sel=comps2[0]\n    else:\n        sel=comps[0]\n    a,x,y,w,h,cx,cy,j=sel\n    # refine with bgdiff restricted to roi and near motion component\n    x0=max(0,x-20); x1=min(960,x+w+20); y0=max(0,y-20); y1=min(540,y+h+20)\n    roi_bg=bgs[i][y0:y1,x0:x1]\n    roi_m=mm[y0:y1,x0:x1]>0\n    # dilate motion more\n    roi_md=cv2.dilate(roi_m.astype(np.uint8),np.ones((11,11),np.uint8))>0\n    cur=((roi_bg>30)&roi_md)\n    ys,xs=np.nonzero(cur)\n    if len(ys)>0:\n        # component containing motion? just use all\n        by=ys.max()+y0; ty=ys.min()+y0; bx=xs.min()+x0; brx=xs.max()+x0\n    else:\n        by=y+h; ty=y; bx=x; brx=x+w\n    prev_center=(cx,cy)\n    rows.append((i,(x,y,w,h), (bx,ty,brx,by), int(cur.sum()), comps[:2]))\nfor r in rows:\n    if r[1] is None:\n        print('F%3d none'%r[0])\n    else:\n        i,box,ref,n,cs=r\n        print('F%3d motbox=%s refbox=%s n=%5d bottom=%3d top=%3d xc=%5.1f'%(i,box,ref,n,ref[3],ref[1],(ref[0]+ref[2])/2))\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 114494,
+     "dur_ms": 5486,
+     "exit": 0,
+     "cpu_ms": 5805.7,
+     "phases_us": {
+      "acquire": 76,
+      "resume": 21484,
+      "mount": 18112,
+      "run": 5378906,
+      "destroy": 85162
+     },
+     "cold": null,
+     "vm": "vm-218"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 119987,
+   "dur_ms": 10704,
+   "tokens_in": 43,
+   "tokens_out": 1812,
+   "cache_read": 41792,
+   "cache_write": 2752,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 130691,
+   "dur_ms": 1300,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    r,f=cap.read()\n    if not r: break\n    frames.append(f)\nfor i in range(45,82):\n    d=cv2.absdiff(frames[i],frames[i-1]).max(axis=2)\n    m=(d>20).astype(np.uint8)\n    m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n    m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((9,9),np.uint8))\n    m=cv2.dilate(m,np.ones((5,5),np.uint8))\n    mm=m.copy(); mm[:180]=0\n    n,lab,stats,cents=cv2.connectedComponentsWithStats(mm,8)\n    comps=[]\n    for j in range(1,n):\n        x,y,w,h,a=stats[j]\n        if a>150 and w>6 and h>6: comps.append((int(a),int(x),int(y),int(w),int(h)))\n    comps.sort(reverse=True)\n    print('F%3d'%i, comps[:12])\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 130739,
+     "dur_ms": 1250,
+     "exit": 0,
+     "cpu_ms": 1555.9,
+     "phases_us": {
+      "acquire": 52,
+      "resume": 21013,
+      "mount": 17805,
+      "run": 1183401,
+      "destroy": 45788
+     },
+     "cold": null,
+     "vm": "vm-222"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 131996,
+   "dur_ms": 4285,
+   "tokens_in": 46,
+   "tokens_out": 797,
+   "cache_read": 46336,
+   "cache_write": 704,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 136282,
+   "dur_ms": 1323,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    r,f=cap.read()\n    if not r: break\n    frames.append(f)\nfor i in range(45,78):\n    d=cv2.absdiff(frames[i],frames[i-1]).max(axis=2)\n    m=(d>20).astype(np.uint8)\n    m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n    m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((9,9),np.uint8))\n    m=cv2.dilate(m,np.ones((5,5),np.uint8))\n    mm=m.copy(); mm[:180]=0\n    n,lab,stats,cents=cv2.connectedComponentsWithStats(mm,8)\n    keep=np.zeros_like(mm)\n    for j in range(1,n):\n        x,y,w,h,a=stats[j]\n        if a>150 and w>6 and h>6:\n            # only components within plausible x of largest comp? all\n            keep[lab==j]=1\n    ys,xs=np.nonzero(keep)\n    if len(ys):\n        # percentiles of bottom per column? just max and 99.5 percentile\n        print('F%3d x[%d,%d] y[%d,%d] bottom_max=%d p99=%d p95=%d n=%d'%(i,xs.min(),xs.max(),ys.min(),ys.max(),ys.max(),np.percentile(ys,99),np.percentile(ys,95),len(ys)))\n    else:\n        print('F%3d none'%i)\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 136331,
+     "dur_ms": 1271,
+     "exit": 0,
+     "cpu_ms": 1626.5,
+     "phases_us": {
+      "acquire": 817,
+      "resume": 22193,
+      "mount": 18984,
+      "run": 1197501,
+      "destroy": 49707
+     },
+     "cold": null,
+     "vm": "vm-225"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 137611,
+   "dur_ms": 38690,
+   "tokens_in": 9,
+   "tokens_out": 6309,
+   "cache_read": 47872,
+   "cache_write": 960,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 176301,
+   "dur_ms": 4029,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    r,f=cap.read()\n    if not r: break\n    frames.append(f)\nN=len(frames)\nbg=np.median(np.stack(frames),axis=0).astype(np.uint8)\nfreq=np.zeros((540,960),np.float32)\nbgs=[]\nfor f in frames:\n    d=cv2.absdiff(f,bg).max(axis=2)\n    bgs.append(d)\n    freq += (d>30)\nfreq/=N\nfor b in [(0,0,960,240),(0,240,960,540),(200,240,400,400)]:\n    x1,y1,x2,y2=b\n    print(b,'freq mean',freq[y1:y2,x1:x2].mean(),'max',freq[y1:y2,x1:x2].max(),'frac>.2',(freq[y1:y2,x1:x2]>.2).mean())\n# per frame current athlete using bgdiff and freq< thresholds, lower region y>=180\nfor fi in range(47,76):\n    d=bgs[fi]\n    for fth in [0.1,0.2,0.3]:\n        m=((d>30)&(freq<fth)).astype(np.uint8)\n        m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n        m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((9,9),np.uint8))\n        mm=m.copy(); mm[:180]=0\n        n,lab,stats,cents=cv2.connectedComponentsWithStats(mm,8)\n        comps=[]\n        for j in range(1,n):\n            x,y,w,h,a=stats[j]\n            if a>150 and w>6 and h>6: comps.append((int(a),int(x),int(y),int(w),int(h)))\n        comps.sort(reverse=True)\n        if fth==0.2:\n            ys,xs=np.nonzero(mm)\n            if len(ys):\n                print('F%3d bottom=%d p99=%d top=%d x[%d,%d] area=%d comps=%s'%(fi,ys.max(),np.percentile(ys,99),ys.min(),xs.min(),xs.max(),mm.sum(),comps[:3]))\n            else: print('F%3d none'%fi)\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 176350,
+     "dur_ms": 3978,
+     "exit": 0,
+     "cpu_ms": 4282.9,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 21388,
+      "mount": 18125,
+      "run": 3886510,
+      "destroy": 69323
+     },
+     "cold": null,
+     "vm": "vm-228"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 180335,
+   "dur_ms": 8932,
+   "tokens_in": 50,
+   "tokens_out": 1497,
+   "cache_read": 55104,
+   "cache_write": 1600,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 189267,
+   "dur_ms": 4654,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    r,f=cap.read()\n    if not r: break\n    frames.append(f)\nN=len(frames)\nbg=np.median(np.stack(frames),axis=0).astype(np.uint8)\nfreq=np.zeros((540,960),np.float32)\nbgs=[]\nfor f in frames:\n    d=cv2.absdiff(f,bg).max(axis=2); bgs.append(d); freq+=(d>30)\nfreq/=N\nfor fth in [0.1,0.2,0.3,0.4,0.5,0.6,0.7]:\n    print('--- fth',fth)\n    vals=[]\n    for fi in range(46,78):\n        d=bgs[fi]\n        m=((d>30)&(freq<fth)).astype(np.uint8)\n        m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n        m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((9,9),np.uint8))\n        mm=m.copy(); mm[:180]=0\n        n,lab,stats,cents=cv2.connectedComponentsWithStats(mm,8)\n        # union comps area>150\n        keep=np.zeros_like(mm)\n        for j in range(1,n):\n            x,y,w,h,a=stats[j]\n            if a>150 and w>6 and h>6: keep[lab==j]=1\n        ys,xs=np.nonzero(keep)\n        vals.append((fi, int(ys.max()) if len(ys) else None, int(keep.sum())))\n    print(vals)\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 189316,
+     "dur_ms": 4603,
+     "exit": 0,
+     "cpu_ms": 5035.5,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 21556,
+      "mount": 18558,
+      "run": 4504309,
+      "destroy": 76769
+     },
+     "cold": null,
+     "vm": "vm-237"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 193927,
+   "dur_ms": 23406,
+   "tokens_in": 6,
+   "tokens_out": 4168,
+   "cache_read": 58240,
+   "cache_write": 2240,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 217333,
+   "dur_ms": 6336,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    r,f=cap.read()\n    if not r: break\n    frames.append(f)\nN=len(frames)\nbg=np.median(np.stack(frames),axis=0).astype(np.uint8)\nbgs=[cv2.absdiff(f,bg).max(axis=2) for f in frames]\nfreq=np.zeros((540,960),np.float32)\nfor d in bgs: freq+=(d>30)\nfreq/=N\nfor variant in ['bgonly','motion_or','motion_dil','motion_now']:\n  print('---',variant)\n  vals=[]\n  for fi in range(46,78):\n    m=(bgs[fi]>30)&(freq<0.8)\n    if variant!='bgonly':\n        prev=frames[max(0,fi-1)]; nxt=frames[min(N-1,fi+1)]\n        md=(cv2.absdiff(frames[fi],prev).max(axis=2)>15)\n        if variant=='motion_or':\n            mn=(cv2.absdiff(frames[fi],nxt).max(axis=2)>15)\n            md=md|mn\n        elif variant=='motion_dil':\n            mn=(cv2.absdiff(frames[fi],nxt).max(axis=2)>15)\n            md=(cv2.dilate((md|mn).astype(np.uint8),np.ones((11,11),np.uint8))>0)\n        elif variant=='motion_now':\n            md=(cv2.dilate(md.astype(np.uint8),np.ones((11,11),np.uint8))>0)\n        m=m&md\n    m=(m.astype(np.uint8))\n    m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n    m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((9,9),np.uint8))\n    mm=m.copy(); mm[:180]=0\n    n,lab,stats,cents=cv2.connectedComponentsWithStats(mm,8)\n    keep=np.zeros_like(mm)\n    for j in range(1,n):\n        x,y,w,h,a=stats[j]\n        if a>150 and w>6 and h>6: keep[lab==j]=1\n    ys,xs=np.nonzero(keep)\n    vals.append((fi,int(ys.max()) if len(ys) else None))\n  print(vals)\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 217382,
+     "dur_ms": 6284,
+     "exit": 0,
+     "cpu_ms": 6611.4,
+     "phases_us": {
+      "acquire": 92,
+      "resume": 20993,
+      "mount": 18281,
+      "run": 6179146,
+      "destroy": 83915
+     },
+     "cold": null,
+     "vm": "vm-241"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 223674,
+   "dur_ms": 2197,
+   "tokens_in": 26,
+   "tokens_out": 304,
+   "cache_read": 64640,
+   "cache_write": 768,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 225871,
+   "dur_ms": 304,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport numpy as np\nb={47:327,48:335,49:357,50:360,51:360,52:360,53:359,54:341,55:309,56:274,57:239,58:237,59:270,60:306,61:345,62:366,63:365,64:366,65:363,66:337,67:348,68:363,69:363,70:363,71:364,72:352,73:322,74:287}\nv=np.array(list(b.values()))\nfor p in [50,60,70,75,80,85,90,95,100]: print(p,np.percentile(v,p))\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 225921,
+     "dur_ms": 218,
+     "exit": 0,
+     "cpu_ms": 301.6,
+     "phases_us": {
+      "acquire": 88,
+      "resume": 21966,
+      "mount": 19589,
+      "run": 161811,
+      "destroy": 33366
+     },
+     "cold": null,
+     "vm": "vm-247"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 226182,
+   "dur_ms": 12002,
+   "tokens_in": 11,
+   "tokens_out": 1925,
+   "cache_read": 65728,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 238184,
+   "dur_ms": 158,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\nls -la / /app /opt 2>/dev/null\nfind / -maxdepth 3 -type f \\( -name '*.py' -o -name '*.toml' -o -name '*.json' \\) 2>/dev/null | head -100\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 238232,
+     "dur_ms": 89,
+     "exit": 0,
+     "cpu_ms": 78.2,
+     "phases_us": {
+      "acquire": 102,
+      "resume": 21198,
+      "mount": 17715,
+      "run": 37600,
+      "destroy": 30275
+     },
+     "cold": null,
+     "vm": "vm-249"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 238348,
+   "dur_ms": 1530,
+   "tokens_in": 27,
+   "tokens_out": 126,
+   "cache_read": 67712,
+   "cache_write": 640,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 239879,
+   "dur_ms": 117,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\nfind /opt/testbed-src -maxdepth 4 -type f -printf '%p %s\\n' 2>/dev/null | head -200\nls -laR /opt/testbed-src 2>/dev/null | head -100\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 239927,
+     "dur_ms": 51,
+     "exit": 0,
+     "cpu_ms": 39.5,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 20809,
+      "mount": 18033,
+      "run": 6896,
+      "destroy": 23523
+     },
+     "cold": null,
+     "vm": "vm-251"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 240002,
+   "dur_ms": 1457,
+   "tokens_in": 0,
+   "tokens_out": 126,
+   "cache_read": 68480,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 241460,
+   "dur_ms": 117,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\nfind /root /tmp /var -maxdepth 4 -type f -printf '%p %s\\n' 2>/dev/null | head -200\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 241508,
+     "dur_ms": 54,
+     "exit": 0,
+     "cpu_ms": 39.5,
+     "phases_us": {
+      "acquire": 62,
+      "resume": 21072,
+      "mount": 18368,
+      "run": 5890,
+      "destroy": 26285
+     },
+     "cold": null,
+     "vm": "vm-252"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 241581,
+   "dur_ms": 8795,
+   "tokens_in": 32,
+   "tokens_out": 1537,
+   "cache_read": 68672,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 250376,
+   "dur_ms": 12653,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    r,f=cap.read()\n    if not r: break\n    frames.append(f)\nN=len(frames)\nfor bgname,bg in [('first',frames[0]),('median',np.median(np.stack(frames),axis=0).astype(np.uint8))]:\n  bgs=[cv2.absdiff(f,bg).max(axis=2) for f in frames]\n  freq=np.zeros((540,960),np.float32)\n  for d in bgs: freq+=(d>30)\n  freq/=N\n  for fth in [0.3,0.5,0.7]:\n    vals=[]\n    for fi in range(40,80):\n        mok=(bgs[fi]>30)&(freq<fth)\n        prev=frames[max(0,fi-1)]; nxt=frames[min(N-1,fi+1)]\n        md=(cv2.absdiff(frames[fi],prev).max(axis=2)>15)|(cv2.absdiff(frames[fi],nxt).max(axis=2)>15)\n        m=(mok&md).astype(np.uint8)\n        m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n        m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((9,9),np.uint8))\n        mm=m.copy(); mm[:180]=0\n        n,lab,stats,cents=cv2.connectedComponentsWithStats(mm,8)\n        keep=np.zeros_like(mm)\n        for j in range(1,n):\n            x,y,w,h,a=stats[j]\n            if a>150 and w>6 and h>6: keep[lab==j]=1\n        ys,xs=np.nonzero(keep)\n        vals.append(int(ys.max()) if len(ys) else None)\n    print(bgname,'fth',fth,vals)\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 250424,
+     "dur_ms": 12602,
+     "exit": 0,
+     "cpu_ms": 13026.8,
+     "phases_us": {
+      "acquire": 71,
+      "resume": 21652,
+      "mount": 18505,
+      "run": 12516353,
+      "destroy": 64119
+     },
+     "cold": null,
+     "vm": "vm-254"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 263035,
+   "dur_ms": 5508,
+   "tokens_in": 36,
+   "tokens_out": 1001,
+   "cache_read": 70336,
+   "cache_write": 704,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 268543,
+   "dur_ms": 17725,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    r,f=cap.read()\n    if not r: break\n    frames.append(f)\nN=len(frames); bg=np.median(np.stack(frames),axis=0).astype(np.uint8)\nfor th in [20,25,30,35,40,50]:\n  bgs=[cv2.absdiff(f,bg).max(axis=2) for f in frames]\n  freq=np.zeros((540,960),np.float32)\n  for d in bgs: freq+=(d>th)\n  freq/=N\n  vals=[]\n  for fi in range(46,78):\n    mok=(bgs[fi]>th)&(freq<0.6)\n    prev=frames[max(0,fi-1)]; nxt=frames[min(N-1,fi+1)]\n    md=(cv2.absdiff(frames[fi],prev).max(axis=2)>15)|(cv2.absdiff(frames[fi],nxt).max(axis=2)>15)\n    m=(mok&md).astype(np.uint8)\n    m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n    m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((9,9),np.uint8))\n    mm=m.copy(); mm[:180]=0\n    n,lab,stats,cents=cv2.connectedComponentsWithStats(mm,8)\n    keep=np.zeros_like(mm)\n    for j in range(1,n):\n        x,y,w,h,a=stats[j]\n        if a>150 and w>6 and h>6: keep[lab==j]=1\n    ys,xs=np.nonzero(keep)\n    vals.append(int(ys.max()) if len(ys) else None)\n  print('th',th,vals)\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 268594,
+     "dur_ms": 17672,
+     "exit": 0,
+     "cpu_ms": 18074.8,
+     "phases_us": {
+      "acquire": 74,
+      "resume": 21712,
+      "mount": 18657,
+      "run": 17594020,
+      "destroy": 56050
+     },
+     "cold": null,
+     "vm": "vm-257"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 286273,
+   "dur_ms": 16284,
+   "tokens_in": 24,
+   "tokens_out": 2701,
+   "cache_read": 72064,
+   "cache_write": 576,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 302557,
+   "dur_ms": 159,
+   "tool": "bash",
+   "is_error": true,
+   "command": "sbx run <<'SBXEOF'\npython3 - <<'PYEOF'\nimport toml, cv2, numpy as np\nprint('toml ok', toml.__version__ if hasattr(toml,'__version__') else '')\nprint(cv2.__version__)\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 302607,
+     "dur_ms": 100,
+     "exit": 1,
+     "cpu_ms": 90.8,
+     "phases_us": {
+      "acquire": 17,
+      "resume": 21713,
+      "mount": 18338,
+      "run": 48980,
+      "destroy": 29333
+     },
+     "cold": null,
+     "vm": "vm-261"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 302723,
+   "dur_ms": 1955,
+   "tokens_in": 24,
+   "tokens_out": 183,
+   "cache_read": 75328,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 304678,
+   "dur_ms": 445,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\npython3 - <<'PYEOF'\nimport sys\nprint(sys.version)\ntry:\n import tomllib; print('tomllib ok')\nexcept Exception as e: print('no tomllib',e)\ntry:\n import tomli; print('tomli ok')\nexcept Exception as e: print('no tomli',e)\nPYEOF\npip list 2>/dev/null | head -50\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 304727,
+     "dur_ms": 378,
+     "exit": 0,
+     "cpu_ms": 422.2,
+     "phases_us": {
+      "acquire": 82,
+      "resume": 20861,
+      "mount": 18674,
+      "run": 333922,
+      "destroy": 23292
+     },
+     "cold": null,
+     "vm": "vm-262"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 305129,
+   "dur_ms": 32425,
+   "tokens_in": 47,
+   "tokens_out": 6441,
+   "cache_read": 75584,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 337555,
+   "dur_ms": 17455,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put jump_analyzer.py <<'PYEOF'\n#!/usr/bin/env python3\n\"\"\"Detect takeoff and landing frames of a single hurdle jump in an MP4 video.\n\nThe camera and background are assumed to be static.  The first frame is\nbackground-only.  The athlete is isolated by comparing every frame with a\ntemporal-median background, while pixels which change in many frames (light\nflicker, compression noise on track markings, ...) are discarded.  A short\ntemporal-motion gate removes other static-looking differences.\n\nThe lowest point of the athlete's silhouette is tracked through the video.\nWhile running it stays on the ground; during the jump it moves noticeably\nup in the image and then returns to the ground.  Those two transitions are\nreported as takeoff and landing.\n\"\"\"\n\nimport glob\nimport os\nimport sys\n\nimport cv2\nimport numpy as np\n\n# ---------------------------------------------------------------------------\n# Tunable constants.  They are expressed relative to the frame size so the\n# script also works if the video is resized, although the task guarantees the\n# same scale as the example.\n# ---------------------------------------------------------------------------\nBG_DIFF_THRESHOLD = 30         # pixel difference from background\nMOTION_THRESHOLD = 15          # frame-to-frame pixel difference\nFREQ_KEEP_BELOW = 0.60         # keep pixels that differ from bg in <60% frames\nGROUND_PERCENTILE = 90.0\nFLIGHT_FRACTION_OF_HEIGHT = 0.030\nRETURN_FRACTION_OF_HEIGHT = 0.010\n\n\ndef _input_path():\n    \"\"\"Return the video path from the command line or a sensible default.\"\"\"\n    if len(sys.argv) > 1 and os.path.isfile(sys.argv[1]):\n        return sys.argv[1]\n\n    candidates = [\n        \"/app/input.mp4\",\n        \"/app/example_video.mp4\",\n        \"input.mp4\",\n        \"example_video.mp4\",\n    ]\n    for path in candidates:\n        if os.path.isfile(path):\n            return path\n\n    for directory in (\"/app\", \".\"):\n        videos = sorted(glob.glob(os.path.join(directory, \"*.mp4\")))\n        if videos:\n            return videos[0]\n\n    raise SystemExit(\"No input MP4 file found\")\n\n\ndef _median_background(path, max_samples=150):\n    \"\"\"Estimate a background image using temporal median over sampled frames.\"\"\"\n    cap = cv2.VideoCapture(path)\n    if not cap.isOpened():\n        raise SystemExit(\"Could not open video: %s\" % path)\n\n    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))\n    frames = []\n\n    if frame_count > 0:\n        stride = max(1, frame_count // max_samples)\n        index = 0\n        while True:\n            ok, frame = cap.read()\n            if not ok:\n                break\n            if index % stride == 0:\n                frames.append(frame)\n            index += 1\n    else:\n        # Frame count is unavailable.  Reading every fifth frame is enough for\n        # a median background and keeps memory usage modest.\n        index = 0\n        while True:\n            ok, frame = cap.read()\n            if not ok:\n                break\n            if index % 5 == 0 or index == 0:\n                frames.append(frame)\n            index += 1\n\n    cap.release()\n\n    if not frames:\n        raise SystemExit(\"No frames could be read from video\")\n\n    # Keep memory bounded even if the container's frame count was wrong.\n    if len(frames) > 4 * max_samples:\n        pick = np.linspace(0, len(frames) - 1, max_samples).astype(int)\n        frames = [frames[i] for i in pick]\n\n    return np.median(np.stack(frames, axis=0), axis=0).astype(np.uint8)\n\n\ndef _difference_from_background(frame, background):\n    \"\"\"Largest per-channel absolute difference from the background.\"\"\"\n    return cv2.absdiff(frame, background).max(axis=2)\n\n\ndef _build_frequency_map(path, background, height, width):\n    \"\"\"Fraction of frames in which each pixel differs from the background.\"\"\"\n    freq = np.zeros((height, width), dtype=np.float32)\n    count = 0\n    cap = cv2.VideoCapture(path)\n    if not cap.isOpened():\n        raise SystemExit(\"Could not reopen video: %s\" % path)\n\n    while True:\n        ok, frame = cap.read()\n        if not ok:\n            break\n        diff = _difference_from_background(frame, background)\n        freq += (diff > BG_DIFF_THRESHOLD).astype(np.float32)\n        count += 1\n\n    cap.release()\n    if count:\n        freq /= float(count)\n    return freq\n\n\ndef _components_bottom(mask, min_area):\n    \"\"\"Return union of sizeable components and their bounding information.\n\n    Only the part of the image below the stands is considered.  Components are\n    joined because a fast hurdler can be split into a few pieces (torso, lead\n    leg, trailing leg) by the subtraction step.\n    \"\"\"\n    height, width = mask.shape\n    y_min = int(round(0.33 * height))\n\n    work = mask.copy()\n    work[:y_min, :] = 0\n\n    num, labels, stats, _ = cv2.connectedComponentsWithStats(work, 8)\n    union = np.zeros_like(work)\n    for label in range(1, num):\n        x, y, w, h, area = stats[label]\n        if area < min_area or w < 5 or h < 5:\n            continue\n        union[labels == label] = 1\n\n    ys, xs = np.nonzero(union)\n    if len(ys) == 0:\n        return None\n\n    return {\n        \"area\": int(union.sum()),\n        \"x0\": int(xs.min()),\n        \"x1\": int(xs.max()),\n        \"top\": int(ys.min()),\n        \"bottom\": int(ys.max()),\n    }\n\n\ndef _track_athlete(path, background, freq):\n    \"\"\"Return per-frame athlete bounding information.\"\"\"\n    cap = cv2.VideoCapture(path)\n    if not cap.isOpened():\n        raise SystemExit(\"Could not reopen video: %s\" % path)\n\n    ok, first = cap.read()\n    if not ok:\n        raise SystemExit(\"No frames could be read from video\")\n\n    height, width = first.shape[:2]\n    min_area = max(100, int(0.00025 * width * height))\n\n    results = []\n    index = 0\n\n    # At the first frame there is no previous frame; use the frame itself.\n    prev = first\n    ok, cur = cap.read()\n    if not ok:\n        cap.release()\n        return [None]\n\n    index = 1\n    while True:\n        ok, nxt = cap.read()\n        is_last = not ok\n        if is_last:\n            nxt = cur\n\n        bg_diff = _difference_from_background(cur, background)\n        motion = (\n            (cv2.absdiff(cur, prev).max(axis=2) > MOTION_THRESHOLD)\n            | (cv2.absdiff(cur, nxt).max(axis=2) > MOTION_THRESHOLD)\n        )\n\n        mask = (\n            (bg_diff > BG_DIFF_THRESHOLD)\n            & (freq < FREQ_KEEP_BELOW)\n            & motion\n        ).astype(np.uint8)\n\n        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))\n        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))\n\n        info = _components_bottom(mask, min_area)\n        if info is not None:\n            info[\"frame\"] = index\n            info[\"touches_edge\"] = info[\"x0\"] <= 2 or info[\"x1\"] >= width - 3\n        results.append(info)\n\n        if is_last:\n            break\n\n        prev, cur = cur, nxt\n        index += 1\n\n    cap.release()\n\n    # results[0] corresponds to frame 0, which has no athlete.\n    return [None] + results\n\n\ndef _detect_flight(frames, height):\n    \"\"\"Find the takeoff and landing frames from the athlete bottom trajectory.\"\"\"\n    n = len(frames)\n    bottoms = np.full(n, np.nan, dtype=np.float32)\n    usable = np.zeros(n, dtype=bool)\n\n    for i, info in enumerate(frames):\n        if info is None:\n            continue\n        bottoms[i] = info[\"bottom\"]\n        # Frames where the athlete is cut off by the image border have an\n        # unreliable silhouette.  They are not used for ground calibration or\n        # for choosing the jump, although they remain valid detections.\n        usable[i] = (not info[\"touches_edge\"]) and info[\"area\"] >= 300\n\n    usable_indices = np.flatnonzero(usable)\n    if len(usable_indices) < 2:\n        usable = np.array([info is not None for info in frames])\n        usable_indices = np.flatnonzero(usable)\n    if len(usable_indices) < 2:\n        raise SystemExit(\"Could not track the athlete in the video\")\n\n    ground = float(np.percentile(bottoms[usable_indices], GROUND_PERCENTILE))\n    deviation = ground - bottoms  # positive when the athlete is above ground\n\n    flight_thr = max(8.0, FLIGHT_FRACTION_OF_HEIGHT * height)\n    return_thr = max(4.0, RETURN_FRACTION_OF_HEIGHT * height)\n\n    candidate = usable & (deviation > flight_thr)\n\n    # Find candidate runs, bridging at most two missing/weak frames so that a\n    # single noisy frame does not split the jump into two segments.\n    segments = []\n    i = 0\n    while i < n:\n        if not candidate[i]:\n            i += 1\n            continue\n        start = i\n        last = i\n        peak = float(deviation[i])\n        score = float(max(0.0, deviation[i]))\n        count = 1\n        j = i + 1\n        gap = 0\n        while j < n:\n            if candidate[j]:\n                last = j\n                peak = max(peak, float(deviation[j]))\n                score += float(max(0.0, deviation[j]))\n                count += 1\n                gap = 0\n            else:\n                gap += 1\n                if gap > 2:\n                    break\n            j += 1\n        segments.append(\n            {\n                \"start\": start,\n                \"last\": last,\n                \"peak\": peak,\n                \"score\": score,\n                \"count\": count,\n            }\n        )\n        i = last + 1\n\n    # A genuine hurdle jump lasts several frames.  Prefer long/high segments;\n    # a one-frame running-leg spike must not win.\n    good_segments = [s for s in segments if s[\"count\"] >= 2]\n    if good_segments:\n        chosen = max(good_segments, key=lambda s: (s[\"score\"], s[\"peak\"]))\n    elif segments:\n        chosen = max(segments, key=lambda s: s[\"peak\"])\n    else:\n        # Last resort: the highest point in the trajectory.\n        valid_dev = np.where(usable, deviation, -np.inf)\n        peak_frame = int(np.argmax(valid_dev))\n        return peak_frame, peak_frame\n\n    takeoff = chosen[\"start\"]\n    core_end = chosen[\"last\"]\n\n    # Include an immediately preceding frame that is already partly lifted.\n    while takeoff - 1 >= 0:\n        prev_frame = takeoff - 1\n        if usable[prev_frame] and deviation[prev_frame] > return_thr:\n            takeoff = prev_frame\n        else:\n            break\n\n    # Landing is the first subsequent usable frame whose feet are back at the\n    # ground level.\n    landing = core_end\n    for j in range(core_end + 1, n):\n        if usable[j]:\n            if deviation[j] <= return_thr:\n                landing = j\n                break\n            landing = j\n\n    return int(takeoff), int(landing)\n\n\ndef main():\n    video_path = _input_path()\n    background = _median_background(video_path)\n    height, width = background.shape[:2]\n    freq = _build_frequency_map(video_path, background, height, width)\n    frames = _track_athlete(video_path, background, freq)\n    takeoff, landing = _detect_flight(frames, height)\n\n    output_path = \"/app/output.toml\"\n    content = (\n        \"jump_takeoff_frame_number = %d\\n\"\n        \"jump_land_frame_number = %d\\n\" % (takeoff, landing)\n    )\n    with open(output_path, \"w\", encoding=\"utf-8\") as handle:\n        handle.write(content)\n\n\nif __name__ == \"__main__\":\n    main()\nPYEOF\nsbx run <<'SBXEOF'\ncd /workspace\npython3 jump_analyzer.py example_video.mp4\ncat output.toml\npython3 - <<'PYEOF'\n# Show tracked trajectory for debugging\nimport jump_analyzer as ja\nimport numpy as np\np='example_video.mp4'\nbg=ja._median_background(p)\nh,w=bg.shape[:2]\nfreq=ja._build_frequency_map(p,bg,h,w)\nframes=ja._track_athlete(p,bg,freq)\nfor i,info in enumerate(frames):\n    if info is not None:\n        print(i, 'bottom',info['bottom'],'x',info['x0'],info['x1'],'area',info['area'],'edge',info['touches_edge'])\nprint('detect',ja._detect_flight(frames,h))\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 337604,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 45.7,
+     "phases_us": {
+      "acquire": 25,
+      "resume": 21368,
+      "mount": 17726,
+      "run": 7497,
+      "destroy": 27062
+     },
+     "cold": null,
+     "vm": "vm-263"
+    },
+    {
+     "at_ms": 337706,
+     "dur_ms": 17301,
+     "exit": 0,
+     "cpu_ms": 18714.5,
+     "phases_us": {
+      "acquire": 17,
+      "resume": 21661,
+      "mount": 18177,
+      "run": 17203677,
+      "destroy": 75750
+     },
+     "cold": null,
+     "vm": "vm-178"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 355016,
+   "dur_ms": 21352,
+   "tokens_in": 25,
+   "tokens_out": 3807,
+   "cache_read": 82112,
+   "cache_write": 640,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 376368,
+   "dur_ms": 8904,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\n# patch jump_analyzer.py by simple text insertion\np='jump_analyzer.py'\ns=open(p).read()\n# insert helper before _detect_flight\nhelper='''\\ndef _select_presence_run(frames, min_area):\\n    \"\"\"Select the longest continuous athlete-presence interval.\\n\\n    Compression noise occasionally produces a moving blob after the athlete has\\n    left the scene.  The real athlete is present for many consecutive frames,\\n    so the longest (and largest) run is the reliable one.\\n    \"\"\"\\n    n = len(frames)\\n    present = np.array(\\n        [info is not None and info[\"area\"] >= min_area for info in frames],\\n        dtype=bool,\\n    )\\n\\n    runs = []\\n    i = 0\\n    while i < n:\\n        if not present[i]:\\n            i += 1\\n            continue\\n\\n        start = i\\n        last = i\\n        count = 0\\n        total_area = 0\\n        gap = 0\\n        j = i\\n        while j < n:\\n            if present[j]:\\n                last = j\\n                count += 1\\n                total_area += frames[j][\"area\"]\\n                gap = 0\\n            else:\\n                gap += 1\\n                if gap > 3:\\n                    break\\n            j += 1\\n\\n        runs.append((start, last, count, total_area))\\n        i = last + 1\\n\\n    if not runs:\\n        return 0, n - 1\\n\\n    start, last, _, _ = max(runs, key=lambda r: (r[2], r[3]))\\n    return start, last\\n\\n'''\ns=s.replace('\\ndef _detect_flight(frames, height):', helper+'\\ndef _detect_flight(frames, height):')\nold='''    n = len(frames)\\n    bottoms = np.full(n, np.nan, dtype=np.float32)\\n    usable = np.zeros(n, dtype=bool)\\n\\n    for i, info in enumerate(frames):\\n        if info is None:\\n            continue\\n        bottoms[i] = info[\"bottom\"]\\n        # Frames where the athlete is cut off by the image border have an\\n        # unreliable silhouette.  They are not used for ground calibration or\\n        # for choosing the jump, although they remain valid detections.\\n        usable[i] = (not info[\"touches_edge\"]) and info[\"area\"] >= 300\\n'''\nnew='''    n = len(frames)\\n    bottoms = np.full(n, np.nan, dtype=np.float32)\\n    usable = np.zeros(n, dtype=bool)\\n\\n    presence_start, presence_end = _select_presence_run(frames, 300)\\n    in_presence = np.zeros(n, dtype=bool)\\n    in_presence[presence_start : presence_end + 1] = True\\n\\n    for i, info in enumerate(frames):\\n        if info is None:\\n            continue\\n        bottoms[i] = info[\"bottom\"]\\n        # Frames where the athlete is cut off by the image border have an\\n        # unreliable silhouette.  They are not used for ground calibration or\\n        # for choosing the jump, although they remain valid detections.\\n        usable[i] = (\\n            in_presence[i]\\n            and (not info[\"touches_edge\"])\\n            and info[\"area\"] >= 300\\n        )\\n'''\nassert old in s\ns=s.replace(old,new)\nopen(p,'w').write(s)\nPYEOF\npython3 jump_analyzer.py example_video.mp4\ncat output.toml\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 376417,
+     "dur_ms": 8838,
+     "exit": 0,
+     "cpu_ms": 9587.2,
+     "phases_us": {
+      "acquire": 64,
+      "resume": 21896,
+      "mount": 18487,
+      "run": 8750461,
+      "destroy": 65649
+     },
+     "cold": null,
+     "vm": "vm-270"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 385279,
+   "dur_ms": 4275,
+   "tokens_in": 24,
+   "tokens_out": 484,
+   "cache_read": 86528,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 389554,
+   "dur_ms": 8852,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport jump_analyzer as ja, numpy as np\np='example_video.mp4'\nbg=ja._median_background(p); h,w=bg.shape[:2]\nfreq=ja._build_frequency_map(p,bg,h,w)\nframes=ja._track_athlete(p,bg,freq)\nprint('presence',ja._select_presence_run(frames,300))\n# replicate detect\nn=len(frames)\nbottoms=np.full(n,np.nan,np.float32); usable=np.zeros(n,bool)\nps,pe=ja._select_presence_run(frames,300); inp=np.zeros(n,bool); inp[ps:pe+1]=True\nfor i,info in enumerate(frames):\n    if info is None: continue\n    bottoms[i]=info['bottom']\n    usable[i]=inp[i] and (not info['touches_edge']) and info['area']>=300\nui=np.flatnonzero(usable)\nprint('usable idx',ui.tolist())\nground=float(np.percentile(bottoms[ui],ja.GROUND_PERCENTILE))\nprint('ground',ground)\nfor i in ui:\n    print(i,'bottom',bottoms[i],'dev',ground-bottoms[i])\nprint('thr flight',max(8,ja.FLIGHT_FRACTION_OF_HEIGHT*h),'return',max(4,ja.RETURN_FRACTION_OF_HEIGHT*h))\nprint(ja._detect_flight(frames,h))\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 389602,
+     "dur_ms": 8802,
+     "exit": 0,
+     "cpu_ms": 9469.6,
+     "phases_us": {
+      "acquire": 16,
+      "resume": 21734,
+      "mount": 18666,
+      "run": 8717207,
+      "destroy": 62354
+     },
+     "cold": null,
+     "vm": "vm-276"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 398412,
+   "dur_ms": 7176,
+   "tokens_in": 36,
+   "tokens_out": 1095,
+   "cache_read": 87040,
+   "cache_write": 384,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 405588,
+   "dur_ms": 8759,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\np='jump_analyzer.py'\ns=open(p).read()\ns=s.replace('FLIGHT_FRACTION_OF_HEIGHT = 0.030\\nRETURN_FRACTION_OF_HEIGHT = 0.010',\n            'FLIGHT_FRACTION_OF_HEIGHT = 0.024\\nRETURN_FRACTION_OF_HEIGHT = 0.015')\nold='''    # Include an immediately preceding frame that is already partly lifted.\\n    while takeoff - 1 >= 0:\\n        prev_frame = takeoff - 1\\n        if usable[prev_frame] and deviation[prev_frame] > return_thr:\\n            takeoff = prev_frame\\n        else:\\n            break\\n\\n'''\nassert old in s\ns=s.replace(old,'')\nopen(p,'w').write(s)\nPYEOF\npython3 jump_analyzer.py example_video.mp4\ncat output.toml\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 405639,
+     "dur_ms": 8695,
+     "exit": 0,
+     "cpu_ms": 9366.1,
+     "phases_us": {
+      "acquire": 106,
+      "resume": 25361,
+      "mount": 21417,
+      "run": 8599145,
+      "destroy": 70439
+     },
+     "cold": null,
+     "vm": "vm-278"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 414353,
+   "dur_ms": 5096,
+   "tokens_in": 11,
+   "tokens_out": 586,
+   "cache_read": 88512,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 419449,
+   "dur_ms": 44226,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    r,f=cap.read()\n    if not r: break\n    frames.append(f)\ncap.release()\nfourcc=cv2.VideoWriter_fourcc(*'mp4v')\ndef write(path, fs):\n    h,w=fs[0].shape[:2]\n    vw=cv2.VideoWriter(path,fourcc,30,(w,h))\n    for f in fs: vw.write(f)\n    vw.release()\n\nwrite('derived_prepend.mp4',[frames[0]]*30+frames)\nwrite('derived_trim40.mp4',frames[40:])\nwrite('derived_slow2.mp4',[f for f in frames for _ in range(2)])\nwrite('derived_drop2.mp4',frames[::2])\n# Also a version with only runner segment plus some background, cut before athlete exits\nwrite('derived_short.mp4',frames[:70])\nprint('done',len(frames))\nPYEOF\nfor f in derived_prepend.mp4 derived_trim40.mp4 derived_slow2.mp4 derived_drop2.mp4 derived_short.mp4; do\n  echo ===$f===\n  python3 jump_analyzer.py $f\n  cat output.toml\ndone\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 419498,
+     "dur_ms": 44174,
+     "exit": 0,
+     "cpu_ms": 46558.8,
+     "phases_us": {
+      "acquire": 89,
+      "resume": 21567,
+      "mount": 18465,
+      "run": 44039623,
+      "destroy": 112817
+     },
+     "cold": null,
+     "vm": "vm-280"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 463681,
+   "dur_ms": 11508,
+   "tokens_in": 61,
+   "tokens_out": 2109,
+   "cache_read": 89152,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 475189,
+   "dur_ms": 48935,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\np='jump_analyzer.py'\ns=open(p).read()\nold='''        mask = (\\n            (bg_diff > BG_DIFF_THRESHOLD)\\n            & (freq < FREQ_KEEP_BELOW)\\n            & motion\\n        ).astype(np.uint8)\\n\\n        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))\\n'''\nnew='''        background_mask = (bg_diff > BG_DIFF_THRESHOLD) & (freq < FREQ_KEEP_BELOW)\\n\\n        # Normally require temporal motion as well: this suppresses stationary\\n        # flicker/compression artefacts.  If the whole frame is a duplicate or\\n        # almost motionless, fall back to the background mask so a slow/high-fps\\n        # video is still analysed correctly.\\n        if int(motion.sum()) < max(80, int(0.00015 * width * height)):\\n            mask = background_mask.astype(np.uint8)\\n        else:\\n            mask = (background_mask & motion).astype(np.uint8)\\n\\n        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))\\n'''\nassert old in s\ns=s.replace(old,new)\nopen(p,'w').write(s)\nPYEOF\nfor f in example_video.mp4 derived_prepend.mp4 derived_trim40.mp4 derived_slow2.mp4 derived_drop2.mp4 derived_short.mp4; do\n  echo ===$f===\n  python3 jump_analyzer.py $f\n  cat output.toml\ndone\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 475241,
+     "dur_ms": 48881,
+     "exit": 0,
+     "cpu_ms": 51555.1,
+     "phases_us": {
+      "acquire": 99,
+      "resume": 25903,
+      "mount": 21165,
+      "run": 48739836,
+      "destroy": 115368
+     },
+     "cold": null,
+     "vm": "vm-290"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 524130,
+   "dur_ms": 3013,
+   "tokens_in": 59,
+   "tokens_out": 334,
+   "cache_read": 91392,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 527143,
+   "dur_ms": 16943,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport jump_analyzer as ja, numpy as np\np='derived_slow2.mp4'\nbg=ja._median_background(p); h,w=bg.shape[:2]\nfreq=ja._build_frequency_map(p,bg,h,w)\nframes=ja._track_athlete(p,bg,freq)\nprint('presence',ja._select_presence_run(frames,300))\nps,pe=ja._select_presence_run(frames,300)\nfor i in range(max(0,ps),min(len(frames),pe+1)):\n    info=frames[i]\n    if info: print(i,'bottom',info['bottom'],'x',info['x0'],info['x1'],'area',info['area'],'edge',info['touches_edge'])\nprint('detect',ja._detect_flight(frames,h))\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 527191,
+     "dur_ms": 16892,
+     "exit": 0,
+     "cpu_ms": 17685.7,
+     "phases_us": {
+      "acquire": 65,
+      "resume": 21812,
+      "mount": 19048,
+      "run": 16784694,
+      "destroy": 85651
+     },
+     "cold": null,
+     "vm": "vm-293"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 544091,
+   "dur_ms": 9104,
+   "tokens_in": 32,
+   "tokens_out": 1071,
+   "cache_read": 91968,
+   "cache_write": 896,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 553195,
+   "dur_ms": 50012,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\np='jump_analyzer.py'\ns=open(p).read()\ns=s.replace('''            else:\\n                gap += 1\\n                if gap > 2:\\n                    break\\n            j += 1\\n        segments.append(''','''            else:\\n                gap += 1\\n                if gap > 1:\\n                    break\\n            j += 1\\n        segments.append(''')\n# The above string may also match presence helper? Check count\nprint('occurrences',s.count('if gap > 1:'),s.count('if gap > 2:'))\nopen(p,'w').write(s)\nPYEOF\nfor f in example_video.mp4 derived_prepend.mp4 derived_trim40.mp4 derived_slow2.mp4 derived_drop2.mp4 derived_short.mp4; do\n  echo ===$f===\n  python3 jump_analyzer.py $f\n  cat output.toml\ndone\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 553244,
+     "dur_ms": 49961,
+     "exit": 0,
+     "cpu_ms": 52778.4,
+     "phases_us": {
+      "acquire": 24,
+      "resume": 24706,
+      "mount": 20850,
+      "run": 49831168,
+      "destroy": 104481
+     },
+     "cold": null,
+     "vm": "vm-295"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 603213,
+   "dur_ms": 25980,
+   "tokens_in": 23,
+   "tokens_out": 4343,
+   "cache_read": 93952,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 629194,
+   "dur_ms": 49985,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\np='jump_analyzer.py'\ns=open(p).read()\nold='''    takeoff = chosen[\"start\"]\\n    core_end = chosen[\"last\"]\\n\\n    # Landing is the first subsequent usable frame whose feet are back at the\\n'''\nnew='''    takeoff = chosen[\"start\"]\\n    core_end = chosen[\"last\"]\\n\\n    # If the first clearly airborne frame only just failed the main threshold,\\n    # include it too.  The extension threshold is deliberately higher than the\\n    # normal running/leg-lift variation.\\n    extension_thr = max(return_thr, 0.60 * flight_thr)\\n    while takeoff - 1 >= 0:\\n        prev_frame = takeoff - 1\\n        if usable[prev_frame] and deviation[prev_frame] > extension_thr:\\n            takeoff = prev_frame\\n        else:\\n            break\\n\\n    # Landing is the first subsequent usable frame whose feet are back at the\\n'''\nassert old in s\ns=s.replace(old,new)\nopen(p,'w').write(s)\nPYEOF\nfor f in example_video.mp4 derived_prepend.mp4 derived_trim40.mp4 derived_slow2.mp4 derived_drop2.mp4 derived_short.mp4; do\n  echo ===$f===\n  python3 jump_analyzer.py $f\n  cat output.toml\ndone\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 629245,
+     "dur_ms": 49931,
+     "exit": 0,
+     "cpu_ms": 52682.1,
+     "phases_us": {
+      "acquire": 97,
+      "resume": 26130,
+      "mount": 21489,
+      "run": 49790971,
+      "destroy": 113678
+     },
+     "cold": null,
+     "vm": "vm-298"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 679190,
+   "dur_ms": 3734,
+   "tokens_in": 15,
+   "tokens_out": 549,
+   "cache_read": 98496,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 682924,
+   "dur_ms": 31850,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n    r,f=cap.read()\n    if not r: break\n    frames.append(f)\ncap.release()\nfourcc=cv2.VideoWriter_fourcc(*'mp4v')\ndef write(path,fs):\n    h,w=fs[0].shape[:2]; vw=cv2.VideoWriter(path,fourcc,30,(w,h))\n    for f in fs: vw.write(f)\n    vw.release()\nrng=np.random.default_rng(0)\nnoisy=[]\nfor f in frames:\n    ff=f.astype(np.float32)+rng.normal(0,8,f.shape)\n    noisy.append(np.clip(ff,0,255).astype(np.uint8))\nwrite('derived_noise.mp4',noisy)\nflick=[]\nfor i,f in enumerate(frames):\n    delta=10*np.sin(i*0.7)\n    flick.append(np.clip(f.astype(np.float32)+delta,0,255).astype(np.uint8))\nwrite('derived_flicker.mp4',flick)\n# add a moving bright box in the stands (y 80-130) throughout\nbox=[]\nfor i,f in enumerate(frames):\n    ff=f.copy(); x=100+i*5\n    cv2.rectangle(ff,(x,80),(x+40,130),(255,255,255),-1)\n    box.append(ff)\nwrite('derived_crowdbox.mp4',box)\nPYEOF\nfor f in derived_noise.mp4 derived_flicker.mp4 derived_crowdbox.mp4; do\n  echo ===$f===\n  python3 jump_analyzer.py $f\n  cat output.toml\ndone\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 682972,
+     "dur_ms": 31800,
+     "exit": 0,
+     "cpu_ms": 33841.5,
+     "phases_us": {
+      "acquire": 67,
+      "resume": 21845,
+      "mount": 18986,
+      "run": 31684738,
+      "destroy": 92664
+     },
+     "cold": null,
+     "vm": "vm-300"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 714781,
+   "dur_ms": 2720,
+   "tokens_in": 28,
+   "tokens_out": 301,
+   "cache_read": 99200,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 717501,
+   "dur_ms": 122,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\nsed -n '1,260p' jump_analyzer.py\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 717552,
+     "dur_ms": 52,
+     "exit": 0,
+     "cpu_ms": 41.9,
+     "phases_us": {
+      "acquire": 87,
+      "resume": 23970,
+      "mount": 20431,
+      "run": 4775,
+      "destroy": 22631
+     },
+     "cold": null,
+     "vm": "vm-302"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 717630,
+   "dur_ms": 2344,
+   "tokens_in": 5,
+   "tokens_out": 242,
+   "cache_read": 99648,
+   "cache_write": 2112,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 719974,
+   "dur_ms": 122,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\nsed -n '260,520p' jump_analyzer.py\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 720026,
+     "dur_ms": 54,
+     "exit": 0,
+     "cpu_ms": 40.2,
+     "phases_us": {
+      "acquire": 107,
+      "resume": 23596,
+      "mount": 20257,
+      "run": 4780,
+      "destroy": 24790
+     },
+     "cold": null,
+     "vm": "vm-305"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 720104,
+   "dur_ms": 5868,
+   "tokens_in": 3,
+   "tokens_out": 845,
+   "cache_read": 101952,
+   "cache_write": 1344,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 725972,
+   "dur_ms": 8777,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\nrm -f derived_*.mp4 median.png output.toml\nls -la\npython3 jump_analyzer.py example_video.mp4\ncat output.toml\npython3 - <<'PYEOF'\nimport os\nprint('exists', os.path.exists('/app/jump_analyzer.py'))\nPYEOF\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 726024,
+     "dur_ms": 8723,
+     "exit": 0,
+     "cpu_ms": 9498.5,
+     "phases_us": {
+      "acquire": 128,
+      "resume": 24299,
+      "mount": 20407,
+      "run": 8622789,
+      "destroy": 75472
+     },
+     "cold": null,
+     "vm": "vm-306"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 734755,
+   "dur_ms": 5809,
+   "tokens_in": 1,
+   "tokens_out": 1009,
+   "cache_read": 104128,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 740565,
+   "dur_ms": 8834,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\npython3 - <<'PYEOF'\np='jump_analyzer.py'\ns=open(p).read()\nold='''    candidates = [\\n        \"/app/input.mp4\",\\n        \"/app/example_video.mp4\",\\n        \"input.mp4\",\\n        \"example_video.mp4\",\\n    ]\\n    for path in candidates:\\n        if os.path.isfile(path):\\n            return path\\n\\n    for directory in (\"/app\", \".\"):\\n        videos = sorted(glob.glob(os.path.join(directory, \"*.mp4\")))\\n        if videos:\\n            return videos[0]\\n\\n    raise SystemExit(\"No input MP4 file found\")\\n'''\nnew='''    for path in (\"/app/input.mp4\", \"input.mp4\"):\\n        if os.path.isfile(path):\\n            return path\\n\\n    # If no path was supplied, prefer any test video over the bundled example.\\n    videos = []\\n    for directory in (\"/app\", \".\"):\\n        videos.extend(sorted(glob.glob(os.path.join(directory, \"*.mp4\"))))\\n    non_examples = [\\n        path for path in videos if \"example_video\" not in os.path.basename(path)\\n    ]\\n    if non_examples:\\n        return non_examples[0]\\n\\n    for path in (\"/app/example_video.mp4\", \"example_video.mp4\"):\\n        if os.path.isfile(path):\\n            return path\\n    if videos:\\n        return videos[0]\\n\\n    raise SystemExit(\"No input MP4 file found\")\\n'''\nassert old in s\ns=s.replace(old,new)\n# Update stale comment about gap bridging\ns=s.replace('''    # Find candidate runs, bridging at most two missing/weak frames so that a\\n    # single noisy frame does not split the jump into two segments.\\n''','''    # Find candidate runs, bridging a single missing/weak frame so that one\\n    # noisy frame does not split the jump into two segments.\\n''')\nopen(p,'w').write(s)\nPYEOF\nrm -rf __pycache__\npython3 jump_analyzer.py example_video.mp4\ncat output.toml\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 740614,
+     "dur_ms": 8782,
+     "exit": 0,
+     "cpu_ms": 9483.4,
+     "phases_us": {
+      "acquire": 85,
+      "resume": 21647,
+      "mount": 18377,
+      "run": 8680364,
+      "destroy": 80115
+     },
+     "cold": null,
+     "vm": "vm-307"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 749405,
+   "dur_ms": 2296,
+   "tokens_in": 18,
+   "tokens_out": 235,
+   "cache_read": 105280,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 751701,
+   "dur_ms": 8799,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'SBXEOF'\ncd /workspace\nrm -rf __pycache__\nls -la\npython3 jump_analyzer.py example_video.mp4 >/dev/null\ncat output.toml\nSBXEOF",
+   "sandbox": [
+    {
+     "at_ms": 751750,
+     "dur_ms": 8747,
+     "exit": 0,
+     "cpu_ms": 9484.7,
+     "phases_us": {
+      "acquire": 80,
+      "resume": 21602,
+      "mount": 19359,
+      "run": 8640260,
+      "destroy": 85172
+     },
+     "cold": null,
+     "vm": "vm-308"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 760507,
+   "dur_ms": 6202,
+   "tokens_in": 43,
+   "tokens_out": 1029,
+   "cache_read": 105536,
+   "cache_write": 192,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 5.545,
+ "calls": 42,
+ "cell": "TB1f"
+}

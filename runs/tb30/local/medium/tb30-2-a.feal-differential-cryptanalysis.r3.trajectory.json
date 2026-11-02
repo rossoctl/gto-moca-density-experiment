@@ -1,0 +1,147 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "feal-differential-cryptanalysis",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 131026,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 266,
+  "output": 24040,
+  "cacheRead": 279104,
+  "cacheWrite": 1472,
+  "total": 304882
+ },
+ "totals": {
+  "model_calls": 8,
+  "tool_calls": 8,
+  "model_ms": 122244,
+  "tool_ms": 8103,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 614,
+   "dur_ms": 930
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1246,
+   "dur_ms": 45,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/feal.py"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1544,
+   "dur_ms": 54,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /app"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1598,
+   "dur_ms": 94605
+  },
+  {
+   "kind": "tool",
+   "at_ms": 96203,
+   "dur_ms": 531,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nfrom feal import f_function\nimport random\nfor delta in [0x80800000,0x00008080,0x80808080,0x02000000,0x00000200]:\n    ds=set()\n    for _ in range(20000):\n        x=random.getrandbits(32)\n        ds.add(f_function(x)^f_function(x^delta))\n    print(hex(delta), len(ds), [hex(v) for v in list(ds)[:5]])\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 96734,
+   "dur_ms": 14934
+  },
+  {
+   "kind": "tool",
+   "at_ms": 111668,
+   "dur_ms": 17,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/attack.py",
+    "content": "#!/usr/bin/env python3\n\"\"\"Chosen-plaintext key recovery for the FEAL-like cipher in feal.py.\n\nRecovers key[5] (the last round key).\n\nIdea\n----\nLet (L_i, R_i) be the Feistel state and k_i the round keys.  The ciphertext\nsatisfies\n\n    C_hi = R4                 C_lo = L4 ^ R4\n\nso R3 = L4 = C_lo ^ C_hi is directly observable, and\n\n    C_hi = L3 ^ f(R3 ^ k5).\n\nFor a plaintext pair with differences (dL, dR) the F-function of this cipher\nhas the exact (probability 1) differential\n\n    Delta = 0x80800000  ==>  f(x) ^ f(x ^ Delta) = 0x02000000.\n\nChoosing dL = a = 0x82800000 and dR = b = 0x02000000 gives\ndL ^ dR = 0x80800000, and propagating through the first three rounds yields\n\n    Delta L3 = a   (exactly, for every key and every plaintext).\n\nTherefore for every such pair\n\n    C_hi ^ C_hi' ^ a  =  f(R3 ^ k5) ^ f(R3' ^ k5)\n\nwhich lets us test the only 2^16 possible values of key[5]\n(each round key is seed * 1234567 mod 2^32 for a 16-bit seed).\n\"\"\"\n\nimport random\n\nfrom feal import f_function\n\n# Exact differential of the F function: input difference -> output difference.\n_DELTA1 = 0x80800000\n_D_OUT1 = 0x02000000\n\n# Plaintext difference that makes Delta L3 = A with probability 1.\n_A = _DELTA1 ^ _D_OUT1          # 0x82800000  (difference in the left half)\n_B = _A ^ _DELTA1               # 0x02000000  (difference in the right half)\n\n_SEED_MULT = 1234567\n\n\ndef _encrypt_pair(encrypt_fn, left, right):\n    \"\"\"Encrypt plaintext and its chosen difference; return (R3, R3', C_hi, C_hi').\"\"\"\n    c1 = encrypt_fn((left << 32) | right)\n    c2 = encrypt_fn(((left ^ _A) << 32) | (right ^ _B))\n\n    hi1, lo1 = (c1 >> 32) & 0xFFFFFFFF, c1 & 0xFFFFFFFF\n    hi2, lo2 = (c2 >> 32) & 0xFFFFFFFF, c2 & 0xFFFFFFFF\n\n    r3_1 = lo1 ^ hi1             # L4 = R3\n    r3_2 = lo2 ^ hi2\n    return r3_1, r3_2, hi1, hi2\n\n\ndef attack(encrypt_fn):\n    \"\"\"Recover the uint32 value of key[5] using chosen plaintexts.\"\"\"\n    rng = random.Random(0xFEAL)\n\n    # Collect a few independent plaintext pairs (R3 must differ for a pair to\n    # be informative; since f is a bijection that also guarantees a non-trivial\n    # target difference).\n    pairs = []\n    attempts = 0\n    while len(pairs) < 4 and attempts < 1000:\n        attempts += 1\n        left = rng.getrandbits(32)\n        right = rng.getrandbits(32)\n        r3_1, r3_2, hi1, hi2 = _encrypt_pair(encrypt_fn, left, right)\n        if r3_1 == r3_2:\n            continue\n        target = (hi1 ^ hi2 ^ _A) & 0xFFFFFFFF\n        pairs.append((r3_1, r3_2, target))\n\n    # The round keys are seed * 1234567 mod 2^32 for a 16-bit seed, so there\n    # are only 65536 candidates for key[5].\n    candidates = []\n    for seed in range(0x10000):\n        k = (seed * _SEED_MULT) & 0xFFFFFFFF\n        for r3_1, r3_2, target in pairs:\n            if (f_function(r3_1 ^ k) ^ f_function(r3_2 ^ k)) != target:\n                break\n        else:\n            candidates.append(k)\n            if len(candidates) > 1:\n                # Extremely unlikely with several pairs; keep going and let\n                # further pairs (if any) disambiguate.\n                pass\n\n    if not candidates:\n        # Defensive fallback: shouldn't happen with a correct cipher.\n        raise RuntimeError(\"key[5] not found\")\n\n    return candidates[0]\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 111685,
+   "dur_ms": 1864
+  },
+  {
+   "kind": "tool",
+   "at_ms": 113549,
+   "dur_ms": 58,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "python3 -c \"\nimport random, time\nimport feal\nfrom attack import attack\n\nok=True\nfor trial in range(20):\n    random.seed(trial)\n    feal.create_random_keys()\n    true=feal.key[5]\n    t=time.time()\n    got=attack(feal.encrypt)\n    dt=time.time()-t\n    print(trial, hex(true), hex(got), 'OK' if got==true else 'FAIL', round(dt,3))\n    ok &= (got==true)\nprint('ALL OK' if ok else 'SOME FAILED')\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 113607,
+   "dur_ms": 1244
+  },
+  {
+   "kind": "tool",
+   "at_ms": 114851,
+   "dur_ms": 18,
+   "tool": "Edit",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/attack.py",
+    "old_string": "    rng = random.Random(0xFEAL)",
+    "new_string": "    rng = random.Random(0xFEA1)",
+    "replace_all": false
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 114869,
+   "dur_ms": 2372
+  },
+  {
+   "kind": "tool",
+   "at_ms": 117241,
+   "dur_ms": 5861,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport random, time\nimport feal\nfrom attack import attack\n\nok=True\nfor trial in range(20):\n    random.seed(trial)\n    feal.create_random_keys()\n    true=feal.key[5]\n    t=time.time()\n    got=attack(feal.encrypt)\n    dt=time.time()-t\n    print(trial, hex(true), hex(got), 'OK' if got==true else 'FAIL', round(dt,3))\n    ok &= (got==true)\nprint('ALL OK' if ok else 'SOME FAILED')\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 123102,
+   "dur_ms": 4145
+  },
+  {
+   "kind": "tool",
+   "at_ms": 127247,
+   "dur_ms": 1519,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport feal, time\nfrom attack import attack\n\ndef set_keys(seeds):\n    for i,s in enumerate(seeds):\n        feal.key[i]=(s*1234567)&0xFFFFFFFF\n\ntests=[(0,0,0,0,0,0),(0xFFFF,)*6,(540,)*6,(1,2,3,4,5,6),(0x1234,0xABCD,0x0,0xFFFF,0x5555,0xABCD)]\nfor seeds in tests:\n    set_keys(seeds)\n    t=time.time(); got=attack(feal.encrypt); dt=time.time()-t\n    print(seeds, hex(feal.key[5]), hex(got), 'OK' if got==feal.key[5] else 'FAIL', round(dt,3))\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 128766,
+   "dur_ms": 2150
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.323,
+ "calls": 8,
+ "cell": "TB1a"
+}

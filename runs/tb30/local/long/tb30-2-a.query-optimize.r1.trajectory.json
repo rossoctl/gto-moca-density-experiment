@@ -1,0 +1,423 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "query-optimize",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 653998,
+ "resolved": false,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 64197,
+  "output": 14648,
+  "cacheRead": 685696,
+  "cacheWrite": 7104,
+  "total": 771645
+ },
+ "totals": {
+  "model_calls": 26,
+  "tool_calls": 30,
+  "model_ms": 79818,
+  "tool_ms": 574612,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 535,
+   "dur_ms": 1125
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1344,
+   "dur_ms": 15,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/my-sql-query.sql"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1660,
+   "dur_ms": 88,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sqlite3 oewn.sqlite \".schema\" 2>&1 | head -200"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1748,
+   "dur_ms": 1489
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2743,
+   "dur_ms": 18,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sqlite3 oewn.sqlite \"SELECT name, type, tbl_name, sql FROM sqlite_master WHERE type IN ('index','table') AND tbl_name IN ('words','senses','synsets') ORDER BY tbl_name, type DESC;\" 2>&1"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3237,
+   "dur_ms": 71,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sqlite3 oewn.sqlite \"SELECT COUNT(*) FROM words; SELECT COUNT(*) FROM senses; SELECT COUNT(*) FROM synsets; SELECT COUNT(DISTINCT wordid) FROM senses;\" 2>&1"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3308,
+   "dur_ms": 9937
+  },
+  {
+   "kind": "tool",
+   "at_ms": 12802,
+   "dur_ms": 330,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sqlite3 oewn.sqlite \"SELECT sqlite_version(); SELECT COUNT(*) AS dup_wordids FROM (SELECT wordid FROM words GROUP BY wordid HAVING COUNT(*)>1); SELECT COUNT(*) AS dup_pairs FROM (SELECT wordid,word FROM words GROUP BY wordid,word HAVING COUNT(*)>1); SELECT COUNT(*) FROM words w LEFT JOIN senses s ON s.wordid=w.wordid WHERE s.wordid IS NULL; SELECT COUNT(*) FROM (SELECT wordid,synsetid FROM senses GROUP BY wordid,synsetid);\" 2>&1"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 13245,
+   "dur_ms": 120177,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "time sqlite3 oewn.sqlite < my-sql-query.sql > /tmp/orig.out 2>/tmp/orig.err; wc -l /tmp/orig.out; head -3 /tmp/orig.out; cat /tmp/orig.err"
+  },
+  {
+   "kind": "model",
+   "at_ms": 133422,
+   "dur_ms": 2193
+  },
+  {
+   "kind": "tool",
+   "at_ms": 135615,
+   "dur_ms": 21,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/sol.sql",
+    "content": "WITH ws AS (\n  SELECT wordid, synsetid, COUNT(*) AS cnt\n  FROM senses\n  GROUP BY wordid, synsetid\n),\nranked AS (\n  SELECT wordid, synsetid, cnt,\n         ROW_NUMBER() OVER (PARTITION BY wordid ORDER BY cnt DESC, synsetid ASC) AS rn\n  FROM ws\n),\nagg AS (\n  SELECT ws.wordid,\n         COUNT(*) AS total_synsets,\n         SUM(ws.cnt) AS total_senses,\n         COUNT(DISTINCT syn.domainid) AS distinct_domains,\n         COUNT(DISTINCT syn.posid) AS distinct_posids\n  FROM ws\n  JOIN synsets syn ON syn.synsetid = ws.synsetid\n  GROUP BY ws.wordid\n)\nSELECT w.wordid AS word_id,\n       w.word AS word,\n       a.total_synsets,\n       a.total_senses,\n       a.distinct_domains,\n       a.distinct_posids,\n       r.synsetid AS top_synsetid,\n       r.cnt AS top_synset_sense_count\nFROM agg a\nJOIN words w ON w.wordid = a.wordid\nJOIN ranked r ON r.wordid = a.wordid AND r.rn = 1\nWHERE a.total_synsets >= 2\n  AND a.distinct_domains >= 2\n  AND a.total_senses >= 2\nORDER BY a.total_senses DESC,\n         a.total_synsets DESC,\n         a.distinct_domains DESC,\n         w.wordid ASC\nLIMIT 500;\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 135636,
+   "dur_ms": 1056
+  },
+  {
+   "kind": "tool",
+   "at_ms": 136692,
+   "dur_ms": 16,
+   "tool": "Edit",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/sol.sql",
+    "old_string": "JOIN ranked r ON r.wordid = a.wordid AND r.rn = 1",
+    "new_string": "JOIN ranked r ON r.wordid = w.wordid AND r.rn = 1",
+    "replace_all": false
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 136708,
+   "dur_ms": 1022
+  },
+  {
+   "kind": "tool",
+   "at_ms": 137730,
+   "dur_ms": 120079,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "time sqlite3 oewn.sqlite < sol.sql > /tmp/sol.out 2>/tmp/sol.err; echo \"exit=$?\"; wc -l /tmp/sol.out; head -5 /tmp/sol.out; cat /tmp/sol.err"
+  },
+  {
+   "kind": "model",
+   "at_ms": 257809,
+   "dur_ms": 2008
+  },
+  {
+   "kind": "tool",
+   "at_ms": 259817,
+   "dur_ms": 57,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ps aux | grep -E 'sqlite3' | grep -v grep; ls -la /app/oewn.sqlite*; cat /tmp/claude-0/-app/a146a52b-63b1-470c-b992-800c89ec9ebe/tasks/bil06zy3a.output 2>/dev/null | tail -5; cat /tmp/claude-0/-app/a146a52b-63b1-470c-b992-800c89ec9ebe/tasks/bzorfxehz.output 2>/dev/null | tail -5"
+  },
+  {
+   "kind": "model",
+   "at_ms": 259874,
+   "dur_ms": 2308
+  },
+  {
+   "kind": "tool",
+   "at_ms": 261853,
+   "dur_ms": 6,
+   "tool": "TaskStop",
+   "is_error": false
+  },
+  {
+   "kind": "tool",
+   "at_ms": 262182,
+   "dur_ms": 6,
+   "tool": "TaskStop",
+   "is_error": false
+  },
+  {
+   "kind": "model",
+   "at_ms": 262188,
+   "dur_ms": 1089
+  },
+  {
+   "kind": "tool",
+   "at_ms": 263277,
+   "dur_ms": 1142,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "pkill -9 sqlite3; sleep 1; ps aux | grep sqlite3 | grep -v grep; echo \"---\"; cd /app && time sqlite3 oewn.sqlite \"SELECT COUNT(*) FROM (SELECT wordid, synsetid, COUNT(*) AS cnt FROM senses GROUP BY wordid, synsetid);\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 264419,
+   "dur_ms": 2368
+  },
+  {
+   "kind": "tool",
+   "at_ms": 266236,
+   "dur_ms": 695,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "time sqlite3 oewn.sqlite \"WITH ws AS (SELECT wordid, synsetid, COUNT(*) AS cnt FROM senses GROUP BY wordid, synsetid) SELECT COUNT(*) FROM (SELECT ws.wordid, COUNT(*) AS ts, SUM(ws.cnt) AS tse, COUNT(DISTINCT syn.domainid), COUNT(DISTINCT syn.posid) FROM ws JOIN synsets syn ON syn.synsetid = ws.synsetid GROUP BY ws.wordid);\""
+  },
+  {
+   "kind": "tool",
+   "at_ms": 266787,
+   "dur_ms": 477,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "time sqlite3 oewn.sqlite \"WITH ws AS (SELECT wordid, synsetid, COUNT(*) AS cnt FROM senses GROUP BY wordid, synsetid) SELECT COUNT(*) FROM (SELECT wordid, synsetid, cnt, ROW_NUMBER() OVER (PARTITION BY wordid ORDER BY cnt DESC, synsetid ASC) rn FROM ws) WHERE rn=1;\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 267264,
+   "dur_ms": 1800
+  },
+  {
+   "kind": "tool",
+   "at_ms": 269064,
+   "dur_ms": 120075,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "time sqlite3 oewn.sqlite < sol.sql > /tmp/sol.out 2>/tmp/sol.err; echo \"exit=$?\"; wc -l /tmp/sol.out; head -5 /tmp/sol.out; cat /tmp/sol.err",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 389139,
+   "dur_ms": 2824
+  },
+  {
+   "kind": "tool",
+   "at_ms": 391963,
+   "dur_ms": 6,
+   "tool": "TaskStop",
+   "is_error": false
+  },
+  {
+   "kind": "model",
+   "at_ms": 391969,
+   "dur_ms": 1461
+  },
+  {
+   "kind": "tool",
+   "at_ms": 393430,
+   "dur_ms": 1044,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "pkill -9 sqlite3; sleep 1; cd /app && sed 's/^SELECT/EXPLAIN QUERY PLAN SELECT/' sol.sql > /tmp/eqp.sql; sqlite3 oewn.sqlite < /tmp/eqp.sql"
+  },
+  {
+   "kind": "model",
+   "at_ms": 394474,
+   "dur_ms": 1191
+  },
+  {
+   "kind": "tool",
+   "at_ms": 395665,
+   "dur_ms": 20,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "{ printf 'EXPLAIN QUERY PLAN '; cat sol.sql; } > /tmp/eqp.sql; sqlite3 oewn.sqlite < /tmp/eqp.sql"
+  },
+  {
+   "kind": "model",
+   "at_ms": 395685,
+   "dur_ms": 5272
+  },
+  {
+   "kind": "tool",
+   "at_ms": 400957,
+   "dur_ms": 30823,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\necho \"== test1: agg+words only ==\"\ntimeout 30 sqlite3 oewn.sqlite \"WITH ws AS (SELECT wordid, synsetid, COUNT(*) AS cnt FROM senses GROUP BY wordid, synsetid), agg AS (SELECT ws.wordid, COUNT(*) AS total_synsets, SUM(ws.cnt) AS total_senses, COUNT(DISTINCT syn.domainid) AS distinct_domains, COUNT(DISTINCT syn.posid) AS distinct_posids FROM ws JOIN synsets syn ON syn.synsetid = ws.synsetid GROUP BY ws.wordid) SELECT COUNT(*) FROM agg a JOIN words w ON w.wordid=a.wordid;\"; echo \"exit=$?\"\necho \"== test2: + ranked join ==\"\ntimeout 30 sqlite3 oewn.sqlite \"WITH ws AS (SELECT wordid, synsetid, COUNT(*) AS cnt FROM senses GROUP BY wordid, synsetid), ranked AS (SELECT wordid, synsetid, cnt, ROW_NUMBER() OVER (PARTITION BY wordid ORDER BY cnt DESC, synsetid ASC) AS rn FROM ws), agg AS (SELECT ws.wordid, COUNT(*) AS total_synsets, SUM(ws.cnt) AS total_senses, COUNT(DISTINCT syn.domainid) AS distinct_domains, COUNT(DISTINCT syn.posid) AS distinct_posids FROM ws JOIN synsets syn ON syn.synsetid = ws.synsetid GROUP BY ws.wordid) SELECT COUNT(*) FROM agg a JOIN words w ON w.wordid=a.wordid JOIN ranked r ON r.wordid=w.wordid AND r.rn=1;\"; echo \"exit=$?\"",
+   "timeout": 90000
+  },
+  {
+   "kind": "model",
+   "at_ms": 431780,
+   "dur_ms": 2180
+  },
+  {
+   "kind": "tool",
+   "at_ms": 433960,
+   "dur_ms": 18,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app; { printf 'EXPLAIN QUERY PLAN '; echo \"WITH ws AS (SELECT wordid, synsetid, COUNT(*) AS cnt FROM senses GROUP BY wordid, synsetid), ranked AS (SELECT wordid, synsetid, cnt, ROW_NUMBER() OVER (PARTITION BY wordid ORDER BY cnt DESC, synsetid ASC) AS rn FROM ws), agg AS (SELECT ws.wordid, COUNT(*) AS total_synsets, SUM(ws.cnt) AS total_senses, COUNT(DISTINCT syn.domainid) AS distinct_domains, COUNT(DISTINCT syn.posid) AS distinct_posids FROM ws JOIN synsets syn ON syn.synsetid = ws.synsetid GROUP BY ws.wordid) SELECT COUNT(*) FROM agg a JOIN words w ON w.wordid=a.wordid JOIN ranked r ON r.wordid=w.wordid AND r.rn=1;\"; } | sqlite3 oewn.sqlite"
+  },
+  {
+   "kind": "model",
+   "at_ms": 433978,
+   "dur_ms": 2632
+  },
+  {
+   "kind": "tool",
+   "at_ms": 436610,
+   "dur_ms": 1502,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\necho \"== ranked + words ==\"\ntimeout 20 sqlite3 oewn.sqlite \"WITH ws AS (SELECT wordid, synsetid, COUNT(*) AS cnt FROM senses GROUP BY wordid, synsetid), ranked AS (SELECT wordid, synsetid, cnt, ROW_NUMBER() OVER (PARTITION BY wordid ORDER BY cnt DESC, synsetid ASC) AS rn FROM ws) SELECT COUNT(*) FROM words w JOIN ranked r ON r.wordid=w.wordid AND r.rn=1;\"; echo \"exit=$?\"\necho \"== agg + ranked ==\"\ntimeout 20 sqlite3 oewn.sqlite \"WITH ws AS (SELECT wordid, synsetid, COUNT(*) AS cnt FROM senses GROUP BY wordid, synsetid), ranked AS (SELECT wordid, synsetid, cnt, ROW_NUMBER() OVER (PARTITION BY wordid ORDER BY cnt DESC, synsetid ASC) AS rn FROM ws), agg AS (SELECT ws.wordid, COUNT(*) AS total_synsets, SUM(ws.cnt) AS total_senses, COUNT(DISTINCT syn.domainid) AS distinct_domains, COUNT(DISTINCT syn.posid) AS distinct_posids FROM ws JOIN synsets syn ON syn.synsetid = ws.synsetid GROUP BY ws.wordid) SELECT COUNT(*) FROM agg a JOIN ranked r ON r.wordid=a.wordid AND r.rn=1;\"; echo \"exit=$?\"",
+   "timeout": 60000
+  },
+  {
+   "kind": "model",
+   "at_ms": 438112,
+   "dur_ms": 4513
+  },
+  {
+   "kind": "tool",
+   "at_ms": 442625,
+   "dur_ms": 30033,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\necho \"== triple with MATERIALIZED agg, ranked ==\"\ntimeout 30 sqlite3 oewn.sqlite \"WITH ws AS (SELECT wordid, synsetid, COUNT(*) AS cnt FROM senses GROUP BY wordid, synsetid), ranked AS MATERIALIZED (SELECT wordid, synsetid, cnt, ROW_NUMBER() OVER (PARTITION BY wordid ORDER BY cnt DESC, synsetid ASC) AS rn FROM ws), agg AS MATERIALIZED (SELECT ws.wordid, COUNT(*) AS total_synsets, SUM(ws.cnt) AS total_senses, COUNT(DISTINCT syn.domainid) AS distinct_domains, COUNT(DISTINCT syn.posid) AS distinct_posids FROM ws JOIN synsets syn ON syn.synsetid = ws.synsetid GROUP BY ws.wordid) SELECT COUNT(*) FROM agg a JOIN words w ON w.wordid=a.wordid JOIN ranked r ON r.wordid=w.wordid AND r.rn=1;\"; echo \"exit=$?\"",
+   "timeout": 60000
+  },
+  {
+   "kind": "model",
+   "at_ms": 472658,
+   "dur_ms": 6999
+  },
+  {
+   "kind": "tool",
+   "at_ms": 479657,
+   "dur_ms": 2566,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\necho \"== Variant A ==\"\ntimeout 30 sqlite3 oewn.sqlite \"WITH ws AS (SELECT wordid, synsetid, COUNT(*) AS cnt FROM senses GROUP BY wordid, synsetid), ranked AS (SELECT wordid, synsetid, cnt, ROW_NUMBER() OVER (PARTITION BY wordid ORDER BY cnt DESC, synsetid ASC) AS rn FROM ws), agg AS (SELECT w.wordid, w.word, COUNT(*) AS total_synsets, SUM(ws.cnt) AS total_senses, COUNT(DISTINCT syn.domainid) AS distinct_domains, COUNT(DISTINCT syn.posid) AS distinct_posids FROM ws JOIN words w ON w.wordid=ws.wordid JOIN synsets syn ON syn.synsetid=ws.synsetid GROUP BY w.wordid,w.word) SELECT COUNT(*) FROM agg a JOIN ranked r ON r.wordid=a.wordid AND r.rn=1;\"; echo \"exit=$?\"\necho \"== Variant B ==\"\ntimeout 30 sqlite3 oewn.sqlite \"WITH ws AS (SELECT s.wordid, w.word, s.synsetid, COUNT(*) AS cnt FROM senses s JOIN words w ON w.wordid=s.wordid GROUP BY s.wordid,w.word,s.synsetid), ranked AS (SELECT wordid, synsetid, cnt, ROW_NUMBER() OVER (PARTITION BY wordid ORDER BY cnt DESC, synsetid ASC) AS rn FROM ws), agg AS (SELECT wordid, word, COUNT(*) AS total_synsets, SUM(cnt) AS total_senses, COUNT(DISTINCT syn.domainid) AS distinct_domains, COUNT(DISTINCT syn.posid) AS distinct_posids FROM ws JOIN synsets syn ON syn.synsetid=ws.synsetid GROUP BY wordid,word) SELECT COUNT(*) FROM agg a JOIN ranked r ON r.wordid=a.wordid AND r.rn=1;\"; echo \"exit=$?\"",
+   "timeout": 90000
+  },
+  {
+   "kind": "model",
+   "at_ms": 482223,
+   "dur_ms": 5401
+  },
+  {
+   "kind": "tool",
+   "at_ms": 487624,
+   "dur_ms": 13,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/sol.sql",
+    "content": "WITH ws AS (\n  SELECT wordid, synsetid, COUNT(*) AS cnt\n  FROM senses\n  GROUP BY wordid, synsetid\n),\nranked AS (\n  SELECT wordid, synsetid, cnt,\n         ROW_NUMBER() OVER (PARTITION BY wordid ORDER BY cnt DESC, synsetid ASC) AS rn\n  FROM ws\n),\nagg AS (\n  SELECT w.wordid,\n         w.word,\n         COUNT(*) AS total_synsets,\n         SUM(ws.cnt) AS total_senses,\n         COUNT(DISTINCT syn.domainid) AS distinct_domains,\n         COUNT(DISTINCT syn.posid) AS distinct_posids\n  FROM ws\n  JOIN words w ON w.wordid = ws.wordid\n  JOIN synsets syn ON syn.synsetid = ws.synsetid\n  GROUP BY w.wordid, w.word\n)\nSELECT a.wordid AS word_id,\n       a.word AS word,\n       a.total_synsets,\n       a.total_senses,\n       a.distinct_domains,\n       a.distinct_posids,\n       r.synsetid AS top_synsetid,\n       r.cnt AS top_synset_sense_count\nFROM agg a\nJOIN ranked r ON r.wordid = a.wordid AND r.rn = 1\nWHERE a.total_synsets >= 2\n  AND a.distinct_domains >= 2\n  AND a.total_senses >= 2\nORDER BY a.total_senses DESC,\n         a.total_synsets DESC,\n         a.distinct_domains DESC,\n         a.wordid ASC\nLIMIT 500;\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 487637,
+   "dur_ms": 1078
+  },
+  {
+   "kind": "tool",
+   "at_ms": 488715,
+   "dur_ms": 949,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app; time sqlite3 oewn.sqlite < sol.sql > /tmp/sol.out; echo \"exit=$?\"; wc -l /tmp/sol.out; head -5 /tmp/sol.out",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 489664,
+   "dur_ms": 2416
+  },
+  {
+   "kind": "tool",
+   "at_ms": 492080,
+   "dur_ms": 34,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "cd /app\npython3 - <<'EOF'\nimport re\norig=open('my-sql-query.sql').read()\n# add wordid restriction inside HAVING\norig_test=orig.replace(\"HAVING total_synsets >= 2\", \"HAVING w.wordid IN (SELECT wordid FROM words ORDER BY wordid LIMIT 3000) AND total_synsets >= 2\")\nopen('/tmp/orig_sub.sql','w').write(orig_test)\nsol=open('sol.sql').read()\nsol_test=sol.replace(\"WHERE a.total_synsets >= 2\", \"WHERE a.wordid IN (SELECT wordid FROM words ORDER BY wordid LIMIT 3000) AND a.total_synsets >= 2\")\nopen('/tmp/sol_sub.sql','w').write(sol_test)\nEOF\ntime sqlite3 oewn.sqlite < /tmp/sol_sub.sql > /tmp/sol_sub.out\ntime sqlite3 oewn.sqlite < /tmp/orig_sub.sql > /tmp/orig_sub.out\necho \"counts:\"; wc -l /tmp/sol_sub.out /tmp/orig_sub.out\ndiff /tmp/sol_sub.out /tmp/orig_sub.out && echo \"IDENTICAL\"",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 492114,
+   "dur_ms": 2046
+  },
+  {
+   "kind": "tool",
+   "at_ms": 494160,
+   "dur_ms": 27779,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\nsed 's/HAVING total_synsets >= 2/HAVING w.wordid IN (SELECT wordid FROM words ORDER BY wordid LIMIT 3000) AND total_synsets >= 2/' my-sql-query.sql > /tmp/orig_sub.sql\nsed 's/WHERE a.total_synsets >= 2/WHERE a.wordid IN (SELECT wordid FROM words ORDER BY wordid LIMIT 3000) AND a.total_synsets >= 2/' sol.sql > /tmp/sol_sub.sql\ngrep -n \"wordid IN\" /tmp/orig_sub.sql /tmp/sol_sub.sql\ntime sqlite3 oewn.sqlite < /tmp/sol_sub.sql > /tmp/sol_sub.out\ntime sqlite3 oewn.sqlite < /tmp/orig_sub.sql > /tmp/orig_sub.out\nwc -l /tmp/sol_sub.out /tmp/orig_sub.out\ndiff /tmp/sol_sub.out /tmp/orig_sub.out && echo \"IDENTICAL\"",
+   "timeout": 600000
+  },
+  {
+   "kind": "model",
+   "at_ms": 521939,
+   "dur_ms": 2785
+  },
+  {
+   "kind": "tool",
+   "at_ms": 524724,
+   "dur_ms": 115605,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app\nfor spec in \"100000 8000\" \"50000 10000\"; do\n  set -- $spec; off=$1; lim=$2\n  sed \"s/HAVING total_synsets >= 2/HAVING w.wordid IN (SELECT wordid FROM words ORDER BY wordid LIMIT $lim OFFSET $off) AND total_synsets >= 2/\" my-sql-query.sql > /tmp/o2.sql\n  sed \"s/WHERE a.total_synsets >= 2/WHERE a.wordid IN (SELECT wordid FROM words ORDER BY wordid LIMIT $lim OFFSET $off) AND a.total_synsets >= 2/\" sol.sql > /tmp/s2.sql\n  sqlite3 oewn.sqlite < /tmp/s2.sql > /tmp/s2.out\n  sqlite3 oewn.sqlite < /tmp/o2.sql > /tmp/o2.out\n  echo \"offset=$off lim=$lim rows: $(wc -l < /tmp/s2.out) $(wc -l < /tmp/o2.out)\"\n  diff /tmp/s2.out /tmp/o2.out && echo IDENTICAL\ndone",
+   "timeout": 600000
+  },
+  {
+   "kind": "model",
+   "at_ms": 640329,
+   "dur_ms": 10221
+  },
+  {
+   "kind": "tool",
+   "at_ms": 650550,
+   "dur_ms": 947,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app; cat sol.sql; echo \"---\"; grep -c ';' sol.sql; echo \"--- run ---\"; time sqlite3 oewn.sqlite < sol.sql | tail -2",
+   "timeout": 60000
+  },
+  {
+   "kind": "model",
+   "at_ms": 651497,
+   "dur_ms": 2404
+  }
+ ],
+ "class": "long",
+ "weight_s_per_command": 42.177,
+ "calls": 30,
+ "cell": "TB1a"
+}

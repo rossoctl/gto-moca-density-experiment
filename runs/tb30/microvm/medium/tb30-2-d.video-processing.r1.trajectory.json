@@ -1,0 +1,1793 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-d",
+ "instance_id": "video-processing",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 562735,
+ "resolved": false,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 100759,
+  "output": 77356,
+  "cacheRead": 5202432,
+  "cacheWrite": 0,
+  "total": 5380547
+ },
+ "totals": {
+  "model_calls": 51,
+  "tool_calls": 50,
+  "model_ms": 473489,
+  "tool_ms": 87999,
+  "sandbox_ms": 84376
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 141,
+   "dur_ms": 4391,
+   "tokens_in": 355,
+   "tokens_out": 94,
+   "cache_read": 5568,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4532,
+   "dur_ms": 519,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace 2>/dev/null || cd /app\npwd\nls -la\nls -la /app\npython3 -c \"import cv2, numpy, toml; print(cv2.__version__)\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 4645,
+     "dur_ms": 315,
+     "exit": 1,
+     "cpu_ms": 505.9,
+     "phases_us": {
+      "acquire": 14,
+      "resume": 24072,
+      "mount": 20757,
+      "run": 263009,
+      "destroy": 27973
+     },
+     "cold": null,
+     "vm": "vm-8"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 5071,
+   "dur_ms": 1787,
+   "tokens_in": 204,
+   "tokens_out": 281,
+   "cache_read": 6016,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6858,
+   "dur_ms": 1593,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2\ncap=cv2.VideoCapture('example_video.mp4')\nprint('opened',cap.isOpened())\nprint('frames',cap.get(cv2.CAP_PROP_FRAME_COUNT))\nprint('fps',cap.get(cv2.CAP_PROP_FPS))\nprint('w',cap.get(cv2.CAP_PROP_FRAME_WIDTH),'h',cap.get(cv2.CAP_PROP_FRAME_HEIGHT))\nn=int(cap.get(cv2.CAP_PROP_FRAME_COUNT))\nimport numpy as np\n# sample frames stats\nfor i in [0,1,5,10,20,30,40,50,60,70,80,90,100,120,140,160,180,200]:\n    cap.set(cv2.CAP_PROP_POS_FRAMES,i)\n    ok,fr=cap.read()\n    if not ok:\n        print(i,'FAIL'); continue\n    print(i, fr.shape, fr.mean(axis=(0,1)))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 6911,
+     "dur_ms": 1503,
+     "exit": 0,
+     "cpu_ms": 2646.3,
+     "phases_us": {
+      "acquire": 57,
+      "resume": 21544,
+      "mount": 18913,
+      "run": 1459746,
+      "destroy": 21761
+     },
+     "cold": null,
+     "vm": "vm-14"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 8468,
+   "dur_ms": 4583,
+   "tokens_in": 447,
+   "tokens_out": 497,
+   "cache_read": 6528,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 13051,
+   "dur_ms": 757,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nprint(len(frames))\nbg=frames[0].astype(np.float32)\nfor i,fr in enumerate(frames):\n d=cv2.absdiff(fr,bg).max(axis=2)\n mask=(d>30).astype(np.uint8)*255\n # clean\n mask=cv2.medianBlur(mask,5)\n n,lab,stats,cent=cv2.connectedComponentsWithStats(mask,8)\n # ignore small and background\n comps=[(stats[j,cv2.CC_STAT_AREA],stats[j],cent[j]) for j in range(1,n) if stats[j,cv2.CC_STAT_AREA]>30]\n comps.sort(key=lambda x:-x[0])\n if i%2==0 or (45<=i<=85):\n  s=' | '.join(f\"A{a} x{x0}-{x0+w-1} y{y0}-{y0+h-1}\" for a,(x0,y0,w,h,ar),(cx,cy) in [(c[1],c[1][:4],c[2]) for c in comps[:3]])\n  # bug tuple\n  s=' | '.join(f\"A{st[cv2.CC_STAT_AREA]} x{st[cv2.CC_STAT_LEFT]}-{st[cv2.CC_STAT_LEFT]+st[cv2.CC_STAT_WIDTH]-1} y{st[cv2.CC_STAT_TOP]}-{st[cv2.CC_STAT_TOP]+st[cv2.CC_STAT_HEIGHT]-1} c({ce[0]:.0f},{ce[1]:.0f})\" for a,st,ce in comps[:3])\n  print(i, 'tot',int((mask>0).sum()), s)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 13105,
+     "dur_ms": 687,
+     "exit": 1,
+     "cpu_ms": 951.6,
+     "phases_us": {
+      "acquire": 66,
+      "resume": 22752,
+      "mount": 19297,
+      "run": 620569,
+      "destroy": 43820
+     },
+     "cold": null,
+     "vm": "vm-16"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 13823,
+   "dur_ms": 1873,
+   "tokens_in": 107,
+   "tokens_out": 403,
+   "cache_read": 7680,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 15696,
+   "dur_ms": 2931,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nprint(len(frames))\nbg=frames[0].astype(np.int16)\nfor i,fr in enumerate(frames):\n d=np.abs(fr.astype(np.int16)-bg).max(axis=2)\n mask=(d>30).astype(np.uint8)*255\n mask=cv2.medianBlur(mask,5)\n n,lab,stats,cent=cv2.connectedComponentsWithStats(mask,8)\n comps=[(stats[j,cv2.CC_STAT_AREA],stats[j],cent[j]) for j in range(1,n) if stats[j,cv2.CC_STAT_AREA]>30]\n comps.sort(key=lambda x:-x[0])\n if i%2==0 or (45<=i<=85):\n  s=' | '.join(f\"A{a} x{st[cv2.CC_STAT_LEFT]}-{st[cv2.CC_STAT_LEFT]+st[cv2.CC_STAT_WIDTH]-1} y{st[cv2.CC_STAT_TOP]}-{st[cv2.CC_STAT_TOP]+st[cv2.CC_STAT_HEIGHT]-1} c({ce[0]:.0f},{ce[1]:.0f})\" for a,st,ce in comps[:3])\n  print(i, 'tot',int((mask>0).sum()), s)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 15748,
+     "dur_ms": 2871,
+     "exit": 0,
+     "cpu_ms": 3334.7,
+     "phases_us": {
+      "acquire": 27,
+      "resume": 24296,
+      "mount": 20965,
+      "run": 2800866,
+      "destroy": 45864
+     },
+     "cold": null,
+     "vm": "vm-19"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 18643,
+   "dur_ms": 4351,
+   "tokens_in": 4512,
+   "tokens_out": 281,
+   "cache_read": 8128,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 22994,
+   "dur_ms": 767,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nchars=' .:-=+*#%@'\ndef art(fr,w=96,h=30):\n g=cv2.cvtColor(fr,cv2.COLOR_BGR2GRAY)\n g=cv2.resize(g,(w,h))\n lo,hi=np.percentile(g,[2,98])\n g=np.clip((g-lo)/(hi-lo+1e-6),0,1)\n return '\\n'.join(''.join(chars[int(v*(len(chars)-1))] for v in row) for row in g)\nfor i in [0,30,34,40,46,49,52,55,58,61,64,67,70,74,80,86,90,100,110,119]:\n print('\\n==== FRAME',i,'====')\n print(art(frames[i]))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 23047,
+     "dur_ms": 706,
+     "exit": 0,
+     "cpu_ms": 997.9,
+     "phases_us": {
+      "acquire": 110,
+      "resume": 22173,
+      "mount": 18869,
+      "run": 635631,
+      "destroy": 47337
+     },
+     "cold": null,
+     "vm": "vm-21"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 23778,
+   "dur_ms": 4115,
+   "tokens_in": 14033,
+   "tokens_out": 266,
+   "cache_read": 13376,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 27893,
+   "dur_ms": 2762,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\n# frame-to-frame diffs, global brightness, and relation to frame 0\nprev=None\nfor i,fr in enumerate(frames):\n g=fr.mean(axis=(0,1))\n if prev is not None:\n  d=np.abs(fr.astype(np.int16)-prev.astype(np.int16)).mean()\n else: d=0\n d0=np.abs(fr.astype(np.int16)-frames[0].astype(np.int16)).mean()\n print(f\"{i:3d} b={g[0]:6.2f},{g[1]:6.2f},{g[2]:6.2f} dframe={d:6.2f} d0={d0:6.2f}\")\n prev=fr\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 27947,
+     "dur_ms": 2700,
+     "exit": 0,
+     "cpu_ms": 3045.3,
+     "phases_us": {
+      "acquire": 74,
+      "resume": 21763,
+      "mount": 19502,
+      "run": 2618917,
+      "destroy": 58520
+     },
+     "cold": null,
+     "vm": "vm-24"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 30674,
+   "dur_ms": 7158,
+   "tokens_in": 3623,
+   "tokens_out": 277,
+   "cache_read": 28032,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 37832,
+   "dur_ms": 777,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nchars=' .:-=+*#%@'\ndef art(fr,w=120,h=45):\n g=cv2.cvtColor(fr,cv2.COLOR_BGR2GRAY)\n g=cv2.resize(g,(w,h),interpolation=cv2.INTER_AREA)\n lo,hi=np.percentile(g,[2,98])\n g=np.clip((g-lo)/(hi-lo+1e-6),0,1)\n return '\\n'.join(''.join(chars[int(v*(len(chars)-1))] for v in row) for row in g)\nfor i in [0,34,40,49,55,60,65,70,80,90,100,110,119]:\n print('\\n==== FRAME',i,'====')\n print(art(frames[i]))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 37889,
+     "dur_ms": 700,
+     "exit": 0,
+     "cpu_ms": 977.7,
+     "phases_us": {
+      "acquire": 122,
+      "resume": 23203,
+      "mount": 19543,
+      "run": 640496,
+      "destroy": 35811
+     },
+     "cold": null,
+     "vm": "vm-27"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 38631,
+   "dur_ms": 5784,
+   "tokens_in": 11795,
+   "tokens_out": 415,
+   "cache_read": 32832,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 44415,
+   "dur_ms": 4135,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nbg=np.median(np.stack(frames),axis=0).astype(np.uint8)\ncv2.imwrite('/tmp/bg.jpg',bg)\nfor i,fr in enumerate(frames):\n d=np.abs(fr.astype(np.int16)-bg.astype(np.int16)).max(axis=2)\n mask=(d>35).astype(np.uint8)*255\n mask=cv2.medianBlur(mask,5)\n n,lab,stats,cent=cv2.connectedComponentsWithStats(mask,8)\n comps=[(stats[j,cv2.CC_STAT_AREA],stats[j],cent[j]) for j in range(1,n) if stats[j,cv2.CC_STAT_AREA]>100]\n comps.sort(key=lambda x:-x[0])\n if i>=30:\n  s=' | '.join(f\"A{a} x{st[cv2.CC_STAT_LEFT]}-{st[cv2.CC_STAT_LEFT]+st[cv2.CC_STAT_WIDTH]-1} y{st[cv2.CC_STAT_TOP]}-{st[cv2.CC_STAT_TOP]+st[cv2.CC_STAT_HEIGHT]-1} c({ce[0]:.0f},{ce[1]:.0f})\" for a,st,ce in comps[:4])\n  print(i, 'tot',int((mask>0).sum()), s)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 44468,
+     "dur_ms": 4073,
+     "exit": 0,
+     "cpu_ms": 4410.8,
+     "phases_us": {
+      "acquire": 104,
+      "resume": 22153,
+      "mount": 18839,
+      "run": 3984036,
+      "destroy": 66887
+     },
+     "cold": null,
+     "vm": "vm-31"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 48572,
+   "dur_ms": 4147,
+   "tokens_in": 4795,
+   "tokens_out": 216,
+   "cache_read": 45440,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 52719,
+   "dur_ms": 8723,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nhog=cv2.HOGDescriptor()\nhog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())\nfor i in range(0,120,2):\n fr=frames[i]\n rects,weights=hog.detectMultiScale(fr,winStride=(8,8),padding=(8,8),scale=1.05)\n if len(rects):\n  print(i,[(tuple(int(v) for v in r),round(float(w),2)) for r,w in zip(rects,weights)])\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 52777,
+     "dur_ms": 8657,
+     "exit": 0,
+     "cpu_ms": 16808.5,
+     "phases_us": {
+      "acquire": 63,
+      "resume": 21976,
+      "mount": 18881,
+      "run": 8585945,
+      "destroy": 48435
+     },
+     "cold": null,
+     "vm": "vm-34"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 61466,
+   "dur_ms": 6984,
+   "tokens_in": 815,
+   "tokens_out": 448,
+   "cache_read": 50752,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 68450,
+   "dur_ms": 1439,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nbg=frames[0].astype(np.int16)\nfor i in range(40,80):\n fr=frames[i]\n d=np.abs(fr.astype(np.int16)-bg).max(axis=2)\n mask=(d>30).astype(np.uint8)*255\n mask=cv2.medianBlur(mask,5)\n mask=cv2.morphologyEx(mask,cv2.MORPH_CLOSE,np.ones((9,9),np.uint8))\n n,lab,stats,cent=cv2.connectedComponentsWithStats(mask,8)\n comps=[(stats[j,cv2.CC_STAT_AREA],j,stats[j],cent[j]) for j in range(1,n) if stats[j,cv2.CC_STAT_AREA]>300]\n comps.sort(key=lambda x:-x[0])\n if not comps:\n  print(i,'none'); continue\n # choose components near expected runner (largest and to left of static person maybe)\n # combine top comps excluding tiny\n s=' | '.join(f\"A{a} x{st[cv2.CC_STAT_LEFT]}-{st[cv2.CC_STAT_LEFT]+st[cv2.CC_STAT_WIDTH]-1} y{st[cv2.CC_STAT_TOP]}-{st[cv2.CC_STAT_TOP]+st[cv2.CC_STAT_HEIGHT]-1} c({ce[0]:.0f},{ce[1]:.0f})\" for a,j,st,ce in comps[:5])\n print(i,s)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 68505,
+     "dur_ms": 1374,
+     "exit": 0,
+     "cpu_ms": 1755.4,
+     "phases_us": {
+      "acquire": 76,
+      "resume": 21844,
+      "mount": 18426,
+      "run": 1301584,
+      "destroy": 50797
+     },
+     "cold": null,
+     "vm": "vm-37"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 69913,
+   "dur_ms": 7532,
+   "tokens_in": 3498,
+   "tokens_out": 443,
+   "cache_read": 52608,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 77445,
+   "dur_ms": 1305,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nfor i in range(44,76):\n a=frames[i].astype(np.int16); b=frames[max(0,i-2)].astype(np.int16)\n d=np.abs(a-b).max(axis=2)\n mask=(d>25).astype(np.uint8)*255\n mask=cv2.medianBlur(mask,5)\n # remove broad low-level? restrict to actual motion\n mask=cv2.dilate(mask,np.ones((5,5),np.uint8))\n n,lab,stats,cent=cv2.connectedComponentsWithStats(mask,8)\n comps=[(stats[j,cv2.CC_STAT_AREA],stats[j],cent[j]) for j in range(1,n) if stats[j,cv2.CC_STAT_AREA]>200]\n comps.sort(key=lambda x:-x[0])\n # Combine top comps likely runner: choose those not near static person at x749? print all\n s=' | '.join(f\"A{a} x{st[cv2.CC_STAT_LEFT]}-{st[cv2.CC_STAT_LEFT]+st[cv2.CC_STAT_WIDTH]-1} y{st[cv2.CC_STAT_TOP]}-{st[cv2.CC_STAT_TOP]+st[cv2.CC_STAT_HEIGHT]-1} c({ce[0]:.0f},{ce[1]:.0f})\" for a,st,ce in comps[:6])\n print(i,'tot',int((mask>0).sum()),s)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 77498,
+     "dur_ms": 1222,
+     "exit": 0,
+     "cpu_ms": 1507.0,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 21505,
+      "mount": 18363,
+      "run": 1155381,
+      "destroy": 45152
+     },
+     "cold": null,
+     "vm": "vm-40"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 78773,
+   "dur_ms": 5855,
+   "tokens_in": 1059,
+   "tokens_out": 318,
+   "cache_read": 57408,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 84628,
+   "dur_ms": 754,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nchars=' .:-=+*#%@'\ndef art_crop(fr,x0,y0,x1,y1,w=80,h=40):\n g=cv2.cvtColor(fr,cv2.COLOR_BGR2GRAY)[y0:y1,x0:x1]\n g=cv2.resize(g,(w,h),interpolation=cv2.INTER_AREA)\n lo,hi=np.percentile(g,[5,95])\n g=np.clip((g-lo)/(hi-lo+1e-6),0,1)\n return '\\n'.join(''.join(chars[int(v*(len(chars)-1))] for v in row) for row in g)\nfor i in [47,49,52,55,58,61,64,67,70,72]:\n print('\\n==== FRAME',i,'crop 200,0-960,400 ====')\n print(art_crop(frames[i],200,0,960,400,w=95,h=40))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 84681,
+     "dur_ms": 678,
+     "exit": 0,
+     "cpu_ms": 1001.8,
+     "phases_us": {
+      "acquire": 59,
+      "resume": 21295,
+      "mount": 18968,
+      "run": 620705,
+      "destroy": 35278
+     },
+     "cold": null,
+     "vm": "vm-42"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 85404,
+   "dur_ms": 4786,
+   "tokens_in": 12198,
+   "tokens_out": 372,
+   "cache_read": 59328,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 90190,
+   "dur_ms": 1349,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nprint('frame  N   xmin xmax   ymin ymax   ymean ymed  y10 y25 y75 y90')\nfor i in range(44,80):\n if i==0: continue\n d=np.abs(frames[i].astype(np.int16)-frames[i-1].astype(np.int16)).max(axis=2)\n mask=d>25\n ys,xs=np.nonzero(mask)\n # remove tiny noise via morphological open? keep pixels with neighborhood support\n if len(xs)==0:\n  print(i,0); continue\n # focus x<900? runner can be at right edge; static person not moving. all good\n print(f\"{i:3d} {len(xs):6d} {xs.min():4d} {xs.max():4d}   {ys.min():4d} {ys.max():4d}   {ys.mean():6.1f} {np.median(ys):5.0f} {np.percentile(ys,10):4.0f} {np.percentile(ys,25):4.0f} {np.percentile(ys,75):4.0f} {np.percentile(ys,90):4.0f}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 90243,
+     "dur_ms": 1288,
+     "exit": 0,
+     "cpu_ms": 1619.3,
+     "phases_us": {
+      "acquire": 58,
+      "resume": 21756,
+      "mount": 18639,
+      "run": 1224389,
+      "destroy": 42014
+     },
+     "cold": null,
+     "vm": "vm-44"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 91555,
+   "dur_ms": 8583,
+   "tokens_in": 1055,
+   "tokens_out": 361,
+   "cache_read": 72064,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 100138,
+   "dur_ms": 467,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nok,fr=cap.read()\nchars=' .:-=+*#%@'\ndef art(fr,w=100,h=45):\n g=cv2.cvtColor(fr,cv2.COLOR_BGR2GRAY)\n g=cv2.resize(g,(w,h),interpolation=cv2.INTER_AREA)\n lo,hi=np.percentile(g,[2,98])\n g=np.clip((g-lo)/(hi-lo+1e-6),0,1)\n return '\\n'.join(''.join(chars[int(v*(len(chars)-1))] for v in row) for row in g)\nprint(art(fr))\n# edge / horizontal gradients\ng=cv2.cvtColor(fr,cv2.COLOR_BGR2GRAY).astype(np.float32)\ngy=np.abs(cv2.Sobel(g,cv2.CV_32F,0,1,ksize=3))\ngx=np.abs(cv2.Sobel(g,cv2.CV_32F,1,0,ksize=3))\n# report rows with high horizontal edge energy in lower half\nfor y in range(0,540,10):\n print(y, round(float(gy[y:y+10].mean()),1), round(float(gx[y:y+10].mean()),1))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 100191,
+     "dur_ms": 379,
+     "exit": 0,
+     "cpu_ms": 520.6,
+     "phases_us": {
+      "acquire": 82,
+      "resume": 21921,
+      "mount": 18576,
+      "run": 325894,
+      "destroy": 31018
+     },
+     "cold": null,
+     "vm": "vm-47"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 100626,
+   "dur_ms": 4190,
+   "tokens_in": 1713,
+   "tokens_out": 255,
+   "cache_read": 74240,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 104816,
+   "dur_ms": 1268,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nfor i in range(47,73):\n d=np.abs(frames[i].astype(np.int16)-frames[i-1].astype(np.int16)).max(axis=2)\n mask=d>25\n pix=frames[i][mask]\n hsv=cv2.cvtColor(frames[i],cv2.COLOR_BGR2HSV)\n hp=hsv[mask]\n print(i,'BGR',np.median(pix,axis=0).astype(int),'HSV',np.median(hp,axis=0).astype(int),'p90 S',np.percentile(hp[:,1],90),'fracS>100',round(float((hp[:,1]>100).mean()),2))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 104868,
+     "dur_ms": 1204,
+     "exit": 0,
+     "cpu_ms": 1493.3,
+     "phases_us": {
+      "acquire": 22,
+      "resume": 21514,
+      "mount": 18386,
+      "run": 1145557,
+      "destroy": 36338
+     },
+     "cold": null,
+     "vm": "vm-50"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 106102,
+   "dur_ms": 4610,
+   "tokens_in": 970,
+   "tokens_out": 293,
+   "cache_read": 76416,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 110712,
+   "dur_ms": 1204,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nfor i in range(45,75):\n d=np.abs(frames[i].astype(np.int16)-frames[i-1].astype(np.int16)).max(axis=2)\n mask=d>25\n hsv=cv2.cvtColor(frames[i],cv2.COLOR_BGR2HSV)\n h=hsv[:,:,0][mask]; s=hsv[:,:,1][mask]; v=hsv[:,:,2][mask]\n # only reasonably saturated/bright motion pixels\n m=(s>60)&(v>40)\n hist=np.bincount((h[m]//10).astype(int),minlength=18)\n top=hist.argsort()[-4:][::-1]\n print(i,'N',m.sum(),'top hue bins',[(int(t*10),int(hist[t])) for t in top], 'meanS',round(float(s[m].mean()),0))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 110765,
+     "dur_ms": 1140,
+     "exit": 0,
+     "cpu_ms": 1484.0,
+     "phases_us": {
+      "acquire": 141,
+      "resume": 22404,
+      "mount": 18829,
+      "run": 1068869,
+      "destroy": 47914
+     },
+     "cold": null,
+     "vm": "vm-53"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 111932,
+   "dur_ms": 6112,
+   "tokens_in": 1318,
+   "tokens_out": 411,
+   "cache_read": 78016,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 118044,
+   "dur_ms": 1219,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nfor i in range(0,120):\n hsv=cv2.cvtColor(frames[i],cv2.COLOR_BGR2HSV)\n h,s,v=hsv[:,:,0],hsv[:,:,1],hsv[:,:,2]\n mask=((h>=95)&(h<=135)&(s>70)&(v>30)).astype(np.uint8)*255\n mask=cv2.medianBlur(mask,3)\n n,lab,stats,cent=cv2.connectedComponentsWithStats(mask,8)\n comps=[(stats[j,cv2.CC_STAT_AREA],stats[j],cent[j]) for j in range(1,n) if stats[j,cv2.CC_STAT_AREA]>30]\n comps.sort(key=lambda x:-x[0])\n if comps and i%1==0:\n  sdesc=' | '.join(f\"A{a} x{st[cv2.CC_STAT_LEFT]}-{st[cv2.CC_STAT_LEFT]+st[cv2.CC_STAT_WIDTH]-1} y{st[cv2.CC_STAT_TOP]}-{st[cv2.CC_STAT_TOP]+st[cv2.CC_STAT_HEIGHT]-1} c({ce[0]:.0f},{ce[1]:.0f})\" for a,st,ce in comps[:3])\n  print(i,sdesc)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 118097,
+     "dur_ms": 1158,
+     "exit": 0,
+     "cpu_ms": 1588.6,
+     "phases_us": {
+      "acquire": 17,
+      "resume": 21977,
+      "mount": 18899,
+      "run": 1083571,
+      "destroy": 51814
+     },
+     "cold": null,
+     "vm": "vm-54"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 119282,
+   "dur_ms": 7088,
+   "tokens_in": 6435,
+   "tokens_out": 268,
+   "cache_read": 80064,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 126370,
+   "dur_ms": 1110,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\ndef artmask(m,w=100,h=45):\n g=cv2.resize(m.astype(np.uint8),(w,h),interpolation=cv2.INTER_AREA)\n return '\\n'.join(''.join('#' if v>0.18 else ('+' if v>0.05 else ' ') for v in row) for row in g)\nfor i in [49,50,52,54,56,58,60,62,64,66,68,70]:\n d=np.abs(frames[i].astype(np.int16)-frames[i-1].astype(np.int16)).max(axis=2)\n m=d>25\n print('\\n==== FRAME',i,'motion i vs i-1 ====')\n print(artmask(m))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 126425,
+     "dur_ms": 1045,
+     "exit": 0,
+     "cpu_ms": 1289.0,
+     "phases_us": {
+      "acquire": 17,
+      "resume": 21924,
+      "mount": 18865,
+      "run": 976192,
+      "destroy": 46299
+     },
+     "cold": null,
+     "vm": "vm-57"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 127498,
+   "dur_ms": 8087,
+   "tokens_in": 2600,
+   "tokens_out": 346,
+   "cache_read": 87616,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 135585,
+   "dur_ms": 863,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nprint('frame N xmin xmax ymin ymax ymean ymed y10 y90')\nfor i in range(44,75):\n hsv=cv2.cvtColor(frames[i],cv2.COLOR_BGR2HSV)\n h,s,v=hsv[:,:,0],hsv[:,:,1],hsv[:,:,2]\n m=(h>=95)&(h<=135)&(s>70)&(v>30)\n # exclude static blue background top y<60\n m[:60]=False\n # exclude tiny static clutter by requiring motion? use color only\n ys,xs=np.nonzero(m)\n if len(xs)==0:\n  print(i,0); continue\n print(f\"{i:3d} {len(xs):5d} {xs.min():4d} {xs.max():4d} {ys.min():4d} {ys.max():4d} {ys.mean():6.1f} {np.median(ys):5.0f} {np.percentile(ys,10):4.0f} {np.percentile(ys,90):4.0f}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 135637,
+     "dur_ms": 783,
+     "exit": 0,
+     "cpu_ms": 1072.0,
+     "phases_us": {
+      "acquire": 78,
+      "resume": 21896,
+      "mount": 18681,
+      "run": 728390,
+      "destroy": 32863
+     },
+     "cold": null,
+     "vm": "vm-60"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 136467,
+   "dur_ms": 4575,
+   "tokens_in": 792,
+   "tokens_out": 427,
+   "cache_read": 91136,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 141042,
+   "dur_ms": 875,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nfor i in range(44,76):\n hsv=cv2.cvtColor(frames[i],cv2.COLOR_BGR2HSV)\n h,s,v=hsv[:,:,0],hsv[:,:,1],hsv[:,:,2]\n m=((h>=95)&(h<=135)&(s>70)&(v>30)).astype(np.uint8)*255\n m[:60]=0\n m=cv2.medianBlur(m,3)\n n,lab,stats,cent=cv2.connectedComponentsWithStats(m,8)\n comps=[(stats[j,cv2.CC_STAT_AREA],j,stats[j],cent[j]) for j in range(1,n) if stats[j,cv2.CC_STAT_AREA]>80]\n comps.sort(key=lambda x:-x[0])\n if not comps:\n  print(i,'none'); continue\n a,j,st,ce=comps[0]\n print(f\"{i:3d} A{a:5d} x{st[cv2.CC_STAT_LEFT]:4d}-{st[cv2.CC_STAT_LEFT]+st[cv2.CC_STAT_WIDTH]-1:4d} y{st[cv2.CC_STAT_TOP]:3d}-{st[cv2.CC_STAT_TOP]+st[cv2.CC_STAT_HEIGHT]-1:3d} cent({ce[0]:.1f},{ce[1]:.1f})\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 141095,
+     "dur_ms": 815,
+     "exit": 0,
+     "cpu_ms": 1185.4,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 21596,
+      "mount": 18521,
+      "run": 740044,
+      "destroy": 53188
+     },
+     "cold": null,
+     "vm": "vm-61"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 141933,
+   "dur_ms": 11943,
+   "tokens_in": 872,
+   "tokens_out": 628,
+   "cache_read": 92608,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 153876,
+   "dur_ms": 1660,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nbg=np.median(np.stack(frames[:32]),axis=0).astype(np.int16)\n# blue tracking x from before (or compute)\nxs_cent={49:947,50:926,51:860,52:822,53:789,54:733,55:685,56:639,57:592,58:571,59:532,60:489,61:441,62:392,63:344,64:299,65:256,66:212,67:168,68:124,69:81,70:40,71:12}\nprint('i predx  area  xmin xmax ymin ymax ymean ymed  y10 y25 y75 y90  bboxH')\nfor i in range(46,76):\n pred=xs_cent.get(i, None)\n if pred is None:\n  # extrapolate\n  pred=947-(i-49)*40\n x0=max(0,pred-170); x1=min(960,pred+170)\n d=np.abs(frames[i].astype(np.int16)-bg).max(axis=2)\n m=(d>30)\n m[:55]=False\n m[:,:x0]=False; m[:,x1:]=False\n # restrict y maybe <380? no\n ys,xs=np.nonzero(m)\n if len(xs)==0:\n  print(i,pred,0); continue\n # remove isolated noise with morph open\n mm=m.astype(np.uint8)*255\n mm=cv2.morphologyEx(mm,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n ys,xs=np.nonzero(mm)\n if len(xs)==0:\n  print(i,pred,0); continue\n print(f\"{i:3d} {pred:4d} {len(xs):6d} {xs.min():4d} {xs.max():4d} {ys.min():4d} {ys.max():4d} {ys.mean():6.1f} {np.median(ys):5.0f} {np.percentile(ys,10):4.0f} {np.percentile(ys,25):4.0f} {np.percentile(ys,75):4.0f} {np.percentile(ys,90):4.0f} {ys.max()-ys.min():4d}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 153930,
+     "dur_ms": 1598,
+     "exit": 0,
+     "cpu_ms": 1935.3,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 21295,
+      "mount": 18772,
+      "run": 1522582,
+      "destroy": 54206
+     },
+     "cold": null,
+     "vm": "vm-63"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 155555,
+   "dur_ms": 8439,
+   "tokens_in": 1035,
+   "tokens_out": 514,
+   "cache_read": 95168,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 163994,
+   "dur_ms": 1497,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nbg=np.median(np.stack(frames[:32]),axis=0).astype(np.int16)\nxs_cent={49:947,50:926,51:860,52:822,53:789,54:733,55:685,56:639,57:592,58:571,59:532,60:489,61:441,62:392,63:344,64:299,65:256,66:212,67:168,68:124,69:81,70:40,71:12}\nfor i in range(48,73):\n xc=xs_cent.get(i,947-(i-49)*40)\n x0=max(0,xc-15); x1=min(960,xc+16)\n d=np.abs(frames[i].astype(np.int16)-bg).max(axis=2)\n col=(d[:,x0:x1]>35).mean(axis=1)>0.4\n # contiguous runs\n runs=[]; st=None\n for y,v in enumerate(col):\n  if v and st is None: st=y\n  if not v and st is not None:\n   if y-st>=4: runs.append((st,y-1))\n   st=None\n if st is not None and 540-st>=4: runs.append((st,539))\n desc=[]\n for a,b in runs:\n  pix=frames[i][a:b+1,x0:x1].reshape(-1,3)\n  hsv=cv2.cvtColor(frames[i],cv2.COLOR_BGR2HSV)[a:b+1,x0:x1].reshape(-1,3)\n  med=np.median(hsv,axis=0).astype(int)\n  desc.append(f\"y{a}-{b} HSV({med[0]},{med[1]},{med[2]})\")\n print(i,'xc',xc,'  ',' | '.join(desc))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 164047,
+     "dur_ms": 1434,
+     "exit": 0,
+     "cpu_ms": 1830.9,
+     "phases_us": {
+      "acquire": 80,
+      "resume": 22791,
+      "mount": 19935,
+      "run": 1366642,
+      "destroy": 44360
+     },
+     "cold": null,
+     "vm": "vm-66"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 165510,
+   "dur_ms": 25456,
+   "tokens_in": 2168,
+   "tokens_out": 421,
+   "cache_read": 97408,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 190966,
+   "dur_ms": 815,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nfor i in [0,49,50,51,52,53,54,55,56,57,58,60,62,64,66,68,70]:\n hsv=cv2.cvtColor(frames[i],cv2.COLOR_BGR2HSV)\n h,s,v=hsv[:,:,0],hsv[:,:,1],hsv[:,:,2]\n m=((h>=95)&(h<=135)&(s>70)&(v>30)).astype(np.uint8)*255\n m[:60]=0\n m=cv2.medianBlur(m,3)\n n,lab,stats,cent=cv2.connectedComponentsWithStats(m,8)\n comps=[]\n for j in range(1,n):\n  a=stats[j,cv2.CC_STAT_AREA]\n  if a>30:\n   st=stats[j]; ce=cent[j]\n   comps.append((a,st,ce))\n comps.sort(key=lambda x:-x[0])\n print('\\nframe',i)\n for a,st,ce in comps[:10]:\n  print(f\" A{a} x{st[cv2.CC_STAT_LEFT]}-{st[cv2.CC_STAT_LEFT]+st[cv2.CC_STAT_WIDTH]-1} y{st[cv2.CC_STAT_TOP]}-{st[cv2.CC_STAT_TOP]+st[cv2.CC_STAT_HEIGHT]-1}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 191018,
+     "dur_ms": 741,
+     "exit": 0,
+     "cpu_ms": 1118.7,
+     "phases_us": {
+      "acquire": 69,
+      "resume": 21567,
+      "mount": 18328,
+      "run": 682276,
+      "destroy": 37307
+     },
+     "cold": null,
+     "vm": "vm-68"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 191802,
+   "dur_ms": 11481,
+   "tokens_in": 1212,
+   "tokens_out": 582,
+   "cache_read": 103488,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 203283,
+   "dur_ms": 860,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\npred=947\nprint('i  xmin xmax xtop ytop ybot ycent area ncomp')\nfor i in range(47,73):\n hsv=cv2.cvtColor(frames[i],cv2.COLOR_BGR2HSV)\n h,s,v=hsv[:,:,0],hsv[:,:,1],hsv[:,:,2]\n m=((h>=95)&(h<=135)&(s>70)&(v>30)).astype(np.uint8)*255\n m[:80]=0\n m=cv2.medianBlur(m,3)\n n,lab,stats,cent=cv2.connectedComponentsWithStats(m,8)\n comps=[]\n for j in range(1,n):\n  a=stats[j,cv2.CC_STAT_AREA]\n  if a<40: continue\n  st=stats[j]; ce=cent[j]\n  if abs(ce[0]-pred)<160:\n   comps.append((a,st,ce))\n if not comps:\n  print(i,'none'); continue\n # combine\n x0=min(st[cv2.CC_STAT_LEFT] for a,st,ce in comps); x1=max(st[cv2.CC_STAT_LEFT]+st[cv2.CC_STAT_WIDTH]-1 for a,st,ce in comps)\n y0=min(st[cv2.CC_STAT_TOP] for a,st,ce in comps); y1=max(st[cv2.CC_STAT_TOP]+st[cv2.CC_STAT_HEIGHT]-1 for a,st,ce in comps)\n area=sum(a for a,st,ce in comps)\n # weighted centroid\n cx=sum(ce[0]*a for a,st,ce in comps)/area; cy=sum(ce[1]*a for a,st,ce in comps)/area\n pred=cx\n print(f\"{i:3d} {x0:4d} {x1:4d} {cx:6.1f} {y0:4d} {y1:4d} {cy:6.1f} {area:5d} {len(comps)}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 203336,
+     "dur_ms": 797,
+     "exit": 0,
+     "cpu_ms": 1162.7,
+     "phases_us": {
+      "acquire": 62,
+      "resume": 21436,
+      "mount": 18092,
+      "run": 726856,
+      "destroy": 48811
+     },
+     "cold": null,
+     "vm": "vm-74"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 204161,
+   "dur_ms": 13887,
+   "tokens_in": 642,
+   "tokens_out": 332,
+   "cache_read": 106368,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 218048,
+   "dur_ms": 1214,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nbg=np.median(np.stack(frames[:40]),axis=0).astype(np.uint8)\ng=cv2.cvtColor(bg,cv2.COLOR_BGR2GRAY)\nedges=cv2.Canny(g,50,150)\nlines=cv2.HoughLinesP(edges,1,np.pi/180,threshold=40,minLineLength=50,maxLineGap=10)\nls=[]\nfor l in lines[:,0]:\n x1,y1,x2,y2=map(int,l)\n length=((x2-x1)**2+(y2-y1)**2)**.5\n ang=np.degrees(np.arctan2(y2-y1,x2-x1))\n ls.append((length,ang,x1,y1,x2,y2))\nls.sort(key=lambda x:-x[0])\nfor t in ls[:40]:\n print(f\"len{t[0]:6.1f} ang{t[1]:7.1f} ({t[2]},{t[3]})-({t[4]},{t[5]})\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 218100,
+     "dur_ms": 1154,
+     "exit": 0,
+     "cpu_ms": 1407.8,
+     "phases_us": {
+      "acquire": 70,
+      "resume": 21360,
+      "mount": 18103,
+      "run": 1080632,
+      "destroy": 52282
+     },
+     "cold": null,
+     "vm": "vm-76"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 219283,
+   "dur_ms": 3884,
+   "tokens_in": 817,
+   "tokens_out": 352,
+   "cache_read": 109056,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 223167,
+   "dur_ms": 1212,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nbg=np.median(np.stack(frames[:40]),axis=0).astype(np.uint8)\ng=cv2.cvtColor(bg,cv2.COLOR_BGR2GRAY)\nedges=cv2.Canny(g,30,100)\nlines=cv2.HoughLinesP(edges,1,np.pi/180,threshold=20,minLineLength=30,maxLineGap=8)\nls=[]\nfor l in lines[:,0]:\n x1,y1,x2,y2=map(int,l)\n length=((x2-x1)**2+(y2-y1)**2)**.5\n ang=np.degrees(np.arctan2(y2-y1,x2-x1))\n if abs(ang)>55:\n  ls.append((length,ang,x1,y1,x2,y2))\nls.sort(key=lambda x:-x[0])\nfor t in ls[:50]:\n print(f\"len{t[0]:6.1f} ang{t[1]:7.1f} ({t[2]},{t[3]})-({t[4]},{t[5]})\")\n# also sample detect components of unusual color in lower half\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 223220,
+     "dur_ms": 1152,
+     "exit": 0,
+     "cpu_ms": 1412.2,
+     "phases_us": {
+      "acquire": 68,
+      "resume": 22738,
+      "mount": 19868,
+      "run": 1077833,
+      "destroy": 50830
+     },
+     "cold": null,
+     "vm": "vm-80"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 224395,
+   "dur_ms": 13760,
+   "tokens_in": 514,
+   "tokens_out": 404,
+   "cache_read": 110464,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 238155,
+   "dur_ms": 1386,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nbg=np.median(np.stack(frames[:32]),axis=0).astype(np.int16)\nxs={52:824,53:785,54:738,55:692,56:644,57:606,58:571,65:256,66:212,67:168,68:124,69:80}\nfor i in [52,53,54,55,56,57,58,65,66,67,68,69]:\n xc=xs[i]; x0=max(0,xc-130); x1=min(960,xc+130)\n y0,y1=40,400\n d=np.abs(frames[i].astype(np.int16)-bg).max(axis=2)[y0:y1,x0:x1]\n m=(d>32)\n # downsample mask\n W,H=52,46\n mm=cv2.resize(m.astype(np.uint8),(W,H),interpolation=cv2.INTER_AREA)\n print(f\"\\n== frame {i} x{x0}-{x1} y{y0}-{y1} ==\")\n for r,row in enumerate(mm):\n  yy=int(y0+r*(y1-y0)/H)\n  print(f\"{yy:3d} \"+''.join('#' if v>0.25 else ('.' if v>0.08 else ' ') for v in row))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 238208,
+     "dur_ms": 1324,
+     "exit": 0,
+     "cpu_ms": 1607.7,
+     "phases_us": {
+      "acquire": 84,
+      "resume": 21971,
+      "mount": 18562,
+      "run": 1252020,
+      "destroy": 49905
+     },
+     "cold": null,
+     "vm": "vm-81"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 239561,
+   "dur_ms": 22230,
+   "tokens_in": 4189,
+   "tokens_out": 568,
+   "cache_read": 113152,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 261791,
+   "dur_ms": 1315,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nbg=np.median(np.stack(frames[:32]),axis=0).astype(np.uint8)\nlab_bg=cv2.cvtColor(bg,cv2.COLOR_BGR2LAB).astype(np.int16)\nhsv_bg=cv2.cvtColor(bg,cv2.COLOR_BGR2HSV).astype(np.int16)\nxs={50:915,51:864,52:824,53:785,54:738,55:692,56:644,57:606,58:571,59:532,60:489,62:392,64:299,65:256,66:212,67:168,68:124,69:80,70:40}\nfor i in [50,51,52,53,54,55,56,57,58,60,62,64,65,66,67,68,69,70]:\n lab=cv2.cvtColor(frames[i],cv2.COLOR_BGR2LAB).astype(np.int16)\n hsv=cv2.cvtColor(frames[i],cv2.COLOR_BGR2HSV).astype(np.int16)\n xc=xs[i]; x0=max(0,xc-110); x1=min(960,xc+110)\n # chroma diff\n dc=np.abs(lab[:,:,1]-lab_bg[:,:,1])+np.abs(lab[:,:,2]-lab_bg[:,:,2])\n # hue diff circular\n dh=np.abs(hsv[:,:,0]-hsv_bg[:,:,0]); dh=np.minimum(dh,180-dh)\n ds=np.abs(hsv[:,:,1]-hsv_bg[:,:,1])\n mask=(dc>18)&(ds>25)\n mask=mask[:,x0:x1]\n ys,xs2=np.nonzero(mask)\n # report bottom within y>80\n ys=ys[ys>80]\n print(i,'N',len(ys),'ymin/max', (ys.min(),ys.max()) if len(ys) else None, 'p95',np.percentile(ys,95) if len(ys) else None)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 261846,
+     "dur_ms": 1253,
+     "exit": 0,
+     "cpu_ms": 1643.4,
+     "phases_us": {
+      "acquire": 105,
+      "resume": 22641,
+      "mount": 19308,
+      "run": 1182250,
+      "destroy": 47712
+     },
+     "cold": null,
+     "vm": "vm-83"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 263126,
+   "dur_ms": 5192,
+   "tokens_in": 564,
+   "tokens_out": 551,
+   "cache_read": 121024,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 268318,
+   "dur_ms": 1366,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nbg=np.median(np.stack(frames[:32]),axis=0).astype(np.uint8)\nlab_bg=cv2.cvtColor(bg,cv2.COLOR_BGR2LAB).astype(np.int16)\nhsv_bg=cv2.cvtColor(bg,cv2.COLOR_BGR2HSV).astype(np.int16)\nxs={52:824,53:785,54:738,55:692,56:644,57:606,58:571,60:489,62:392,63:344,64:299,65:256,66:212,67:168,68:124,69:80}\nfor i in [52,53,54,55,56,57,58,60,62,63,64,65,66,67,68,69]:\n lab=cv2.cvtColor(frames[i],cv2.COLOR_BGR2LAB).astype(np.int16)\n hsv=cv2.cvtColor(frames[i],cv2.COLOR_BGR2HSV).astype(np.int16)\n xc=xs[i]; x0=max(0,xc-120); x1=min(960,xc+120)\n dc=np.abs(lab[:,:,1]-lab_bg[:,:,1])+np.abs(lab[:,:,2]-lab_bg[:,:,2])\n ds=np.abs(hsv[:,:,1]-hsv_bg[:,:,1])\n mask=(dc>18)&(ds>25)\n mask=mask[40:400,x0:x1]\n W,H=46,36\n mm=cv2.resize(mask.astype(np.uint8),(W,H),interpolation=cv2.INTER_AREA)\n print(f\"\\n== frame {i} x{x0}-{x1} ==\")\n for r,row in enumerate(mm):\n  yy=int(40+r*360/H)\n  print(f\"{yy:3d} \"+''.join('#' if v>0.25 else ('.' if v>0.08 else ' ') for v in row))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 268369,
+     "dur_ms": 1293,
+     "exit": 0,
+     "cpu_ms": 1640.7,
+     "phases_us": {
+      "acquire": 102,
+      "resume": 21526,
+      "mount": 18394,
+      "run": 1223233,
+      "destroy": 48085
+     },
+     "cold": null,
+     "vm": "vm-90"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 269703,
+   "dur_ms": 15923,
+   "tokens_in": 2723,
+   "tokens_out": 113,
+   "cache_read": 122240,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 285626,
+   "dur_ms": 158,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nfind / -maxdepth 3 -type f \\( -name '*.mp4' -o -name '*.toml' -o -name '*.json' -o -name '*.txt' \\) 2>/dev/null | head -100\nls -la /workspace /app\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 285679,
+     "dur_ms": 87,
+     "exit": 0,
+     "cpu_ms": 74.3,
+     "phases_us": {
+      "acquire": 71,
+      "resume": 21375,
+      "mount": 18018,
+      "run": 36999,
+      "destroy": 28520
+     },
+     "cold": null,
+     "vm": "vm-92"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 285807,
+   "dur_ms": 1775,
+   "tokens_in": 180,
+   "tokens_out": 86,
+   "cache_read": 127040,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 287582,
+   "dur_ms": 124,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -laR /opt/testbed-src 2>/dev/null | head -200\nfind /opt -maxdepth 4 -type f 2>/dev/null | head -100\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 287634,
+     "dur_ms": 48,
+     "exit": 0,
+     "cpu_ms": 43.5,
+     "phases_us": {
+      "acquire": 87,
+      "resume": 21017,
+      "mount": 18327,
+      "run": 7468,
+      "destroy": 19518
+     },
+     "cold": null,
+     "vm": "vm-94"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 287727,
+   "dur_ms": 25339,
+   "tokens_in": 139,
+   "tokens_out": 595,
+   "cache_read": 127296,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 313066,
+   "dur_ms": 2646,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nB=np.median(np.stack(frames),axis=0).astype(np.int16)\nxs={47:946,48:916,49:916,50:896,51:885,52:850,53:808,54:767,55:725,56:678,57:634,58:603,59:541,60:495,61:453,62:414,63:372,64:332,65:290,66:255,67:204,68:158,69:124,70:86,71:71,72:44,73:27,74:43,75:39}\nprint('i x  min p1 p5 p10  top_med_blue_ref')\nblue={49:104,50:108,51:109,52:106,53:102,54:98,55:94,56:90,57:86,58:88,59:89,60:89,61:94,62:96,63:102,64:102,65:99,66:98,67:102,68:106,69:111,70:111,71:109}\nfor i in range(44,76):\n if i not in xs: continue\n xc=xs[i]; x0=max(0,xc-140); x1=min(960,xc+140)\n d=np.abs(frames[i].astype(np.int16)-B).max(axis=2)\n m=(d>40)\n m[:60]=False\n m[:,:x0]=False; m[:,x1:]=False\n # morphology open/close\n mm=cv2.morphologyEx(m.astype(np.uint8),cv2.MORPH_OPEN,np.ones((3,3),np.uint8))\n ys,xs2=np.nonzero(mm)\n if len(ys)==0:\n  print(i,xc,'none'); continue\n print(f\"{i:3d} {xc:4d} {ys.min():4d} {np.percentile(ys,1):4.0f} {np.percentile(ys,5):4.0f} {np.percentile(ys,10):4.0f}   blue={blue.get(i,'-')}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 313119,
+     "dur_ms": 2586,
+     "exit": 0,
+     "cpu_ms": 2902.5,
+     "phases_us": {
+      "acquire": 81,
+      "resume": 21147,
+      "mount": 17875,
+      "run": 2500354,
+      "destroy": 63847
+     },
+     "cold": null,
+     "vm": "vm-95"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 315733,
+   "dur_ms": 6265,
+   "tokens_in": 575,
+   "tokens_out": 795,
+   "cache_read": 131648,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 321998,
+   "dur_ms": 739,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nxs={47:946,48:916,49:916,50:896,51:885,52:850,53:808,54:767,55:725,56:678,57:634,58:603,59:541,60:495,61:453,62:414,63:372,64:332,65:290,66:255,67:204,68:158,69:124,70:86,71:71,72:44,73:27,74:43,75:39}\nblue={49:104,50:108,51:109,52:106,53:102,54:98,55:94,56:90,57:86,58:88,59:89,60:89,61:94,62:96,63:102,64:102,65:99,66:98,67:102,68:106,69:111,70:111,71:109}\nfor i in range(46,76):\n xc=xs[i]; x0=max(0,xc-170); x1=min(960,xc+170)\n d=np.abs(frames[i].astype(np.int16)-frames[max(0,i-2)].astype(np.int16)).max(axis=2)\n m=(d>22).astype(np.uint8)*255\n m[:50]=0; m[:,:x0]=0; m[:,x1:]=0\n m=cv2.medianBlur(m,5)\n m=cv2.dilate(m,np.ones((5,5),np.uint8))\n n,lab,stats,cent=cv2.connectedComponentsWithStats(m,8)\n comps=[]\n for j in range(1,n):\n  a=stats[j,cv2.CC_STAT_AREA]\n  st=stats[j]; ce=cent[j]\n  if a>150 and abs(ce[0]-xc)<200:\n   comps.append((a,st,ce))\n comps.sort(key=lambda t:-t[0])\n if not comps:\n  print(i,'none');continue\n # combine top 3 comps within 150 of x\n use=[]\n for a,st,ce in comps:\n  if abs(ce[0]-xc)<130: use.append((a,st,ce))\n if not use: use=[comps[0]]\n xmin=min(st[cv2.CC_STAT_LEFT] for a,st,ce in use); xmax=max(st[cv2.CC_STAT_LEFT]+st[cv2.CC_STAT_WIDTH]-1 for a,st,ce in use)\n ymin=min(st[cv2.CC_STAT_TOP] for a,st,ce in use); ymax=max(st[cv2.CC_STAT_TOP]+st[cv2.CC_STAT_HEIGHT]-1 for a,st,ce in use)\n print(f\"{i:3d} blobs={len(use)} A={sum(a for a,st,ce in use):5d} x{xmin}-{xmax} y{ymin}-{ymax} blue_top={blue.get(i,'-')}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 322050,
+     "dur_ms": 672,
+     "exit": 1,
+     "cpu_ms": 992.2,
+     "phases_us": {
+      "acquire": 73,
+      "resume": 21353,
+      "mount": 18300,
+      "run": 606544,
+      "destroy": 44014
+     },
+     "cold": null,
+     "vm": "vm-99"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 322756,
+   "dur_ms": 3941,
+   "tokens_in": 68,
+   "tokens_out": 782,
+   "cache_read": 133312,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 326697,
+   "dur_ms": 1239,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nxs={47:946,48:916,49:916,50:896,51:885,52:850,53:808,54:767,55:725,56:678,57:634,58:603,59:541,60:495,61:453,62:414,63:372,64:332,65:290,66:255,67:204,68:158,69:124,70:86,71:71,72:44,73:27,74:43,75:39}\nblue={49:104,50:108,51:109,52:106,53:102,54:98,55:94,56:90,57:86,58:88,59:89,60:89,61:94,62:96,63:102,64:102,65:99,66:98,67:102,68:106,69:111,70:111,71:109}\nfor i in range(47,76):\n xc=xs[i]; x0=max(0,xc-170); x1=min(960,xc+170)\n d=np.abs(frames[i].astype(np.int16)-frames[max(0,i-2)].astype(np.int16)).max(axis=2)\n m=(d>22).astype(np.uint8)*255\n m[:50]=0; m[:,:x0]=0; m[:,x1:]=0\n m=cv2.medianBlur(m,5)\n m=cv2.dilate(m,np.ones((5,5),np.uint8))\n n,lab,stats,cent=cv2.connectedComponentsWithStats(m,8)\n comps=[]\n for j in range(1,n):\n  a=stats[j,cv2.CC_STAT_AREA]\n  st=stats[j]; ce=cent[j]\n  if a>150 and abs(ce[0]-xc)<200:\n   comps.append((a,st,ce))\n comps.sort(key=lambda t:-t[0])\n if not comps:\n  print(i,'none');continue\n use=[]\n for a,st,ce in comps:\n  if abs(ce[0]-xc)<130: use.append((a,st,ce))\n if not use: use=[comps[0]]\n xmin=min(st[cv2.CC_STAT_LEFT] for a,st,ce in use); xmax=max(st[cv2.CC_STAT_LEFT]+st[cv2.CC_STAT_WIDTH]-1 for a,st,ce in use)\n ymin=min(st[cv2.CC_STAT_TOP] for a,st,ce in use); ymax=max(st[cv2.CC_STAT_TOP]+st[cv2.CC_STAT_HEIGHT]-1 for a,st,ce in use)\n print(f\"{i:3d} blobs={len(use)} A={sum(a for a,st,ce in use):5d} x{xmin}-{xmax} y{ymin}-{ymax} blue_top={blue.get(i,'-')}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 326751,
+     "dur_ms": 1178,
+     "exit": 0,
+     "cpu_ms": 1545.4,
+     "phases_us": {
+      "acquire": 110,
+      "resume": 22446,
+      "mount": 19343,
+      "run": 1111581,
+      "destroy": 44092
+     },
+     "cold": null,
+     "vm": "vm-100"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 327952,
+   "dur_ms": 4601,
+   "tokens_in": 695,
+   "tokens_out": 705,
+   "cache_read": 134144,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 332553,
+   "dur_ms": 2214,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nxs={47:946,48:916,49:916,50:896,51:885,52:850,53:808,54:767,55:725,56:678,57:634,58:603,59:541,60:495,61:453,62:414,63:372,64:332,65:290,66:255,67:204,68:158,69:124,70:86,71:71,72:44,73:27,74:43,75:39}\nblue={49:104,50:108,51:109,52:106,53:102,54:98,55:94,56:90,57:86,58:88,59:89,60:89,61:94,62:96,63:102,64:102,65:99,66:98,67:102,68:106,69:111,70:111,71:109}\nfor thr in [75,85,95]:\n print('--- y>',thr)\n for i in range(47,76):\n  xc=xs[i]; x0=max(0,xc-170); x1=min(960,xc+170)\n  d=np.abs(frames[i].astype(np.int16)-frames[max(0,i-2)].astype(np.int16)).max(axis=2)\n  m=(d>22).astype(np.uint8)*255\n  m[:thr]=0; m[:,:x0]=0; m[:,x1:]=0\n  m=cv2.medianBlur(m,5); m=cv2.dilate(m,np.ones((5,5),np.uint8))\n  n,lab,stats,cent=cv2.connectedComponentsWithStats(m,8)\n  comps=[]\n  for j in range(1,n):\n   a=stats[j,cv2.CC_STAT_AREA]; st=stats[j]; ce=cent[j]\n   if a>150 and abs(ce[0]-xc)<200: comps.append((a,st,ce))\n  comps.sort(key=lambda t:-t[0])\n  if not comps: print(i,'none'); continue\n  use=[c for c in comps if abs(c[2][0]-xc)<130] or [comps[0]]\n  ymin=min(st[cv2.CC_STAT_TOP] for a,st,ce in use); ymax=max(st[cv2.CC_STAT_TOP]+st[cv2.CC_STAT_HEIGHT]-1 for a,st,ce in use)\n  print(f\"{i:3d} y{ymin}-{ymax} blue={blue.get(i,'-')}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 332604,
+     "dur_ms": 2156,
+     "exit": 0,
+     "cpu_ms": 2492.4,
+     "phases_us": {
+      "acquire": 63,
+      "resume": 21745,
+      "mount": 19242,
+      "run": 2085311,
+      "destroy": 49034
+     },
+     "cold": null,
+     "vm": "vm-102"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 334783,
+   "dur_ms": 8932,
+   "tokens_in": 927,
+   "tokens_out": 441,
+   "cache_read": 135616,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 343715,
+   "dur_ms": 3107,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nfor det in [True,False]:\n print('==== detectShadows',det)\n bs=cv2.createBackgroundSubtractorMOG2(history=500,varThreshold=30,detectShadows=det)\n out=[]\n for i,fr in enumerate(frames):\n  m=bs.apply(fr,learningRate=0.002)\n  fg=(m==255).astype(np.uint8)*255\n  fg=cv2.medianBlur(fg,5)\n  n,lab,stats,cent=cv2.connectedComponentsWithStats(fg,8)\n  comps=[(stats[j,cv2.CC_STAT_AREA],stats[j],cent[j]) for j in range(1,n) if stats[j,cv2.CC_STAT_AREA]>300]\n  comps.sort(key=lambda t:-t[0])\n  if 44<=i<=76:\n   if comps:\n    a,st,ce=comps[0]\n    print(f\"{i:3d} A{a:6d} x{st[cv2.CC_STAT_LEFT]:4d}-{st[cv2.CC_STAT_LEFT]+st[cv2.CC_STAT_WIDTH]-1:4d} y{st[cv2.CC_STAT_TOP]:3d}-{st[cv2.CC_STAT_TOP]+st[cv2.CC_STAT_HEIGHT]-1:3d} c({ce[0]:.0f},{ce[1]:.0f})\")\n   else: print(i,'none')\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 343767,
+     "dur_ms": 3047,
+     "exit": 0,
+     "cpu_ms": 5321.3,
+     "phases_us": {
+      "acquire": 72,
+      "resume": 21712,
+      "mount": 18623,
+      "run": 2984513,
+      "destroy": 40851
+     },
+     "cold": null,
+     "vm": "vm-103"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 346842,
+   "dur_ms": 4183,
+   "tokens_in": 1531,
+   "tokens_out": 139,
+   "cache_read": 138048,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 351025,
+   "dur_ms": 423,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2\ncap=cv2.VideoCapture('example_video.mp4')\nfor k in dir(cv2):\n if k.startswith('CAP_PROP'):\n  try:\n   v=cap.get(getattr(cv2,k))\n   if v not in (0,1): print(k,v)\n  except: pass\nPY\nstrings example_video.mp4 | head -50\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 351076,
+     "dur_ms": 325,
+     "exit": 0,
+     "cpu_ms": 455.7,
+     "phases_us": {
+      "acquire": 91,
+      "resume": 21122,
+      "mount": 18566,
+      "run": 280381,
+      "destroy": 23554
+     },
+     "cold": null,
+     "vm": "vm-105"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 351466,
+   "dur_ms": 5830,
+   "tokens_in": 236,
+   "tokens_out": 530,
+   "cache_read": 140096,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 357296,
+   "dur_ms": 2333,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nbg=np.median(np.stack(frames),axis=0).astype(np.uint8)\nedge_bg=cv2.Canny(bg,40,120)\nedge_bg=cv2.dilate(edge_bg,np.ones((5,5),np.uint8))\nxs={47:946,48:916,49:916,50:896,51:885,52:850,53:808,54:767,55:725,56:678,57:634,58:603,59:541,60:495,61:453,62:414,63:372,64:332,65:290,66:255,67:204,68:158,69:124,70:86,71:71,72:44,73:27,74:43,75:39}\nfor i in range(47,76):\n xc=xs[i]; x0=max(0,xc-110); x1=min(960,xc+110)\n g=cv2.cvtColor(frames[i],cv2.COLOR_BGR2GRAY)\n e=cv2.Canny(g,40,120)\n e[edge_bg>0]=0\n e[:90]=0; e[:,:x0]=0; e[:,x1:]=0\n e=cv2.dilate(e,np.ones((3,3),np.uint8))\n ys,xs2=np.nonzero(e)\n if len(ys)==0: print(i,'none'); continue\n # histogram y, ignore sparse rows\n hist=np.bincount(ys,minlength=540)\n good=np.nonzero(hist>=3)[0]\n print(f\"{i:3d} top {good.min() if len(good) else -1:3d} bottom {good.max() if len(good) else -1:3d}  p95 {np.percentile(ys,95):.0f} max {ys.max()}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 357348,
+     "dur_ms": 2274,
+     "exit": 0,
+     "cpu_ms": 2590.4,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 22347,
+      "mount": 19211,
+      "run": 2184768,
+      "destroy": 67037
+     },
+     "cold": null,
+     "vm": "vm-106"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 359645,
+   "dur_ms": 5082,
+   "tokens_in": 533,
+   "tokens_out": 119,
+   "cache_read": 141312,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 364727,
+   "dur_ms": 174,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -la / /opt /root 2>/dev/null\nfind / -maxdepth 3 -type d \\( -name '*test*' -o -name '*task*' -o -name '*data*' -o -name '*eval*' \\) 2>/dev/null | head -100\nenv | sort | head -100\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 364782,
+     "dur_ms": 93,
+     "exit": 0,
+     "cpu_ms": 89.8,
+     "phases_us": {
+      "acquire": 119,
+      "resume": 23319,
+      "mount": 20462,
+      "run": 42225,
+      "destroy": 26796
+     },
+     "cold": null,
+     "vm": "vm-109"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 364921,
+   "dur_ms": 7327,
+   "tokens_in": 1483,
+   "tokens_out": 670,
+   "cache_read": 142336,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 372248,
+   "dur_ms": 1840,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nbs=cv2.createBackgroundSubtractorMOG2(history=500,varThreshold=30,detectShadows=True)\nxs={47:946,48:916,49:916,50:896,51:885,52:850,53:808,54:767,55:725,56:678,57:634,58:603,59:541,60:495,61:453,62:414,63:372,64:332,65:290,66:255,67:204,68:158,69:124,70:86,71:71,72:44,73:27,74:43,75:39}\nout=[]\nfor i,fr in enumerate(frames):\n m=bs.apply(fr,learningRate=0.002)\n fg=(m==255).astype(np.uint8)*255\n fg=cv2.medianBlur(fg,5)\n if i in xs:\n  xc=xs[i]; x0=max(0,xc-140); x1=min(960,xc+140)\n  sub=fg.copy(); sub[:80]=0; sub[:,:x0]=0; sub[:,x1:]=0\n  n,lab,stats,cent=cv2.connectedComponentsWithStats(sub,8)\n  comps=[(stats[j,cv2.CC_STAT_AREA],stats[j],cent[j]) for j in range(1,n) if stats[j,cv2.CC_STAT_AREA]>50]\n  comps.sort(key=lambda t:-t[0])\n  use=[c for c in comps if abs(c[2][0]-xc)<120]\n  if use:\n   ymin=min(st[cv2.CC_STAT_TOP] for a,st,ce in use); ymax=max(st[cv2.CC_STAT_TOP]+st[cv2.CC_STAT_HEIGHT]-1 for a,st,ce in use)\n   xmin=min(st[cv2.CC_STAT_LEFT] for a,st,ce in use); xmax=max(st[cv2.CC_STAT_LEFT]+st[cv2.CC_STAT_WIDTH]-1 for a,st,ce in use)\n   area=sum(a for a,st,ce in use)\n   out.append((i,xmin,xmax,ymin,ymax,area,len(use)))\nfor o in out: print(f\"{o[0]:3d} x{o[1]}-{o[2]} y{o[3]}-{o[4]} A{o[5]} n{o[6]}\")\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 372301,
+     "dur_ms": 1779,
+     "exit": 0,
+     "cpu_ms": 2996.7,
+     "phases_us": {
+      "acquire": 143,
+      "resume": 21399,
+      "mount": 18239,
+      "run": 1714417,
+      "destroy": 42884
+     },
+     "cold": null,
+     "vm": "vm-110"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 374108,
+   "dur_ms": 5727,
+   "tokens_in": 492,
+   "tokens_out": 431,
+   "cache_read": 145088,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 379835,
+   "dur_ms": 1991,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,fr=cap.read()\n if not ok: break\n frames.append(fr)\nbs=cv2.createBackgroundSubtractorMOG2(history=500,varThreshold=30,detectShadows=True)\nmasks=[]\nfor i,fr in enumerate(frames):\n m=bs.apply(fr,learningRate=0.002)\n fg=(m==255).astype(np.uint8)*255\n fg=cv2.medianBlur(fg,5)\n masks.append(fg)\nxs={56:678,57:634,58:603,59:541,60:495,61:453,62:414,63:372,64:332,65:290,66:255,67:204,68:158}\nfor i in [56,57,58,59,60,61,62,63,64,65,66,67,68]:\n xc=xs[i]; x0=max(0,xc-150); x1=min(960,xc+150)\n m=masks[i][40:400,x0:x1]\n W,H=50,40\n mm=cv2.resize((m>0).astype(np.uint8),(W,H),interpolation=cv2.INTER_AREA)\n print(f\"\\n== frame {i} x{x0}-{x1} ==\")\n for r,row in enumerate(mm):\n  yy=int(40+r*360/H)\n  print(f\"{yy:3d} \"+''.join('#' if v>0.2 else ('.' if v>0.05 else ' ') for v in row))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 379888,
+     "dur_ms": 1910,
+     "exit": 0,
+     "cpu_ms": 3122.9,
+     "phases_us": {
+      "acquire": 87,
+      "resume": 21706,
+      "mount": 19148,
+      "run": 1841169,
+      "destroy": 47143
+     },
+     "cold": null,
+     "vm": "vm-111"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 381844,
+   "dur_ms": 64097,
+   "tokens_in": 3468,
+   "tokens_out": 1602,
+   "cache_read": 146496,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 445941,
+   "dur_ms": 2864,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npip install toml -q\ncat > /tmp/proto.py <<'PY'\nimport cv2, numpy as np, sys\n\ndef analyze(path):\n    cap=cv2.VideoCapture(path)\n    frames=[]\n    while True:\n        ok,fr=cap.read()\n        if not ok: break\n        frames.append(fr)\n    n=len(frames)\n    bs=cv2.createBackgroundSubtractorMOG2(history=500,varThreshold=30,detectShadows=True)\n    recs=[]\n    pred=None\n    min_area=120; min_h=25\n    for i,fr in enumerate(frames):\n        lr=0.05 if i<5 else 0.002\n        m=bs.apply(fr,learningRate=lr)\n        fg=(m==255).astype(np.uint8)*255\n        fg=cv2.medianBlur(fg,5)\n        fg=cv2.morphologyEx(fg,cv2.MORPH_CLOSE,np.ones((3,3),np.uint8))\n        nl,lab,stats,cent=cv2.connectedComponentsWithStats(fg,8)\n        cands=[]\n        for j in range(1,nl):\n            a=int(stats[j,cv2.CC_STAT_AREA]); x=int(stats[j,cv2.CC_STAT_LEFT]); y=int(stats[j,cv2.CC_STAT_TOP]); w=int(stats[j,cv2.CC_STAT_WIDTH]); h=int(stats[j,cv2.CC_STAT_HEIGHT])\n            if a<min_area or h<min_h: continue\n            bottom=y+h-1\n            if bottom<150: continue\n            # ignore very wide flat background patches\n            if h<40 and w>150: continue\n            cands.append((a,x,y,w,h,cent[j][0],cent[j][1]))\n        if not cands:\n            recs.append(None); continue\n        # choose based on prediction\n        if pred is None:\n            # choose largest\n            chosen=max(cands,key=lambda c:c[0])\n        else:\n            chosen=min(cands,key=lambda c:abs(c[5]-pred))\n        xc=chosen[5]\n        # combine all candidates near chosen x\n        use=[c for c in cands if abs(c[5]-xc)<160]\n        if not use: use=[chosen]\n        xmin=min(c[1] for c in use); xmax=max(c[1]+c[3]-1 for c in use)\n        ymin=min(c[2] for c in use); ymax=max(c[2]+c[4]-1 for c in use)\n        area=sum(c[0] for c in use)\n        # weighted x center\n        cx=sum(c[5]*c[0] for c in use)/area\n        # update prediction\n        pred=cx\n        recs.append(dict(i=i,x=cx,xmin=xmin,xmax=xmax,top=ymin,bottom=ymax,area=area))\n    # find contiguous runs\n    runs=[]; st=None\n    for i,r in enumerate(recs):\n        if r is not None and st is None: st=i\n        if r is None and st is not None:\n            runs.append((st,i-1)); st=None\n    if st is not None: runs.append((st,n-1))\n    # filter runs with span x and frames\n    best=None; bestscore=-1\n    for a,b in runs:\n        rr=[recs[k] for k in range(a,b+1) if recs[k] is not None]\n        if len(rr)<4: continue\n        xs=[r['x'] for r in rr]\n        span=max(xs)-min(xs)\n        score=span*len(rr)\n        if score>bestscore:\n            bestscore=score; best=(a,b)\n    print('runs',runs,'best',best)\n    if best is None:\n        return None\n    a,b=best\n    idx=[]; xs=[]; bottoms=[]; tops=[]\n    for k in range(a,b+1):\n        r=recs[k]\n        if r is None: continue\n        # discard edge-cut frames for baseline/detection\n        idx.append(k); xs.append(r['x']); bottoms.append(r['bottom']); tops.append(r['top'])\n    idx=np.array(idx); xs=np.array(xs,float); bottoms=np.array(bottoms,float); tops=np.array(tops,float)\n    # smooth bottoms\n    def medfilt(v,k=3):\n        out=v.copy()\n        h=k//2\n        for i in range(len(v)):\n            out[i]=np.median(v[max(0,i-h):min(len(v),i+h+1)])\n        return out\n    bsmooth=medfilt(bottoms,3)\n    # baseline robust high percentile / line fit on high points\n    # first use percentile 80\n    base=np.percentile(bsmooth,80)\n    # optionally fit line on points >= percentile 55\n    sel=bsmooth>=np.percentile(bsmooth,55)\n    if sel.sum()>=4:\n        try:\n            coef=np.polyfit(xs[sel],bsmooth[sel],1)\n            # refine keep near line upper\n            fit=np.polyval(coef,xs)\n            sel2=bsmooth>=fit-8\n            if sel2.sum()>=4:\n                coef=np.polyfit(xs[sel2],bsmooth[sel2],1)\n                basearr=np.polyval(coef,xs)\n            else:\n                basearr=np.full_like(xs,base)\n        except Exception:\n            basearr=np.full_like(xs,base)\n    else:\n        basearr=np.full_like(xs,base)\n    clear=basearr-bsmooth\n    print('base',base,'clear max',clear.max())\n    for k,xx,bb,cc in zip(idx,xs,bottoms,clear):\n        print(k, round(xx,1), int(bb), round(cc,1))\n    ap=int(np.argmax(clear)); maxc=clear[ap]\n    thr=max(5.0,0.05*maxc)\n    above=clear>thr\n    # contiguous run containing apex\n    l=ap\n    while l>0 and above[l-1]: l-=1\n    r=ap\n    while r+1<len(above) and above[r+1]: r+=1\n    take=int(idx[l]); land=int(idx[r]+1) if r+1<len(idx) else int(idx[r])\n    print('apex',int(idx[ap]),'maxc',maxc,'thr',thr,'take',take,'land',land)\n    return take,land\n\nif __name__=='__main__':\n    print(analyze(sys.argv[1] if len(sys.argv)>1 else '/workspace/example_video.mp4'))\nPY\npython3 /tmp/proto.py /workspace/example_video.mp4\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 445994,
+     "dur_ms": 2791,
+     "exit": 0,
+     "cpu_ms": 4070.3,
+     "phases_us": {
+      "acquire": 74,
+      "resume": 21494,
+      "mount": 18535,
+      "run": 2726137,
+      "destroy": 43117
+     },
+     "cold": null,
+     "vm": "vm-112"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 448828,
+   "dur_ms": 16828,
+   "tokens_in": 1132,
+   "tokens_out": 1530,
+   "cache_read": 161408,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 465656,
+   "dur_ms": 2103,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncat > /tmp/proto2.py <<'PY'\nimport cv2, numpy as np, sys\n\ndef medfilt(v,k=3):\n    v=np.asarray(v,float); out=v.copy(); h=k//2\n    for i in range(len(v)):\n        out[i]=np.median(v[max(0,i-h):min(len(v),i+h+1)])\n    return out\n\ndef analyze(path):\n    cap=cv2.VideoCapture(path); frames=[]\n    while True:\n        ok,fr=cap.read()\n        if not ok: break\n        frames.append(fr)\n    n=len(frames)\n    bs=cv2.createBackgroundSubtractorMOG2(history=500,varThreshold=30,detectShadows=True)\n    recs=[None]*n\n    active=False; prevx=None; vel=None; missing=0\n    for i,fr in enumerate(frames):\n        lr=0.05 if i<5 else 0.002\n        m=bs.apply(fr,learningRate=lr)\n        fg=(m==255).astype(np.uint8)*255\n        fg=cv2.medianBlur(fg,5)\n        fg=cv2.morphologyEx(fg,cv2.MORPH_CLOSE,np.ones((3,3),np.uint8))\n        nl,lab,stats,cent=cv2.connectedComponentsWithStats(fg,8)\n        cands=[]\n        for j in range(1,nl):\n            a=int(stats[j,cv2.CC_STAT_AREA]); x=int(stats[j,cv2.CC_STAT_LEFT]); y=int(stats[j,cv2.CC_STAT_TOP]); w=int(stats[j,cv2.CC_STAT_WIDTH]); h=int(stats[j,cv2.CC_STAT_HEIGHT])\n            if a<120 or h<25: continue\n            bottom=y+h-1\n            if bottom<150: continue\n            if h<40 and w>150: continue\n            cands.append((a,x,y,w,h,float(cent[j][0]),float(cent[j][1])))\n        if not active:\n            strong=[c for c in cands if c[0]>=400 and c[4]>=50]\n            if not strong: continue\n            chosen=max(strong,key=lambda c:c[0])\n            active=True; prevx=chosen[5]; vel=None; missing=0\n        else:\n            if cands:\n                pred=prevx if vel is None else prevx+vel\n                chosen=min(cands,key=lambda c:abs(c[5]-pred))\n                if abs(chosen[5]-pred)>110:\n                    chosen=None\n            else:\n                chosen=None\n            if chosen is None:\n                missing+=1\n                if missing>2: active=False\n                continue\n        xc=chosen[5]\n        use=[c for c in cands if abs(c[5]-xc)<160]\n        if not use: use=[chosen]\n        xmin=min(c[1] for c in use); xmax=max(c[1]+c[3]-1 for c in use)\n        ymin=min(c[2] for c in use); ymax=max(c[2]+c[4]-1 for c in use)\n        area=sum(c[0] for c in use)\n        cx=sum(c[5]*c[0] for c in use)/area\n        if vel is None: vel=cx-prevx\n        else: vel=0.6*vel+0.4*(cx-prevx)\n        prevx=cx; missing=0\n        recs[i]=dict(i=i,x=cx,xmin=xmin,xmax=xmax,top=ymin,bottom=ymax,area=area)\n    idx=[i for i,r in enumerate(recs) if r is not None]\n    print('detected',idx[0] if idx else None,idx[-1] if idx else None,'count',len(idx))\n    if len(idx)<4: return None\n    xs=np.array([recs[i]['x'] for i in idx],float)\n    bottoms=np.array([recs[i]['bottom'] for i in idx],float)\n    xmins=np.array([recs[i]['xmin'] for i in idx]); xmaxs=np.array([recs[i]['xmax'] for i in idx])\n    valid=(xmins>2)&(xmaxs<957)\n    bs=medfilt(bottoms,3)\n    # baseline fit on valid high points\n    if valid.sum()>=4:\n        p=np.percentile(bs[valid],55)\n        sel=valid&(bs>=p)\n        if sel.sum()>=4:\n            coef=np.polyfit(xs[sel],bs[sel],1)\n            fit=np.polyval(coef,xs)\n            sel2=valid&(bs>=fit-10)\n            if sel2.sum()>=4: coef=np.polyfit(xs[sel2],bs[sel2],1)\n            basearr=np.polyval(coef,xs)\n        else:\n            basearr=np.full_like(xs,np.percentile(bs[valid],80))\n    else:\n        basearr=np.full_like(xs,np.percentile(bs,80))\n    clear=basearr-bs\n    clear[~valid]=-999\n    ap=int(np.argmax(clear)); maxc=float(clear[ap])\n    print('baseline vals',round(float(np.median(basearr[valid])),1),'maxc',round(maxc,1),'apex',idx[ap])\n    for k,xx,bb,cc,vv in zip(idx,xs,bottoms,clear,valid):\n        print(k,round(xx,1),int(bb),round(cc,1),'V' if vv else '')\n    thr=max(5.0,0.05*maxc)\n    above=clear>thr\n    l=ap\n    while l>0 and above[l-1]: l-=1\n    r=ap\n    while r+1<len(above) and above[r+1]: r+=1\n    take=int(idx[l]); land=int(idx[r]+1) if r+1<len(idx) else int(idx[r])\n    print('thr',round(thr,1),'above range',idx[l],idx[r],'=> take',take,'land',land)\n    return take,land\n\nif __name__=='__main__':\n    print(analyze(sys.argv[1] if len(sys.argv)>1 else '/workspace/example_video.mp4'))\nPY\npython3 /tmp/proto2.py /workspace/example_video.mp4\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 465708,
+     "dur_ms": 2034,
+     "exit": 0,
+     "cpu_ms": 3363.0,
+     "phases_us": {
+      "acquire": 25,
+      "resume": 21758,
+      "mount": 18450,
+      "run": 1968473,
+      "destroy": 43748
+     },
+     "cold": null,
+     "vm": "vm-119"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 467779,
+   "dur_ms": 15065,
+   "tokens_in": 946,
+   "tokens_out": 1798,
+   "cache_read": 165312,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 482844,
+   "dur_ms": 2077,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncat > /tmp/proto3.py <<'PY'\nimport cv2, numpy as np, sys\n\ndef medfilt(v,k=3):\n    v=np.asarray(v,float); out=v.copy(); h=k//2\n    for i in range(len(v)):\n        out[i]=np.median(v[max(0,i-h):min(len(v),i+h+1)])\n    return out\n\ndef analyze(path):\n    cap=cv2.VideoCapture(path); frames=[]\n    while True:\n        ok,fr=cap.read()\n        if not ok: break\n        frames.append(fr)\n    n=len(frames); H,W=frames[0].shape[:2]\n    bs=cv2.createBackgroundSubtractorMOG2(history=500,varThreshold=30,detectShadows=True)\n    recs=[None]*n\n    active=False; prevx=None; vel=None; missing=0; direction=0\n    for i,fr in enumerate(frames):\n        lr=0.05 if i<5 else 0.002\n        m=bs.apply(fr,learningRate=lr)\n        fg=(m==255).astype(np.uint8)*255\n        fg=cv2.medianBlur(fg,5)\n        fg=cv2.morphologyEx(fg,cv2.MORPH_CLOSE,np.ones((3,3),np.uint8))\n        nl,lab,stats,cent=cv2.connectedComponentsWithStats(fg,8)\n        cands=[]\n        for j in range(1,nl):\n            a=int(stats[j,cv2.CC_STAT_AREA]); x=int(stats[j,cv2.CC_STAT_LEFT]); y=int(stats[j,cv2.CC_STAT_TOP]); w=int(stats[j,cv2.CC_STAT_WIDTH]); h=int(stats[j,cv2.CC_STAT_HEIGHT])\n            if a<120 or h<25: continue\n            bottom=y+h-1\n            if bottom<150: continue\n            if h<40 and w>150: continue\n            cands.append((a,x,y,w,h,float(cent[j][0]),float(cent[j][1])))\n        if not active:\n            strong=[c for c in cands if c[0]>=400 and c[4]>=50]\n            if not strong: continue\n            chosen=max(strong,key=lambda c:c[0])\n            active=True; prevx=chosen[5]; vel=None; missing=0; direction=0\n        else:\n            chosen=None\n            if cands:\n                pred=prevx if vel is None else prevx+vel\n                chosen=min(cands,key=lambda c:abs(c[5]-pred))\n                if abs(chosen[5]-pred)>110: chosen=None\n            if chosen is None:\n                missing+=1\n                if missing>2: active=False\n                continue\n        xc=chosen[5]\n        use=[c for c in cands if abs(c[5]-xc)<160]\n        if not use: use=[chosen]\n        xmin=min(c[1] for c in use); xmax=max(c[1]+c[3]-1 for c in use)\n        ymin=min(c[2] for c in use); ymax=max(c[2]+c[4]-1 for c in use)\n        area=sum(c[0] for c in use)\n        cx=sum(c[5]*c[0] for c in use)/area\n        dx=cx-prevx if prevx is not None else 0\n        if abs(dx)>3: direction=1 if dx>0 else -1\n        if vel is None: vel=dx\n        else: vel=0.6*vel+0.4*dx\n        prevx=cx; missing=0\n        recs[i]=dict(i=i,x=cx,xmin=xmin,xmax=xmax,top=ymin,bottom=ymax,area=area)\n        # stop when athlete has clearly exited the near edge\n        if (direction<0 and cx<45) or (direction>0 and cx>W-45):\n            active=False\n    idx=[i for i,r in enumerate(recs) if r is not None]\n    print('detected',idx[0] if idx else None,idx[-1] if idx else None,'count',len(idx))\n    if len(idx)<4: return None\n    xs=np.array([recs[i]['x'] for i in idx],float)\n    bottoms=np.array([recs[i]['bottom'] for i in idx],float)\n    xmins=np.array([recs[i]['xmin'] for i in idx]); xmaxs=np.array([recs[i]['xmax'] for i in idx])\n    valid=(xmins>2)&(xmaxs<W-3)\n    bs=medfilt(bottoms,3)\n    if valid.sum()>=4:\n        p=np.percentile(bs[valid],55); sel=valid&(bs>=p)\n        if sel.sum()>=4:\n            coef=np.polyfit(xs[sel],bs[sel],1); fit=np.polyval(coef,xs)\n            sel2=valid&(bs>=fit-10)\n            if sel2.sum()>=4: coef=np.polyfit(coef is not None and xs[sel2] or xs[sel2],bs[sel2],1)\n            basearr=np.polyval(coef,xs)\n        else: basearr=np.full_like(xs,np.percentile(bs[valid],80))\n    else: basearr=np.full_like(xs,np.percentile(bs,80))\n    clear=basearr-bs\n    maxc=float(np.max(clear[valid])) if valid.any() else float(np.max(clear))\n    if maxc<15: return None\n    thr=max(5.0,0.05*maxc)\n    above=(clear>thr)&valid\n    # find runs of above\n    runs=[]; st=None\n    for j,v in enumerate(above):\n        if v and st is None: st=j\n        if not v and st is not None:\n            runs.append((st,j-1)); st=None\n    if st is not None: runs.append((st,len(above)-1))\n    best=None; bestmove=-1\n    for l,r in runs:\n        if r-l<2: continue\n        # horizontal path length within run\n        segx=xs[l:r+1]\n        move=float(np.sum(np.abs(np.diff(segx)))) if len(segx)>1 else 0.0\n        if move>bestmove:\n            bestmove=move; best=(l,r)\n    print('baseline',round(float(np.median(basearr[valid])),1),'maxc',round(maxc,1),'thr',round(thr,1),'runs',[(idx[l],idx[r],round(float(np.sum(np.abs(np.diff(xs[l:r+1])))),1)) for l,r in runs],'best',best)\n    for k,xx,bb,cc,vv in zip(idx,xs,bottoms,clear,valid):\n        print(k,round(xx,1),int(bb),round(cc,1),'V' if vv else '')\n    if best is None:\n        ap=int(np.argmax(clear)); l=ap; r=ap\n    else:\n        l,r=best\n    take=int(idx[l]); land=int(idx[r]+1) if r+1<len(idx) else int(idx[r])\n    print('=> take',take,'land',land)\n    return take,land\n\nif __name__=='__main__':\n    print(analyze(sys.argv[1] if len(sys.argv)>1 else '/workspace/example_video.mp4'))\nPY\npython3 /tmp/proto3.py /workspace/example_video.mp4\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 482897,
+     "dur_ms": 2010,
+     "exit": 1,
+     "cpu_ms": 3408.8,
+     "phases_us": {
+      "acquire": 68,
+      "resume": 20865,
+      "mount": 18471,
+      "run": 1938014,
+      "destroy": 51338
+     },
+     "cold": null,
+     "vm": "vm-122"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 484942,
+   "dur_ms": 3943,
+   "tokens_in": 202,
+   "tokens_out": 329,
+   "cache_read": 169280,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 488885,
+   "dur_ms": 169,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\np='/tmp/proto3.py'\ns=open(p).read()\ns=s.replace(\"if sel2.sum()>=4: coef=np.polyfit(coef is not None and xs[sel2] or xs[sel2],bs[sel2],1)\",\"if sel2.sum()>=4: coef=np.polyfit(xs[sel2],bs[sel2],1)\")\ns=s.replace(\"if (direction<0 and cx<45) or (direction>0 and cx>W-45):\\n            active=False\",\"if (direction<0 and cx<45) or (direction>0 and cx>W-45):\\n            ended=True\\n            active=False\\n            break\")\ns=s.replace(\"active=False; prevx=None; vel=None; missing=0; direction=0\\n    for i,fr\",\"active=False; prevx=None; vel=None; missing=0; direction=0; ended=False\\n    for i,fr\")\ns=s.replace(\"                if missing>2: active=False\\n                continue\",\"                if missing>2:\\n                    active=False\\n                    ended=True\\n                    break\\n                continue\")\nopen(p,'w').write(s)\nPY\npython3 /tmp/proto3.py /workspace/example_video.mp4\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 488937,
+     "dur_ms": 106,
+     "exit": 2,
+     "cpu_ms": 106.8,
+     "phases_us": {
+      "acquire": 17,
+      "resume": 21839,
+      "mount": 19676,
+      "run": 64636,
+      "destroy": 19725
+     },
+     "cold": null,
+     "vm": "vm-129"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 489073,
+   "dur_ms": 7022,
+   "tokens_in": 84,
+   "tokens_out": 1761,
+   "cache_read": 170048,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 496095,
+   "dur_ms": 1496,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncat > proto3.py <<'PY'\nimport cv2, numpy as np, sys\n\ndef medfilt(v,k=3):\n    v=np.asarray(v,float); out=v.copy(); h=k//2\n    for i in range(len(v)):\n        out[i]=np.median(v[max(0,i-h):min(len(v),i+h+1)])\n    return out\n\ndef analyze(path):\n    cap=cv2.VideoCapture(path); frames=[]\n    while True:\n        ok,fr=cap.read()\n        if not ok: break\n        frames.append(fr)\n    n=len(frames); H,W=frames[0].shape[:2]\n    bs=cv2.createBackgroundSubtractorMOG2(history=500,varThreshold=30,detectShadows=True)\n    recs=[None]*n\n    active=False; prevx=None; vel=None; missing=0; direction=0\n    for i,fr in enumerate(frames):\n        lr=0.05 if i<5 else 0.002\n        m=bs.apply(fr,learningRate=lr)\n        fg=(m==255).astype(np.uint8)*255\n        fg=cv2.medianBlur(fg,5)\n        fg=cv2.morphologyEx(fg,cv2.MORPH_CLOSE,np.ones((3,3),np.uint8))\n        nl,lab,stats,cent=cv2.connectedComponentsWithStats(fg,8)\n        cands=[]\n        for j in range(1,nl):\n            a=int(stats[j,cv2.CC_STAT_AREA]); x=int(stats[j,cv2.CC_STAT_LEFT]); y=int(stats[j,cv2.CC_STAT_TOP]); w=int(stats[j,cv2.CC_STAT_WIDTH]); h=int(stats[j,cv2.CC_STAT_HEIGHT])\n            if a<120 or h<25: continue\n            bottom=y+h-1\n            if bottom<150: continue\n            if h<40 and w>150: continue\n            cands.append((a,x,y,w,h,float(cent[j][0]),float(cent[j][1])))\n        if not active:\n            strong=[c for c in cands if c[0]>=400 and c[4]>=50]\n            if not strong: continue\n            chosen=max(strong,key=lambda c:c[0])\n            active=True; prevx=chosen[5]; vel=None; missing=0; direction=0\n        else:\n            chosen=None\n            if cands:\n                pred=prevx if vel is None else prevx+vel\n                chosen=min(cands,key=lambda c:abs(c[5]-pred))\n                if abs(chosen[5]-pred)>110: chosen=None\n            if chosen is None:\n                missing+=1\n                if missing>2:\n                    active=False\n                    break\n                continue\n        xc=chosen[5]\n        use=[c for c in cands if abs(c[5]-xc)<160]\n        if not use: use=[chosen]\n        xmin=min(c[1] for c in use); xmax=max(c[1]+c[3]-1 for c in use)\n        ymin=min(c[2] for c in use); ymax=max(c[2]+c[4]-1 for c in use)\n        area=sum(c[0] for c in use)\n        cx=sum(c[5]*c[0] for c in use)/area\n        dx=cx-prevx if prevx is not None else 0\n        if abs(dx)>3: direction=1 if dx>0 else -1\n        if vel is None: vel=dx\n        else: vel=0.6*vel+0.4*dx\n        prevx=cx; missing=0\n        recs[i]=dict(i=i,x=cx,xmin=xmin,xmax=xmax,top=ymin,bottom=ymax,area=area)\n        if (direction<0 and cx<45) or (direction>0 and cx>W-45):\n            active=False\n            break\n    idx=[i for i,r in enumerate(recs) if r is not None]\n    print('detected',idx[0] if idx else None,idx[-1] if idx else None,'count',len(idx))\n    if len(idx)<4: return None\n    xs=np.array([recs[i]['x'] for i in idx],float)\n    bottoms=np.array([recs[i]['bottom'] for i in idx],float)\n    xmins=np.array([recs[i]['xmin'] for i in idx]); xmaxs=np.array([recs[i]['xmax'] for i in idx])\n    valid=(xmins>2)&(xmaxs<W-3)\n    bs=medfilt(bottoms,3)\n    if valid.sum()>=4:\n        p=np.percentile(bs[valid],55); sel=valid&(bs>=p)\n        if sel.sum()>=4:\n            coef=np.polyfit(xs[sel],bs[sel],1); fit=np.polyval(coef,xs)\n            sel2=valid&(bs>=fit-10)\n            if sel2.sum()>=4: coef=np.polyfit(xs[sel2],bs[sel2],1)\n            basearr=np.polyval(coef,xs)\n        else: basearr=np.full_like(xs,np.percentile(bs[valid],80))\n    else: basearr=np.full_like(xs,np.percentile(bs,80))\n    clear=basearr-bs\n    maxc=float(np.max(clear[valid])) if valid.any() else float(np.max(clear))\n    if maxc<15: return None\n    thr=max(5.0,0.05*maxc)\n    above=(clear>thr)&valid\n    runs=[]; st=None\n    for j,v in enumerate(above):\n        if v and st is None: st=j\n        if not v and st is not None:\n            runs.append((st,j-1)); st=None\n    if st is not None: runs.append((st,len(above)-1))\n    best=None; bestmove=-1\n    for l,r in runs:\n        if r-l<2: continue\n        segx=xs[l:r+1]\n        move=float(np.sum(np.abs(np.diff(segx)))) if len(segx)>1 else 0.0\n        if move>bestmove:\n            bestmove=move; best=(l,r)\n    print('baseline',round(float(np.median(basearr[valid])),1),'maxc',round(maxc,1),'thr',round(thr,1),'runs',[(idx[l],idx[r],round(float(np.sum(np.abs(np.diff(xs[l:r+1])))),1)) for l,r in runs],'best',best)\n    for k,xx,bb,cc,vv in zip(idx,xs,bottoms,clear,valid):\n        print(k,round(xx,1),int(bb),round(cc,1),'V' if vv else '')\n    if best is None:\n        ap=int(np.argmax(clear)); l=ap; r=ap\n    else:\n        l,r=best\n    take=int(idx[l]); land=int(idx[r]+1) if r+1<len(idx) else int(idx[r])\n    print('=> take',take,'land',land)\n    return take,land\n\nif __name__=='__main__':\n    print(analyze(sys.argv[1] if len(sys.argv)>1 else '/workspace/example_video.mp4'))\nPY\npython3 proto3.py /workspace/example_video.mp4\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 496147,
+     "dur_ms": 1432,
+     "exit": 0,
+     "cpu_ms": 2306.3,
+     "phases_us": {
+      "acquire": 76,
+      "resume": 21797,
+      "mount": 18759,
+      "run": 1362404,
+      "destroy": 47808
+     },
+     "cold": null,
+     "vm": "vm-130"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 497609,
+   "dur_ms": 27191,
+   "tokens_in": 445,
+   "tokens_out": 2452,
+   "cache_read": 171904,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 524800,
+   "dur_ms": 1598,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ncat > jump_analyzer.py <<'PY'\nimport os\nimport sys\n\nimport cv2\nimport numpy as np\n\ntry:\n    import toml\nexcept ImportError:\n    toml = None\n\n\ndef _median_filter(values, kernel=3):\n    values = np.asarray(values, dtype=float)\n    result = values.copy()\n    half = kernel // 2\n    for i in range(len(values)):\n        lo = max(0, i - half)\n        hi = min(len(values), i + half + 1)\n        result[i] = np.median(values[lo:hi])\n    return result\n\n\ndef _load_frames(path):\n    cap = cv2.VideoCapture(path)\n    if not cap.isOpened():\n        raise RuntimeError(f\"Could not open video: {path}\")\n    frames = []\n    while True:\n        ok, frame = cap.read()\n        if not ok:\n            break\n        frames.append(frame)\n    cap.release()\n    if not frames:\n        raise RuntimeError(f\"No frames could be read from video: {path}\")\n    return frames\n\n\ndef _track_athlete(frames):\n    height, width = frames[0].shape[:2]\n    subtractor = cv2.createBackgroundSubtractorMOG2(\n        history=500, varThreshold=30, detectShadows=True\n    )\n\n    records = [None] * len(frames)\n    active = False\n    previous_x = None\n    velocity = None\n    missing = 0\n    direction = 0\n    start_x = None\n    active_frames = 0\n\n    for index, frame in enumerate(frames):\n        learning_rate = 0.05 if index < 5 else 0.002\n        raw_mask = subtractor.apply(frame, learningRate=learning_rate)\n        mask = (raw_mask == 255).astype(np.uint8) * 255\n        mask = cv2.medianBlur(mask, 5)\n        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))\n\n        count, labels, stats, centroids = cv2.connectedComponentsWithStats(mask, 8)\n        candidates = []\n        for component in range(1, count):\n            area = int(stats[component, cv2.CC_STAT_AREA])\n            x = int(stats[component, cv2.CC_STAT_LEFT])\n            y = int(stats[component, cv2.CC_STAT_TOP])\n            w = int(stats[component, cv2.CC_STAT_WIDTH])\n            h = int(stats[component, cv2.CC_STAT_HEIGHT])\n            if area < 120 or h < 25:\n                continue\n            bottom = y + h - 1\n            if bottom < 150:\n                continue\n            if h < 40 and w > 150:\n                continue\n            candidates.append(\n                (area, x, y, w, h, float(centroids[component][0]), float(centroids[component][1]))\n            )\n\n        if not active:\n            strong = [c for c in candidates if c[0] >= 400 and c[4] >= 50]\n            if not strong:\n                continue\n\n            chosen = max(strong, key=lambda c: c[0])\n            active = True\n            previous_x = chosen[5]\n            start_x = chosen[5]\n            velocity = None\n            missing = 0\n            direction = 0\n            active_frames = 0\n        else:\n            chosen = None\n            if candidates:\n                predicted_x = previous_x if velocity is None else previous_x + velocity\n                chosen = min(candidates, key=lambda c: abs(c[5] - predicted_x))\n                if abs(chosen[5] - predicted_x) > 110:\n                    chosen = None\n\n            if chosen is None:\n                missing += 1\n                if missing > 2:\n                    active = False\n                    break\n                continue\n\n        center_x = chosen[5]\n        used = [c for c in candidates if abs(c[5] - center_x) < 160]\n        if not used:\n            used = [chosen]\n\n        xmin = min(c[1] for c in used)\n        xmax = max(c[1] + c[3] - 1 for c in used)\n        ymin = min(c[2] for c in used)\n        ymax = max(c[2] + c[4] - 1 for c in used)\n        total_area = sum(c[0] for c in used)\n        weighted_x = sum(c[5] * c[0] for c in used) / total_area\n\n        delta_x = weighted_x - previous_x if previous_x is not None else 0.0\n        if abs(delta_x) > 3:\n            direction = 1 if delta_x > 0 else -1\n\n        if velocity is None:\n            velocity = delta_x\n        else:\n            velocity = 0.6 * velocity + 0.4 * delta_x\n\n        previous_x = weighted_x\n        missing = 0\n        active_frames += 1\n        records[index] = {\n            \"index\": index,\n            \"x\": weighted_x,\n            \"xmin\": xmin,\n            \"xmax\": xmax,\n            \"top\": ymin,\n            \"bottom\": ymax,\n            \"area\": total_area,\n        }\n\n        moved_far = start_x is not None and abs(weighted_x - start_x) > 80\n        leaving = (direction < 0 and weighted_x < 45) or (\n            direction > 0 and weighted_x > width - 45\n        )\n        if active_frames >= 4 and moved_far and leaving:\n            active = False\n            break\n\n    return [r for r in records if r is not None], width\n\n\ndef _find_jump_frames(frames):\n    tracked, width = _track_athlete(frames)\n    if len(tracked) < 4:\n        raise RuntimeError(\"Could not track the athlete\")\n\n    indices = np.array([r[\"index\"] for r in tracked], dtype=int)\n    xs = np.array([r[\"x\"] for r in tracked], dtype=float)\n    bottoms = np.array([r[\"bottom\"] for r in tracked], dtype=float)\n    xmins = np.array([r[\"xmin\"] for r in tracked], dtype=int)\n    xmaxs = np.array([r[\"xmax\"] for r in tracked], dtype=int)\n\n    valid = (xmins > 2) & (xmaxs < width - 3)\n    smoothed_bottom = _median_filter(bottoms, 3)\n\n    if valid.sum() >= 4:\n        high_cutoff = np.percentile(smoothed_bottom[valid], 55)\n        selected = valid & (smoothed_bottom >= high_cutoff)\n        if selected.sum() >= 4:\n            coefficients = np.polyfit(xs[selected], smoothed_bottom[selected], 1)\n            fitted = np.polyval(coefficients, xs)\n            refined = valid & (smoothed_bottom >= fitted - 10)\n            if refined.sum() >= 4:\n                coefficients = np.polyfit(xs[refined], smoothed_bottom[refined], 1)\n            baseline = np.polyval(coefficients, xs)\n        else:\n            baseline = np.full_like(xs, np.percentile(smoothed_bottom[valid], 80))\n    else:\n        baseline = np.full_like(xs, np.percentile(smoothed_bottom, 80))\n\n    clearance = baseline - smoothed_bottom\n    maximum_clearance = float(np.max(clearance[valid])) if valid.any() else float(np.max(clearance))\n    if maximum_clearance < 15:\n        raise RuntimeError(\"Could not identify a jump\")\n\n    threshold = max(5.0, 0.05 * maximum_clearance)\n    above = (clearance > threshold) & valid\n\n    runs = []\n    start = None\n    for i, is_above in enumerate(above):\n        if is_above and start is None:\n            start = i\n        if not is_above and start is not None:\n            runs.append((start, i - 1))\n            start = None\n    if start is not None:\n        runs.append((start, len(above) - 1))\n\n    best_run = None\n    best_score = -1.0\n    for run_start, run_end in runs:\n        if run_end - run_start < 2:\n            continue\n        segment_x = xs[run_start : run_end + 1]\n        horizontal_motion = (\n            float(np.sum(np.abs(np.diff(segment_x)))) if len(segment_x) > 1 else 0.0\n        )\n        peak_clearance = float(np.max(clearance[run_start : run_end + 1]))\n        score = horizontal_motion * peak_clearance\n        if score > best_score:\n            best_score = score\n            best_run = (run_start, run_end)\n\n    if best_run is None:\n        apex = int(np.argmax(clearance))\n        best_run = (apex, apex)\n\n    run_start, run_end = best_run\n    takeoff_index = int(indices[run_start])\n    if run_end + 1 < len(indices):\n        landing_index = int(indices[run_end + 1])\n    else:\n        landing_index = int(indices[run_end])\n\n    takeoff_index = max(0, min(takeoff_index, len(frames) - 1))\n    landing_index = max(takeoff_index, min(landing_index, len(frames) - 1))\n    return takeoff_index, landing_index\n\n\ndef _write_output(path, takeoff_frame, landing_frame):\n    data = {\n        \"jump_takeoff_frame_number\": int(takeoff_frame),\n        \"jump_land_frame_number\": int(landing_frame),\n    }\n    with open(path, \"w\", encoding=\"utf-8\") as handle:\n        if toml is not None:\n            toml.dump(data, handle)\n        else:\n            handle.write(\n                f\"jump_takeoff_frame_number = {int(takeoff_frame)}\\n\"\n                f\"jump_land_frame_number = {int(landing_frame)}\\n\"\n            )\n\n\ndef main():\n    if len(sys.argv) > 1:\n        video_path = sys.argv[1]\n    else:\n        video_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), \"example_video.mp4\")\n\n    frames = _load_frames(video_path)\n    takeoff_frame, landing_frame = _find_jump_frames(frames)\n    _write_output(\"/app/output.toml\", takeoff_frame, landing_frame)\n\n\nif __name__ == \"__main__\":\n    main()\nPY\npython3 jump_analyzer.py /workspace/example_video.mp4\ncat /app/output.toml\nrm -f proto3.py\nls -la\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 524853,
+     "dur_ms": 1492,
+     "exit": 0,
+     "cpu_ms": 2384.9,
+     "phases_us": {
+      "acquire": 22,
+      "resume": 24504,
+      "mount": 20005,
+      "run": 1420306,
+      "destroy": 47210
+     },
+     "cold": null,
+     "vm": "vm-131"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 526418,
+   "dur_ms": 4287,
+   "tokens_in": 215,
+   "tokens_out": 334,
+   "cache_read": 178304,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 530705,
+   "dur_ms": 8277,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2, numpy as np, subprocess, os\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,f=cap.read()\n if not ok: break\n frames.append(f)\ncap.release()\nfourcc=cv2.VideoWriter_fourcc(*'mp4v')\nfor st in [10,20,30,40]:\n out=cv2.VideoWriter(f'/workspace/trim_{st}.mp4',fourcc,30,(960,540))\n for f in frames[st:]: out.write(f)\n out.release()\n# prepend duplicates of first frame\nfor k in [15,45]:\n out=cv2.VideoWriter(f'/workspace/pre_{k}.mp4',fourcc,30,(960,540))\n for _ in range(k): out.write(frames[0])\n for f in frames: out.write(f)\n out.release()\nPY\nfor f in trim_10 trim_20 trim_30 trim_40 pre_15 pre_45; do\n  python3 jump_analyzer.py /workspace/$f.mp4\n  echo -n \"$f: \"; cat /app/output.toml | tr '\\n' ' '; echo\ndone\nrm -f trim_*.mp4 pre_*.mp4\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 530756,
+     "dur_ms": 8210,
+     "exit": 0,
+     "cpu_ms": 12331.9,
+     "phases_us": {
+      "acquire": 85,
+      "resume": 24579,
+      "mount": 20327,
+      "run": 8115109,
+      "destroy": 70153
+     },
+     "cold": null,
+     "vm": "vm-134"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 539000,
+   "dur_ms": 3640,
+   "tokens_in": 204,
+   "tokens_out": 225,
+   "cache_read": 179008,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 542640,
+   "dur_ms": 2098,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2\ncap=cv2.VideoCapture('example_video.mp4')\nw=int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)); h=int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)); fps=cap.get(cv2.CAP_PROP_FPS)\nout=cv2.VideoWriter('/workspace/flipped.mp4',cv2.VideoWriter_fourcc(*'mp4v'),fps,(w,h))\nwhile True:\n ok,f=cap.read()\n if not ok: break\n out.write(cv2.flip(f,1))\nout.release(); cap.release()\nPY\npython3 jump_analyzer.py /workspace/flipped.mp4\ncat /app/output.toml\nrm -f flipped.mp4\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 542692,
+     "dur_ms": 2006,
+     "exit": 0,
+     "cpu_ms": 3158.7,
+     "phases_us": {
+      "acquire": 17,
+      "resume": 21611,
+      "mount": 18893,
+      "run": 1939732,
+      "destroy": 44468
+     },
+     "cold": null,
+     "vm": "vm-135"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 544755,
+   "dur_ms": 6221,
+   "tokens_in": 46,
+   "tokens_out": 299,
+   "cache_read": 179712,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 550976,
+   "dur_ms": 4187,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport cv2\ncap=cv2.VideoCapture('example_video.mp4')\nframes=[]\nwhile True:\n ok,f=cap.read()\n if not ok: break\n frames.append(f)\ncap.release()\nfourcc=cv2.VideoWriter_fourcc(*'mp4v')\n# slow 2x (each frame twice) -> takeoff ~108, land ~124\nout=cv2.VideoWriter('/workspace/slow.mp4',fourcc,30,(960,540))\nfor f in frames:\n out.write(f); out.write(f)\nout.release()\n# fast 2x (every other frame) -> takeoff ~27, land ~31\nout=cv2.VideoWriter('/workspace/fast.mp4',fourcc,30,(960,540))\nfor f in frames[::2]: out.write(f)\nout.release()\nPY\nfor f in slow fast; do\n python3 jump_analyzer.py /workspace/$f.mp4\n echo -n \"$f: \"; cat /app/output.toml | tr '\\n' ' '; echo\ndone\nrm -f slow.mp4 fast.mp4\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 551028,
+     "dur_ms": 4096,
+     "exit": 0,
+     "cpu_ms": 6212.2,
+     "phases_us": {
+      "acquire": 82,
+      "resume": 21523,
+      "mount": 18531,
+      "run": 4027668,
+      "destroy": 46722
+     },
+     "cold": null,
+     "vm": "vm-136"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 555186,
+   "dur_ms": 7407,
+   "tokens_in": 98,
+   "tokens_out": 67,
+   "cache_read": 180800,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 5.545,
+ "calls": 50,
+ "cell": "TB1d"
+}

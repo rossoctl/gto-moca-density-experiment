@@ -1,0 +1,358 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-f",
+ "instance_id": "sqlite-db-truncate",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 53251,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 214,
+  "output": 7747,
+  "cacheRead": 65600,
+  "cacheWrite": 6016,
+  "total": 79577
+ },
+ "totals": {
+  "model_calls": 10,
+  "tool_calls": 9,
+  "model_ms": 49592,
+  "tool_ms": 1428,
+  "sandbox_ms": 831
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1170,
+   "dur_ms": 849,
+   "tokens_in": 14,
+   "tokens_out": 103,
+   "cache_read": 1088,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2023,
+   "dur_ms": 123,
+   "tool": "bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\nls -la /workspace\nfile /workspace/trunc.db 2>/dev/null || true\nls -la /workspace/trunc.db\nxxd -l 256 /workspace/trunc.db\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 2072,
+     "dur_ms": 62,
+     "exit": 127,
+     "cpu_ms": 55.0,
+     "phases_us": {
+      "acquire": 74,
+      "resume": 21303,
+      "mount": 19071,
+      "run": 16921,
+      "destroy": 23711
+     },
+     "cold": null,
+     "vm": "vm-9"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 2146,
+   "dur_ms": 1037,
+   "tokens_in": 26,
+   "tokens_out": 127,
+   "cache_read": 1216,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3184,
+   "dur_ms": 157,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nod -Ax -tx1z -v /workspace/trunc.db | head -100\necho ---\nwhich sqlite3 || true\npython3 - <<'PY'\ndata=open('/workspace/trunc.db','rb').read()\nprint(len(data), data[:16])\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 3232,
+     "dur_ms": 80,
+     "exit": 0,
+     "cpu_ms": 87.5,
+     "phases_us": {
+      "acquire": 119,
+      "resume": 21575,
+      "mount": 19408,
+      "run": 36428,
+      "destroy": 21838
+     },
+     "cold": null,
+     "vm": "vm-12"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 3344,
+   "dur_ms": 4225,
+   "tokens_in": 0,
+   "tokens_out": 615,
+   "cache_read": 1536,
+   "cache_write": 3968,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 7570,
+   "dur_ms": 145,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\ndata=open('/workspace/trunc.db','rb').read()\n# find nonzero ranges\nruns=[]\nstart=None\nfor i,b in enumerate(data):\n    if b and start is None: start=i\n    if not b and start is not None:\n        runs.append((start,i)); start=None\nif start is not None: runs.append((start,len(data)))\nfor a,b in runs:\n    print(hex(a),hex(b),b-a)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 7618,
+     "dur_ms": 87,
+     "exit": 0,
+     "cpu_ms": 70.9,
+     "phases_us": {
+      "acquire": 119,
+      "resume": 22349,
+      "mount": 19587,
+      "run": 34991,
+      "destroy": 29655
+     },
+     "cold": null,
+     "vm": "vm-14"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 7718,
+   "dur_ms": 2038,
+   "tokens_in": 26,
+   "tokens_out": 323,
+   "cache_read": 6080,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 9756,
+   "dur_ms": 143,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\ndata=open('/workspace/trunc.db','rb').read()\nptrs=[0x0ff0,0x0fdf,0x0fce,0x0fbd,0x0fac,0x0f9b,0x0f8a,0x0f79,0x0f61,0x0f49]\nfor i,p in enumerate(ptrs):\n    end = ptrs[i-1] if i>0 else len(data)\n    print(hex(p),hex(end),data[p:end].hex(),repr(data[p:end]))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 9804,
+     "dur_ms": 81,
+     "exit": 0,
+     "cpu_ms": 72.6,
+     "phases_us": {
+      "acquire": 69,
+      "resume": 21994,
+      "mount": 19518,
+      "run": 33324,
+      "destroy": 25102
+     },
+     "cold": null,
+     "vm": "vm-19"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 9902,
+   "dur_ms": 8128,
+   "tokens_in": 41,
+   "tokens_out": 1307,
+   "cache_read": 6592,
+   "cache_write": 448,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 18030,
+   "dur_ms": 145,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\nimport struct\nfor h in ['4058ff5c28f5c28f','3fe0000000000000']:\n    print(h, struct.unpack('>d', bytes.fromhex(h))[0])\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 18078,
+     "dur_ms": 78,
+     "exit": 0,
+     "cpu_ms": 84.0,
+     "phases_us": {
+      "acquire": 56,
+      "resume": 22002,
+      "mount": 19765,
+      "run": 35874,
+      "destroy": 19365
+     },
+     "cold": null,
+     "vm": "vm-20"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 18177,
+   "dur_ms": 1689,
+   "tokens_in": 43,
+   "tokens_out": 226,
+   "cache_read": 8384,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 19866,
+   "dur_ms": 119,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -laR /workspace | head -100\necho '--- /app ---'\nls -la /app 2>/dev/null || true\necho '--- find db/json ---'\nfind / -maxdepth 3 \\( -name '*.db' -o -name '*.json' \\) 2>/dev/null | head -100\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 19875,
+     "dur_ms": 83,
+     "exit": 0,
+     "cpu_ms": 75.6,
+     "phases_us": {
+      "acquire": 83,
+      "resume": 21328,
+      "mount": 18992,
+      "run": 36303,
+      "destroy": 24637
+     },
+     "cold": null,
+     "vm": "vm-21"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 19988,
+   "dur_ms": 1274,
+   "tokens_in": 30,
+   "tokens_out": 174,
+   "cache_read": 8640,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 21263,
+   "dur_ms": 159,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -la /opt/testbed-src/\nfile /opt/testbed-src/trunc.db\nod -Ax -tx1z -N 128 /opt/testbed-src/trunc.db\ncmp -l /workspace/trunc.db /opt/testbed-src/trunc.db | head -50 || true\nwc -c /opt/testbed-src/trunc.db /workspace/trunc.db\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 21312,
+     "dur_ms": 72,
+     "exit": 0,
+     "cpu_ms": 63.7,
+     "phases_us": {
+      "acquire": 88,
+      "resume": 21623,
+      "mount": 19039,
+      "run": 18527,
+      "destroy": 31391
+     },
+     "cold": null,
+     "vm": "vm-22"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 21424,
+   "dur_ms": 969,
+   "tokens_in": 11,
+   "tokens_out": 106,
+   "cache_read": 9024,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 22394,
+   "dur_ms": 120,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nfind /opt -maxdepth 3 -type f 2>/dev/null | head -200\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 22443,
+     "dur_ms": 64,
+     "exit": 0,
+     "cpu_ms": 40.2,
+     "phases_us": {
+      "acquire": 66,
+      "resume": 22116,
+      "mount": 19889,
+      "run": 5134,
+      "destroy": 36045
+     },
+     "cold": null,
+     "vm": "vm-23"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 22517,
+   "dur_ms": 25371,
+   "tokens_in": 10,
+   "tokens_out": 4315,
+   "cache_read": 9344,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 47888,
+   "dur_ms": 317,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\nimport json, struct\n\ndata = open('/workspace/trunc.db','rb').read()\nassert data[0] == 0x0d, 'not a table leaf page'\nncell = int.from_bytes(data[3:5], 'big')\ncell_start = int.from_bytes(data[5:7], 'big')\nprint('page type', hex(data[0]), 'cells', ncell, 'content start', hex(cell_start))\n\ndef varint(buf, p):\n    v = 0\n    for i in range(9):\n        b = buf[p+i]\n        if i == 8:\n            return (v << 8) | b, p+9\n        v = (v << 7) | (b & 0x7f)\n        if not (b & 0x80):\n            return v, p+i+1\n    raise ValueError\n\ndef decode_record(payload):\n    hlen, p = varint(payload, 0)\n    types = []\n    q = p\n    while q < hlen:\n        t, q = varint(payload, q)\n        types.append(t)\n    body = hlen\n    vals = []\n    for t in types:\n        if t == 0:\n            vals.append(None)\n        elif t == 1:\n            vals.append(int.from_bytes(payload[body:body+1], 'big', signed=True)); body += 1\n        elif t == 2:\n            vals.append(int.from_bytes(payload[body:body+2], 'big', signed=True)); body += 2\n        elif t == 3:\n            vals.append(int.from_bytes(payload[body:body+3], 'big', signed=True)); body += 3\n        elif t == 4:\n            vals.append(int.from_bytes(payload[body:body+4], 'big', signed=True)); body += 4\n        elif t == 5:\n            vals.append(int.from_bytes(payload[body:body+6], 'big', signed=True)); body += 6\n        elif t == 6:\n            vals.append(int.from_bytes(payload[body:body+8], 'big', signed=True)); body += 8\n        elif t == 7:\n            vals.append(struct.unpack('>d', payload[body:body+8])[0]); body += 8\n        elif t == 8:\n            vals.append(0)\n        elif t == 9:\n            vals.append(1)\n        elif t >= 12:\n            n = (t-12)//2\n            raw = payload[body:body+n]; body += n\n            vals.append(raw if t % 2 == 0 else raw.decode('utf-8'))\n        else:\n            raise ValueError(f'reserved serial type {t}')\n    return vals\n\nrows=[]\nptrs=[int.from_bytes(data[8+2*i:10+2*i],'big') for i in range(ncell)]\nfor ptr in ptrs:\n    payload_len, p = varint(data, ptr)\n    rowid, p = varint(data, p)\n    payload = data[p:p+payload_len]\n    vals = decode_record(payload)\n    print(rowid, ptr, payload_len, vals)\n    rows.append((rowid, vals))\n\n# Pick text column as word, numeric column as value\nout=[]\nfor rowid, vals in rows:\n    word = next(v for v in vals if isinstance(v, str))\n    value = next(v for v in vals if isinstance(v, (int, float)) and not isinstance(v, bool))\n    out.append({'word': word, 'value': value})\n\nwith open('/workspace/recover.json','w') as f:\n    json.dump(out, f, indent=2)\nprint(json.dumps(out, indent=2))\nPY\necho '--- file ---'\ncat /workspace/recover.json\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 47938,
+     "dur_ms": 224,
+     "exit": 0,
+     "cpu_ms": 164.2,
+     "phases_us": {
+      "acquire": 78,
+      "resume": 21602,
+      "mount": 19221,
+      "run": 169410,
+      "destroy": 32305
+     },
+     "cold": null,
+     "vm": "vm-24"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 48206,
+   "dur_ms": 4012,
+   "tokens_in": 13,
+   "tokens_out": 451,
+   "cache_read": 13696,
+   "cache_write": 640,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.107,
+ "calls": 9,
+ "cell": "TB1f"
+}

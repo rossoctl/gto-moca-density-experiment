@@ -1,0 +1,1237 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "largest-eigenval",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 486494,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 23613,
+  "output": 65750,
+  "cacheRead": 3106624,
+  "cacheWrite": 0,
+  "total": 3195987
+ },
+ "totals": {
+  "model_calls": 62,
+  "tool_calls": 68,
+  "model_ms": 320999,
+  "tool_ms": 164192,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 93,
+   "dur_ms": 3292,
+   "tokens_in": 23,
+   "tokens_out": 132,
+   "cache_read": 7168,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3385,
+   "dur_ms": 28,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/eigen.py"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3530,
+   "dur_ms": 14,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/eval.py"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3729,
+   "dur_ms": 555,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app && python -c \"import numpy; print(numpy.__version__)\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 4319,
+   "dur_ms": 8990,
+   "tokens_in": 1321,
+   "tokens_out": 427,
+   "cache_read": 7168,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 13309,
+   "dur_ms": 367,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python -c \"\nimport numpy as np, time\nimport scipy, scipy.linalg\nprint('scipy', scipy.__version__)\nfor n in [2,4,6,8,10]:\n    A=np.random.normal(size=(n,n))\n    for name,f in [('eig',lambda A: np.linalg.eig(A)),('eigvals',lambda A: np.linalg.eigvals(A)),('scipy.eig',lambda A: scipy.linalg.eig(A)),('scipy.eigvals',lambda A: scipy.linalg.eigvals(A))]:\n        # warm\n        f(A)\n        ts=[]\n        for _ in range(2000):\n            t=time.perf_counter(); f(A); ts.append(time.perf_counter()-t)\n        print(n,name,np.median(ts)*1e6)\n\""
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14192,
+   "dur_ms": 283,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python -c \"\nimport numpy as np, scipy.linalg.lapack as L, time\nprint([x for x in dir(L) if 'geev' in x.lower()])\nfor n in [2,4,6,8,10]:\n    A=np.random.normal(size=(n,n)).astype(np.float64)\n    for name in ['dgeev','sgeev']:\n        f=getattr(L,name)\n        try:\n            f(A.copy())\n        except Exception as e:\n            print(name,'err',e); continue\n        ts=[]\n        for _ in range(2000):\n            t=time.perf_counter(); f(A.copy()); ts.append(time.perf_counter()-t)\n        print(n,name,np.median(ts)*1e6)\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 14492,
+   "dur_ms": 992,
+   "tokens_in": 150,
+   "tokens_out": 196,
+   "cache_read": 10368,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 15484,
+   "dur_ms": 1181,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python -c \"\nimport numpy as np, time\nfor n in [2,4,6,8,10]:\n    ts=[]\n    for _ in range(5000):\n        A=np.random.normal(size=(n,n)).astype(np.float64)\n        t=time.perf_counter(); np.linalg.eig(A); ts.append(time.perf_counter()-t)\n    print(n,'eig',np.median(ts)*1e6)\n\""
+  },
+  {
+   "kind": "tool",
+   "at_ms": 15761,
+   "dur_ms": 10059,
+   "tool": "bash",
+   "is_error": false,
+   "command": "pip install numba scipy 2>&1 | tail -20",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 25835,
+   "dur_ms": 1418,
+   "tokens_in": 785,
+   "tokens_out": 267,
+   "cache_read": 10688,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 27253,
+   "dur_ms": 2098,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python -c \"\nimport numpy as np, time\nimport scipy, scipy.linalg\nimport scipy.linalg.lapack as L\nprint('scipy',scipy.__version__)\nfor n in [2,4,6,8,10]:\n    A=np.random.normal(size=(n,n)).astype(np.float64)\n    funcs=[('eig',lambda A: np.linalg.eig(A)),('scipy.eig',lambda A: scipy.linalg.eig(A)),('scipy.eigvals',lambda A: scipy.linalg.eigvals(A)),('dgeev',lambda A: L.dgeev(A)) ]\n    for name,f in funcs:\n        try: f(A.copy())\n        except Exception as e: print(name,e); continue\n        ts=[]\n        for _ in range(3000):\n            t=time.perf_counter(); f(A.copy()); ts.append(time.perf_counter()-t)\n        print(n,name,round(np.median(ts)*1e6,2))\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 29366,
+   "dur_ms": 1151,
+   "tokens_in": 238,
+   "tokens_out": 69,
+   "cache_read": 11712,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 30517,
+   "dur_ms": 690,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python -c \"\nimport scipy.linalg.lapack as L, inspect\nprint(L.dgeev.__doc__)\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 31221,
+   "dur_ms": 2947,
+   "tokens_in": 242,
+   "tokens_out": 249,
+   "cache_read": 12032,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 34168,
+   "dur_ms": 1408,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python -c \"\nimport numpy as np, time\nimport scipy.linalg.lapack as L\nfor n in [2,4,6,8,10]:\n    A=np.random.normal(size=(n,n)).astype(np.float64)\n    def f1(A): return L.dgeev(A,compute_vl=0,compute_vr=1,overwrite_a=1)\n    def f2(A): return L.dgeev(A.copy(),compute_vl=0,compute_vr=1,overwrite_a=1)\n    for name,f in [('dgeev-noVL-copy',f2),('dgeev-noVL-over',f1)]:\n        f(A.copy())\n        ts=[]\n        for _ in range(5000):\n            B=A.copy()\n            t=time.perf_counter(); f(B); ts.append(time.perf_counter()-t)\n        print(n,name,round(np.median(ts)*1e6,2))\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 35593,
+   "dur_ms": 10298,
+   "tokens_in": 146,
+   "tokens_out": 498,
+   "cache_read": 12800,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 45891,
+   "dur_ms": 975,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python -c \"\nimport numpy as np, time\nimport scipy.linalg.lapack as L\nfor n in [2,10]:\n    A=np.random.normal(size=(n,n)).astype(np.float64)\n    for name,kw in [('ow0',dict(compute_vl=0,compute_vr=1)),('ow1copy',dict(compute_vl=0,compute_vr=1,overwrite_a=1))]:\n        def f(B):\n            if name=='ow1copy': B=B.copy()\n            return L.dgeev(B,**kw)\n        f(A)\n        ts=[]\n        for _ in range(5000):\n            t=time.perf_counter(); f(A); ts.append(time.perf_counter()-t)\n        print(n,name,round(np.median(ts)*1e6,2))\n\""
+  },
+  {
+   "kind": "tool",
+   "at_ms": 46881,
+   "dur_ms": 1709,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python -c \"\nimport numpy as np\nfrom scipy.linalg.lapack import dgeev\nrng=np.random.default_rng(0)\nbad=0\nfor n in range(2,11):\n  for t in range(2000):\n    A=rng.normal(size=(n,n))\n    wr,wi,vl,vr,info=dgeev(A,compute_vl=0,compute_vr=1)\n    idx=int(np.argmax(np.hypot(wr,wi)))\n    if wi[idx]==0:\n      val=wr[idx]; vec=vr[:,idx]\n    else:\n      j=idx if wi[idx]>0 else idx-1\n      val=wr[j]+1j*wi[j]; vec=vr[:,j]+1j*vr[:,j+1]\n    if not np.allclose(A@vec,val*vec):\n      bad+=1\n      if bad<5: print('BAD',n,idx,wi[idx],np.linalg.norm(A@vec-val*vec))\nprint('bad',bad)\n\"",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 48605,
+   "dur_ms": 2907,
+   "tokens_in": 63,
+   "tokens_out": 197,
+   "cache_read": 15232,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 51512,
+   "dur_ms": 366,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python -c \"\nimport numpy, os, glob\nprint(numpy.__file__)\nbase=os.path.dirname(numpy.__file__)\nfor p in glob.glob(os.path.join(os.path.dirname(base),'numpy.libs','*')): print(p)\nprint('---')\nimport numpy.linalg.lapack_lite as ll\nprint(ll.__file__)\nprint([x for x in dir(ll) if 'geev' in x.lower()])\n\""
+  },
+  {
+   "kind": "tool",
+   "at_ms": 51825,
+   "dur_ms": 56,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python -c \"\nimport ctypes.util\nprint(ctypes.util.find_library('lapack'))\nprint(ctypes.util.find_library('blas'))\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 51927,
+   "dur_ms": 1208,
+   "tokens_in": 205,
+   "tokens_out": 215,
+   "cache_read": 15872,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 53135,
+   "dur_ms": 337,
+   "tool": "bash",
+   "is_error": false,
+   "command": "nm -D /usr/local/lib/python3.13/site-packages/numpy.libs/libscipy_openblas64_-56d6093b.so 2>/dev/null | grep -i ' dgeev' | head -20; python -c \"\nimport numpy.linalg as la\nprint(la.lapack_lite.__file__ if hasattr(la,'lapack_lite') else '')\nimport numpy.linalg._umath_linalg as u\nprint(u.__file__)\n\""
+  },
+  {
+   "kind": "tool",
+   "at_ms": 53426,
+   "dur_ms": 17,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ldd /usr/local/lib/python3.13/site-packages/numpy/linalg/_umath_linalg.cpython-313-x86_64-linux-gnu.so | head -30"
+  },
+  {
+   "kind": "model",
+   "at_ms": 53485,
+   "dur_ms": 1575,
+   "tokens_in": 526,
+   "tokens_out": 88,
+   "cache_read": 16320,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 55060,
+   "dur_ms": 17,
+   "tool": "bash",
+   "is_error": false,
+   "command": "nm -D /usr/local/lib/python3.13/site-packages/numpy.libs/libscipy_openblas64_-56d6093b.so 2>/dev/null | grep -i dgeev | head; echo status:$?"
+  },
+  {
+   "kind": "model",
+   "at_ms": 55116,
+   "dur_ms": 871,
+   "tokens_in": 66,
+   "tokens_out": 130,
+   "cache_read": 16896,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 55987,
+   "dur_ms": 24,
+   "tool": "bash",
+   "is_error": false,
+   "command": "nm -D /usr/local/lib/python3.13/site-packages/numpy.libs/libscipy_openblas64_-56d6093b.so 2>&1 | head; command -v nm; readelf -Ws /usr/local/lib/python3.13/site-packages/numpy.libs/libscipy_openblas64_-56d6093b.so 2>/dev/null | grep -i dgeev | head"
+  },
+  {
+   "kind": "model",
+   "at_ms": 56041,
+   "dur_ms": 1061,
+   "tokens_in": 51,
+   "tokens_out": 160,
+   "cache_read": 17088,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 57102,
+   "dur_ms": 222,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python -c \"\nimport ctypes, glob\nlib=ctypes.CDLL(glob.glob('/usr/local/lib/python3.13/site-packages/numpy.libs/libscipy_openblas64_*.so')[0])\nfor s in ['dgeev_','dgeev','dgeev_64_','dgeev64_','scipy_dgeev_','LAPACKE_dgeev']:\n    try:\n        f=getattr(lib,s); print('found',s,f)\n    except Exception as e: print('no',s)\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 57338,
+   "dur_ms": 935,
+   "tokens_in": 80,
+   "tokens_out": 86,
+   "cache_read": 17280,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 58273,
+   "dur_ms": 18,
+   "tool": "bash",
+   "is_error": false,
+   "command": "command -v objdump readelf strings; strings /usr/local/lib/python3.13/site-packages/numpy.libs/libscipy_openblas64_-56d6093b.so | grep -i dgeev | head"
+  },
+  {
+   "kind": "model",
+   "at_ms": 58328,
+   "dur_ms": 2493,
+   "tokens_in": 46,
+   "tokens_out": 222,
+   "cache_read": 17472,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 60821,
+   "dur_ms": 1251,
+   "tool": "bash",
+   "is_error": false,
+   "command": "pip install pyelftools -q 2>&1 | tail -2; python -c \"\nfrom elftools.elf.elffile import ELFFile\nimport glob\np=glob.glob('/usr/local/lib/python3.13/site-packages/numpy.libs/libscipy_openblas64_*.so')[0]\nwith open(p,'rb') as f:\n    e=ELFFile(f)\n    syms=[s.name for s in e.get_section_by_name('.dynsym').iter_symbols()]\nprint(len(syms))\nprint([s for s in syms if 'geev' in s.lower()][:20])\nprint([s for s in syms if 'eig' in s.lower()][:20])\nprint(syms[:20])\n\"",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 62087,
+   "dur_ms": 4928,
+   "tokens_in": 488,
+   "tokens_out": 745,
+   "cache_read": 17856,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 67015,
+   "dur_ms": 1729,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport ctypes, glob, os, numpy as np, time\np=glob.glob(os.path.join(os.path.dirname(os.path.dirname(np.__file__)),'numpy.libs','libscipy_openblas64_*.so'))[0]\nlib=ctypes.CDLL(p)\nfn=getattr(lib,'scipy_dgeev_64_')\ni64=ctypes.c_int64\ndptr=ctypes.POINTER(ctypes.c_double)\nfn.argtypes=[ctypes.c_char_p,ctypes.c_char_p,ctypes.POINTER(i64),dptr,ctypes.POINTER(i64),dptr,dptr,dptr,ctypes.POINTER(i64),dptr,ctypes.POINTER(i64),dptr,ctypes.POINTER(i64),ctypes.POINTER(i64)]\nfn.restype=None\n\ndef eig(A):\n    n=A.shape[0]\n    a=np.array(A,dtype=np.float64,order='F',copy=True)\n    wr=np.empty(n,dtype=np.float64); wi=np.empty(n,dtype=np.float64); vr=np.empty((n,n),dtype=np.float64,order='F')\n    lwork=i64(max(4*n,1)); work=np.empty(max(4*n,1),dtype=np.float64)\n    info=i64(0); nn=i64(n); lda=i64(n); ldvl=i64(1); ldvr=i64(n)\n    fn(b'N',b'V',ctypes.byref(nn),a.ctypes.data_as(dptr),ctypes.byref(lda),wr.ctypes.data_as(dptr),wi.ctypes.data_as(dptr),None,ctypes.byref(ldvl),vr.ctypes.data_as(dptr),ctypes.byref(ldvr),work.ctypes.data_as(dptr),ctypes.byref(lwork),ctypes.byref(info))\n    return wr,wi,vr,int(info.value)\n\nrng=np.random.default_rng(1); bad=0\nfor n in range(2,11):\n  for t in range(1000):\n    A=rng.normal(size=(n,n))\n    wr,wi,vr,info=eig(A)\n    idx=int(np.argmax(np.hypot(wr,wi)))\n    if wi[idx]==0:\n      val=wr[idx]; vec=vr[:,idx].copy()\n    else:\n      j=idx if wi[idx]>0 else idx-1\n      val=wr[j]+1j*wi[j]; vec=vr[:,j]+1j*vr[:,j+1]\n    if not np.allclose(A@vec,val*vec):\n      bad+=1; print('bad',n,info)\nprint('bad',bad)\nfor n in [2,4,6,8,10]:\n    A=rng.normal(size=(n,n))\n    eig(A)\n    ts=[]\n    for _ in range(3000):\n        t=time.perf_counter(); eig(A); ts.append(time.perf_counter()-t)\n    print(n,round(np.median(ts)*1e6,2))\nPY",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 68762,
+   "dur_ms": 6173,
+   "tokens_in": 93,
+   "tokens_out": 404,
+   "cache_read": 19456,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 74935,
+   "dur_ms": 664,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport re\np='eigen.py'\ns=open(p).read()\ns=s.replace('import numpy as np\\n', '''import numpy as np\n\ntry:\n    from scipy.linalg.lapack import dgeev as _dgeev\nexcept Exception:  # pragma: no cover\n    _dgeev = None\n''')\ns=s.replace('''    # beat this reference solution!\n    eigenvalues, eigenvectors = np.linalg.eig(A)\n    idx = np.argmax(np.abs(eigenvalues))\n    return eigenvalues[idx], eigenvectors[:, idx]''','''    if _dgeev is not None:\n        wr, wi, _vl, vr, info = _dgeev(\n            A, compute_vl=0, compute_vr=1, overwrite_a=0\n        )\n        if info == 0:\n            idx = int(np.argmax(np.hypot(wr, wi)))\n            if wi[idx] == 0.0:\n                return wr[idx], vr[:, idx].copy()\n            if wi[idx] > 0.0:\n                j = idx\n            else:\n                j = idx - 1\n            return (wr[j] + 1j * wi[j],\n                    vr[:, j] + 1j * vr[:, j + 1])\n\n    eigenvalues, eigenvectors = np.linalg.eig(A)\n    idx = np.argmax(np.abs(eigenvalues))\n    return eigenvalues[idx], eigenvectors[:, idx]''')\nopen(p,'w').write(s)\nPY\ncat /app/eigen.py && python /app/eval.py",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 75615,
+   "dur_ms": 2257,
+   "tokens_in": 555,
+   "tokens_out": 304,
+   "cache_read": 20736,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 77872,
+   "dur_ms": 2051,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport numpy as np, time\nfrom eigen import find_dominant_eigenvalue_and_eigenvector as f\nrng=np.random.default_rng(123)\nfor n in range(1,11):\n    # accuracy\n    for _ in range(2000):\n        A=rng.normal(size=(n,n))\n        val,vec=f(A)\n        if not np.allclose(A@vec,val*vec):\n            print('BAD',n,np.linalg.norm(A@vec-val*vec)); raise SystemExit\n    A=rng.normal(size=(n,n))\n    ts=[]; rs=[]\n    for _ in range(200):\n        B=rng.normal(size=(n,n))\n        t=time.perf_counter(); f(B); ts.append(time.perf_counter()-t)\n        t=time.perf_counter(); np.linalg.eig(B); rs.append(time.perf_counter()-t)\n    print(n, round(np.median(ts)*1e6,2), round(np.median(rs)*1e6,2), round(np.median(rs)/np.median(ts),2))\nPY",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 79938,
+   "dur_ms": 4166,
+   "tokens_in": 184,
+   "tokens_out": 372,
+   "cache_read": 21696,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 84104,
+   "dur_ms": 1959,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport numpy as np, time\nfrom scipy.linalg.lapack import dgeev\nrng=np.random.default_rng(0)\nfor n in [2,6,10]:\n  A=rng.normal(size=(n,n))\n  wr,wi,vl,vr,info=dgeev(A,compute_vl=0,compute_vr=1)\n  funcs={\n   'hypot_argmax_copy':lambda: (lambda idx: (wr[idx],vr[:,idx].copy()))(int(np.argmax(np.hypot(wr,wi)))),\n   'sq_argmax_copy':lambda: (lambda idx: (wr[idx],vr[:,idx].copy()))(int(np.argmax(wr*wr+wi*wi))),\n   'abs_argmax_view':lambda: (lambda idx: (wr[idx],vr[:,idx]))(int(np.argmax(np.abs(wr+1j*wi)))),\n   'sq_argmax_view':lambda: (lambda idx: (wr[idx],vr[:,idx]))(int(np.argmax(wr*wr+wi*wi))),\n   'argmax_only':lambda: int(np.argmax(wr*wr+wi*wi)),\n  }\n  for name,f in funcs.items():\n    f(); ts=[]\n    for _ in range(20000):\n      t=time.perf_counter(); f(); ts.append(time.perf_counter()-t)\n    print(n,name,round(np.median(ts)*1e9,1),'ns')\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 86078,
+   "dur_ms": 2578,
+   "tokens_in": 193,
+   "tokens_out": 308,
+   "cache_read": 22784,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 88656,
+   "dur_ms": 1350,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport numpy as np, time\nrng=np.random.default_rng(0)\nfor n in [2,6,10]:\n  wr=rng.normal(size=n); wi=rng.normal(size=n)\n  funcs={\n   'np':lambda: int(np.argmax(wr*wr+wi*wi)),\n   'nphypot':lambda: int(np.argmax(np.hypot(wr,wi))),\n   'py_zip':lambda: max(range(n), key=lambda i: wr[i]*wr[i]+wi[i]*wi[i]),\n   'py_enum':lambda: max(enumerate(zip(wr,wi)), key=lambda p: p[1][0]*p[1][0]+p[1][1]*p[1][1])[0],\n   'py_list':lambda: max(range(n), key=(wr*wr+wi*wi).__getitem__),\n  }\n  for name,f in funcs.items():\n    f(); ts=[]\n    for _ in range(20000):\n      t=time.perf_counter(); f(); ts.append(time.perf_counter()-t)\n    print(n,name,round(np.median(ts)*1e9,1),'ns')\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 90034,
+   "dur_ms": 1693,
+   "tokens_in": 212,
+   "tokens_out": 225,
+   "cache_read": 23424,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 91727,
+   "dur_ms": 1578,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport numpy as np, time\nfrom scipy.linalg.lapack import dgeev\nrng=np.random.default_rng(0)\nfor n in [2,4,6,8,10]:\n  A=rng.normal(size=(n,n))\n  for name,kw in [('none',dict(compute_vl=0,compute_vr=0)),('vr',dict(compute_vl=0,compute_vr=1)),('both',dict(compute_vl=1,compute_vr=1))]:\n    f=lambda: dgeev(A,**kw)\n    f(); ts=[]\n    for _ in range(5000):\n      t=time.perf_counter(); f(); ts.append(time.perf_counter()-t)\n    print(n,name,round(np.median(ts)*1e6,2))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 93322,
+   "dur_ms": 22474,
+   "tokens_in": 132,
+   "tokens_out": 282,
+   "cache_read": 23936,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 115796,
+   "dur_ms": 2178,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport numpy as np,time\nfrom scipy.linalg.lapack import dgeev\nfrom eigen import find_dominant_eigenvalue_and_eigenvector as f\nrng=np.random.default_rng(0)\nfor n in [6,8,10]:\n  A=rng.normal(size=(n,n))\n  def g(): return dgeev(A,compute_vl=0,compute_vr=1,overwrite_a=0)\n  def h():\n    wr,wi,_vl,vr,info=g()\n    idx=int(np.argmax(np.hypot(wr,wi)))\n    return wr[idx],vr[:,idx].copy()\n  for name,fn in [('dgeev',g),('dgeev+post',h),('func',lambda:f(A)),('ref',lambda:np.linalg.eig(A))]:\n    fn(); ts=[]\n    for _ in range(5000):\n      t=time.perf_counter(); fn(); ts.append(time.perf_counter()-t)\n    print(n,name,round(np.median(ts)*1e6,2))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 117991,
+   "dur_ms": 10328,
+   "tokens_in": 145,
+   "tokens_out": 649,
+   "cache_read": 28416,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 128319,
+   "dur_ms": 3301,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport numpy as np, time\nrng=np.random.default_rng(0)\n\ndef alg(A, iters=20, rqi=4, tol=1e-10):\n    n=A.shape[0]\n    V=rng.normal(size=(n,2))\n    # orthonormalize\n    for j in range(2):\n        V[:,j]-=V[:,:j]@(V[:,:j].T@V[:,j])\n        V[:,j]/=np.linalg.norm(V[:,j])\n    for it in range(iters):\n        W=A@V\n        # MGS\n        for j in range(2):\n            W[:,j]-=V[:,:j]@(V[:,:j].T@W[:,j])\n            W[:,j]/=np.linalg.norm(W[:,j])\n        V=W\n    B=V.T@A@V\n    ev,evec=np.linalg.eig(B)\n    idx=np.argmax(np.abs(ev)); lam=ev[idx]; y=evec[:,idx]; x=V@y\n    x=x/np.linalg.norm(x)\n    lam=(x.conj()@(A@x))/(x.conj()@x)\n    for k in range(rqi):\n        M=A-lam*np.eye(n)\n        try:\n            z=np.linalg.solve(M,x)\n        except np.linalg.LinAlgError:\n            return lam,x,False,k\n        nz=np.linalg.norm(z)\n        if nz==0 or not np.isfinite(nz): break\n        x=z/nz\n        lam=(x.conj()@(A@x))/(x.conj()@x)\n        r=np.linalg.norm(A@x-lam*x)/np.linalg.norm(x)\n        if r<tol: return lam,x,True,k\n    r=np.linalg.norm(A@x-lam*x)/np.linalg.norm(x)\n    return lam,x,r<tol,rqi\n\nfor iters in [10,20,30,50]:\n  print('iters',iters)\n  for n in [2,4,6,8,10]:\n    fails=0; worst=0; its=[]\n    for t in range(200):\n        A=rng.normal(size=(n,n))\n        lam,x,ok,k=alg(A,iters=iters)\n        r=np.linalg.norm(A@x-lam*x)/np.linalg.norm(x)\n        worst=max(worst,r)\n        if not np.allclose(A@x,lam*x): fails+=1\n    print(n,'fails',fails,'worst',worst)\nPY",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 131634,
+   "dur_ms": 4699,
+   "tokens_in": 367,
+   "tokens_out": 505,
+   "cache_read": 30592,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 136333,
+   "dur_ms": 366,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport numpy as np\nrng=np.random.default_rng(1)\ndef alg(A, iters=20, rqi=4, tol=1e-10):\n    n=A.shape[0]\n    V=rng.normal(size=(n,2))\n    for j in range(2):\n        V[:,j]-=V[:,:j]@(V[:,:j].T@V[:,j])\n        V[:,j]/=np.linalg.norm(V[:,j])\n    for it in range(iters):\n        W=A@V\n        for j in range(2):\n            W[:,j]-=V[:,:j]@(V[:,:j].T@W[:,j])\n            W[:,j]/=np.linalg.norm(W[:,j])\n        V=W\n    B=V.T@A@V\n    ev,evec=np.linalg.eig(B)\n    idx=np.argmax(np.abs(ev)); lam=ev[idx]; y=evec[:,idx]; x=V@y\n    x=x/np.linalg.norm(x)\n    lam=(x.conj()@(A@x))/(x.conj()@x)\n    print('start',lam,'true ev',np.linalg.eigvals(A),'res0',np.linalg.norm(A@x-lam*x))\n    for k in range(rqi):\n        M=A-lam*np.eye(n)\n        z=np.linalg.solve(M,x)\n        x=z/np.linalg.norm(z)\n        lam=(x.conj()@(A@x))/(x.conj()@x)\n        r=np.linalg.norm(A@x-lam*x)\n        print(k,lam,r)\n        if r<tol: break\n    return lam,x\nfor t in range(1000):\n    A=rng.normal(size=(2,2))\n    lam,x=alg(A)\n    r=np.linalg.norm(A@x-lam*x)/np.linalg.norm(x)\n    if not np.allclose(A@x,lam*x):\n        print('BAD matrix',A); break\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 136716,
+   "dur_ms": 5841,
+   "tokens_in": 2802,
+   "tokens_out": 617,
+   "cache_read": 31936,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 142557,
+   "dur_ms": 4676,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport numpy as np\nrng=np.random.default_rng(0)\n\ndef orth(W):\n    n,m=W.shape\n    for j in range(m):\n        for k in range(j):\n            W[:,j]-=W[:,k]*np.vdot(W[:,k],W[:,j])\n        W[:,j]/=np.linalg.norm(W[:,j])\n    return W\n\ndef alg(A, iters=20, rqi=6, tol=1e-10):\n    n=A.shape[0]\n    V=orth(rng.normal(size=(n,2)))\n    for it in range(iters):\n        V=orth(A@V)\n    B=V.T@A@V\n    ev,evec=np.linalg.eig(B)\n    idx=np.argmax(np.abs(ev)); lam=ev[idx]; y=evec[:,idx]; x=V@y\n    x=x/np.linalg.norm(x)\n    lam=(x.conj()@(A@x))/(x.conj()@x)\n    for k in range(rqi):\n        M=A-lam*np.eye(n)\n        try: z=np.linalg.solve(M,x)\n        except np.linalg.LinAlgError: break\n        nz=np.linalg.norm(z)\n        if nz==0 or not np.isfinite(nz): break\n        x=z/nz\n        lam=(x.conj()@(A@x))/(x.conj()@x)\n        r=np.linalg.norm(A@x-lam*x)/np.linalg.norm(x)\n        if r<tol: return lam,x,True,k\n    r=np.linalg.norm(A@x-lam*x)/np.linalg.norm(x)\n    return lam,x,r<tol,rqi\n\nfor iters in [5,10,20,30,50]:\n  print('iters',iters)\n  for n in [2,4,6,8,10]:\n    fails=0; worst=0; its=[]\n    for t in range(300):\n        A=rng.normal(size=(n,n))\n        lam,x,ok,k=alg(A,iters=iters)\n        r=np.linalg.norm(A@x-lam*x)/np.linalg.norm(x)\n        worst=max(worst,r); its.append(k)\n        if not np.allclose(A@x,lam*x): fails+=1\n    print(n,'fails',fails,'worst',f'{worst:.1e}','rqi',np.mean(its))\nPY",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 147250,
+   "dur_ms": 37409,
+   "tokens_in": 595,
+   "tokens_out": 1403,
+   "cache_read": 35968,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 184659,
+   "dur_ms": 865,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/proto_qr.py <<'PY'\nimport numpy as np, math, time\n\ndef givens(a,b):\n    # returns c (real), s complex such that G=[c,s;-conj(s),c] zeroes b\n    if b==0:\n        return 1.0, 0.0+0.0j\n    aa=abs(a)\n    r=math.hypot(aa,abs(b))\n    if aa==0:\n        return 0.0, 1.0+0.0j  # need check orientation; if a=0, c=0, s=b/|b|? formula s=a*conj(b)/(|a|r) invalid\n    c=aa/r\n    s=a*np.conj(b)/(aa*r)\n    return c,s\n\ndef hessenberg(A):\n    H=A.astype(np.complex128).copy()\n    n=H.shape[0]\n    for k in range(n-2):\n        # householder on H[k+1:,k]\n        x=H[k+1:,k].copy()\n        nx=np.linalg.norm(x)\n        if nx==0: continue\n        # choose alpha to avoid cancellation: alpha = -phase(x0)*nx\n        x0=x[0]\n        if x0==0:\n            phase=1.0\n        else:\n            phase=x0/abs(x0)\n        alpha=-phase*nx\n        v=x.copy(); v[0]-=alpha\n        nv=np.vdot(v,v).real\n        if nv<1e-300: continue\n        # left: rows k+1:\n        for j in range(k, n):\n            w=np.vdot(v, H[k+1:,j])\n            H[k+1:,j]-= (2*w/nv)*v\n        # right: cols k+1:\n        for i in range(n):\n            w=np.dot(H[i,k+1:], v)  # row times v\n            H[i,k+1:]-= (2*w/nv)*np.conj(v)\n        H[k+1:,k]=0.0\n        H[k+2:,k]=0.0\n    return H\n\ndef qr_eig(A, maxiter=200, tol=1e-14):\n    H=hessenberg(A)\n    n=H.shape[0]\n    m=n-1\n    it=0\n    while m>0 and it<maxiter:\n        # check deflation, from bottom\n        # find smallest l such that subdiag zero\n        # if trailing subdiag zero\n        if abs(H[m,m-1]) <= tol*(abs(H[m-1,m-1])+abs(H[m,m])+1e-300):\n            H[m,m-1]=0\n            m-=1\n            it=0\n            continue\n        # could also check if leading part split: find l\n        l=m\n        while l>0:\n            if abs(H[l,l-1]) <= tol*(abs(H[l-1,l-1])+abs(H[l,l])+1e-300):\n                H[l,l-1]=0\n                break\n            l-=1\n        # active block l..m\n        if m-l==0:\n            m-=1; it=0; continue\n        # shift from trailing 2x2\n        a=H[m-1,m-1]; b=H[m-1,m]; c=H[m,m-1]; d=H[m,m]\n        disc=np.sqrt((a-d)*(a-d)+4*b*c)\n        mu1=(a+d+disc)/2\n        mu2=(a+d-disc)/2\n        mu=mu1 if abs(mu1-d)<=abs(mu2-d) else mu2\n        # apply QR step on block l..m\n        # subtract shift on diagonal l..m\n        for i in range(l,m+1):\n            H[i,i]-=mu\n        cs=[]\n        for k in range(l,m):\n            cc,ss=givens(H[k,k],H[k+1,k])\n            cs.append((cc,ss))\n            # left apply G rows k,k+1 for cols k..m\n            for j in range(k,m+1):\n                a0=H[k,j]; b0=H[k+1,j]\n                H[k,j]=cc*a0+ss*b0\n                H[k+1,j]=-np.conj(ss)*a0+cc*b0\n        # right apply G^H columns k,k+1 increasing\n        for k in range(l,m):\n            cc,ss=cs[k-l]\n            for i in range(l,k+2):  # rows l..k+1 (above/equal might include zeros)\n                a0=H[i,k]; b0=H[i,k+1]\n                H[i,k]=cc*a0+np.conj(ss)*b0\n                H[i,k+1]=-ss*a0+cc*b0\n        # add shift back\n        for i in range(l,m+1):\n            H[i,i]+=mu\n        it+=1\n        # after step, maybe check deflation next loop\n    return np.diag(H).copy(), H, it, m\n\nif __name__=='__main__':\n    rng=np.random.default_rng(0)\n    for n in range(2,11):\n        worst=0; maxbad=0; its=[]; fails=0\n        for t in range(200):\n            A=rng.normal(size=(n,n))\n            ev,H,it,m=qr_eig(A)\n            true=np.linalg.eigvals(A)\n            # compare sorted by angle/magnitude: just measure max matching distance\n            d=np.max(np.min(np.abs(ev[:,None]-true[None,:]),axis=1))\n            worst=max(worst,d)\n            if m>0: fails+=1\n            its.append(it)\n            if d>1e-8: maxbad+=1\n        print(n,'worst',f'{worst:.2e}','bad',maxbad,'unconv',fails,'iters',np.mean(its))\nPY\npython /tmp/proto_qr.py",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 185541,
+   "dur_ms": 1712,
+   "tokens_in": 277,
+   "tokens_out": 119,
+   "cache_read": 44160,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 187253,
+   "dur_ms": 3421,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sed -i 's/        H\\[k+1:,\\k\\]=0.0/        # keep subdiagonal/' /tmp/proto_qr.py; grep -n 'H\\[k' /tmp/proto_qr.py | head -20; python /tmp/proto_qr.py",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 190689,
+   "dur_ms": 2492,
+   "tokens_in": 405,
+   "tokens_out": 173,
+   "cache_read": 44672,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 193181,
+   "dur_ms": 246,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && python - <<'PY'\nimport numpy as np\nfrom proto_qr import hessenberg, qr_eig\nrng=np.random.default_rng(0)\nA=rng.normal(size=(5,5))\nH=hessenberg(A)\nnp.set_printoptions(precision=3,suppress=True)\nprint(H)\nprint('subdiag',np.diag(H,-1))\nprint('eig H',np.sort_complex(np.linalg.eigvals(H)))\nprint('eig A',np.sort_complex(np.linalg.eigvals(A)))\nprint(qr_eig(A)[2:])\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 193443,
+   "dur_ms": 2027,
+   "tokens_in": 377,
+   "tokens_out": 53,
+   "cache_read": 45440,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 195470,
+   "dur_ms": 16,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sed -n '45,120p' /tmp/proto_qr.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 195534,
+   "dur_ms": 1701,
+   "tokens_in": 893,
+   "tokens_out": 306,
+   "cache_read": 46144,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 197235,
+   "dur_ms": 325,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && python - <<'PY'\nimport numpy as np\nfrom proto_qr import hessenberg\nrng=np.random.default_rng(0)\nA=rng.normal(size=(5,5)); H=hessenberg(A); n=5; tol=1e-14; m=n-1; it=0\nwhile m>0 and it<5:\n    print('m',m,'sub',abs(H[m,m-1]),'crit',tol*(abs(H[m-1,m-1])+abs(H[m,m])+1e-300))\n    if abs(H[m,m-1]) <= tol*(abs(H[m-1,m-1])+abs(H[m,m])+1e-300):\n        print('deflate'); H[m,m-1]=0; m-=1; it=0; continue\n    l=m\n    while l>0:\n        if abs(H[l,l-1]) <= tol*(abs(H[l-1,l-1])+abs(H[l,l])+1e-300):\n            H[l,l-1]=0; break\n        l-=1\n    print('l',l)\n    if m-l==0:\n        m-=1; it=0; continue\n    break\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 197574,
+   "dur_ms": 25974,
+   "tokens_in": 43,
+   "tokens_out": 2604,
+   "cache_read": 47360,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 223548,
+   "dur_ms": 5561,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/numba_eig.py <<'PY'\nimport math\nimport cmath\nimport numpy as np\nfrom numba import njit\n\n@njit(cache=True)\ndef _hessenberg(A):\n    n = A.shape[0]\n    H = np.empty((n, n), dtype=np.complex128)\n    for i in range(n):\n        for j in range(n):\n            H[i, j] = A[i, j]\n    v = np.empty(n, dtype=np.complex128)\n    for k in range(n - 2):\n        s = 0.0\n        for i in range(k + 1, n):\n            z = H[i, k]\n            s += z.real * z.real + z.imag * z.imag\n        nx = math.sqrt(s)\n        if nx == 0.0:\n            continue\n        x0 = H[k + 1, k]\n        ax0 = abs(x0)\n        if ax0 == 0.0:\n            phase = 1.0 + 0.0j\n        else:\n            phase = x0 / ax0\n        alpha = -phase * nx\n        nv = 0.0\n        for i in range(k + 1, n):\n            v[i] = H[i, k]\n        v[k + 1] -= alpha\n        for i in range(k + 1, n):\n            z = v[i]\n            nv += z.real * z.real + z.imag * z.imag\n        if nv < 1.0e-300:\n            continue\n        inv2 = 2.0 / nv\n        for j in range(k, n):\n            w = 0.0j\n            for i in range(k + 1, n):\n                w += np.conj(v[i]) * H[i, j]\n            w *= inv2\n            for i in range(k + 1, n):\n                H[i, j] -= w * v[i]\n        for i in range(n):\n            w = 0.0j\n            for j in range(k + 1, n):\n                w += H[i, j] * v[j]\n            w *= inv2\n            for j in range(k + 1, n):\n                H[i, j] -= w * np.conj(v[j])\n        for i in range(k + 2, n):\n            H[i, k] = 0.0\n    return H\n\n\n@njit(cache=True)\ndef _dominant_eigenvalue(A):\n    H = _hessenberg(A)\n    n = H.shape[0]\n    m = n - 1\n    it = 0\n    maxit = 2000\n    cc = np.empty(n, dtype=np.float64)\n    ss = np.empty(n, dtype=np.complex128)\n    while m > 0:\n        if it > maxit:\n            return 0.0j, False\n        if abs(H[m, m - 1]) <= 1.0e-14 * (abs(H[m - 1, m - 1]) + abs(H[m, m])):\n            H[m, m - 1] = 0.0\n            m -= 1\n            it = 0\n            continue\n        l = m\n        while l > 0:\n            if abs(H[l, l - 1]) <= 1.0e-14 * (abs(H[l - 1, l - 1]) + abs(H[l, l])):\n                H[l, l - 1] = 0.0\n                break\n            l -= 1\n        if m == l:\n            m -= 1\n            it = 0\n            continue\n        a = H[m - 1, m - 1]\n        b = H[m - 1, m]\n        c = H[m, m - 1]\n        d = H[m, m]\n        disc = cmath.sqrt((a - d) * (a - d) + 4.0 * b * c)\n        mu1 = 0.5 * (a + d + disc)\n        mu2 = 0.5 * (a + d - disc)\n        if abs(mu1 - d) <= abs(mu2 - d):\n            mu = mu1\n        else:\n            mu = mu2\n        for i in range(l, m + 1):\n            H[i, i] -= mu\n        for k in range(l, m):\n            a0 = H[k, k]\n            b0 = H[k + 1, k]\n            aa = abs(a0)\n            bb = abs(b0)\n            r = math.sqrt(aa * aa + bb * bb)\n            if r == 0.0:\n                c0 = 1.0\n                s0 = 0.0j\n            elif aa == 0.0:\n                c0 = 0.0\n                s0 = np.conj(b0) / bb\n            else:\n                c0 = aa / r\n                s0 = a0 * np.conj(b0) / (aa * r)\n            cc[k] = c0\n            ss[k] = s0\n            for j in range(k, m + 1):\n                a1 = H[k, j]\n                b1 = H[k + 1, j]\n                H[k, j] = c0 * a1 + s0 * b1\n                H[k + 1, j] = -np.conj(s0) * a1 + c0 * b1\n        for k in range(l, m):\n            c0 = cc[k]\n            s0 = ss[k]\n            for i in range(l, k + 2):\n                a1 = H[i, k]\n                b1 = H[i, k + 1]\n                H[i, k] = c0 * a1 + np.conj(s0) * b1\n                H[i, k + 1] = -s0 * a1 + c0 * b1\n        for i in range(l, m + 1):\n            H[i, i] += mu\n        it += 1\n    idx = 0\n    best = abs(H[0, 0])\n    for i in range(1, n):\n        x = abs(H[i, i])\n        if x > best:\n            best = x\n            idx = i\n    return H[idx, idx], True\n\n\n@njit(cache=True)\ndef _eigenvector_for(A, lam):\n    n = A.shape[0]\n    scale = 0.0\n    for i in range(n):\n        for j in range(n):\n            z = A[i, j]\n            if z < 0.0:\n                z = -z\n            if z > scale:\n                scale = z\n    shift = lam + 1.0e-13 * (scale + 1.0)\n    M = np.empty((n, n), dtype=np.complex128)\n    for i in range(n):\n        for j in range(n):\n            M[i, j] = A[i, j]\n        M[i, i] -= shift\n    piv = np.empty(n, dtype=np.int64)\n    for k in range(n):\n        p = k\n        maxv = abs(M[k, k])\n        for i in range(k + 1, n):\n            v = abs(M[i, k])\n            if v > maxv:\n                maxv = v\n                p = i\n        piv[k] = p\n        if p != k:\n            for j in range(n):\n                tmp = M[k, j]\n                M[k, j] = M[p, j]\n                M[p, j] = tmp\n        for i in range(k + 1, n):\n            f = M[i, k] / M[k, k]\n            M[i, k] = f\n            for j in range(k + 1, n):\n                M[i, j] -= f * M[k, j]\n    x = np.empty(n, dtype=np.complex128)\n    for i in range(n):\n        x[i] = 1.0 + 0.137 * i\n    for k in range(n):\n        p = piv[k]\n        if p != k:\n            tmp = x[k]\n            x[k] = x[p]\n            x[p] = tmp\n    for i in range(n):\n        s = x[i]\n        for j in range(i):\n            s -= M[i, j] * x[j]\n        x[i] = s\n    for i in range(n - 1, -1, -1):\n        s = x[i]\n        for j in range(i + 1, n):\n            s -= M[i, j] * x[j]\n        x[i] = s / M[i, i]\n    nrm = 0.0\n    for i in range(n):\n        z = x[i]\n        nrm += z.real * z.real + z.imag * z.imag\n    nrm = math.sqrt(nrm)\n    for i in range(n):\n        x[i] /= nrm\n    return x\n\n\n@njit(cache=True)\ndef _refine(A, lam, x):\n    n = A.shape[0]\n    # Rayleigh quotient\n    Ax = np.empty(n, dtype=np.complex128)\n    for i in range(n):\n        s = 0.0j\n        for j in range(n):\n            s += A[i, j] * x[j]\n        Ax[i] = s\n    num = 0.0j\n    den = 0.0\n    for i in range(n):\n        num += np.conj(x[i]) * Ax[i]\n        den += x[i].real * x[i].real + x[i].imag * x[i].imag\n    lam2 = num / den\n    r = 0.0\n    for i in range(n):\n        z = Ax[i] - lam2 * x[i]\n        r += z.real * z.real + z.imag * z.imag\n    return lam2, math.sqrt(r)\n\n\n@njit(cache=True)\ndef solve(A):\n    lam, ok = _dominant_eigenvalue(A)\n    if not ok:\n        return 0.0j, np.zeros(A.shape[0], dtype=np.complex128), False\n    x = _eigenvector_for(A, lam)\n    lam2, res = _refine(A, lam, x)\n    return lam2, x, res < 1.0e-9\nPY\ncd /tmp && python - <<'PY'\nimport numpy as np, time\nfrom numba_eig import solve\nrng=np.random.default_rng(0)\n# compile\nprint(solve(rng.normal(size=(3,3))))\nfor n in range(2,11):\n    bad=0; fallback=0; worst=0\n    for t in range(2000):\n        A=rng.normal(size=(n,n))\n        lam,x,ok=solve(A)\n        if not ok:\n            fallback+=1\n        r=np.linalg.norm(A@x-lam*x)/max(np.linalg.norm(x),1e-300)\n        worst=max(worst,r)\n        if not np.allclose(A@x,lam*x): bad+=1\n    print(n,'bad',bad,'fallback',fallback,'worst',worst)\nfor n in [2,4,6,8,10]:\n    A=rng.normal(size=(n,n))\n    solve(A)\n    ts=[]\n    for _ in range(5000):\n        t=time.perf_counter(); solve(A); ts.append(time.perf_counter()-t)\n    print('time',n,round(np.median(ts)*1e6,2))\nPY",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 229129,
+   "dur_ms": 2679,
+   "tokens_in": 328,
+   "tokens_out": 250,
+   "cache_read": 54080,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 231808,
+   "dur_ms": 2091,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && python - <<'PY'\nimport numpy as np,time\nimport numba_eig as ne\nrng=np.random.default_rng(0)\nfor n in [6,8,10]:\n A=rng.normal(size=(n,n))\n lam,ok=ne._dominant_eigenvalue(A); x=ne._eigenvector_for(A,lam)\n funcs=[('dom',lambda: ne._dominant_eigenvalue(A)),('vec',lambda: ne._eigenvector_for(A,lam)),('ref',lambda: ne._refine(A,lam,x)),('solve',lambda: ne.solve(A))]\n for name,f in funcs:\n  f(); ts=[]\n  for _ in range(10000):\n   t=time.perf_counter(); f(); ts.append(time.perf_counter()-t)\n  print(n,name,round(np.median(ts)*1e6,2))\nPY",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 233915,
+   "dur_ms": 6651,
+   "tokens_in": 132,
+   "tokens_out": 533,
+   "cache_read": 54848,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 240566,
+   "dur_ms": 22528,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport numpy as np\nrng=np.random.default_rng(0)\n\ndef orth(W):\n    n,m=W.shape\n    for j in range(m):\n        for k in range(j):\n            W[:,j]-=W[:,k]*np.vdot(W[:,k],W[:,j])\n        W[:,j]/=np.linalg.norm(W[:,j])\n    return W\n\ndef alg(A, iters=20, m=2, delta=1e-13):\n    n=A.shape[0]\n    V=orth(rng.normal(size=(n,m)))\n    for it in range(iters):\n        V=orth(A@V)\n    B=V.T@A@V\n    ev,evec=np.linalg.eig(B)\n    idx=np.argmax(np.abs(ev)); lam=ev[idx]; y=evec[:,idx]; x=V@y\n    # inverse iteration with shift\n    M=A-(lam+delta)*np.eye(n)\n    try: z=np.linalg.solve(M,x)\n    except np.linalg.LinAlgError: return lam,x,False\n    if not np.all(np.isfinite(z)): return lam,x,False\n    z/=np.linalg.norm(z)\n    lamr=(z.conj()@(A@z))/(z.conj()@z)\n    r=np.linalg.norm(A@z-lamr*z)/np.linalg.norm(z)\n    return lamr,z,r<1e-9\n\nfor m in [2,3,4]:\n  print('m',m)\n  for iters in [5,10,15,20,30,40,60]:\n    row=[]\n    for n in [4,6,8,10]:\n      fails=0\n      for t in range(300):\n        A=rng.normal(size=(n,n))\n        lam,x,ok=alg(A,iters=iters,m=m)\n        r=np.linalg.norm(A@x-lam*x)/np.linalg.norm(x)\n        if not np.allclose(A@x,lam*x): fails+=1\n      row.append(fails)\n    print(iters,row)\nPY",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 263112,
+   "dur_ms": 6864,
+   "tokens_in": 335,
+   "tokens_out": 483,
+   "cache_read": 56256,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 269976,
+   "dur_ms": 948,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && python - <<'PY'\n# read numba_eig source, modify to return iteration count in a debug wrapper by copying function? quick via sed create file\nsrc=open('numba_eig.py').read()\nstart=src.index('@njit(cache=True)\\ndef _dominant_eigenvalue')\nend=src.index('@njit(cache=True)\\ndef _eigenvector_for')\nfn=src[start:end].replace('@njit(cache=True)','@njit').replace('def _dominant_eigenvalue','def _dominant_eigenvalue_dbg').replace('return 0.0j, False','return 0.0j, False, it').replace('return H[idx, idx], True','return H[idx, idx], True, it')\n# add counter increments on deflation? total actual QR steps only it resets; create separate total\nfn=fn.replace('    it = 0\\n    maxit = 2000','    it = 0\\n    total = 0\\n    maxit = 2000')\nfn=fn.replace('        it += 1\\n','        it += 1\\n        total += 1\\n')\nfn=fn.replace('return H[idx, idx], True, it','return H[idx, idx], True, total')\nns={}; exec('import math\\nimport cmath\\nimport numpy as np\\nfrom numba import njit\\n'+fn,ns)\ndbg=ns['_dominant_eigenvalue_dbg']\nimport numpy as np\nrng=np.random.default_rng(0)\nfor n in range(2,11):\n vals=[]; bad=0\n for _ in range(500):\n  A=rng.normal(size=(n,n)); v,ok,t=dbg(A); vals.append(t)\n  if not ok: bad+=1\n print(n,'mean',np.mean(vals),'max',max(vals),'median',np.median(vals),'bad',bad)\nPY",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 270940,
+   "dur_ms": 2166,
+   "tokens_in": 231,
+   "tokens_out": 408,
+   "cache_read": 57920,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 273106,
+   "dur_ms": 2168,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && python - <<'PY'\nsrc=open('numba_eig.py').read()\n# insert total count into original\nsrc=src.replace('    it = 0\\n    maxit = 2000','    it = 0\\n    total = 0\\n    maxit = 2000')\nsrc=src.replace('        it += 1\\n','        it += 1\\n        total += 1\\n')\nsrc=src.replace('    return H[idx, idx], True\\n','    return H[idx, idx], True, total\\n')\n# rename function to avoid conflict in fresh import\nsrc=src.replace('def _dominant_eigenvalue(A):','def _dominant_eigenvalue_dbg(A):')\nsrc=src.replace('def solve(A):\\n    lam, ok = _dominant_eigenvalue(A)','def solve(A):\\n    lam, ok = _dominant_eigenvalue_dbg(A)[:2]')\nopen('numba_dbg.py','w').write(src)\nPY\npython - <<'PY'\nimport numpy as np\nfrom numba_dbg import _dominant_eigenvalue_dbg as dbg\nrng=np.random.default_rng(0)\nfor n in range(2,11):\n vals=[]; bad=0\n for _ in range(500):\n  A=rng.normal(size=(n,n)); v,ok,t=dbg(A); vals.append(t)\n  if not ok: bad+=1\n print(n,'mean',round(np.mean(vals),1),'max',max(vals),'median',np.median(vals),'bad',bad)\nPY",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 275289,
+   "dur_ms": 1438,
+   "tokens_in": 360,
+   "tokens_out": 222,
+   "cache_read": 58560,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 276727,
+   "dur_ms": 2890,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && sed -i 's/return 0.0j, False$/return 0.0j, False, it/' numba_dbg.py && python - <<'PY'\nimport numpy as np\nfrom numba_dbg import _dominant_eigenvalue_dbg as dbg\nrng=np.random.default_rng(0)\nfor n in range(2,11):\n vals=[]; bad=0\n for _ in range(500):\n  A=rng.normal(size=(n,n)); v,ok,t=dbg(A); vals.append(t)\n  if not ok: bad+=1\n print(n,'mean',round(np.mean(vals),1),'max',max(vals),'median',np.median(vals),'bad',bad)\nPY",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 279633,
+   "dur_ms": 6370,
+   "tokens_in": 186,
+   "tokens_out": 455,
+   "cache_read": 59136,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 286003,
+   "dur_ms": 795,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && python - <<'PY'\nimport numpy as np,time\nfrom scipy.linalg.lapack import dgeev\nfrom numba import njit\nimport numba_eig as ne\n\n@njit(cache=True)\ndef vec_ref(A,lam):\n    x=ne._eigenvector_for(A,lam)\n    lam2,res=ne._refine(A,lam,x)\n    return lam2,x,res<1e-9\n\ndef solve_lap(A):\n    wr,wi,vl,vr,info=dgeev(A,compute_vl=0,compute_vr=0)\n    idx=int(np.argmax(np.hypot(wr,wi)))\n    lam=wr[idx]+1j*wi[idx]\n    return vec_ref(A,lam)\n\nrng=np.random.default_rng(0)\n# compile\nsolve_lap(rng.normal(size=(3,3)))\nfor n in range(2,11):\n bad=0;fb=0\n for _ in range(2000):\n  A=rng.normal(size=(n,n)); lam,x,ok=solve_lap(A)\n  if not ok: fb+=1\n  if not np.allclose(A@x,lam*x): bad+=1\n print('acc',n,bad,fb)\nfor n in [2,4,6,8,10]:\n A=rng.normal(size=(n,n)); solve_lap(A)\n for name,f in [('lap_none+vec',lambda:solve_lap(A)),('scipy_full',lambda:dgeev(A,compute_vl=0,compute_vr=1))]:\n  ts=[]\n  for _ in range(5000):\n   t=time.perf_counter(); f(); ts.append(time.perf_counter()-t)\n  print(n,name,round(np.median(ts)*1e6,2))\nPY",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 286819,
+   "dur_ms": 3434,
+   "tokens_in": 312,
+   "tokens_out": 449,
+   "cache_read": 60544,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 290253,
+   "dur_ms": 2651,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && python - <<'PY'\nimport numpy as np,time\nfrom scipy.linalg.lapack import dgeev\nfrom numba import njit\nimport numba_eig as ne\n\n@njit\ndef vec_ref(A,lam):\n    x=ne._eigenvector_for(A,lam)\n    lam2,res=ne._refine(A,lam,x)\n    return lam2,x,res<1e-9\n\ndef solve_lap(A):\n    wr,wi,vl,vr,info=dgeev(A,compute_vl=0,compute_vr=0)\n    idx=int(np.argmax(np.hypot(wr,wi)))\n    lam=wr[idx]+1j*wi[idx]\n    return vec_ref(A,lam)\n\nrng=np.random.default_rng(0)\nsolve_lap(rng.normal(size=(3,3)))\nfor n in range(2,11):\n bad=0;fb=0\n for _ in range(1000):\n  A=rng.normal(size=(n,n)); lam,x,ok=solve_lap(A)\n  if not ok: fb+=1\n  if not np.allclose(A@x,lam*x): bad+=1\n print('acc',n,bad,fb)\nfor n in [2,4,6,8,10]:\n A=rng.normal(size=(n,n)); solve_lap(A)\n for name,f in [('lap_none+vec',lambda:solve_lap(A)),('scipy_full',lambda:dgeev(A,compute_vl=0,compute_vr=1))]:\n  ts=[]\n  for _ in range(5000):\n   t=time.perf_counter(); f(); ts.append(time.perf_counter()-t)\n  print(n,name,round(np.median(ts)*1e6,2))\nPY",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 292920,
+   "dur_ms": 3726,
+   "tokens_in": 246,
+   "tokens_out": 203,
+   "cache_read": 61248,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 296646,
+   "dur_ms": 1412,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && python - <<'PY'\nimport numpy as np,time\nimport numba_eig as ne\nfrom numba import njit\n# Use debug file hessenberg function same\nrng=np.random.default_rng(0)\nfor n in [6,8,10]:\n A=rng.normal(size=(n,n))\n H=ne._hessenberg(A)\n for name,f in [('hess',lambda:ne._hessenberg(A)),('dom',lambda:ne._dominant_eigenvalue(A))]:\n  f(); ts=[]\n  for _ in range(10000):\n   t=time.perf_counter(); f(); ts.append(time.perf_counter()-t)\n  print(n,name,round(np.median(ts)*1e6,2))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 298077,
+   "dur_ms": 15393,
+   "tokens_in": 59,
+   "tokens_out": 1305,
+   "cache_read": 62144,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 313470,
+   "dur_ms": 5202,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/hqr_proto.py <<'PY'\nimport numpy as np, math\n\ndef sign(a,b):\n    return abs(a) if b>=0 else -abs(a)\n\ndef hqr(a_in):\n    a=a_in.astype(np.float64).copy()\n    n=a.shape[0]\n    wr=np.zeros(n); wi=np.zeros(n)\n    anorm=0.0\n    for i in range(n):\n        for j in range(max(i-1,0),n):\n            anorm+=abs(a[i,j])\n    nn=n-1; t=0.0; total=0\n    while nn>=0:\n        its=0\n        while True:\n            l=nn\n            while l>=1:\n                s=abs(a[l-1,l-1])+abs(a[l,l])\n                if s==0.0: s=anorm\n                if abs(a[l,l-1])+s==s:\n                    a[l,l-1]=0.0\n                    break\n                l-=1\n            x=a[nn,nn]\n            if l==nn:\n                wr[nn]=x+t; wi[nn]=0.0; nn-=1\n            else:\n                y=a[nn-1,nn-1]\n                w=a[nn,nn-1]*a[nn-1,nn]\n                if l==nn-1:\n                    p=0.5*(y-x)\n                    q=p*p+w\n                    z=math.sqrt(abs(q))\n                    x+=t\n                    if q>=0.0:\n                        z=p+sign(z,p)\n                        wr[nn-1]=wr[nn]=x+z\n                        if z!=0.0: wr[nn]=x-w/z\n                        wi[nn-1]=wi[nn]=0.0\n                    else:\n                        wr[nn-1]=wr[nn]=x+p\n                        wi[nn-1]=-z\n                        wi[nn]=z\n                    nn-=2\n                else:\n                    if its==60:\n                        raise RuntimeError('too many')\n                    if its==10 or its==20:\n                        t+=x\n                        for i in range(nn+1): a[i,i]-=x\n                        s=abs(a[nn,nn-1])+abs(a[nn-1,nn-2])\n                        y=x=0.75*s\n                        w=-0.4375*s*s\n                    its+=1; total+=1\n                    m=nn-2\n                    while m>=l:\n                        z=a[m,m]\n                        r=x-z\n                        s=y-z\n                        p=(r*s-w)/a[m+1,m]+a[m,m+1]\n                        q=a[m+1,m+1]-z-r-s\n                        r=a[m+2,m+1]\n                        s=abs(p)+abs(q)+abs(r)\n                        p/=s; q/=s; r/=s\n                        if m==l: break\n                        u=abs(a[m,m-1])*(abs(q)+abs(r))\n                        v=abs(p)*(abs(a[m-1,m-1])+abs(z)+abs(a[m+1,m+1]))\n                        if u+v==v: break\n                        m-=1\n                    for i in range(m+2,nn+1):\n                        a[i,i-2]=0.0\n                        if i!=m+2: a[i,i-3]=0.0\n                    for k in range(m,nn):\n                        if k!=m:\n                            p=a[k,k-1]; q=a[k+1,k-1]; r=0.0\n                            if k!=nn-1: r=a[k+2,k-1]\n                            x=abs(p)+abs(q)+abs(r)\n                            if x!=0.0:\n                                p/=x; q/=x; r/=x\n                        s=math.sqrt(p*p+q*q+r*r)\n                        s=sign(s,p)\n                        if s!=0.0:\n                            if k==m:\n                                if l!=m: a[k,k-1]=-a[k,k-1]\n                            else:\n                                a[k,k-1]=-s*x\n                            p+=s\n                            x=p/s; y=q/s; z=r/s\n                            q/=p; r/=p\n                            for j in range(k,nn+1):\n                                p=a[k,j]+q*a[k+1,j]\n                                if k!=nn-1:\n                                    p+=r*a[k+2,j]\n                                    a[k+2,j]-=p*z\n                                a[k+1,j]-=p*y\n                                a[k,j]-=p*x\n                            mmin=min(nn,k+3)\n                            for i in range(l,mmin+1):\n                                p=x*a[i,k]+y*a[i,k+1]\n                                if k!=nn-1:\n                                    p+=z*a[i,k+2]\n                                    a[i,k+2]-=p*r\n                                a[i,k+1]-=p*q\n                                a[i,k]-=p\n            if not (l<nn-1):\n                break\n    return wr,wi,total\n\nif __name__=='__main__':\n    rng=np.random.default_rng(0)\n    for n in range(2,11):\n        worst=0; bad=0\n        for t in range(500):\n            A=rng.normal(size=(n,n))\n            wr,wi,it=hqr(A)\n            ev=wr+1j*wi\n            true=np.linalg.eigvals(A)\n            d=np.max(np.min(np.abs(ev[:,None]-true[None,:]),axis=1))\n            worst=max(worst,d)\n            if d>1e-8: bad+=1\n        print(n,'worst',f'{worst:.2e}','bad',bad)\nPY\npython /tmp/hqr_proto.py",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 318690,
+   "dur_ms": 4798,
+   "tokens_in": 185,
+   "tokens_out": 255,
+   "cache_read": 66176,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 323488,
+   "dur_ms": 6260,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && python - <<'PY'\nimport numpy as np\nfrom proto_qr import hessenberg\nfrom hqr_proto import hqr\nrng=np.random.default_rng(0)\nfor n in range(2,11):\n    worst=0; bad=0\n    for t in range(500):\n        A=rng.normal(size=(n,n))\n        H=hessenberg(A).real\n        wr,wi,it=hqr(H)\n        ev=wr+1j*wi\n        true=np.linalg.eigvals(A)\n        d=np.max(np.min(np.abs(ev[:,None]-true[None,:]),axis=1))\n        worst=max(worst,d)\n        if d>1e-8: bad+=1\n        if bad and t<3: print('bad ex',n,d)\n    print(n,'worst',f'{worst:.2e}','bad',bad)\nPY",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 329764,
+   "dur_ms": 10576,
+   "tokens_in": 175,
+   "tokens_out": 2531,
+   "cache_read": 67264,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 340340,
+   "dur_ms": 5770,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/numba_real.py <<'PY'\nimport math\nimport numpy as np\nfrom numba import njit\nimport numba_eig as _old\n\n@njit(cache=True)\ndef _hessenberg(A):\n    n = A.shape[0]\n    H = np.empty((n, n), dtype=np.float64)\n    for i in range(n):\n        for j in range(n):\n            H[i, j] = A[i, j]\n    v = np.empty(n, dtype=np.float64)\n    for k in range(n - 2):\n        s = 0.0\n        for i in range(k + 1, n):\n            s += H[i, k] * H[i, k]\n        nx = math.sqrt(s)\n        if nx == 0.0:\n            continue\n        x0 = H[k + 1, k]\n        if x0 >= 0.0:\n            alpha = -nx\n        else:\n            alpha = nx\n        nv = 0.0\n        for i in range(k + 1, n):\n            v[i] = H[i, k]\n        v[k + 1] -= alpha\n        for i in range(k + 1, n):\n            nv += v[i] * v[i]\n        if nv < 1.0e-300:\n            continue\n        inv2 = 2.0 / nv\n        for j in range(k, n):\n            w = 0.0\n            for i in range(k + 1, n):\n                w += v[i] * H[i, j]\n            w *= inv2\n            for i in range(k + 1, n):\n                H[i, j] -= w * v[i]\n        for i in range(n):\n            w = 0.0\n            for j in range(k + 1, n):\n                w += H[i, j] * v[j]\n            w *= inv2\n            for j in range(k + 1, n):\n                H[i, j] -= w * v[j]\n        for i in range(k + 2, n):\n            H[i, k] = 0.0\n    return H\n\n\n@njit(cache=True)\ndef _hqr(a):\n    n = a.shape[0]\n    wr = np.zeros(n, dtype=np.float64)\n    wi = np.zeros(n, dtype=np.float64)\n    anorm = 0.0\n    for i in range(n):\n        j0 = i - 1\n        if j0 < 0:\n            j0 = 0\n        for j in range(j0, n):\n            anorm += abs(a[i, j])\n    nn = n - 1\n    t = 0.0\n    while nn >= 0:\n        its = 0\n        while True:\n            l = nn\n            while l >= 1:\n                s = abs(a[l - 1, l - 1]) + abs(a[l, l])\n                if s == 0.0:\n                    s = anorm\n                if abs(a[l, l - 1]) + s == s:\n                    a[l, l - 1] = 0.0\n                    break\n                l -= 1\n            x = a[nn, nn]\n            if l == nn:\n                wr[nn] = x + t\n                wi[nn] = 0.0\n                nn -= 1\n            else:\n                y = a[nn - 1, nn - 1]\n                w = a[nn, nn - 1] * a[nn - 1, nn]\n                if l == nn - 1:\n                    p = 0.5 * (y - x)\n                    q = p * p + w\n                    z = math.sqrt(abs(q))\n                    x += t\n                    if q >= 0.0:\n                        if z >= 0.0:\n                            z = p + z\n                        else:\n                            z = p - z\n                        wr[nn - 1] = x + z\n                        wr[nn] = x + z\n                        if z != 0.0:\n                            wr[nn] = x - w / z\n                        wi[nn - 1] = 0.0\n                        wi[nn] = 0.0\n                    else:\n                        wr[nn - 1] = x + p\n                        wr[nn] = x + p\n                        wi[nn - 1] = -z\n                        wi[nn] = z\n                    nn -= 2\n                else:\n                    if its == 60:\n                        return wr, wi, False\n                    if its == 10 or its == 20:\n                        t += x\n                        for i in range(nn + 1):\n                            a[i, i] -= x\n                        s = abs(a[nn, nn - 1]) + abs(a[nn - 1, nn - 2])\n                        y = 0.75 * s\n                        x = y\n                        w = -0.4375 * s * s\n                    its += 1\n                    m = nn - 2\n                    while m >= l:\n                        z = a[m, m]\n                        r = x - z\n                        s = y - z\n                        p = (r * s - w) / a[m + 1, m] + a[m, m + 1]\n                        q = a[m + 1, m + 1] - z - r - s\n                        r = a[m + 2, m + 1]\n                        s = abs(p) + abs(q) + abs(r)\n                        p /= s\n                        q /= s\n                        r /= s\n                        if m == l:\n                            break\n                        u = abs(a[m, m - 1]) * (abs(q) + abs(r))\n                        v = abs(p) * (abs(a[m - 1, m - 1]) + abs(z) + abs(a[m + 1, m + 1]))\n                        if u + v == v:\n                            break\n                        m -= 1\n                    for i in range(m + 2, nn + 1):\n                        a[i, i - 2] = 0.0\n                        if i != m + 2:\n                            a[i, i - 3] = 0.0\n                    for k in range(m, nn):\n                        if k != m:\n                            p = a[k, k - 1]\n                            q = a[k + 1, k - 1]\n                            r = 0.0\n                            if k != nn - 1:\n                                r = a[k + 2, k - 1]\n                            x = abs(p) + abs(q) + abs(r)\n                            if x != 0.0:\n                                p /= x\n                                q /= x\n                                r /= x\n                        s = math.sqrt(p * p + q * q + r * r)\n                        if p < 0.0:\n                            s = -s\n                        if s != 0.0:\n                            if k == m:\n                                if l != m:\n                                    a[k, k - 1] = -a[k, k - 1]\n                            else:\n                                a[k, k - 1] = -s * x\n                            p += s\n                            x = p / s\n                            y = q / s\n                            z = r / s\n                            q /= p\n                            r /= p\n                            for j in range(k, nn + 1):\n                                p = a[k, j] + q * a[k + 1, j]\n                                if k != nn - 1:\n                                    p += r * a[k + 2, j]\n                                    a[k + 2, j] -= p * z\n                                a[k + 1, j] -= p * y\n                                a[k, j] -= p * x\n                            mmin = k + 3\n                            if nn < mmin:\n                                mmin = nn\n                            for i in range(l, mmin + 1):\n                                p = x * a[i, k] + y * a[i, k + 1]\n                                if k != nn - 1:\n                                    p += z * a[i, k + 2]\n                                    a[i, k + 2] -= p * r\n                                a[i, k + 1] -= p * q\n                                a[i, k] -= p\n            if not (l < nn - 1):\n                break\n    return wr, wi, True\n\n\n@njit(cache=True)\ndef _dominant_eigenvalue(A):\n    H = _hessenberg(A)\n    wr, wi, ok = _hqr(H)\n    if not ok:\n        return 0.0j, False\n    idx = 0\n    best = wr[0] * wr[0] + wi[0] * wi[0]\n    for i in range(1, wr.shape[0]):\n        v = wr[i] * wr[i] + wi[i] * wi[i]\n        if v > best:\n            best = v\n            idx = i\n    return wr[idx] + 1j * wi[idx], True\n\n\n@njit(cache=True)\ndef solve(A):\n    lam, ok = _dominant_eigenvalue(A)\n    if not ok:\n        return 0.0j, np.zeros(A.shape[0], dtype=np.complex128), False\n    x = _old._eigenvector_for(A, lam)\n    lam2, res = _old._refine(A, lam, x)\n    return lam2, x, res < 1.0e-9\nPY\ncd /tmp && python - <<'PY'\nimport numpy as np, time\nfrom numba_real import solve, _dominant_eigenvalue, _hessenberg, _hqr\nrng=np.random.default_rng(0)\nsolve(rng.normal(size=(3,3)))\nfor n in range(2,11):\n    bad=0; fb=0; worst=0\n    for t in range(3000):\n        A=rng.normal(size=(n,n))\n        lam,x,ok=solve(A)\n        if not ok: fb+=1\n        r=np.linalg.norm(A@x-lam*x)/max(np.linalg.norm(x),1e-300)\n        worst=max(worst,r)\n        if not np.allclose(A@x,lam*x): bad+=1\n    print(n,'bad',bad,'fb',fb,'worst',f'{worst:.1e}')\n# eigenvalue accuracy\nfor n in [6,10]:\n    worst=0\n    for _ in range(1000):\n        A=rng.normal(size=(n,n)); lam,ok=_dominant_eigenvalue(A); true=np.linalg.eigvals(A); d=abs(lam-true[np.argmax(abs(true))]); worst=max(worst,d)\n    print('eig',n,worst)\nfor n in [2,4,6,8,10]:\n    A=rng.normal(size=(n,n)); solve(A)\n    for name,f in [('solve',lambda:solve(A)),('dom',lambda:_dominant_eigenvalue(A)),('hess',lambda:_hessenberg(A))]:\n        ts=[]\n        for _ in range(10000):\n            t=time.perf_counter(); f(); ts.append(time.perf_counter()-t)\n        print('time',n,name,round(np.median(ts)*1e6,2))\nPY",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 346130,
+   "dur_ms": 3261,
+   "tokens_in": 371,
+   "tokens_out": 415,
+   "cache_read": 70400,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 349391,
+   "dur_ms": 1051,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && python - <<'PY'\nimport numpy as np\nfrom numba_real import _hessenberg,_hqr,_dominant_eigenvalue\nfrom hqr_proto import hqr\nrng=np.random.default_rng(0)\nfor n in range(3,11):\n for t in range(10000):\n    A=rng.normal(size=(n,n))\n    lam,ok=_dominant_eigenvalue(A)\n    true=np.linalg.eigvals(A); td=true[np.argmax(abs(true))]\n    if abs(lam-td)>1e-6:\n        print('found n',n,'t',t,'lam',lam,'true',td,'ok',ok)\n        H=_hessenberg(A)\n        print('H eig err vs A',np.max(np.min(np.abs(np.linalg.eigvals(H)[:,None]-true[None,:]),axis=1)))\n        wr,wi,ok2=_hqr(H.copy())\n        ev=wr+1j*wi\n        print('numba hqr err',np.max(np.min(np.abs(ev[:,None]-true[None,:]),axis=1)),'ok2',ok2)\n        wr2,wi2,it=hqr(H.copy())\n        ev2=wr2+1j*wi2\n        print('proto hqr err',np.max(np.min(np.abs(ev2[:,None]-true[None,:]),axis=1)))\n        print('numba ev',np.sort_complex(ev)); print('true',np.sort_complex(true))\n        # save\n        np.save('/tmp/badA.npy',A)\n        raise SystemExit\nprint('none')\nPY",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 350459,
+   "dur_ms": 3234,
+   "tokens_in": 217,
+   "tokens_out": 247,
+   "cache_read": 71360,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 353693,
+   "dur_ms": 3355,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && python - <<'PY'\nimport numpy as np\nfrom numba_real import solve\nrng=np.random.default_rng(0)\nfor n in range(2,11):\n    bad=0; fb=0; worst=0\n    for t in range(5000):\n        A=rng.normal(size=(n,n)); lam,x,ok=solve(A)\n        if not ok: fb+=1; continue\n        r=np.linalg.norm(A@x-lam*x)/max(np.linalg.norm(x),1e-300)\n        worst=max(worst,r)\n        if not np.allclose(A@x,lam*x):\n            bad+=1\n            if bad<3: print('bad',n,r,lam)\n    print(n,'bad_when_ok',bad,'fb',fb,'worst_ok',f'{worst:.1e}')\nPY",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 357063,
+   "dur_ms": 20819,
+   "tokens_in": 239,
+   "tokens_out": 3635,
+   "cache_read": 72064,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 377882,
+   "dur_ms": 5995,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /app/eigen.py <<'PY'\nimport math\n\nimport numpy as np\n\ntry:\n    from numba import njit\nexcept Exception:  # pragma: no cover\n    njit = None\n\ntry:\n    from scipy.linalg.lapack import dgeev as _dgeev\nexcept Exception:  # pragma: no cover\n    _dgeev = None\n\n\nif njit is not None:\n\n    @njit(cache=True)\n    def _hessenberg(A):\n        n = A.shape[0]\n        H = np.empty((n, n), dtype=np.float64)\n        for i in range(n):\n            for j in range(n):\n                H[i, j] = A[i, j]\n        v = np.empty(n, dtype=np.float64)\n        for k in range(n - 2):\n            s = 0.0\n            for i in range(k + 1, n):\n                s += H[i, k] * H[i, k]\n            nx = math.sqrt(s)\n            if nx == 0.0:\n                continue\n            x0 = H[k + 1, k]\n            if x0 >= 0.0:\n                alpha = -nx\n            else:\n                alpha = nx\n            nv = 0.0\n            for i in range(k + 1, n):\n                v[i] = H[i, k]\n            v[k + 1] -= alpha\n            for i in range(k + 1, n):\n                nv += v[i] * v[i]\n            if nv < 1.0e-300:\n                continue\n            inv2 = 2.0 / nv\n            for j in range(k, n):\n                w = 0.0\n                for i in range(k + 1, n):\n                    w += v[i] * H[i, j]\n                w *= inv2\n                for i in range(k + 1, n):\n                    H[i, j] -= w * v[i]\n            for i in range(n):\n                w = 0.0\n                for j in range(k + 1, n):\n                    w += H[i, j] * v[j]\n                w *= inv2\n                for j in range(k + 1, n):\n                    H[i, j] -= w * v[j]\n            for i in range(k + 2, n):\n                H[i, k] = 0.0\n        return H\n\n\n    @njit(cache=True)\n    def _hqr(a):\n        n = a.shape[0]\n        wr = np.zeros(n, dtype=np.float64)\n        wi = np.zeros(n, dtype=np.float64)\n        anorm = 0.0\n        for i in range(n):\n            j0 = i - 1\n            if j0 < 0:\n                j0 = 0\n            for j in range(j0, n):\n                anorm += abs(a[i, j])\n        nn = n - 1\n        t = 0.0\n        while nn >= 0:\n            its = 0\n            while True:\n                l = nn\n                while l >= 1:\n                    s = abs(a[l - 1, l - 1]) + abs(a[l, l])\n                    if s == 0.0:\n                        s = anorm\n                    if abs(a[l, l - 1]) + s == s:\n                        a[l, l - 1] = 0.0\n                        break\n                    l -= 1\n                x = a[nn, nn]\n                if l == nn:\n                    wr[nn] = x + t\n                    wi[nn] = 0.0\n                    nn -= 1\n                else:\n                    y = a[nn - 1, nn - 1]\n                    w = a[nn, nn - 1] * a[nn - 1, nn]\n                    if l == nn - 1:\n                        p = 0.5 * (y - x)\n                        q = p * p + w\n                        z = math.sqrt(abs(q))\n                        x += t\n                        if q >= 0.0:\n                            if z >= 0.0:\n                                z = p + z\n                            else:\n                                z = p - z\n                            wr[nn - 1] = x + z\n                            wr[nn] = x + z\n                            if z != 0.0:\n                                wr[nn] = x - w / z\n                            wi[nn - 1] = 0.0\n                            wi[nn] = 0.0\n                        else:\n                            wr[nn - 1] = x + p\n                            wr[nn] = x + p\n                            wi[nn - 1] = -z\n                            wi[nn] = z\n                        nn -= 2\n                    else:\n                        if its == 60:\n                            return wr, wi, False\n                        if its == 10 or its == 20:\n                            t += x\n                            for i in range(nn + 1):\n                                a[i, i] -= x\n                            s = abs(a[nn, nn - 1]) + abs(a[nn - 1, nn - 2])\n                            y = 0.75 * s\n                            x = y\n                            w = -0.4375 * s * s\n                        its += 1\n                        m = nn - 2\n                        while m >= l:\n                            z = a[m, m]\n                            r = x - z\n                            s = y - z\n                            p = (r * s - w) / a[m + 1, m] + a[m, m + 1]\n                            q = a[m + 1, m + 1] - z - r - s\n                            r = a[m + 2, m + 1]\n                            s = abs(p) + abs(q) + abs(r)\n                            p /= s\n                            q /= s\n                            r /= s\n                            if m == l:\n                                break\n                            u = abs(a[m, m - 1]) * (abs(q) + abs(r))\n                            v = abs(p) * (\n                                abs(a[m - 1, m - 1])\n                                + abs(z)\n                                + abs(a[m + 1, m + 1])\n                            )\n                            if u + v == v:\n                                break\n                            m -= 1\n                        for i in range(m + 2, nn + 1):\n                            a[i, i - 2] = 0.0\n                            if i != m + 2:\n                                a[i, i - 3] = 0.0\n                        for k in range(m, nn):\n                            if k != m:\n                                p = a[k, k - 1]\n                                q = a[k + 1, k - 1]\n                                r = 0.0\n                                if k != nn - 1:\n                                    r = a[k + 2, k - 1]\n                                x = abs(p) + abs(q) + abs(r)\n                                if x != 0.0:\n                                    p /= x\n                                    q /= x\n                                    r /= x\n                            s = math.sqrt(p * p + q * q + r * r)\n                            if p < 0.0:\n                                s = -s\n                            if s != 0.0:\n                                if k == m:\n                                    if l != m:\n                                        a[k, k - 1] = -a[k, k - 1]\n                                else:\n                                    a[k, k - 1] = -s * x\n                                p += s\n                                x = p / s\n                                y = q / s\n                                z = r / s\n                                q /= p\n                                r /= p\n                                for j in range(k, nn + 1):\n                                    p = a[k, j] + q * a[k + 1, j]\n                                    if k != nn - 1:\n                                        p += r * a[k + 2, j]\n                                        a[k + 2, j] -= p * z\n                                    a[k + 1, j] -= p * y\n                                    a[k, j] -= p * x\n                                mmin = k + 3\n                                if nn < mmin:\n                                    mmin = nn\n                                for i in range(l, mmin + 1):\n                                    p = x * a[i, k] + y * a[i, k + 1]\n                                    if k != nn - 1:\n                                        p += z * a[i, k + 2]\n                                        a[i, k + 2] -= p * r\n                                    a[i, k + 1] -= p * q\n                                    a[i, k] -= p\n                if not (l < nn - 1):\n                    break\n        return wr, wi, True\n\n\n    @njit(cache=True)\n    def _dominant_eigenvalue(A):\n        H = _hessenberg(A)\n        wr, wi, ok = _hqr(H)\n        if not ok:\n            return 0.0j, False\n        idx = 0\n        best = wr[0] * wr[0] + wi[0] * wi[0]\n        for i in range(1, wr.shape[0]):\n            v = wr[i] * wr[i] + wi[i] * wi[i]\n            if v > best:\n                best = v\n                idx = i\n        return wr[idx] + 1j * wi[idx], True\n\n\n    @njit(cache=True)\n    def _eigenvector_for(A, lam):\n        n = A.shape[0]\n        scale = 0.0\n        for i in range(n):\n            for j in range(n):\n                z = A[i, j]\n                if z < 0.0:\n                    z = -z\n                if z > scale:\n                    scale = z\n        shift = lam + 1.0e-13 * (scale + 1.0)\n        M = np.empty((n, n), dtype=np.complex128)\n        for i in range(n):\n            for j in range(n):\n                M[i, j] = A[i, j]\n            M[i, i] -= shift\n        piv = np.empty(n, dtype=np.int64)\n        for k in range(n):\n            p = k\n            maxv = abs(M[k, k])\n            for i in range(k + 1, n):\n                v = abs(M[i, k])\n                if v > maxv:\n                    maxv = v\n                    p = i\n            piv[k] = p\n            if p != k:\n                for j in range(n):\n                    tmp = M[k, j]\n                    M[k, j] = M[p, j]\n                    M[p, j] = tmp\n            for i in range(k + 1, n):\n                f = M[i, k] / M[k, k]\n                M[i, k] = f\n                for j in range(k + 1, n):\n                    M[i, j] -= f * M[k, j]\n        x = np.empty(n, dtype=np.complex128)\n        for i in range(n):\n            x[i] = 1.0 + 0.137 * i\n        for k in range(n):\n            p = piv[k]\n            if p != k:\n                tmp = x[k]\n                x[k] = x[p]\n                x[p] = tmp\n        for i in range(n):\n            s = x[i]\n            for j in range(i):\n                s -= M[i, j] * x[j]\n            x[i] = s\n        for i in range(n - 1, -1, -1):\n            s = x[i]\n            for j in range(i + 1, n):\n                s -= M[i, j] * x[j]\n            x[i] = s / M[i, i]\n        nrm = 0.0\n        for i in range(n):\n            z = x[i]\n            nrm += z.real * z.real + z.imag * z.imag\n        nrm = math.sqrt(nrm)\n        for i in range(n):\n            x[i] /= nrm\n        return x\n\n\n    @njit(cache=True)\n    def _refine(A, x):\n        n = A.shape[0]\n        Ax = np.empty(n, dtype=np.complex128)\n        for i in range(n):\n            s = 0.0j\n            for j in range(n):\n                s += A[i, j] * x[j]\n            Ax[i] = s\n        num = 0.0j\n        den = 0.0\n        for i in range(n):\n            num += np.conj(x[i]) * Ax[i]\n            den += x[i].real * x[i].real + x[i].imag * x[i].imag\n        lam = num / den\n        r = 0.0\n        for i in range(n):\n            z = Ax[i] - lam * x[i]\n            r += z.real * z.real + z.imag * z.imag\n        return lam, math.sqrt(r)\n\n\n    @njit(cache=True)\n    def _solve(A):\n        lam, ok = _dominant_eigenvalue(A)\n        if not ok:\n            return 0.0j, np.zeros(A.shape[0], dtype=np.complex128), False\n        x = _eigenvector_for(A, lam)\n        lam2, res = _refine(A, x)\n        same = abs(lam2 - lam) <= 1.0e-6 * (1.0 + abs(lam))\n        return lam2, x, res < 1.0e-9 and same\n\n\ndef _lapack_solution(A):\n    if _dgeev is not None:\n        wr, wi, _vl, vr, info = _dgeev(\n            A, compute_vl=0, compute_vr=1, overwrite_a=0\n        )\n        if info == 0:\n            idx = int(np.argmax(np.hypot(wr, wi)))\n            if wi[idx] == 0.0:\n                return wr[idx], vr[:, idx]\n            if wi[idx] > 0.0:\n                j = idx\n            else:\n                j = idx - 1\n            return wr[j] + 1j * wi[j], vr[:, j] + 1j * vr[:, j + 1]\n\n    eigenvalues, eigenvectors = np.linalg.eig(A)\n    idx = np.argmax(np.abs(eigenvalues))\n    return eigenvalues[idx], eigenvectors[:, idx]\n\n\ndef find_dominant_eigenvalue_and_eigenvector(A: np.ndarray):\n    \"\"\"\n    Find the dominant eigenvalue and eigenvector of a general real square matrix.\n\n    Args:\n        A: Real-valued square matrix (accepts numpy arrays) up to size 10x10,\n        dtype np.float64.\n\n    Returns:\n        eigenvalue: Dominant eigenvalue (numpy scalar, potentially complex)\n        eigenvector: Corresponding eigenvector (np.ndarray, potentially complex)\n    \"\"\"\n    A = np.asarray(A, dtype=np.float64, order=\"C\")\n\n    if njit is not None:\n        eigenvalue, eigenvector, ok = _solve(A)\n        if ok:\n            return eigenvalue, eigenvector\n\n    return _lapack_solution(A)\nPY\ncd /app && python - <<'PY'\nimport numpy as np, time\nfrom eigen import find_dominant_eigenvalue_and_eigenvector as f\nrng=np.random.default_rng(42)\nf(rng.normal(size=(3,3)))  # compile\nfor n in range(1,11):\n    bad=0\n    for _ in range(3000):\n        A=rng.normal(size=(n,n))\n        val,vec=f(A)\n        if not np.allclose(A@vec,val*vec):\n            bad+=1\n            if bad<3: print('BAD',n,np.linalg.norm(A@vec-val*vec))\n    A=rng.normal(size=(n,n))\n    ts=[]; rs=[]\n    for _ in range(500):\n        B=rng.normal(size=(n,n))\n        t=time.perf_counter(); f(B); ts.append(time.perf_counter()-t)\n        t=time.perf_counter(); np.linalg.eig(B); rs.append(time.perf_counter()-t)\n    print(n,'bad',bad,'new',round(np.median(ts)*1e6,2),'ref',round(np.median(rs)*1e6,2),'speed',round(np.median(rs)/np.median(ts),2))\nPY",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 383897,
+   "dur_ms": 1172,
+   "tokens_in": 252,
+   "tokens_out": 62,
+   "cache_read": 77824,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 385069,
+   "dur_ms": 1072,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python eval.py",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 386159,
+   "dur_ms": 3923,
+   "tokens_in": 187,
+   "tokens_out": 296,
+   "cache_read": 78144,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 390082,
+   "dur_ms": 949,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && find . -maxdepth 2 -type f -printf '%p %s\\n' | sort && python - <<'PY'\n# Validate a few special matrices\nimport numpy as np\nfrom eigen import find_dominant_eigenvalue_and_eigenvector as f\ncases = {\n 'diag': np.diag([1., -3., 2.]),\n 'ones': np.ones((4,4)),\n 'zero': np.zeros((3,3)),\n 'rotation': np.array([[0.,-1.],[1.,0.]]),\n 'defective': np.array([[1.,1.],[0.,1.]]),\n 'complexpair': np.array([[0.,-1.,0.],[1.,0.,0.],[0.,0.,0.5]]),\n 'large': np.array([[1e8,2.],[3.,4e8]]),\n}\nfor name,A in cases.items():\n    lam,x=f(A)\n    r=np.linalg.norm(A@x-lam*x)\n    print(name,lam,'res',r,'allclose',np.allclose(A@x,lam*x))\nPY",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 391047,
+   "dur_ms": 5183,
+   "tokens_in": 537,
+   "tokens_out": 75,
+   "cache_read": 78912,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 396230,
+   "dur_ms": 2847,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && for i in 1 2 3; do python eval.py; done",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 399093,
+   "dur_ms": 2240,
+   "tokens_in": 528,
+   "tokens_out": 71,
+   "cache_read": 80256,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 401333,
+   "dur_ms": 4622,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && rm -rf __pycache__ && time python eval.py",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 405971,
+   "dur_ms": 3505,
+   "tokens_in": 248,
+   "tokens_out": 260,
+   "cache_read": 81024,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 409476,
+   "dur_ms": 2700,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport numpy as np\nfrom eigen import find_dominant_eigenvalue_and_eigenvector as f\nrng=np.random.default_rng(12345)\nfor n in [2,3,5,7,10]:\n    badres=0; badmag=0; worst=0.0\n    for _ in range(5000):\n        A=rng.normal(size=(n,n))\n        val,vec=f(A)\n        if not np.allclose(A@vec,val*vec): badres+=1\n        true=np.linalg.eigvals(A); tm=np.max(np.abs(true))\n        ratio=abs(val)/tm\n        worst=max(worst,abs(1-ratio))\n        if abs(val) < tm*(1-1e-8): badmag+=1\n    print(n,'res_fail',badres,'mag_fail',badmag,'worst_rel_mag',worst)\nPY",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 412197,
+   "dur_ms": 3850,
+   "tokens_in": 175,
+   "tokens_out": 320,
+   "cache_read": 81792,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 416047,
+   "dur_ms": 1024,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport numpy as np\nimport eigen\nfrom eigen import _solve, _lapack_solution, _dominant_eigenvalue\nrng=np.random.default_rng(12345)\nfound=0\nfor n in [3,10]:\n    for _ in range(20000):\n        A=rng.normal(size=(n,n))\n        val,vec,ok=_solve(A)\n        true=np.linalg.eigvals(A); tm=np.max(np.abs(true))\n        if ok and abs(val) < tm*(1-1e-8):\n            print('BADMAG n',n,'ok',ok,'val',val,'|val|',abs(val),'truemax',tm)\n            lam,ok2=_dominant_eigenvalue(A)\n            print('hqr dom',lam,'|hqr|',abs(lam),'ok2',ok2)\n            print('true',np.sort_complex(true))\n            print('res',np.linalg.norm(A@vec-val*vec))\n            np.save(f'/tmp/badmag{n}_{found}.npy',A)\n            found+=1\n            if found>=5: break\n    if found>=5: break\nPY",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 417091,
+   "dur_ms": 2001,
+   "tokens_in": 630,
+   "tokens_out": 167,
+   "cache_read": 82496,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 419092,
+   "dur_ms": 923,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport numpy as np\nfrom eigen import _hessenberg,_hqr\nfor p in ['/tmp/badmag3_0.npy','/tmp/badmag3_1.npy']:\n    A=np.load(p)\n    H=_hessenberg(A); wr,wi,ok=_hqr(H.copy())\n    print('true',np.sort_complex(np.linalg.eigvals(A)))\n    print('hqr ',np.sort_complex(wr+1j*wi))\n    print('wr',wr,'wi',wi,'ok',ok)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 420033,
+   "dur_ms": 1985,
+   "tokens_in": 219,
+   "tokens_out": 185,
+   "cache_read": 83392,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 422018,
+   "dur_ms": 955,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && python - <<'PY'\nimport numpy as np\nfrom numba_real import _hessenberg,_hqr\nfrom hqr_proto import hqr\nfor p in ['/tmp/badmag3_0.npy','/tmp/badmag3_1.npy']:\n    A=np.load(p)\n    H=_hessenberg(A)\n    wr,wi,ok=_hqr(H.copy())\n    print('numba',np.sort_complex(wr+1j*wi))\n    wr2,wi2,it=hqr(H.copy())\n    print('proto',np.sort_complex(wr2+1j*wi2))\n    print('H',H)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 422989,
+   "dur_ms": 5376,
+   "tokens_in": 254,
+   "tokens_out": 626,
+   "cache_read": 83904,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 428365,
+   "dur_ms": 3977,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && python - <<'PY'\np='numba_real.py'\ns=open(p).read()\ns=s.replace('''                        if q >= 0.0:\n                            if z >= 0.0:\n                                z = p + z\n                            else:\n                                z = p - z''','''                        if q >= 0.0:\n                            if p >= 0.0:\n                                z = p + z\n                            else:\n                                z = p - z''')\nopen(p,'w').write(s)\nPY\npython - <<'PY'\nimport numpy as np\nfrom numba_real import _hessenberg,_hqr,_dominant_eigenvalue,solve\nfrom hqr_proto import hqr\nfor p in ['/tmp/badmag3_0.npy','/tmp/badmag3_1.npy']:\n    A=np.load(p); H=_hessenberg(A)\n    wr,wi,ok=_hqr(H.copy()); print('numba',np.sort_complex(wr+1j*wi))\n    wr2,wi2,it=hqr(H.copy()); print('proto',np.sort_complex(wr2+1j*wi2))\nrng=np.random.default_rng(0)\n# accuracy all eigenvalues\nfor n in range(2,11):\n    worst=0; bad=0\n    for t in range(3000):\n        A=rng.normal(size=(n,n)); H=_hessenberg(A); wr,wi,ok=_hqr(H.copy()); ev=wr+1j*wi; true=np.linalg.eigvals(A)\n        d=np.max(np.min(np.abs(ev[:,None]-true[None,:]),axis=1)); worst=max(worst,d)\n        if d>1e-8: bad+=1\n    print(n,'worst',f'{worst:.1e}','bad',bad)\n# dominance\nfor n in [2,3,5,7,10]:\n    badres=0;badmag=0;worst=0\n    for _ in range(5000):\n        A=rng.normal(size=(n,n)); val,x,ok=solve(A)\n        if not ok: continue\n        if not np.allclose(A@x,val*x): badres+=1\n        true=np.linalg.eigvals(A); tm=np.max(np.abs(true)); ratio=abs(val)/tm; worst=max(worst,abs(1-ratio))\n        if abs(val)<tm*(1-1e-8): badmag+=1\n    print('dom',n,'badres',badres,'badmag',badmag,'worst',worst)\nPY",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 432359,
+   "dur_ms": 2422,
+   "tokens_in": 378,
+   "tokens_out": 78,
+   "cache_read": 85184,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 434781,
+   "dur_ms": 21,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && sed -n '1,140p' hqr_proto.py && echo '=====NUMBA=====' && sed -n '60,230p' numba_real.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 434834,
+   "dur_ms": 4222,
+   "tokens_in": 2825,
+   "tokens_out": 708,
+   "cache_read": 85824,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 439056,
+   "dur_ms": 4270,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && python - <<'PY'\np='numba_real.py'\ns=open(p).read()\ns=s.replace('if z >= 0.0:\\n                                z = p + z\\n                            else:\\n                                z = p - z','if p >= 0.0:\\n                                z = p + z\\n                            else:\\n                                z = p - z')\nopen(p,'w').write(s)\nPY\ngrep -n -A4 'if q >= 0.0' /tmp/numba_real.py | head -20\npython - <<'PY'\nimport numpy as np\nfrom numba_real import _hessenberg,_hqr,_dominant_eigenvalue,solve\nfrom hqr_proto import hqr\nfor p in ['/tmp/badmag3_0.npy','/tmp/badmag3_1.npy']:\n    A=np.load(p); H=_hessenberg(A)\n    wr,wi,ok=_hqr(H.copy()); print('numba',np.sort_complex(wr+1j*wi))\n    wr2,wi2,it=hqr(H.copy()); print('proto',np.sort_complex(wr2+1j*wi2))\nrng=np.random.default_rng(0)\nfor n in range(2,11):\n    worst=0; bad=0\n    for t in range(3000):\n        A=rng.normal(size=(n,n)); H=_hessenberg(A); wr,wi,ok=_hqr(H.copy()); ev=wr+1j*wi; true=np.linalg.eigvals(A)\n        d=np.max(np.min(np.abs(ev[:,None]-true[None,:]),axis=1)); worst=max(worst,d)\n        if d>1e-8: bad+=1\n    print(n,'worst',f'{worst:.1e}','bad',bad)\nfor n in [2,3,5,7,10]:\n    badres=0;badmag=0;worst=0\n    for _ in range(5000):\n        A=rng.normal(size=(n,n)); val,x,ok=solve(A)\n        if not ok: continue\n        if not np.allclose(A@x,val*x): badres+=1\n        true=np.linalg.eigvals(A); tm=np.max(np.abs(true)); ratio=abs(val)/tm; worst=max(worst,abs(1-ratio))\n        if abs(val)<tm*(1-1e-8): badmag+=1\n    print('dom',n,'badres',badres,'badmag',badmag,'worst',worst)\nfor n in [2,4,6,8,10]:\n    A=rng.normal(size=(n,n)); solve(A)\n    ts=[]\n    for _ in range(10000):\n        import time; t=time.perf_counter(); solve(A); ts.append(time.perf_counter()-t)\n    print('time',n,round(np.median(ts)*1e6,2))\nPY",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 443348,
+   "dur_ms": 3640,
+   "tokens_in": 470,
+   "tokens_out": 652,
+   "cache_read": 89536,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 446988,
+   "dur_ms": 4174,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && python - <<'PY'\np='numba_real.py'\ns=open(p).read()\nold='''                        if q >= 0.0:\n                            if z >= 0.0:\n                                z = p + z\n                            else:\n                                z = p - z'''\nnew='''                        if q >= 0.0:\n                            if p >= 0.0:\n                                z = p + z\n                            else:\n                                z = p - z'''\nprint(old in s)\ns=s.replace(old,new)\nprint(new in s)\nopen(p,'w').write(s)\nPY\ngrep -n -A4 'if q >= 0.0' /tmp/numba_real.py | head\npython - <<'PY'\nimport numpy as np\nfrom numba_real import _hessenberg,_hqr,solve\nfrom hqr_proto import hqr\nfor p in ['/tmp/badmag3_0.npy','/tmp/badmag3_1.npy']:\n    A=np.load(p); H=_hessenberg(A)\n    wr,wi,ok=_hqr(H.copy()); print('numba',np.sort_complex(wr+1j*wi))\n    wr2,wi2,it=hqr(H.copy()); print('proto',np.sort_complex(wr2+1j*wi2))\nrng=np.random.default_rng(0)\nfor n in range(2,11):\n    worst=0; bad=0\n    for t in range(3000):\n        A=rng.normal(size=(n,n)); H=_hessenberg(A); wr,wi,ok=_hqr(H.copy()); ev=wr+1j*wi; true=np.linalg.eigvals(A)\n        d=np.max(np.min(np.abs(ev[:,None]-true[None,:]),axis=1)); worst=max(worst,d)\n        if d>1e-8: bad+=1\n    print(n,'worst',f'{worst:.1e}','bad',bad)\nfor n in [2,3,5,7,10]:\n    badres=0;badmag=0;worst=0\n    for _ in range(5000):\n        A=rng.normal(size=(n,n)); val,x,ok=solve(A)\n        if not ok: continue\n        if not np.allclose(A@x,val*x): badres+=1\n        true=np.linalg.eigvals(A); tm=np.max(np.abs(true)); ratio=abs(val)/tm; worst=max(worst,abs(1-ratio))\n        if abs(val)<tm*(1-1e-8): badmag+=1\n    print('dom',n,'badres',badres,'badmag',badmag,'worst',worst)\nPY",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 451182,
+   "dur_ms": 3008,
+   "tokens_in": 434,
+   "tokens_out": 546,
+   "cache_read": 90752,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 454190,
+   "dur_ms": 6897,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp && sed -i '94s/if z >= 0.0/if p >= 0.0/' numba_real.py && sed -n '91,99p' numba_real.py && python - <<'PY'\nimport numpy as np\nfrom numba_real import _hessenberg,_hqr,solve\nfrom hqr_proto import hqr\nfor p in ['/tmp/badmag3_0.npy','/tmp/badmag3_1.npy']:\n    A=np.load(p); H=_hessenberg(A)\n    wr,wi,ok=_hqr(H.copy()); print('numba',np.sort_complex(wr+1j*wi))\n    wr2,wi2,it=hqr(H.copy()); print('proto',np.sort_complex(wr2+1j*wi2))\nrng=np.random.default_rng(0)\nfor n in range(2,11):\n    worst=0; bad=0\n    for t in range(3000):\n        A=rng.normal(size=(n,n)); H=_hessenberg(A); wr,wi,ok=_hqr(H.copy()); ev=wr+1j*wi; true=np.linalg.eigvals(A)\n        d=np.max(np.min(np.abs(ev[:,None]-true[None,:]),axis=1)); worst=max(worst,d)\n        if d>1e-8: bad+=1\n    print(n,'worst',f'{worst:.1e}','bad',bad)\nfor n in [2,3,5,7,10]:\n    badres=0;badmag=0;worst=0\n    for _ in range(5000):\n        A=rng.normal(size=(n,n)); val,x,ok=solve(A)\n        if not ok: continue\n        if not np.allclose(A@x,val*x): badres+=1\n        true=np.linalg.eigvals(A); tm=np.max(np.abs(true)); ratio=abs(val)/tm; worst=max(worst,abs(1-ratio))\n        if abs(val)<tm*(1-1e-8): badmag+=1\n    print('dom',n,'badres',badres,'badmag',badmag,'worst',worst)\nPY",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 461106,
+   "dur_ms": 1191,
+   "tokens_in": 473,
+   "tokens_out": 55,
+   "cache_read": 91776,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 462297,
+   "dur_ms": 15,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && grep -n 'if z >= 0.0' eigen.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 462344,
+   "dur_ms": 1104,
+   "tokens_in": 57,
+   "tokens_out": 78,
+   "cache_read": 92288,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 463448,
+   "dur_ms": 16,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && sed -i '106s/if z >= 0.0/if p >= 0.0/' eigen.py && sed -n '102,112p' eigen.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 463491,
+   "dur_ms": 2790,
+   "tokens_in": 107,
+   "tokens_out": 462,
+   "cache_read": 92416,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 466281,
+   "dur_ms": 12579,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && rm -rf __pycache__ && python - <<'PY'\nimport numpy as np, time\nfrom eigen import find_dominant_eigenvalue_and_eigenvector as f\nrng=np.random.default_rng(2024)\nf(rng.normal(size=(3,3)))\nfor n in range(1,11):\n    bad=0; badmag=0; worst=0.0; worst_mag=0.0\n    for _ in range(10000):\n        A=rng.normal(size=(n,n))\n        val,vec=f(A)\n        if not np.allclose(A@vec,val*vec):\n            bad+=1\n            if bad<3: print('BADRES',n,np.linalg.norm(A@vec-val*vec))\n        true=np.linalg.eigvals(A); tm=np.max(np.abs(true))\n        if tm>0:\n            ratio=abs(val)/tm\n            worst_mag=max(worst_mag,abs(1-ratio))\n            if abs(val)<tm*(1-1e-8): badmag+=1\n    print(n,'badres',bad,'badmag',badmag,'worst_rel_mag',f'{worst_mag:.1e}')\nfor n in range(2,11):\n    A=rng.normal(size=(n,n))\n    ts=[]; rs=[]\n    for _ in range(1000):\n        B=rng.normal(size=(n,n))\n        t=time.perf_counter(); f(B); ts.append(time.perf_counter()-t)\n        t=time.perf_counter(); np.linalg.eig(B); rs.append(time.perf_counter()-t)\n    print('time',n,round(np.median(ts)*1e6,2),round(np.median(rs)*1e6,2),round(np.median(rs)/np.median(ts),2))\nPY",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 478878,
+   "dur_ms": 1329,
+   "tokens_in": 396,
+   "tokens_out": 66,
+   "cache_read": 92992,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 480207,
+   "dur_ms": 2074,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python eval.py && python eval.py",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 482298,
+   "dur_ms": 4059,
+   "tokens_in": 364,
+   "tokens_out": 81,
+   "cache_read": 93440,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.233,
+ "calls": 68,
+ "cell": "TB1c"
+}

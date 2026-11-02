@@ -1,0 +1,589 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "gcode-to-text",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 417394,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 56871,
+  "output": 26845,
+  "cacheRead": 673536,
+  "cacheWrite": 0,
+  "total": 757252
+ },
+ "totals": {
+  "model_calls": 30,
+  "tool_calls": 29,
+  "model_ms": 174658,
+  "tool_ms": 241472,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 139,
+   "dur_ms": 3586,
+   "tokens_in": 44,
+   "tokens_out": 61,
+   "cache_read": 7040,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3725,
+   "dur_ms": 150,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app && wc -l /app/text.gcode && head -100 /app/text.gcode"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3925,
+   "dur_ms": 2146,
+   "tokens_in": 530,
+   "tokens_out": 69,
+   "cache_read": 7168,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6071,
+   "dur_ms": 35,
+   "tool": "bash",
+   "is_error": false,
+   "command": "grep -n -i -E \"text|emboss|;|M486|string|font\" /app/text.gcode | head -200"
+  },
+  {
+   "kind": "model",
+   "at_ms": 6140,
+   "dur_ms": 2807,
+   "tokens_in": 390,
+   "tokens_out": 76,
+   "cache_read": 7808,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 8947,
+   "dur_ms": 1969,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 -c \"import matplotlib; print(matplotlib.__version__)\" 2>&1; python3 -c \"import numpy; print(numpy.__version__)\" 2>&1"
+  },
+  {
+   "kind": "model",
+   "at_ms": 10951,
+   "dur_ms": 1266,
+   "tokens_in": 153,
+   "tokens_out": 89,
+   "cache_read": 8384,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 12217,
+   "dur_ms": 9273,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 -c \"import PIL; print(PIL.__version__)\" 2>&1; pip install --quiet matplotlib numpy 2>&1 | tail -5",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 21506,
+   "dur_ms": 1660,
+   "tokens_in": 186,
+   "tokens_out": 91,
+   "cache_read": 8640,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 23166,
+   "dur_ms": 33,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sed -n '100,170p' /app/text.gcode; echo ----; sed -n '1390,1425p' /app/text.gcode; echo ----; sed -n '1510,1545p' /app/text.gcode"
+  },
+  {
+   "kind": "model",
+   "at_ms": 23221,
+   "dur_ms": 5196,
+   "tokens_in": 1203,
+   "tokens_out": 565,
+   "cache_read": 9024,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 28417,
+   "dur_ms": 1314,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/plot.py <<'EOF'\nimport re, matplotlib\nmatplotlib.use('Agg')\nimport matplotlib.pyplot as plt\n\nsegs=[]  # (x0,y0,x1,y1,z,obj)\nobj=None\nx=y=z=None\np=-1\ncur=None\nwith open('/app/text.gcode') as f:\n    for line in f:\n        line=line.strip()\n        if line.startswith('M486'):\n            parts=line.split()\n            if len(parts)>=3 and parts[1].startswith('S'):\n                if parts[1]=='S-1': obj=None\n                else: obj=parts[1]\n            continue\n        m=re.match(r'G[01]\\b',line)\n        if not m: continue\n        words=dict((w[0],float(w[1:])) for w in line.split() if re.match(r'[A-Z]-?[0-9.]',w))\n        nz=words.get('Z',z)\n        nx=words.get('X',x); ny=words.get('Y',y)\n        e=words.get('E',0)\n        if x is not None and nx is not None and ny is not None and e>0:\n            segs.append((x,y,nx,ny,nz if nz is not None else z,obj))\n        x=nx if nx is not None else x\n        y=ny if ny is not None else y\n        z=nz if nz is not None else z\nprint('total segs',len(segs))\nfrom collections import Counter\nprint(Counter(s[5] for s in segs))\nzs=sorted(set(round(s[4] or 0,3) for s in segs if s[5]=='S0'))\nprint('S0 z values',zs[:50], '...', len(zs))\nfor ob in ['S0','S1']:\n    ss=[s for s in segs if s[5]==ob]\n    xs=[v for s in ss for v in (s[0],s[2])]; ys=[v for s in ss for v in (s[1],s[3])]\n    print(ob,len(ss),'x',min(xs),max(xs),'y',min(ys),max(ys))\nEOF\npython3 /tmp/plot.py",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 29751,
+   "dur_ms": 1122,
+   "tokens_in": 168,
+   "tokens_out": 113,
+   "cache_read": 11008,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 30873,
+   "dur_ms": 1088,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sed -i \"s/if len(parts)>=3 and parts\\[1\\].startswith('S'):/if len(parts)>=2 and parts[1].startswith('S'):/\" /tmp/plot.py && python3 /tmp/plot.py",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 31978,
+   "dur_ms": 4604,
+   "tokens_in": 355,
+   "tokens_out": 244,
+   "cache_read": 11328,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 36582,
+   "dur_ms": 1069,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat >> /tmp/plot.py <<'EOF'\nfrom collections import defaultdict\nbyz=defaultdict(list)\nfor s in segs:\n    if s[5]=='S0':\n        byz[round(s[4],2)].append(s)\nfor za in sorted(byz)[::20]:\n    ss=byz[za]\n    xs=[v for s in ss for v in (s[0],s[2])]; ys=[v for s in ss for v in (s[1],s[3])]\n    print('z',za,'n',len(ss),'x',round(min(xs),1),round(max(xs),1),'y',round(min(ys),1),round(max(ys),1))\nprint('last z',sorted(byz)[-1])\nEOF\npython3 /tmp/plot.py 2>&1 | tail -20",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 37666,
+   "dur_ms": 3597,
+   "tokens_in": 724,
+   "tokens_out": 238,
+   "cache_read": 12160,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 41263,
+   "dur_ms": 1104,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat >> /tmp/plot.py <<'EOF'\nprint('--- S1 per z ---')\nbyz1=defaultdict(list)\nfor s in segs:\n    if s[5]=='S1': byz1[round(s[4],2)].append(s)\nfor za in sorted(byz1)[::20]:\n    ss=byz1[za]\n    xs=[v for s in ss for v in (s[0],s[2])]; ys=[v for s in ss for v in (s[1],s[3])]\n    print('z',za,'n',len(ss),'x',round(min(xs),1),round(max(xs),1),'y',round(min(ys),1),round(max(ys),1))\nEOF\npython3 /tmp/plot.py 2>&1 | tail -20",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 42382,
+   "dur_ms": 4585,
+   "tokens_in": 737,
+   "tokens_out": 361,
+   "cache_read": 13440,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 46967,
+   "dur_ms": 392,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport re\nfrom collections import Counter\nobj=None;x=y=z=None;segs=[]\nfor line in open('/app/text.gcode'):\n    line=line.strip()\n    if line.startswith('M486'):\n        parts=line.split()\n        if len(parts)>=2 and parts[1].startswith('S'):\n            obj=None if parts[1]=='S-1' else parts[1]\n        continue\n    if not re.match(r'G[01]\\b',line): continue\n    words=dict((w[0],float(w[1:])) for w in line.split() if re.match(r'[A-Z]-?[0-9.]',w))\n    nz=words.get('Z',z); nx=words.get('X',x); ny=words.get('Y',y); e=words.get('E',0)\n    if x is not None and nx is not None and ny is not None and e>0:\n        segs.append((x,y,nx,ny,nz,obj))\n    x=nx if nx is not None else x; y=ny if ny is not None else y; z=nz if nz is not None else z\nc=Counter(s[4] for s in segs if s[5]=='S1')\nprint(len(c)); print(sorted(c.items())[:50]); print(sorted(c.items())[-20:])\nEOF",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 47377,
+   "dur_ms": 5428,
+   "tokens_in": 215,
+   "tokens_out": 506,
+   "cache_read": 14912,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 52805,
+   "dur_ms": 76416,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/plots.py <<'EOF'\nimport re, matplotlib\nmatplotlib.use('Agg')\nimport matplotlib.pyplot as plt\nfrom collections import defaultdict\nobj=None;x=y=z=None;segs=[]\nfor line in open('/app/text.gcode'):\n    line=line.strip()\n    if line.startswith('M486'):\n        parts=line.split()\n        if len(parts)>=2 and parts[1].startswith('S'):\n            obj=None if parts[1]=='S-1' else parts[1]\n        continue\n    if not re.match(r'G[01]\\b',line): continue\n    words=dict((w[0],float(w[1:])) for w in line.split() if re.match(r'[A-Z]-?[0-9.]',w))\n    nz=words.get('Z',z); nx=words.get('X',x); ny=words.get('Y',y); e=words.get('E',0)\n    if x is not None and nx is not None and ny is not None and e>0:\n        segs.append((x,y,nx,ny,nz,obj))\n    x=nx if nx is not None else x; y=ny if ny is not None else y; z=nz if nz is not None else z\nS0=[s for s in segs if s[5]=='S0']\nfig,axs=plt.subplots(1,3,figsize=(24,8))\nfor ax,(i,j,lbl) in zip(axs,[(0,1,'XY'),(0,4,'XZ'),(1,4,'YZ')]):\n    for s in S0:\n        ax.plot([s[i],s[2 if i==0 else 3]],[s[j],s[3 if j==1 else 4]],'-',lw=0.3)\n    ax.set_title(lbl); ax.set_aspect('equal'); ax.invert_yaxis()\nplt.tight_layout(); plt.savefig('/tmp/s0.png',dpi=150)\nEOF\npython3 /tmp/plots.py",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 129267,
+   "dur_ms": 4206,
+   "tokens_in": 27,
+   "tokens_out": 696,
+   "cache_read": 16064,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 133473,
+   "dur_ms": 78700,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/plots.py <<'EOF'\nimport re, matplotlib\nmatplotlib.use('Agg')\nimport matplotlib.pyplot as plt\nfrom collections import defaultdict\nobj=None;x=y=z=None;segs=[]\nfor line in open('/app/text.gcode'):\n    line=line.strip()\n    if line.startswith('M486'):\n        parts=line.split()\n        if len(parts)>=2 and parts[1].startswith('S'):\n            obj=None if parts[1]=='S-1' else parts[1]\n        continue\n    if not re.match(r'G[01]\\b',line): continue\n    words=dict((w[0],float(w[1:])) for w in line.split() if re.match(r'[A-Z]-?[0-9.]',w))\n    nz=words.get('Z',z); nx=words.get('X',x); ny=words.get('Y',y); e=words.get('E',0)\n    if x is not None and nx is not None and ny is not None and e>0:\n        segs.append((x,y,nx,ny,nz,obj))\n    x=nx if nx is not None else x; y=ny if ny is not None else y; z=nz if nz is not None else z\nS0=[s for s in segs if s[5]=='S0']\nfig,axs=plt.subplots(1,3,figsize=(24,8))\nfor ax,(a,b) in zip(axs,[((0,2),(1,3)),((0,2),(4,4)),((1,3),(4,4))]):\n    for s in S0:\n        ax.plot([s[a[0]],s[a[1]]],[s[b[0]],s[b[1]]],'-',lw=0.3)\n    ax.set_title(str((a,b))); ax.set_aspect('equal')\naxs[1].invert_yaxis(); axs[2].invert_yaxis()\nplt.tight_layout(); plt.savefig('/tmp/s0.png',dpi=150)\n# by layer small multiples\nzs=sorted(set(round(s[4],2) for s in S0))\nsel=zs[::10]\nfig,axs=plt.subplots(4,6,figsize=(24,16)); axs=axs.ravel()\nfor ax,za in zip(axs,sel):\n    ss=[s for s in S0 if round(s[4],2)==za]\n    for s in ss: ax.plot([s[0],s[2]],[s[1],s[3]],'-',lw=0.8)\n    ax.set_title(f'z={za}'); ax.set_aspect('equal'); ax.invert_yaxis()\nplt.tight_layout(); plt.savefig('/tmp/layers.png',dpi=100)\nEOF\npython3 /tmp/plots.py && ls -la /tmp/*.png",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 212193,
+   "dur_ms": 714,
+   "tokens_in": 126,
+   "tokens_out": 43,
+   "cache_read": 16832,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 212907,
+   "dur_ms": 1001,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "filePath": "/tmp/s0.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 213936,
+   "dur_ms": 20131,
+   "tokens_in": 80,
+   "tokens_out": 95,
+   "cache_read": 16960,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 234067,
+   "dur_ms": 26,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sed -n '2960,3010p' /app/text.gcode; echo ====; sed -n '4240,4290p' /app/text.gcode; echo ====; sed -n '8880,8920p' /app/text.gcode"
+  },
+  {
+   "kind": "model",
+   "at_ms": 234273,
+   "dur_ms": 9096,
+   "tokens_in": 1229,
+   "tokens_out": 717,
+   "cache_read": 20032,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 243369,
+   "dur_ms": 27302,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/pca.py <<'EOF'\nimport re, numpy as np, matplotlib\nmatplotlib.use('Agg')\nimport matplotlib.pyplot as plt\nobj=None;x=y=z=None;segs=[]\nfor line in open('/app/text.gcode'):\n    line=line.strip()\n    if line.startswith('M486'):\n        parts=line.split()\n        if len(parts)>=2 and parts[1].startswith('S'):\n            obj=None if parts[1]=='S-1' else parts[1]\n        continue\n    if not re.match(r'G[01]\\b',line): continue\n    words=dict((w[0],float(w[1:])) for w in line.split() if re.match(r'[A-Z]-?[0-9.]',w))\n    nz=words.get('Z',z); nx=words.get('X',x); ny=words.get('Y',y); e=words.get('E',0)\n    if x is not None and nx is not None and ny is not None and e>0:\n        segs.append((x,y,nx,ny,nz,obj))\n    x=nx if nx is not None else x; y=ny if ny is not None else y; z=nz if nz is not None else z\nS0=np.array([[s[0],s[1],s[4]] for s in segs if s[5]=='S0']+[[s[2],s[3],s[4]] for s in segs if s[5]=='S0'])\nc=S0.mean(0)\nu,sv,vt=np.linalg.svd(S0-c,full_matrices=False)\nprint('sv',sv,'ratio',sv/sv[0],'normal',vt[2])\nprint('extent along axes',[(S0-c)@vt[i] for i in range(3)])\nprint('minmax',[((S0-c)@vt[i]).min() for i in range(3)],[((S0-c)@vt[i]).max() for i in range(3)])\n# project endpoints\nP=[]\nfor s in segs:\n    if s[5]!='S0': continue\n    a=np.array([s[0],s[1],s[4]])-c; b=np.array([s[2],s[3],s[4]])-c\n    P.append((a@vt[0],a@vt[1],b@vt[0],b@vt[1]))\nfig,ax=plt.subplots(figsize=(20,12))\nfor a,b,cc,d in P: ax.plot([a,cc],[b,d],'-',lw=0.5)\nax.set_aspect('equal'); ax.invert_yaxis()\nplt.savefig('/tmp/pca.png',dpi=150,bbox_inches='tight')\nnp.save('/tmp/s0pts.npy',S0); np.save('/tmp/basis.npy',vt); np.save('/tmp/cent.npy',c)\nEOF\npython3 /tmp/pca.py",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 270691,
+   "dur_ms": 2212,
+   "tokens_in": 318,
+   "tokens_out": 102,
+   "cache_read": 22720,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 272903,
+   "dur_ms": 16101,
+   "tool": "bash",
+   "is_error": false,
+   "command": "apt-get update -qq && apt-get install -y -qq tesseract-ocr >/tmp/apt.log 2>&1; which tesseract; tesseract --version 2>&1 | head -2",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 289019,
+   "dur_ms": 6009,
+   "tokens_in": 55,
+   "tokens_out": 782,
+   "cache_read": 23296,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 295028,
+   "dur_ms": 4081,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/render.py <<'EOF'\nimport numpy as np, matplotlib\nmatplotlib.use('Agg')\nimport matplotlib.pyplot as plt\nfrom matplotlib.collections import LineCollection\nS0=np.load('/tmp/s0pts.npy'); vt=np.load('/tmp/basis.npy'); c=np.load('/tmp/cent.npy')\n# reread segments\nimport re\nobj=None;x=y=z=None;segs=[]\nfor line in open('/app/text.gcode'):\n    line=line.strip()\n    if line.startswith('M486'):\n        parts=line.split()\n        if len(parts)>=2 and parts[1].startswith('S'):\n            obj=None if parts[1]=='S-1' else parts[1]\n        continue\n    if not re.match(r'G[01]\\b',line): continue\n    words=dict((w[0],float(w[1:])) for w in line.split() if re.match(r'[A-Z]-?[0-9.]',w))\n    nz=words.get('Z',z); nx=words.get('X',x); ny=words.get('Y',y); e=words.get('E',0)\n    if x is not None and nx is not None and ny is not None and e>0:\n        segs.append((x,y,nx,ny,nz,obj))\n    x=nx if nx is not None else x; y=ny if ny is not None else y; z=nz if nz is not None else z\nlines=[]\nfor s in segs:\n    if s[5]!='S0': continue\n    a=np.array([s[0],s[1],s[4]])-c; b=np.array([s[2],s[3],s[4]])-c\n    lines.append([(a@vt[0],a@vt[1]),(b@vt[0],b@vt[1])])\nfor name,horiz,vert,flipx,flipy in [\n    ('base',vt[0],vt[1],1,1),\n    ('flipy',vt[0],vt[1],1,-1),\n    ('flipx',vt[0],vt[1],-1,1),\n    ('flipxy',vt[0],vt[1],-1,-1),\n]:\n    L=[]\n    for (a,b) in lines:\n        L.append([(flipx*a[0],flipy*a[1]),(flipx*b[0],flipy*b[1])])\n    fig=plt.figure(figsize=(168/25.4, 30/25.4), dpi=300)\n    ax=fig.add_axes([0,0,1,1]); ax.set_xlim(-85,92); ax.set_ylim(-14,14); ax.axis('off')\n    ax.add_collection(LineCollection(L,colors='black',linewidths=0.7))\n    fig.savefig(f'/tmp/txt_{name}.png',dpi=300,facecolor='white')\n    plt.close(fig)\nEOF\npython3 /tmp/render.py && ls -la /tmp/txt_*.png\nfor f in /tmp/txt_*.png; do echo \"=== $f\"; tesseract \"$f\" - --psm 7 2>/dev/null; done",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 299124,
+   "dur_ms": 6843,
+   "tokens_in": 222,
+   "tokens_out": 251,
+   "cache_read": 24512,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 305967,
+   "dur_ms": 377,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nfrom PIL import Image\nimport numpy as np\nfor name in ['base']:\n    im=np.array(Image.open(f'/tmp/txt_{name}.png').convert('L'))\n    ink=im<128\n    print(im.shape, ink.sum())\n    cols=ink.any(0); rows=ink.any(1)\n    xs=np.where(cols)[0]; ys=np.where(rows)[0]\n    print('bbox',xs.min(),xs.max(),ys.min(),ys.max())\n    # segments of consecutive blank columns\n    gaps=[]; start=None\n    for i,v in enumerate(cols):\n        if not v and start is None: start=i\n        if v and start is not None: gaps.append((start,i-1)); start=None\n    if start is not None: gaps.append((start,len(cols)-1))\n    print('gaps',gaps)\nEOF",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 306359,
+   "dur_ms": 5397,
+   "tokens_in": 262,
+   "tokens_out": 646,
+   "cache_read": 25920,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 311756,
+   "dur_ms": 5626,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/seg.py <<'EOF'\nfrom PIL import Image, ImageOps\nimport numpy as np, subprocess, os\nim=np.array(Image.open('/tmp/txt_base.png').convert('L'))\nink=im<128\ncols=ink.any(0)\nxs=np.where(cols)[0]; ys=np.where(ink.any(1))[0]\n# character x spans separated by >=3 blank cols\nspans=[]; start=None\nfor i,v in enumerate(cols):\n    if v and start is None: start=i\n    if not v and start is not None:\n        # look ahead blank run\n        j=i\n        while j<len(cols) and not cols[j]: j+=1\n        if j>=len(cols) or (j-i)>=4:\n            spans.append((start,i-1)); start=None\n# simpler: recompute\nspans=[]; instr=False; lastink=-999\nfor i,v in enumerate(cols):\n    if v:\n        if not instr: start=i; instr=True\n        lastink=i\n    else:\n        if instr and i-lastink>=4:\n            spans.append((start,lastink)); instr=False\nif instr: spans.append((start,lastink))\nprint('n',len(spans),'spans',spans)\nos.makedirs('/tmp/chars',exist_ok=True)\nfor k,(a,b) in enumerate(spans):\n    crop=Image.fromarray(255-im[max(0,ys.min()-20):ys.max()+21, max(0,a-10):b+10])\n    # trim to actual ink within crop\n    arr=np.array(crop); mask=arr<128\n    yy,xx=np.where(mask)\n    crop=crop.crop((xx.min(),yy.min(),xx.max()+1,yy.max()+1))\n    crop=crop.resize((crop.width*4,crop.height*4),Image.Resampling.LANCZOS)\n    fn=f'/tmp/chars/c{k:02d}.png'; crop.save(fn)\n    r=subprocess.run(['tesseract',fn,'-','--psm','10','-c','tessedit_char_whitelist=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789{}_'],capture_output=True,text=True)\n    ra=subprocess.run(['tesseract',fn,'-','--psm','10'],capture_output=True,text=True)\n    print(k,(a,b),'w',b-a+1,'h',crop.height//4,'->',repr(r.stdout.strip()),'|',repr(ra.stdout.strip()))\nEOF\npython3 /tmp/seg.py",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 317396,
+   "dur_ms": 7112,
+   "tokens_in": 765,
+   "tokens_out": 500,
+   "cache_read": 26880,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 324508,
+   "dur_ms": 3457,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/seg2.py <<'EOF'\nfrom PIL import Image\nimport numpy as np, subprocess, os\nim=np.array(Image.open('/tmp/txt_base.png').convert('L'))\nink=im<128\ncols=ink.any(0)\nspans=[]; instr=False; lastink=-999\nfor i,v in enumerate(cols):\n    if v:\n        if not instr: start=i; instr=True\n        lastink=i\n    else:\n        if instr and i-lastink>=4:\n            spans.append((start,lastink)); instr=False\nif instr: spans.append((start,lastink))\nos.makedirs('/tmp/chars2',exist_ok=True)\nfor k,(a,b) in enumerate(spans):\n    sub=ink[:,a:b+1]\n    yy=np.where(sub.any(1))[0]\n    y0,y1=yy.min(),yy.max()\n    crop=Image.fromarray(255-im[max(0,y0-15):y1+16, max(0,a-8):b+9])\n    arr=np.array(crop); mask=arr<128; y2,x2=np.where(mask)\n    crop=crop.crop((x2.min(),y2.min(),x2.max()+1,y2.max()+1))\n    crop=crop.resize((crop.width*6,crop.height*6),Image.Resampling.LANCZOS)\n    # add border\n    crop=Image.new('L',(crop.width+80,crop.height+80),255) if False else crop\n    fn=f'/tmp/chars2/c{k:02d}.png'; crop.save(fn)\n    r=subprocess.run(['tesseract',fn,'-','--psm','10'],capture_output=True,text=True)\n    print(f'{k:2d} x=({a},{b}) y=({y0},{y1}) yrel rows {y0-102}..{y1-102} -> {r.stdout.strip()!r}')\nEOF\npython3 /tmp/seg2.py",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 327984,
+   "dur_ms": 14582,
+   "tokens_in": 693,
+   "tokens_out": 507,
+   "cache_read": 28928,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 342566,
+   "dur_ms": 407,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/ascii.py <<'EOF'\nfrom PIL import Image\nimport numpy as np\nim=np.array(Image.open('/tmp/txt_base.png').convert('L'))\nink=im<128\ncols=ink.any(0)\nspans=[]; instr=False; lastink=-999\nfor i,v in enumerate(cols):\n    if v:\n        if not instr: start=i; instr=True\n        lastink=i\n    else:\n        if instr and i-lastink>=4:\n            spans.append((start,lastink)); instr=False\nif instr: spans.append((start,lastink))\ndef show(k, maxw=34, maxh=30):\n    a,b=spans[k]\n    sub=ink[:,a:b+1]\n    yy=np.where(sub.any(1))[0]; y0,y1=yy.min(),yy.max()\n    sub=ink[y0:y1+1,a:b+1]\n    h,w=sub.shape\n    W=min(maxw,w); H=min(maxh, max(1,round(h*W/w)))\n    out=[]\n    for r in range(H):\n        line=''\n        for c in range(W):\n            ys=slice(int(r*h/H),max(int(r*h/H)+1,int((r+1)*h/H)))\n            xs=slice(int(c*w/W),max(int(c*w/W)+1,int((c+1)*w/W)))\n            frac=sub[ys,xs].mean()\n            line += '#' if frac>0.35 else ('.' if frac>0.08 else ' ')\n        out.append(line.rstrip())\n    print(f'--- span {k} x=({a},{b}) y=({y0},{y1}) shape {w}x{h}')\n    print('\\n'.join(out))\nfor k in [0,1,2,3,4,5,6,7,8,9,11,12,14,15,16,17,18,19,20,21,22,23,24,25]:\n    show(k)\nEOF\npython3 /tmp/ascii.py",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 342993,
+   "dur_ms": 13951,
+   "tokens_in": 4498,
+   "tokens_out": 53,
+   "cache_read": 32000,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 356944,
+   "dur_ms": 34,
+   "tool": "bash",
+   "is_error": false,
+   "command": "fc-list | head -50; echo; fc-list | wc -l"
+  },
+  {
+   "kind": "model",
+   "at_ms": 357101,
+   "dur_ms": 3441,
+   "tokens_in": 232,
+   "tokens_out": 92,
+   "cache_read": 38464,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 360542,
+   "dur_ms": 38,
+   "tool": "bash",
+   "is_error": false,
+   "command": "grep -a -o -E \"[ -~]{4,}\" /app/text.gcode | grep -i -E \"flag|gcode|chall|gc0|gcd\" | head -20; strings /app/text.gcode | head -50"
+  },
+  {
+   "kind": "model",
+   "at_ms": 360616,
+   "dur_ms": 3585,
+   "tokens_in": 64,
+   "tokens_out": 57,
+   "cache_read": 39168,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 364201,
+   "dur_ms": 42,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 -c \"import scipy; print(scipy.__version__)\" 2>&1"
+  },
+  {
+   "kind": "model",
+   "at_ms": 364273,
+   "dur_ms": 6600,
+   "tokens_in": 105,
+   "tokens_out": 839,
+   "cache_read": 39424,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 370873,
+   "dur_ms": 7680,
+   "tool": "bash",
+   "is_error": false,
+   "command": "pip install --quiet scipy 2>&1 | tail -2\ncat > /tmp/match.py <<'EOF'\nfrom PIL import Image, ImageFont, ImageDraw\nimport numpy as np\nfrom scipy.ndimage import binary_fill_holes, binary_closing\nim=np.array(Image.open('/tmp/txt_base.png').convert('L'))\nink=im<128\ncols=ink.any(0)\nspans=[]; instr=False; lastink=-999\nfor i,v in enumerate(cols):\n    if v:\n        if not instr: start=i; instr=True\n        lastink=i\n    else:\n        if instr and i-lastink>=4:\n            spans.append((start,lastink)); instr=False\nif instr: spans.append((start,lastink))\ndef glyph(k):\n    a,b=spans[k]; sub=ink[:,a:b+1]\n    yy=np.where(sub.any(1))[0]; sub=sub[yy.min():yy.max()+1]\n    return sub\ndef fontglyph(ch,path):\n    f=ImageFont.truetype(path,400)\n    img=Image.new('L',(600,600),0); d=ImageDraw.Draw(img)\n    d.text((50,50),ch,fill=255,font=f)\n    a=np.array(img)>128\n    yy,xx=np.where(a)\n    return a[yy.min():yy.max()+1,xx.min():xx.max()+1]\ndef iou(a,b):\n    # resize b to a shape\n    bi=Image.fromarray((b*255).astype('uint8')).resize((a.shape[1],a.shape[0]),Image.Resampling.LANCZOS)\n    bb=np.array(bi)>128\n    return (a&bb).sum()/max(1,(a|bb).sum())\nfonts={'book':'/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf','bold':'/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf','serif':'/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf','serifb':'/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf','mono':'/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf','monob':'/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf'}\ntests={0:'ftlI1',1:'lI1',2:'a',3:'gq',5:'gq',6:'c',7:'O0oQ',8:'d',9:'3',11:'i',12:'z2',14:'c',15:'h',16:'4',17:'L',18:'L',19:'e',20:'n',21:'G6',22:'i',23:'N',24:'gq',25:'}'}\nfor k,cands in tests.items():\n    g=glyph(k); g=binary_closing(binary_fill_holes(g),np.ones((3,3)))\n    scores=[]\n    for ch in cands:\n        for fn,path in fonts.items():\n            fg=binary_fill_holes(fontglyph(ch,path))\n            scores.append((iou(g,fg),ch,fn))\n    scores.sort(reverse=True)\n    print(k,'shape',g.shape,'best',[(round(s,3),c,f) for s,c,f in scores[:4]])\nEOF\npython3 /tmp/match.py",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 378569,
+   "dur_ms": 5204,
+   "tokens_in": 40471,
+   "tokens_out": 363,
+   "cache_read": 1856,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 383773,
+   "dur_ms": 424,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nfrom PIL import Image,ImageFont,ImageDraw\nimport numpy as np\nfonts={'book':'/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf','bold':'/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf','mono':'/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf','serif':'/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf','serifb':'/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf'}\ndef fg(ch,path):\n    f=ImageFont.truetype(path,400); img=Image.new('L',(800,800),0); ImageDraw.Draw(img).text((50,50),ch,fill=255,font=f)\n    a=np.array(img)>128; yy,xx=np.where(a); a=a[yy.min():yy.max()+1,xx.min():xx.max()+1]\n    return a.shape[1],a.shape[0],a.sum()/(a.shape[0]*a.shape[1])\nfor ch in 'O0oQDIl1f':\n    print(ch,[(fn,)+tuple(round(x,3) for x in fg(ch,p)) for fn,p in fonts.items()])\nEOF",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 384215,
+   "dur_ms": 16466,
+   "tokens_in": 842,
+   "tokens_out": 310,
+   "cache_read": 43008,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 400681,
+   "dur_ms": 1940,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/fillrender.py <<'EOF'\nimport numpy as np\nfrom PIL import Image, ImageFilter\nfrom scipy.ndimage import binary_fill_holes, binary_closing, binary_dilation\nimport subprocess\nim=np.array(Image.open('/tmp/txt_base.png').convert('L'))\nink=im<128\nf=binary_fill_holes(binary_closing(ink,np.ones((3,3))))\n# some interior holes due to open outlines: dilate then fill then erode\nfor it in [1,2,3]:\n    d=binary_dilation(f,np.ones((it,it)))\n    f2=binary_fill_holes(d)\n    out=np.where(f2,0,255).astype('uint8')\n    Image.fromarray(out).save(f'/tmp/fill{it}.png')\n    for psm in ['7','8','13']:\n        r=subprocess.run(['tesseract',f'/tmp/fill{it}.png','-','--psm',psm],capture_output=True,text=True)\n        print(it,psm,repr(r.stdout.strip()))\nEOF\npython3 /tmp/fillrender.py",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 402638,
+   "dur_ms": 7167,
+   "tokens_in": 197,
+   "tokens_out": 933,
+   "cache_read": 46912,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 409805,
+   "dur_ms": 1378,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/aspectmatch.py <<'EOF'\nfrom PIL import Image,ImageFont,ImageDraw\nimport numpy as np\nfrom scipy.ndimage import binary_fill_holes,binary_closing,binary_dilation\nim=np.array(Image.open('/tmp/txt_base.png').convert('L')); ink=im<128\ncols=ink.any(0); spans=[]; instr=False; lastink=-999\nfor i,v in enumerate(cols):\n    if v:\n        if not instr: start=i; instr=True\n        lastink=i\n    else:\n        if instr and i-lastink>=4: spans.append((start,lastink)); instr=False\nif instr: spans.append((start,lastink))\ndef glyph(k):\n    a,b=spans[k]; sub=ink[:,a:b+1]; yy=np.where(sub.any(1))[0]; sub=sub[yy.min():yy.max()+1]\n    sub=binary_fill_holes(binary_closing(sub,np.ones((3,3))))\n    return sub\ndef fontglyph(ch,path):\n    f=ImageFont.truetype(path,400); img=Image.new('L',(900,900),0); ImageDraw.Draw(img).text((50,50),ch,fill=255,font=f)\n    a=np.array(img)>128; yy,xx=np.where(a); a=a[yy.min():yy.max()+1,xx.min():xx.max()+1]\n    return binary_fill_holes(a)\ndef best_iou(obs,cand):\n    oh,ow=obs.shape\n    # uniform scale candidate height to obs height\n    s=oh/cand.shape[0]; nw=max(1,round(cand.shape[1]*s)); nh=oh\n    ci=np.array(Image.fromarray((cand*255).astype('uint8')).resize((nw,nh),Image.Resampling.LANCZOS))>128\n    best=0\n    for dx in range(-10,11):\n        for dy in range(-3,4):\n            canvas=np.zeros_like(obs)\n            x0=dx; y0=dy\n            xs0=max(0,x0); ys0=max(0,y0); xs1=min(ow,x0+nw); ys1=min(oh,y0+nh)\n            if xs1<=xs0 or ys1<=ys0: continue\n            canvas[ys0:ys1,xs0:xs1]=ci[ys0-y0:ys1-y0,xs0-x0:xs1-x0]\n            u=(obs|canvas).sum(); iou=(obs&canvas).sum()/u if u else 0\n            best=max(best,iou)\n    return best,nw,nh\npaths={'book':'/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf','bold':'/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf','mono':'/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf','serif':'/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf'}\nfor k,cands in {7:'O0oQ',1:'lI',0:'fF',12:'zs2',21:'G6',2:'a',6:'cC',17:'L',22:'i1l',24:'gq'}.items():\n    g=glyph(k); print('span',k,'obs',g.shape)\n    for ch in cands:\n        vals=[]\n        for fn,p in paths.items():\n            cg=fontglyph(ch,p); iou,nw,nh=best_iou(g,cg)\n            vals.append((round(iou,3),ch,fn,(nw,nh),round(cg.shape[1]/cg.shape[0],3)))\n        vals.sort(reverse=True)\n        print('  ',vals[:3])\nEOF\npython3 /tmp/aspectmatch.py",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 411203,
+   "dur_ms": 4957,
+   "tokens_in": 1927,
+   "tokens_out": 73,
+   "cache_read": 48448,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 416160,
+   "dur_ms": 15,
+   "tool": "write",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/out.txt",
+    "content": "flag{gc0d3_iz_ch4LLenGiNg}\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 416241,
+   "dur_ms": 988,
+   "tokens_in": 53,
+   "tokens_out": 32,
+   "cache_read": 51200,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 2.875,
+ "calls": 29,
+ "cell": "TB1c"
+}

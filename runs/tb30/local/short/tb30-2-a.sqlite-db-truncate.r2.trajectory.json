@@ -1,0 +1,158 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "sqlite-db-truncate",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 78074,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 376,
+  "output": 13747,
+  "cacheRead": 205504,
+  "cacheWrite": 4544,
+  "total": 224171
+ },
+ "totals": {
+  "model_calls": 9,
+  "tool_calls": 10,
+  "model_ms": 76688,
+  "tool_ms": 846,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 499,
+   "dur_ms": 1176
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1396,
+   "dur_ms": 50,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "ls -la /app/ && file /app/trunc.db && stat -c '%s bytes' /app/trunc.db"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1675,
+   "dur_ms": 26,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "xxd /app/trunc.db | head -50"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1701,
+   "dur_ms": 1019
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2720,
+   "dur_ms": 56,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\ndata=open('trunc.db','rb').read()\nprint(len(data))\nprint(data[:16])\nimport binascii\nprint(binascii.hexlify(data[:128]).decode())\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 2776,
+   "dur_ms": 4230
+  },
+  {
+   "kind": "tool",
+   "at_ms": 7006,
+   "dur_ms": 93,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\ndata=open('trunc.db','rb').read()\nprint('sqlite magic at:', data.find(b'SQLite format 3'))\nprint('len',len(data))\n# print all printable runs\nimport re\nfor m in re.finditer(rb'[ -~]{4,}', data):\n    print(m.start(), m.group()[:120])\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 7099,
+   "dur_ms": 2131
+  },
+  {
+   "kind": "tool",
+   "at_ms": 9230,
+   "dur_ms": 38,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\ndata=open('trunc.db','rb').read()\nimport binascii\nfor off in range(0,4096,16):\n    chunk=data[off:off+16]\n    print('%04x  %-47s  %s'%(off, binascii.hexlify(chunk).decode(), ''.join(chr(b) if 32<=b<127 else '.' for b in chunk)))\n\" | sed -n '230,260p'"
+  },
+  {
+   "kind": "model",
+   "at_ms": 9268,
+   "dur_ms": 34827
+  },
+  {
+   "kind": "tool",
+   "at_ms": 43530,
+   "dur_ms": 37,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\ndata=open('/app/trunc.db','rb').read()\nn=len(data)\n# page header at 0\nptype=data[0]\nfreeblock=int.from_bytes(data[1:3],'big')\nncells=int.from_bytes(data[3:5],'big')\ncellstart=int.from_bytes(data[5:7],'big')\nfrag=data[7]\nprint('page type',ptype,'freeblock',freeblock,'ncells',ncells,'cellstart',hex(cellstart),'frag',frag)\nptrs=[int.from_bytes(data[8+2*i:10+2*i],'big') for i in range(ncells)]\nprint('ptrs',[hex(p) for p in ptrs])\n\ndef varint(b,i):\n    v=0\n    for k in range(9):\n        c=b[i+k]\n        if k==8:\n            v=(v<<8)|c\n            return v,i+k+1\n        v=(v<<7)|(c&0x7f)\n        if not (c&0x80):\n            return v,i+k+1\n    return v,i+9\n\nfor idx,p in enumerate(ptrs):\n    plen,i=varint(data,p)\n    rowid,i=varint(data,i)\n    payload=data[i:i+plen]\n    hlen=payload[0]\n    types=[]\n    j=1\n    while j<hlen:\n        t,j=varint(payload,j)\n        types.append(t)\n    print('\\ncell',idx,'off',hex(p),'plen',plen,'rowid',rowid,'hlen',hlen,'types',types)\n    print(' payload hex:',payload.hex())\n    print(' payload raw:',payload)\nEOF"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 44095,
+   "dur_ms": 416,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -laR /app 2>/dev/null; echo ---; find / -name '*.db*' -o -name '*.sqlite*' 2>/dev/null | grep -v proc | head -50"
+  },
+  {
+   "kind": "model",
+   "at_ms": 44511,
+   "dur_ms": 10817
+  },
+  {
+   "kind": "tool",
+   "at_ms": 55328,
+   "dur_ms": 34,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport struct\nfor h in ['4058ff5c28f5c28f','3fe0000000000000']:\n    print(h, struct.unpack('>d', bytes.fromhex(h))[0], repr(struct.unpack('>d', bytes.fromhex(h))[0]))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 55362,
+   "dur_ms": 13772
+  },
+  {
+   "kind": "tool",
+   "at_ms": 69134,
+   "dur_ms": 42,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\ndata=open('/app/trunc.db','rb').read()\n# Identify non-zero byte regions\nregions=[]\ni=0\nwhile i<len(data):\n    if data[i]!=0:\n        j=i\n        while j<len(data) and data[j]!=0: j+=1\n        regions.append((i,j,j-i))\n        i=j\n    else: i+=1\nprint(\"non-zero regions (start,end,len):\")\nfor r in regions: print(\"  %#06x-%#06x len=%d\"%(r[0],r[1],r[2]))\n# expected: 0..27 header+ptrs, 0xf49..0xfff cells\nexpect=set(range(0,28))|set(range(0xf49,0x1000))\nextra=[i for i in range(len(data)) if data[i]!=0 and i not in expect]\nprint(\"non-zero bytes outside header+ptr array and cell-content area:\", extra)\n# freeblock/frag already 0; confirm no overflow references (all payload local)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 69176,
+   "dur_ms": 5232
+  },
+  {
+   "kind": "tool",
+   "at_ms": 74408,
+   "dur_ms": 54,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport json, struct\n\ndata = open('/app/trunc.db','rb').read()\n\ndef varint(b, i):\n    v = 0\n    for k in range(9):\n        c = b[i+k]\n        if k == 8:\n            return (v << 8) | c, i+9\n        v = (v << 7) | (c & 0x7f)\n        if not (c & 0x80):\n            return v, i+k+1\n\ndef decode(types, body):\n    out = []\n    off = 0\n    for t in types:\n        if t == 0:\n            out.append(None)\n        elif t in (1,2,3,4,5,6):\n            size = {1:1,2:2,3:3,4:4,5:6,6:8}[t]\n            out.append(int.from_bytes(body[off:off+size], 'big', signed=True)); off += size\n        elif t == 7:\n            out.append(struct.unpack('>d', body[off:off+8])[0]); off += 8\n        elif t == 8:\n            out.append(0)\n        elif t == 9:\n            out.append(1)\n        elif t >= 12:\n            n = (t-12)//2 if t % 2 == 0 else (t-13)//2\n            chunk = body[off:off+n]; off += n\n            out.append(chunk if t % 2 == 0 else chunk.decode('utf-8', 'replace'))\n    return out\n\nassert data[0] == 13, \"not a table leaf page\"\nncells = int.from_bytes(data[3:5], 'big')\nptrs = [int.from_bytes(data[8+2*i:10+2*i], 'big') for i in range(ncells)]\n\nrows = []\nfor p in ptrs:\n    plen, i = varint(data, p)\n    rowid, i = varint(data, i)\n    payload = data[i:i+plen]\n    hlen = payload[0]\n    j = 1; types = []\n    while j < hlen:\n        t, j = varint(payload, j)\n        types.append(t)\n    vals = decode(types, payload[hlen:])\n    # column layout: [NULL, word TEXT, value NUMERIC]\n    word = next(v for v in vals if isinstance(v, str))\n    value = vals[-1]\n    # normalize integral floats to int? keep as stored numeric type\n    rows.append({\"word\": word, \"value\": value})\n\nwith open('/app/recover.json','w') as f:\n    json.dump(rows, f, indent=2)\n    f.write('\\n')\n\nprint(json.dumps(rows, indent=2))\nEOF\necho '--- file ---'\ncat /app/recover.json"
+  },
+  {
+   "kind": "model",
+   "at_ms": 74462,
+   "dur_ms": 3484
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.107,
+ "calls": 10,
+ "cell": "TB1a"
+}

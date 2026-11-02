@@ -1,0 +1,515 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "query-optimize",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 297836,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 1059,
+  "output": 28006,
+  "cacheRead": 1125568,
+  "cacheWrite": 8704,
+  "total": 1163337
+ },
+ "totals": {
+  "model_calls": 36,
+  "tool_calls": 37,
+  "model_ms": 142193,
+  "tool_ms": 154888,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 669,
+   "dur_ms": 938
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1278,
+   "dur_ms": 14,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/my-sql-query.sql"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1607,
+   "dur_ms": 87,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sqlite3 oewn.sqlite \".schema\" | head -200"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1694,
+   "dur_ms": 1061
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2755,
+   "dur_ms": 55,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sqlite3 oewn.sqlite \".indexes\" && echo \"---COUNTS---\" && sqlite3 oewn.sqlite \"SELECT 'words',COUNT(*) FROM words UNION ALL SELECT 'senses',COUNT(*) FROM senses UNION ALL SELECT 'synsets',COUNT(*) FROM synsets;\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 2810,
+   "dur_ms": 3178
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5988,
+   "dur_ms": 272,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sqlite3 oewn.sqlite \"\nSELECT 'dup_synsetids', COUNT(*) FROM (SELECT synsetid FROM synsets GROUP BY synsetid HAVING COUNT(*)>1);\nSELECT 'dup_words', COUNT(*) FROM (SELECT wordid FROM words GROUP BY wordid HAVING COUNT(*)>1);\nSELECT 'distinct_wordid_senses', COUNT(DISTINCT wordid) FROM senses;\nSELECT 'senses_not_in_synsets', COUNT(*) FROM senses s LEFT JOIN synsets y ON s.synsetid=y.synsetid WHERE y.synsetid IS NULL;\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 6260,
+   "dur_ms": 1498
+  },
+  {
+   "kind": "tool",
+   "at_ms": 7758,
+   "dur_ms": 120077,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "time sqlite3 oewn.sqlite < my-sql-query.sql > /tmp/orig.out 2>/tmp/orig.err; wc -l /tmp/orig.out; head -5 /tmp/orig.out; cat /tmp/orig.err"
+  },
+  {
+   "kind": "model",
+   "at_ms": 127835,
+   "dur_ms": 9042
+  },
+  {
+   "kind": "tool",
+   "at_ms": 136877,
+   "dur_ms": 845,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/cand1.sql <<'EOF'\nWITH pair AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt, MAX(syn.domainid) AS domainid, MAX(syn.posid) AS posid\n  FROM senses s JOIN synsets syn ON syn.synsetid = s.synsetid\n  GROUP BY s.wordid, s.synsetid\n), ranked AS (\n  SELECT wordid, synsetid, cnt, domainid, posid,\n         ROW_NUMBER() OVER (PARTITION BY wordid ORDER BY cnt DESC, synsetid ASC) AS rn\n  FROM pair\n), agg AS (\n  SELECT wordid,\n         COUNT(*) AS total_synsets,\n         SUM(cnt) AS total_senses,\n         COUNT(DISTINCT domainid) AS distinct_domains,\n         COUNT(DISTINCT posid) AS distinct_posids,\n         MAX(CASE WHEN rn=1 THEN synsetid END) AS top_synsetid,\n         MAX(CASE WHEN rn=1 THEN cnt END) AS top_synset_sense_count\n  FROM ranked\n  GROUP BY wordid\n)\nSELECT w.wordid AS word_id, w.word AS word, total_synsets, total_senses, distinct_domains, distinct_posids, top_synsetid, top_synset_sense_count\nFROM agg JOIN words w ON w.wordid = agg.wordid\nWHERE total_synsets >= 2 AND distinct_domains >= 2 AND total_senses >= 2\nORDER BY total_senses DESC, total_synsets DESC, distinct_domains DESC, word_id ASC\nLIMIT 500;\nEOF\ntime sqlite3 oewn.sqlite < /tmp/cand1.sql > /tmp/cand1.out; wc -l /tmp/cand1.out; head -3 /tmp/cand1.out"
+  },
+  {
+   "kind": "model",
+   "at_ms": 137722,
+   "dur_ms": 1123
+  },
+  {
+   "kind": "tool",
+   "at_ms": 138845,
+   "dur_ms": 23,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /tmp/orig.out; wc -l /tmp/orig.out 2>/dev/null; cat /tmp/orig.err 2>/dev/null"
+  },
+  {
+   "kind": "model",
+   "at_ms": 138868,
+   "dur_ms": 2568
+  },
+  {
+   "kind": "tool",
+   "at_ms": 141436,
+   "dur_ms": 404,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cp /app/oewn.sqlite /tmp/oewn_idx.sqlite && sqlite3 /tmp/oewn_idx.sqlite \"CREATE INDEX i1 ON senses(wordid); CREATE INDEX i2 ON senses(synsetid); CREATE INDEX i3 ON synsets(synsetid); CREATE INDEX i4 ON words(wordid);\" && echo done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 141840,
+   "dur_ms": 1017
+  },
+  {
+   "kind": "tool",
+   "at_ms": 142857,
+   "dur_ms": 672,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /tmp && time sqlite3 oewn_idx.sqlite < /app/my-sql-query.sql > /tmp/ref_idx.out; wc -l /tmp/ref_idx.out",
+   "timeout": 600000
+  },
+  {
+   "kind": "model",
+   "at_ms": 143529,
+   "dur_ms": 1188
+  },
+  {
+   "kind": "tool",
+   "at_ms": 144717,
+   "dur_ms": 964,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sqlite3 /tmp/oewn_idx.sqlite < /tmp/cand1.sql > /tmp/cand1_idx.out && diff /tmp/ref_idx.out /tmp/cand1_idx.out && echo \"IDENTICAL (indexed copy)\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 145681,
+   "dur_ms": 1098
+  },
+  {
+   "kind": "tool",
+   "at_ms": 146779,
+   "dur_ms": 16,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "diff /tmp/cand1.out /tmp/ref_idx.out && echo \"IDENTICAL (unindexed candidate vs reference)\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 146795,
+   "dur_ms": 3480
+  },
+  {
+   "kind": "tool",
+   "at_ms": 150275,
+   "dur_ms": 19,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sqlite3 oewn.sqlite \"EXPLAIN QUERY PLAN $(cat /tmp/cand1.sql)\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 150294,
+   "dur_ms": 4843
+  },
+  {
+   "kind": "tool",
+   "at_ms": 155137,
+   "dur_ms": 30,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/cand2.sql <<'EOF'\nWITH pair AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt, syn.domainid, syn.posid\n  FROM senses s JOIN synsets syn ON syn.synsetid = s.synsetid\n  GROUP BY s.wordid, s.synsetid\n), ranked AS (\n  SELECT wordid, synsetid, cnt, domainid, posid,\n         ROW_NUMBER() OVER (PARTITION BY wordid ORDER BY cnt DESC, synsetid ASC) AS rn\n  FROM pair\n), agg AS (\n  SELECT wordid, COUNT(*) AS total_synsets, SUM(cnt) AS total_senses,\n         COUNT(DISTINCT domainid) AS distinct_domains, COUNT(DISTINCT posid) AS distinct_posids,\n         MAX(CASE WHEN rn=1 THEN synsetid END) AS top_synsetid,\n         MAX(CASE WHEN rn=1 THEN cnt END) AS top_synset_sense_count\n  FROM ranked GROUP BY wordid\n  HAVING COUNT(*) >= 2 AND COUNT(DISTINCT domainid) >= 2 AND SUM(cnt) >= 2\n)\nSELECT w.wordid AS word_id, w.word, total_synsets, total_senses, distinct_domains, distinct_posids, top_synsetid, top_synset_sense_count\nFROM agg JOIN words w ON w.wordid = agg.wordid\nORDER BY total_senses DESC, total_synsets DESC, distinct_domains DESC, word_id ASC\nLIMIT 500;\nEOF\ncat > /tmp/cand3.sql <<'EOF'\nWITH pair0 AS (\n  SELECT wordid, synsetid, COUNT(*) AS cnt FROM senses GROUP BY wordid, synsetid\n), pair AS (\n  SELECT p.wordid, p.synsetid, p.cnt, syn.domainid, syn.posid\n  FROM pair0 p JOIN synsets syn ON syn.synsetid = p.synsetid\n), ranked AS (\n  SELECT wordid, synsetid, cnt, domainid, posid,\n         ROW_NUMBER() OVER (PARTITION BY wordid ORDER BY cnt DESC, synsetid ASC) AS rn\n  FROM pair\n), agg AS (\n  SELECT wordid, COUNT(*) AS total_synsets, SUM(cnt) AS total_senses,\n         COUNT(DISTINCT domainid) AS distinct_domains, COUNT(DISTINCT posid) AS distinct_posids,\n         MAX(CASE WHEN rn=1 THEN synsetid END) AS top_synsetid,\n         MAX(CASE WHEN rn=1 THEN cnt END) AS top_synset_sense_count\n  FROM ranked GROUP BY wordid\n)\nSELECT w.wordid AS word_id, w.word, total_synsets, total_senses, distinct_domains, distinct_posids, top_synsetid, top_synset_sense_count\nFROM agg JOIN words w ON w.wordid = agg.wordid\nWHERE total_synsets >= 2 AND distinct_domains >= 2 AND total_senses >= 2\nORDER BY total_senses DESC, total_synsets DESC, distinct_domains DESC, word_id ASC\nLIMIT 500;\nEOF\nfor f in cand1 cand2 cand3; do echo \"== $f ==\"; for i in 1 2; do /usr/bin/time -f \"%e s\" sqlite3 oewn.sqlite < /tmp/$f.sql > /tmp/$f.out; done; done\nfor f in cand2 cand3; do diff -q /tmp/cand1.out /tmp/$f.out && echo \"$f matches\"; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 155167,
+   "dur_ms": 1585
+  },
+  {
+   "kind": "tool",
+   "at_ms": 156752,
+   "dur_ms": 7964,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "for f in cand1 cand2 cand3; do echo \"== $f ==\"; for i in 1 2 3; do start=$(date +%s%N); sqlite3 oewn.sqlite < /tmp/$f.sql > /tmp/$f.out; end=$(date +%s%N); echo \"$(( (end-start)/1000000 )) ms\"; done; done\nfor f in cand1 cand2 cand3; do echo -n \"$f lines: \"; wc -l < /tmp/$f.out; done\ndiff -q /tmp/cand1.out /tmp/cand2.out && echo \"cand2 matches\"; diff -q /tmp/cand1.out /tmp/cand3.out && echo \"cand3 matches\"; diff -q /tmp/cand1.out /tmp/ref_idx.out && echo \"cand1 matches reference\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 164716,
+   "dur_ms": 2059
+  },
+  {
+   "kind": "tool",
+   "at_ms": 166775,
+   "dur_ms": 412,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "echo -n \"pair count: \"; sqlite3 oewn.sqlite \"SELECT COUNT(*) FROM (SELECT 1 FROM senses GROUP BY wordid,synsetid);\"\necho \"== senses group only ==\"; start=$(date +%s%N); sqlite3 oewn.sqlite \"SELECT COUNT(*) FROM (SELECT wordid,synsetid,COUNT(*) FROM senses GROUP BY wordid,synsetid)\" >/dev/null; end=$(date +%s%N); echo \"$(( (end-start)/1000000 )) ms\"\necho \"== join only (no group) ==\"; start=$(date +%s%N); sqlite3 oewn.sqlite \"SELECT COUNT(*) FROM senses s JOIN synsets syn ON syn.synsetid=s.synsetid\" >/dev/null; end=$(date +%s%N); echo \"$(( (end-start)/1000000 )) ms\"\necho \"== final sort/limit portion ==\"; start=$(date +%s%N); sqlite3 oewn.sqlite \"SELECT COUNT(*) FROM (SELECT wordid,COUNT(*) c FROM senses GROUP BY wordid HAVING c>=2)\" >/dev/null; end=$(date +%s%N); echo \"$(( (end-start)/1000000 )) ms\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 167187,
+   "dur_ms": 6653
+  },
+  {
+   "kind": "tool",
+   "at_ms": 173840,
+   "dur_ms": 142,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sqlite3 oewn.sqlite \"SELECT MIN(synsetid),MAX(synsetid),MAX(c) FROM (SELECT synsetid, COUNT(*) c FROM senses GROUP BY wordid,synsetid) q; SELECT MIN(synsetid),MAX(synsetid) FROM synsets;\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 173982,
+   "dur_ms": 2174
+  },
+  {
+   "kind": "tool",
+   "at_ms": 176156,
+   "dur_ms": 1551,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/cand4.sql <<'EOF'\nWITH pair AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt, syn.domainid, syn.posid\n  FROM senses s JOIN synsets syn ON syn.synsetid = s.synsetid\n  GROUP BY s.wordid, s.synsetid\n), agg AS (\n  SELECT wordid,\n         COUNT(*) AS total_synsets,\n         SUM(cnt) AS total_senses,\n         COUNT(DISTINCT domainid) AS distinct_domains,\n         COUNT(DISTINCT posid) AS distinct_posids,\n         MAX(cnt) AS top_synset_sense_count,\n         MAX(cnt * 1000000 - synsetid) AS top_key\n  FROM pair\n  GROUP BY wordid\n  HAVING COUNT(*) >= 2 AND COUNT(DISTINCT domainid) >= 2 AND SUM(cnt) >= 2\n)\nSELECT w.wordid AS word_id, w.word, total_synsets, total_senses, distinct_domains, distinct_posids,\n       top_synset_sense_count * 1000000 - top_key AS top_synsetid,\n       top_synset_sense_count\nFROM agg JOIN words w ON w.wordid = agg.wordid\nORDER BY total_senses DESC, total_synsets DESC, distinct_domains DESC, word_id ASC\nLIMIT 500;\nEOF\nfor i in 1 2 3; do start=$(date +%s%N); sqlite3 oewn.sqlite < /tmp/cand4.sql > /tmp/cand4.out; end=$(date +%s%N); echo \"$(( (end-start)/1000000 )) ms\"; done\ndiff -q /tmp/cand4.out /tmp/ref_idx.out && echo \"cand4 matches reference\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 177707,
+   "dur_ms": 3968
+  },
+  {
+   "kind": "tool",
+   "at_ms": 181675,
+   "dur_ms": 1526,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "echo \"== pair CTE cost ==\"; for i in 1 2; do start=$(date +%s%N); sqlite3 oewn.sqlite \"WITH pair AS (SELECT s.wordid,s.synsetid,COUNT(*) cnt,syn.domainid,syn.posid FROM senses s JOIN synsets syn ON syn.synsetid=s.synsetid GROUP BY s.wordid,s.synsetid) SELECT COUNT(*) FROM pair\" >/dev/null; end=$(date +%s%N); echo \"$(( (end-start)/1000000 )) ms\"; done\necho \"== pair+agg cost ==\"; for i in 1 2; do start=$(date +%s%N); sqlite3 oewn.sqlite \"WITH pair AS (SELECT s.wordid,s.synsetid,COUNT(*) cnt,syn.domainid,syn.posid FROM senses s JOIN synsets syn ON syn.synsetid=s.synsetid GROUP BY s.wordid,s.synsetid) SELECT COUNT(*) FROM (SELECT wordid,COUNT(*),SUM(cnt),COUNT(DISTINCT domainid),COUNT(DISTINCT posid),MAX(cnt),MAX(cnt*1000000-synsetid) FROM pair GROUP BY wordid)\" >/dev/null; end=$(date +%s%N); echo \"$(( (end-start)/1000000 )) ms\"; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 183201,
+   "dur_ms": 3184
+  },
+  {
+   "kind": "tool",
+   "at_ms": 186385,
+   "dur_ms": 987,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "echo \"== group senses then join ==\"; for i in 1 2 3; do start=$(date +%s%N); sqlite3 oewn.sqlite \"WITH pair0 AS (SELECT wordid,synsetid,COUNT(*) cnt FROM senses GROUP BY wordid,synsetid) SELECT COUNT(*) FROM pair0 p JOIN synsets syn ON syn.synsetid=p.synsetid\" >/dev/null; end=$(date +%s%N); echo \"$(( (end-start)/1000000 )) ms\"; done\necho \"== plan ==\"; sqlite3 oewn.sqlite \"EXPLAIN QUERY PLAN WITH pair0 AS (SELECT wordid,synsetid,COUNT(*) cnt FROM senses GROUP BY wordid,synsetid) SELECT COUNT(*) FROM pair0 p JOIN synsets syn ON syn.synsetid=p.synsetid\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 187372,
+   "dur_ms": 3232
+  },
+  {
+   "kind": "tool",
+   "at_ms": 190604,
+   "dur_ms": 29,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /tmp/orig.out; cat /tmp/orig.err; ps aux | grep -c \"[s]qlite3 oewn.sqlite\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 190633,
+   "dur_ms": 8199
+  },
+  {
+   "kind": "tool",
+   "at_ms": 198832,
+   "dur_ms": 2171,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/cand5.sql <<'EOF'\nWITH pair0 AS (\n  SELECT wordid, synsetid, COUNT(*) AS cnt FROM senses GROUP BY wordid, synsetid\n), top AS (\n  SELECT wordid, MAX(cnt) AS topcnt, MAX(cnt * 1000000 - synsetid) AS topkey\n  FROM pair0 GROUP BY wordid\n), agg AS (\n  SELECT s.wordid,\n         COUNT(DISTINCT s.synsetid) AS total_synsets,\n         COUNT(*) AS total_senses,\n         COUNT(DISTINCT syn.domainid) AS distinct_domains,\n         COUNT(DISTINCT syn.posid) AS distinct_posids\n  FROM senses s JOIN synsets syn ON syn.synsetid = s.synsetid\n  GROUP BY s.wordid\n)\nSELECT w.wordid AS word_id, w.word, total_synsets, total_senses, distinct_domains, distinct_posids,\n       topcnt * 1000000 - topkey AS top_synsetid, topcnt AS top_synset_sense_count\nFROM agg JOIN top USING (wordid) JOIN words w ON w.wordid = agg.wordid\nWHERE total_synsets >= 2 AND distinct_domains >= 2 AND total_senses >= 2\nORDER BY total_senses DESC, total_synsets DESC, distinct_domains DESC, word_id ASC\nLIMIT 500;\nEOF\nfor i in 1 2 3; do start=$(date +%s%N); sqlite3 oewn.sqlite < /tmp/cand5.sql > /tmp/cand5.out; end=$(date +%s%N); echo \"$(( (end-start)/1000000 )) ms\"; done\ndiff -q /tmp/cand5.out /tmp/ref_idx.out && echo \"cand5 matches reference\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 201003,
+   "dur_ms": 5894
+  },
+  {
+   "kind": "tool",
+   "at_ms": 206897,
+   "dur_ms": 1648,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/cand6.sql <<'EOF'\nWITH pair AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt, syn.domainid, syn.posid\n  FROM senses s JOIN synsets syn ON syn.synsetid = s.synsetid\n  GROUP BY s.wordid, s.synsetid\n), agg AS (\n  SELECT wordid,\n         COUNT(*) AS total_synsets,\n         SUM(cnt) AS total_senses,\n         COUNT(DISTINCT domainid) AS distinct_domains,\n         MAX(posid = 'n') + MAX(posid = 'v') + MAX(posid = 'a') + MAX(posid = 'r') + MAX(posid = 's') AS distinct_posids,\n         MAX(cnt) AS top_synset_sense_count,\n         MAX(cnt * 1000000 - synsetid) AS top_key\n  FROM pair\n  GROUP BY wordid\n  HAVING COUNT(*) >= 2 AND COUNT(DISTINCT domainid) >= 2 AND SUM(cnt) >= 2\n)\nSELECT w.wordid AS word_id, w.word, total_synsets, total_senses, distinct_domains, distinct_posids,\n       top_synset_sense_count * 1000000 - top_key AS top_synsetid,\n       top_synset_sense_count\nFROM agg JOIN words w ON w.wordid = agg.wordid\nORDER BY total_senses DESC, total_synsets DESC, distinct_domains DESC, word_id ASC\nLIMIT 500;\nEOF\nfor i in 1 2 3; do start=$(date +%s%N); sqlite3 oewn.sqlite < /tmp/cand6.sql > /tmp/cand6.out; end=$(date +%s%N); echo \"$(( (end-start)/1000000 )) ms\"; done\ndiff -q /tmp/cand6.out /tmp/ref_idx.out && echo \"cand6 matches reference\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 208545,
+   "dur_ms": 3166
+  },
+  {
+   "kind": "tool",
+   "at_ms": 211711,
+   "dur_ms": 1533,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "P=\"WITH pair AS (SELECT s.wordid,s.synsetid,COUNT(*) cnt,syn.domainid,syn.posid FROM senses s JOIN synsets syn ON syn.synsetid=s.synsetid GROUP BY s.wordid,s.synsetid)\"\nfor expr in \"COUNT(*)\" \"COUNT(*),COUNT(DISTINCT domainid)\" \"COUNT(*),COUNT(DISTINCT posid)\" \"COUNT(*),COUNT(DISTINCT domainid),COUNT(DISTINCT posid)\"; do\n  echo -n \"[$expr] \"; start=$(date +%s%N); sqlite3 oewn.sqlite \"$P SELECT COUNT(*) FROM (SELECT wordid,$expr FROM pair GROUP BY wordid)\" >/dev/null; end=$(date +%s%N); echo \"$(( (end-start)/1000000 )) ms\"\ndone"
+  },
+  {
+   "kind": "model",
+   "at_ms": 213244,
+   "dur_ms": 3831
+  },
+  {
+   "kind": "tool",
+   "at_ms": 217075,
+   "dur_ms": 223,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sqlite3 oewn.sqlite \"\nSELECT COUNT(*) FROM (SELECT wordid FROM senses GROUP BY wordid HAVING COUNT(*)>=2);\nSELECT COUNT(*) FROM (SELECT wordid FROM senses GROUP BY wordid HAVING COUNT(*)>=2 AND COUNT(DISTINCT synsetid)>=2);\nSELECT COUNT(DISTINCT domainid) FROM synsets;\nSELECT COUNT(DISTINCT domainid) FROM domains;\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 217298,
+   "dur_ms": 5631
+  },
+  {
+   "kind": "tool",
+   "at_ms": 222929,
+   "dur_ms": 1214,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/cand7.sql <<'EOF'\nWITH multi AS (\n  SELECT wordid FROM senses GROUP BY wordid HAVING COUNT(*) >= 2\n), pair AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt, syn.domainid, syn.posid\n  FROM multi m JOIN senses s ON s.wordid = m.wordid\n  JOIN synsets syn ON syn.synsetid = s.synsetid\n  GROUP BY s.wordid, s.synsetid\n), agg AS (\n  SELECT wordid,\n         COUNT(*) AS total_synsets,\n         SUM(cnt) AS total_senses,\n         COUNT(DISTINCT domainid) AS distinct_domains,\n         COUNT(DISTINCT posid) AS distinct_posids,\n         MAX(cnt) AS top_synset_sense_count,\n         MAX(cnt * 1000000 - synsetid) AS top_key\n  FROM pair\n  GROUP BY wordid\n  HAVING COUNT(*) >= 2 AND COUNT(DISTINCT domainid) >= 2 AND SUM(cnt) >= 2\n)\nSELECT w.wordid AS word_id, w.word, total_synsets, total_senses, distinct_domains, distinct_posids,\n       top_synset_sense_count * 1000000 - top_key AS top_synsetid,\n       top_synset_sense_count\nFROM agg JOIN words w ON w.wordid = agg.wordid\nORDER BY total_senses DESC, total_synsets DESC, distinct_domains DESC, word_id ASC\nLIMIT 500;\nEOF\nfor i in 1 2 3; do start=$(date +%s%N); sqlite3 oewn.sqlite < /tmp/cand7.sql > /tmp/cand7.out; end=$(date +%s%N); echo \"$(( (end-start)/1000000 )) ms\"; done\ndiff -q /tmp/cand7.out /tmp/ref_idx.out && echo \"cand7 matches reference\"\nsqlite3 oewn.sqlite \"EXPLAIN QUERY PLAN $(cat /tmp/cand7.sql)\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 224143,
+   "dur_ms": 5285
+  },
+  {
+   "kind": "tool",
+   "at_ms": 229428,
+   "dur_ms": 1261,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/cand8.sql <<'EOF'\nWITH multi AS (\n  SELECT wordid FROM senses GROUP BY wordid HAVING COUNT(*) >= 2\n), pair AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt, syn.domainid, syn.posid\n  FROM senses s CROSS JOIN multi m\n  JOIN synsets syn ON syn.synsetid = s.synsetid\n  WHERE s.wordid = m.wordid\n  GROUP BY s.wordid, s.synsetid\n), agg AS (\n  SELECT wordid, COUNT(*) AS total_synsets, SUM(cnt) AS total_senses,\n         COUNT(DISTINCT domainid) AS distinct_domains, COUNT(DISTINCT posid) AS distinct_posids,\n         MAX(cnt) AS top_synset_sense_count, MAX(cnt * 1000000 - synsetid) AS top_key\n  FROM pair GROUP BY wordid\n  HAVING COUNT(*) >= 2 AND COUNT(DISTINCT domainid) >= 2 AND SUM(cnt) >= 2\n)\nSELECT w.wordid AS word_id, w.word, total_synsets, total_senses, distinct_domains, distinct_posids,\n       top_synset_sense_count * 1000000 - top_key AS top_synsetid, top_synset_sense_count\nFROM agg JOIN words w ON w.wordid = agg.wordid\nORDER BY total_senses DESC, total_synsets DESC, distinct_domains DESC, word_id ASC\nLIMIT 500;\nEOF\nfor i in 1 2 3; do start=$(date +%s%N); sqlite3 oewn.sqlite < /tmp/cand8.sql > /tmp/cand8.out; end=$(date +%s%N); echo \"$(( (end-start)/1000000 )) ms\"; done\ndiff -q /tmp/cand8.out /tmp/ref_idx.out && echo \"cand8 matches reference\"\nsqlite3 oewn.sqlite \"EXPLAIN QUERY PLAN $(cat /tmp/cand8.sql)\" | head -20"
+  },
+  {
+   "kind": "model",
+   "at_ms": 230689,
+   "dur_ms": 5589
+  },
+  {
+   "kind": "tool",
+   "at_ms": 236278,
+   "dur_ms": 1364,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "echo \"== cand7 multi+pair ==\"; for i in 1 2; do start=$(date +%s%N); sqlite3 oewn.sqlite \"WITH multi AS (SELECT wordid FROM senses GROUP BY wordid HAVING COUNT(*)>=2) SELECT COUNT(*) FROM (SELECT s.wordid,s.synsetid,COUNT(*) cnt,syn.domainid,syn.posid FROM multi m JOIN senses s ON s.wordid=m.wordid JOIN synsets syn ON syn.synsetid=s.synsetid GROUP BY s.wordid,s.synsetid)\" >/dev/null; end=$(date +%s%N); echo \"$(( (end-start)/1000000 )) ms\"; done\necho \"== cand7 full agg ==\"; for i in 1 2; do start=$(date +%s%N); sqlite3 oewn.sqlite \"WITH multi AS (SELECT wordid FROM senses GROUP BY wordid HAVING COUNT(*)>=2), pair AS (SELECT s.wordid,s.synsetid,COUNT(*) cnt,syn.domainid,syn.posid FROM multi m JOIN senses s ON s.wordid=m.wordid JOIN synsets syn ON syn.synsetid=s.synsetid GROUP BY s.wordid,s.synsetid) SELECT COUNT(*) FROM (SELECT wordid,COUNT(*),SUM(cnt),COUNT(DISTINCT domainid),COUNT(DISTINCT posid),MAX(cnt),MAX(cnt*1000000-synsetid) FROM pair GROUP BY wordid)\" >/dev/null; end=$(date +%s%N); echo \"$(( (end-start)/1000000 )) ms\"; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 237642,
+   "dur_ms": 4982
+  },
+  {
+   "kind": "tool",
+   "at_ms": 242624,
+   "dur_ms": 1097,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/cand9.sql <<'EOF'\nWITH multi AS (\n  SELECT wordid FROM senses GROUP BY wordid HAVING COUNT(*) >= 2\n), pair0 AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt\n  FROM multi m JOIN senses s ON s.wordid = m.wordid\n  GROUP BY s.wordid, s.synsetid\n), pair AS (\n  SELECT p.wordid, p.synsetid, p.cnt, syn.domainid, syn.posid\n  FROM pair0 p JOIN synsets syn ON syn.synsetid = p.synsetid\n), agg AS (\n  SELECT wordid, COUNT(*) AS total_synsets, SUM(cnt) AS total_senses,\n         COUNT(DISTINCT domainid) AS distinct_domains, COUNT(DISTINCT posid) AS distinct_posids,\n         MAX(cnt) AS top_synset_sense_count, MAX(cnt * 1000000 - synsetid) AS top_key\n  FROM pair GROUP BY wordid\n  HAVING COUNT(*) >= 2 AND COUNT(DISTINCT domainid) >= 2 AND SUM(cnt) >= 2\n)\nSELECT w.wordid AS word_id, w.word, total_synsets, total_senses, distinct_domains, distinct_posids,\n       top_synset_sense_count * 1000000 - top_key AS top_synsetid, top_synset_sense_count\nFROM agg JOIN words w ON w.wordid = agg.wordid\nORDER BY total_senses DESC, total_synsets DESC, distinct_domains DESC, word_id ASC\nLIMIT 500;\nEOF\nfor i in 1 2 3; do start=$(date +%s%N); sqlite3 oewn.sqlite < /tmp/cand9.sql > /tmp/cand9.out; end=$(date +%s%N); echo \"$(( (end-start)/1000000 )) ms\"; done\ndiff -q /tmp/cand9.out /tmp/ref_idx.out && echo \"cand9 matches reference\"\nsqlite3 oewn.sqlite \"EXPLAIN QUERY PLAN $(cat /tmp/cand9.sql)\" | head -22"
+  },
+  {
+   "kind": "model",
+   "at_ms": 243721,
+   "dur_ms": 5798
+  },
+  {
+   "kind": "tool",
+   "at_ms": 249519,
+   "dur_ms": 955,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "echo \"== multi only ==\"; for i in 1 2; do start=$(date +%s%N); sqlite3 oewn.sqlite \"WITH multi AS (SELECT wordid FROM senses GROUP BY wordid HAVING COUNT(*)>=2) SELECT COUNT(*) FROM multi\" >/dev/null; end=$(date +%s%N); echo \"$(( (end-start)/1000000 )) ms\"; done\necho \"== multi+pair0 ==\"; for i in 1 2; do start=$(date +%s%N); sqlite3 oewn.sqlite \"WITH multi AS (SELECT wordid FROM senses GROUP BY wordid HAVING COUNT(*)>=2) SELECT COUNT(*) FROM (SELECT s.wordid,s.synsetid,COUNT(*) FROM multi m JOIN senses s ON s.wordid=m.wordid GROUP BY s.wordid,s.synsetid)\" >/dev/null; end=$(date +%s%N); echo \"$(( (end-start)/1000000 )) ms\"; done\necho \"== +pair ==\"; for i in 1 2; do start=$(date +%s%N); sqlite3 oewn.sqlite \"WITH multi AS (SELECT wordid FROM senses GROUP BY wordid HAVING COUNT(*)>=2), pair0 AS (SELECT s.wordid,s.synsetid,COUNT(*) cnt FROM multi m JOIN senses s ON s.wordid=m.wordid GROUP BY s.wordid,s.synsetid) SELECT COUNT(*) FROM pair0 p JOIN synsets syn ON syn.synsetid=p.synsetid\" >/dev/null; end=$(date +%s%N); echo \"$(( (end-start)/1000000 )) ms\"; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 250474,
+   "dur_ms": 7814
+  },
+  {
+   "kind": "tool",
+   "at_ms": 258288,
+   "dur_ms": 1096,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sqlite3 --version\ncat > /tmp/cand10.sql <<'EOF'\nWITH multi AS (\n  SELECT wordid FROM senses GROUP BY wordid HAVING COUNT(*) >= 2\n), pair0 AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt\n  FROM multi m JOIN senses s ON s.wordid = m.wordid\n  GROUP BY s.wordid, s.synsetid\n), pair AS (\n  SELECT p.wordid, p.synsetid, p.cnt, syn.domainid, syn.posid\n  FROM pair0 p JOIN synsets syn ON syn.synsetid = p.synsetid\n), agg AS (\n  SELECT wordid, COUNT(*) AS total_synsets, SUM(cnt) AS total_senses,\n         COUNT(DISTINCT domainid) AS distinct_domains, COUNT(DISTINCT posid) AS distinct_posids,\n         MAX(cnt) AS top_synset_sense_count, MAX(cnt * 1000000 - synsetid) AS top_key\n  FROM pair GROUP BY wordid\n)\nSELECT w.wordid AS word_id, w.word, total_synsets, total_senses, distinct_domains, distinct_posids,\n       top_synset_sense_count * 1000000 - top_key AS top_synsetid, top_synset_sense_count\nFROM agg JOIN words w ON w.wordid = agg.wordid\nWHERE total_synsets >= 2 AND distinct_domains >= 2 AND total_senses >= 2\nORDER BY total_senses DESC, total_synsets DESC, distinct_domains DESC, word_id ASC\nLIMIT 500;\nEOF\nfor i in 1 2 3; do start=$(date +%s%N); sqlite3 oewn.sqlite < /tmp/cand10.sql > /tmp/cand10.out; end=$(date +%s%N); echo \"$(( (end-start)/1000000 )) ms\"; done\ndiff -q /tmp/cand10.out /tmp/ref_idx.out && echo \"cand10 matches reference\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 259384,
+   "dur_ms": 1242
+  },
+  {
+   "kind": "tool",
+   "at_ms": 260626,
+   "dur_ms": 73,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sqlite3 oewn.sqlite \"SELECT MIN(domainid),MAX(domainid),COUNT(DISTINCT domainid) FROM synsets; SELECT domainid, COUNT(*) FROM synsets GROUP BY domainid ORDER BY domainid;\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 260699,
+   "dur_ms": 13127
+  },
+  {
+   "kind": "tool",
+   "at_ms": 273174,
+   "dur_ms": 6,
+   "tool": "TaskStop",
+   "is_error": false
+  },
+  {
+   "kind": "tool",
+   "at_ms": 273826,
+   "dur_ms": 1037,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /tmp && sqlite3 -header oewn_idx.sqlite < /app/my-sql-query.sql > /tmp/ref_h.out; sqlite3 -header /app/oewn.sqlite < /tmp/cand10.sql > /tmp/cand10_h.out; diff /tmp/ref_h.out /tmp/cand10_h.out && echo \"HEADER+ROWS IDENTICAL\"; head -2 /tmp/cand10_h.out",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 274863,
+   "dur_ms": 3275
+  },
+  {
+   "kind": "tool",
+   "at_ms": 278138,
+   "dur_ms": 2201,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/cand11.sql <<'EOF'\nWITH pair0 AS (\n  SELECT wordid, synsetid, COUNT(*) AS cnt FROM senses GROUP BY wordid, synsetid\n), multi AS (\n  SELECT wordid FROM pair0 GROUP BY wordid HAVING SUM(cnt) >= 2\n), pair AS (\n  SELECT p.wordid, p.synsetid, p.cnt, syn.domainid, syn.posid\n  FROM multi m JOIN pair0 p ON p.wordid = m.wordid\n  JOIN synsets syn ON syn.synsetid = p.synsetid\n), agg AS (\n  SELECT wordid, COUNT(*) AS total_synsets, SUM(cnt) AS total_senses,\n         COUNT(DISTINCT domainid) AS distinct_domains, COUNT(DISTINCT posid) AS distinct_posids,\n         MAX(cnt) AS top_synset_sense_count, MAX(cnt * 1000000 - synsetid) AS top_key\n  FROM pair GROUP BY wordid\n)\nSELECT w.wordid AS word_id, w.word, total_synsets, total_senses, distinct_domains, distinct_posids,\n       top_synset_sense_count * 1000000 - top_key AS top_synsetid, top_synset_sense_count\nFROM agg JOIN words w ON w.wordid = agg.wordid\nWHERE total_synsets >= 2 AND distinct_domains >= 2 AND total_senses >= 2\nORDER BY total_senses DESC, total_synsets DESC, distinct_domains DESC, word_id ASC\nLIMIT 500;\nEOF\nfor i in 1 2 3; do start=$(date +%s%N); sqlite3 oewn.sqlite < /tmp/cand11.sql > /tmp/cand11.out; end=$(date +%s%N); echo \"$(( (end-start)/1000000 )) ms\"; done\ndiff -q /tmp/cand11.out /tmp/ref_idx.out && echo \"cand11 matches reference\"\nsed 's/1000000/(SELECT MAX(synsetid)+1 FROM synsets)/g' /tmp/cand10.sql > /tmp/cand12.sql\nfor i in 1 2; do start=$(date +%s%N); sqlite3 oewn.sqlite < /tmp/cand12.sql > /tmp/cand12.out; end=$(date +%s%N); echo \"cand12 $(( (end-start)/1000000 )) ms\"; done\ndiff -q /tmp/cand12.out /tmp/ref_idx.out && echo \"cand12 matches reference\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 280339,
+   "dur_ms": 7454
+  },
+  {
+   "kind": "tool",
+   "at_ms": 287793,
+   "dur_ms": 1104,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/cand13.sql <<'EOF'\nWITH multi AS (\n  SELECT wordid FROM senses GROUP BY wordid HAVING COUNT(*) >= 2\n), pair0 AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt\n  FROM senses s\n  WHERE s.wordid IN (SELECT wordid FROM multi)\n  GROUP BY s.wordid, s.synsetid\n), pair AS (\n  SELECT p.wordid, p.synsetid, p.cnt, syn.domainid, syn.posid\n  FROM pair0 p JOIN synsets syn ON syn.synsetid = p.synsetid\n), agg AS (\n  SELECT wordid, COUNT(*) AS total_synsets, SUM(cnt) AS total_senses,\n         COUNT(DISTINCT domainid) AS distinct_domains, COUNT(DISTINCT posid) AS distinct_posids,\n         MAX(cnt) AS top_synset_sense_count, MAX(cnt * 1000000 - synsetid) AS top_key\n  FROM pair GROUP BY wordid\n)\nSELECT w.wordid AS word_id, w.word, total_synsets, total_senses, distinct_domains, distinct_posids,\n       top_synset_sense_count * 1000000 - top_key AS top_synsetid, top_synset_sense_count\nFROM agg JOIN words w ON w.wordid = agg.wordid\nWHERE total_synsets >= 2 AND distinct_domains >= 2 AND total_senses >= 2\nORDER BY total_senses DESC, total_synsets DESC, distinct_domains DESC, word_id ASC\nLIMIT 500;\nEOF\nfor i in 1 2 3; do start=$(date +%s%N); sqlite3 oewn.sqlite < /tmp/cand13.sql > /tmp/cand13.out; end=$(date +%s%N); echo \"$(( (end-start)/1000000 )) ms\"; done\ndiff -q /tmp/cand13.out /tmp/ref_idx.out && echo \"cand13 matches reference\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 288897,
+   "dur_ms": 2232
+  },
+  {
+   "kind": "tool",
+   "at_ms": 291129,
+   "dur_ms": 14,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/sol.sql",
+    "content": "WITH multi AS (\n  SELECT wordid FROM senses GROUP BY wordid HAVING COUNT(*) >= 2\n), pair0 AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS cnt\n  FROM multi m JOIN senses s ON s.wordid = m.wordid\n  GROUP BY s.wordid, s.synsetid\n), pair AS (\n  SELECT p.wordid, p.synsetid, p.cnt, syn.domainid, syn.posid\n  FROM pair0 p JOIN synsets syn ON syn.synsetid = p.synsetid\n), agg AS (\n  SELECT wordid,\n         COUNT(*) AS total_synsets,\n         SUM(cnt) AS total_senses,\n         COUNT(DISTINCT domainid) AS distinct_domains,\n         COUNT(DISTINCT posid) AS distinct_posids,\n         MAX(cnt) AS top_synset_sense_count,\n         MAX(cnt * 1000000 - synsetid) AS top_key\n  FROM pair\n  GROUP BY wordid\n)\nSELECT w.wordid AS word_id, w.word, total_synsets, total_senses, distinct_domains, distinct_posids,\n       top_synset_sense_count * 1000000 - top_key AS top_synsetid, top_synset_sense_count\nFROM agg JOIN words w ON w.wordid = agg.wordid\nWHERE total_synsets >= 2 AND distinct_domains >= 2 AND total_senses >= 2\nORDER BY total_senses DESC, total_synsets DESC, distinct_domains DESC, word_id ASC\nLIMIT 500;\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 291143,
+   "dur_ms": 1698
+  },
+  {
+   "kind": "tool",
+   "at_ms": 292841,
+   "dur_ms": 1802,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "echo \"--- semicolon/statement check ---\" && sqlite3 oewn.sqlite \".read sol.sql\" > /tmp/final.out 2>/tmp/final.err; echo \"exit=$?\"; cat /tmp/final.err\necho \"--- timing (3 runs) ---\"; for i in 1 2 3; do start=$(date +%s%N); sqlite3 oewn.sqlite < sol.sql > /tmp/final.out; end=$(date +%s%N); echo \"$(( (end-start)/1000000 )) ms\"; done\necho \"--- identical to original's output ---\"; diff /tmp/ref_h.out <(sqlite3 -header oewn.sqlite < sol.sql) && echo \"EXACT MATCH (headers + 500 rows)\"\necho \"--- file has single statement, no comments ---\"; grep -c ';' sol.sql; grep -c -- '--' sol.sql"
+  },
+  {
+   "kind": "model",
+   "at_ms": 294643,
+   "dur_ms": 3087
+  }
+ ],
+ "class": "long",
+ "weight_s_per_command": 42.177,
+ "calls": 37,
+ "cell": "TB1a"
+}

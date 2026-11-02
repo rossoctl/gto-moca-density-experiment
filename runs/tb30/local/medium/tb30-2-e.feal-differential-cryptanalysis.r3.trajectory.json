@@ -1,0 +1,284 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "feal-differential-cryptanalysis",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 247304,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 446,
+  "output": 20217,
+  "cacheRead": 204864,
+  "cacheWrite": 1472,
+  "total": 226999
+ },
+ "totals": {
+  "model_calls": 13,
+  "tool_calls": 13,
+  "model_ms": 133448,
+  "tool_ms": 112609,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1148,
+   "dur_ms": 809,
+   "tokens_in": 27,
+   "tokens_out": 97,
+   "cache_read": 1600,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1961,
+   "dur_ms": 7,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "path": "/app/feal.py"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1961,
+   "dur_ms": 15,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app && find /app -maxdepth 2 -type f | head -50"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1976,
+   "dur_ms": 55271,
+   "tokens_in": 37,
+   "tokens_out": 8796,
+   "cache_read": 2432,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 57248,
+   "dur_ms": 1487,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport random\nimport feal\n\ndef f(x):\n    return feal.f_function(x)\n\nS=0x00008080\nfor t in range(5):\n    x=random.getrandbits(32)\n    print(hex(x), hex(f(x)^f(x^S)))\nprint('S2')\nfor t in range(3):\n    x=random.getrandbits(32)\n    print(hex(f(x)^f(x^0x80800000)))\nprint('S3')\nfor t in range(3):\n    x=random.getrandbits(32)\n    print(hex(f(x)^f(x^0x80808080)))\n\n# test characteristic with random keys\nfor trial in range(5):\n    feal.create_random_keys()\n    Lp=random.getrandbits(32); Rp=random.getrandbits(32)\n    dLp=0x00000002; dRp=0x00008082\n    P=feal.merge(Lp,Rp); Pp=feal.merge(Lp^dLp,Rp^dRp)\n    C=feal.encrypt(P); Cp=feal.encrypt(Pp)\n    CL=feal.getleft(C); CR=feal.getright(C); CLp=feal.getleft(Cp); CRp=feal.getright(Cp)\n    dCL=CL^CLp; dCR=CR^CRp\n    R3=CL^CR; R3p=CLp^CRp\n    print('round3 diff', hex(R3^R3p), 'dCL', hex(dCL))\n    # find right key candidate matches\n    matches=[]\n    target=dCL^S\n    for seed in range(0x10000):\n        k=(seed*1234567)&0xffffffff\n        if (f(R3^k)^f(R3p^k))==target:\n            matches.append((seed,k))\n    print('nummatches',len(matches),'actual key5',hex(feal.key[5]), 'in', any(k==feal.key[5] for _,k in matches), matches[:5])\nPY",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 58739,
+   "dur_ms": 13785,
+   "tokens_in": 55,
+   "tokens_out": 2239,
+   "cache_read": 11264,
+   "cache_write": 448,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 72524,
+   "dur_ms": 2791,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport random\nimport feal\n\ndef f(x): return feal.f_function(x)\n\nopts=[\n ('S1',0x00008080,0x00000002,0x00000002,0x00008082),\n ('S2',0x80800000,0x02000000,0x02000000,0x82800000),\n ('S3',0x80808080,0x02000002,0x02000002,0x82808082),\n]\nfor name,A0,FdA,dLp,dRp in opts:\n    print('---',name,'last diff',hex(FdA))\n    for trial in range(3):\n        feal.create_random_keys()\n        Lp=random.getrandbits(32); Rp=random.getrandbits(32)\n        P=feal.merge(Lp,Rp); Pp=feal.merge(Lp^dLp,Rp^dRp)\n        C=feal.encrypt(P); Cp=feal.encrypt(Pp)\n        CL=feal.getleft(C);CR=feal.getright(C);CLp=feal.getleft(Cp);CRp=feal.getright(Cp)\n        R3=CL^CR;R3p=CLp^CRp\n        target=CL^CLp^A0\n        cnt=0; actual=False\n        for seed in range(0x10000):\n            k=(seed*1234567)&0xffffffff\n            if (f(R3^k)^f(R3p^k))==target:\n                cnt+=1\n                if k==feal.key[5]: actual=True\n        print(' matches',cnt,'actual',actual,'dR3',hex(R3^R3p))\nPY",
+   "timeout": 180
+  },
+  {
+   "kind": "model",
+   "at_ms": 75318,
+   "dur_ms": 8434,
+   "tokens_in": 36,
+   "tokens_out": 993,
+   "cache_read": 13952,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 83752,
+   "dur_ms": 9098,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport random, time\nimport feal\n\ndef f(x): return feal.f_function(x)\nA0=0x80808080\ndLp=0x02000002\ndRp=0x82808082\nseeds=list(range(0x10000))\nmaxpairs=0\nt0=time.time()\nfor trial in range(30):\n    feal.create_random_keys()\n    cand=seeds\n    pairs=0\n    while len(cand)>1 and pairs<20:\n        pairs+=1\n        Lp=random.getrandbits(32); Rp=random.getrandbits(32)\n        C=feal.encrypt(feal.merge(Lp,Rp)); Cp=feal.encrypt(feal.merge(Lp^dLp,Rp^dRp))\n        CL=feal.getleft(C);CR=feal.getright(C);CLp=feal.getleft(Cp);CRp=feal.getright(Cp)\n        R3=CL^CR;R3p=CLp^CRp\n        target=CL^CLp^A0\n        cand=[s for s in cand if (f(R3^((s*1234567)&0xffffffff))^f(R3p^((s*1234567)&0xffffffff)))==target]\n    ok= len(cand)==1 and ((cand[0]*1234567)&0xffffffff)==feal.key[5]\n    maxpairs=max(maxpairs,pairs)\n    if not ok:\n        print('FAIL',trial,len(cand),pairs,hex(feal.key[5]),cand[:5])\n        break\nelse:\n    print('all ok maxpairs',maxpairs,'elapsed',time.time()-t0)\nPY",
+   "timeout": 180
+  },
+  {
+   "kind": "model",
+   "at_ms": 92853,
+   "dur_ms": 10251,
+   "tokens_in": 33,
+   "tokens_out": 1647,
+   "cache_read": 15168,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 103105,
+   "dur_ms": 1,
+   "tool": "write",
+   "is_error": false,
+   "input": {
+    "path": "/app/attack.py",
+    "content": "#!/usr/bin/env python3\n\"\"\"Chosen-plaintext differential attack recovering FEAL-like key[5].\"\"\"\n\n\ndef _g(a, b, x):\n    t = (a + b + x) & 0xFF\n    return ((t << 2) | (t >> 6)) & 0xFF\n\n\ndef _f(v):\n    x0 = v & 0xFF\n    x1 = (v >> 8) & 0xFF\n    x2 = (v >> 16) & 0xFF\n    x3 = (v >> 24) & 0xFF\n\n    y2 = _g(x3 ^ x2, x1 ^ x0, 1)\n    y3 = _g(x3, y2, 0)\n    y1 = _g(x1 ^ x0, y2, 0)\n    y0 = _g(x0, y1, 1)\n\n    return y0 | (y1 << 8) | (y2 << 16) | (y3 << 24)\n\n\ndef _getleft(v):\n    return (v >> 32) & 0xFFFFFFFF\n\n\ndef _getright(v):\n    return v & 0xFFFFFFFF\n\n\ndef _merge(left, right):\n    return ((left & 0xFFFFFFFF) << 32) | (right & 0xFFFFFFFF)\n\n\n# Input difference chosen so that the differential characteristic through the\n# first three rounds is deterministic.  In particular, after three rounds:\n#     delta(L3) = 0x80808080,  delta(R3) = 0x02000002\n# (The F-function maps the byte differences 0x80 to output differences 0x02\n# with probability one, because addition by 0x80 is just an XOR of bit 7.)\n_DELTA_L = 0x02000002\n_DELTA_R = 0x82808082\n_DELTA_L3 = 0x80808080\n\n# key[i] = (seed * 1234567) mod 2**32, with a 16-bit seed.\n_CANDIDATES = [((seed * 1234567) & 0xFFFFFFFF) for seed in range(0x10000)]\n\n\ndef attack(encrypt_fn):\n    \"\"\"Recover key[5] using chosen-plaintext differential queries.\"\"\"\n    candidates = _CANDIDATES\n\n    # A few different base plaintexts suffice.  The differential is\n    # independent of the base value, while the actual last-round F inputs\n    # differ, which lets us filter out wrong key candidates.\n    bases = [\n        0x0123456789ABCDEF,\n        0xFEDCBA9876543210,\n        0x0F1E2D3C4B5A6978,\n        0x8877665544332211,\n        0x13579BDF2468ACE0,\n        0xDEADBEEFCAFEBABE,\n        0x1020304050607080,\n        0xA5A5A5A5A5A5A5A5,\n    ]\n\n    for base in bases:\n        p1 = base\n        p2 = _merge(\n            _getleft(base) ^ _DELTA_L,\n            _getright(base) ^ _DELTA_R,\n        )\n\n        c1 = encrypt_fn(p1)\n        c2 = encrypt_fn(p2)\n\n        c1l, c1r = _getleft(c1), _getright(c1)\n        c2l, c2r = _getleft(c2), _getright(c2)\n\n        # In the last round, R3 = C_left XOR C_right.  The expected\n        # differential gives delta(F) = delta(C_left) XOR delta(L3).\n        r3 = c1l ^ c1r\n        r3p = c2l ^ c2r\n        target = c1l ^ c2l ^ _DELTA_L3\n\n        candidates = [\n            k for k in candidates\n            if (_f(r3 ^ k) ^ _f(r3p ^ k)) == target\n        ]\n\n        if len(candidates) == 1:\n            return candidates[0]\n\n        if not candidates:\n            # Should not happen for a correct characteristic, but avoid a\n            # hard failure if an oracle behaves unexpectedly.\n            raise RuntimeError(\"differential filtering eliminated all keys\")\n\n    if len(candidates) == 1:\n        return candidates[0]\n\n    # Extremely unlikely with the 32-bit F-difference test above.\n    raise RuntimeError(\n        \"could not uniquely identify key[5] ({} candidates remain)\".format(\n            len(candidates)\n        )\n    )\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 103109,
+   "dur_ms": 2326,
+   "tokens_in": 40,
+   "tokens_out": 303,
+   "cache_read": 16832,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 105435,
+   "dur_ms": 3643,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport random, time\nimport feal\nimport attack\n\nfor trial in range(20):\n    feal.create_random_keys()\n    t=time.time()\n    got=attack.attack(feal.encrypt)\n    dt=time.time()-t\n    if got != feal.key[5]:\n        print('FAIL',trial,hex(got),hex(feal.key[5]))\n        break\nelse:\n    print('all ok, last elapsed',dt)\nPY",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 109080,
+   "dur_ms": 4189,
+   "tokens_in": 49,
+   "tokens_out": 530,
+   "cache_read": 17152,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 113270,
+   "dur_ms": 2421,
+   "tool": "bash",
+   "is_error": true,
+   "command": "cd /app && python3 - <<'PY'\nimport time, feal, attack\nstart=time.time()\nfor trial in range(100):\n    feal.create_random_keys()\n    got=attack.attack(feal.encrypt)\n    if got != feal.key[5]:\n        print('FAIL', trial, hex(got), hex(feal.key[5])); break\nelse:\n    print('100 trials ok, avg', (time.time()-start)/100)\nPY",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 115691,
+   "dur_ms": 5229,
+   "tokens_in": 24,
+   "tokens_out": 854,
+   "cache_read": 17728,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 120921,
+   "dur_ms": 58481,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport random, feal, attack\n\n# find a failing key\nfor trial in range(1000):\n    feal.create_random_keys()\n    try:\n        got=attack.attack(feal.encrypt)\n        if got != feal.key[5]:\n            print('wrong',trial,hex(got),hex(feal.key[5])); break\n    except Exception as e:\n        print('fail trial',trial,e)\n        print('keys', [hex(k) for k in feal.key])\n        # analyze remaining candidates with many more bases\n        bases=[0x0123456789ABCDEF,0xFEDCBA9876543210,0x0F1E2D3C4B5A6978,0x8877665544332211,0x13579BDF2468ACE0,0xDEADBEEFCAFEBABE,0x1020304050607080,0xA5A5A5A5A5A5A5A5]\n        cand=list(range(0x10000))\n        DL=attack._DELTA_L; DR=attack._DELTA_R; DL3=attack._DELTA_L3\n        f=attack._f\n        rng=random.Random(1)\n        for bi in range(60):\n            if bi < len(bases):\n                base=bases[bi]\n            else:\n                base=rng.getrandbits(64)\n            p2=attack._merge(attack._getleft(base)^DL, attack._getright(base)^DR)\n            c1=feal.encrypt(base); c2=feal.encrypt(p2)\n            c1l,c1r=attack._getleft(c1),attack._getright(c1)\n            c2l,c2r=attack._getleft(c2),attack._getright(c2)\n            r3=c1l^c1r; r3p=c2l^c2r; target=c1l^c2l^DL3\n            cand=[s for s in cand if (f(r3^((s*1234567)&0xffffffff))^f(r3p^((s*1234567)&0xffffffff)))==target]\n            if bi<15 or len(cand)<=3:\n                print('after base',bi,'count',len(cand),[hex((s*1234567)&0xffffffff) for s in cand[:10]])\n            if len(cand)==1:\n                print('unique at',bi,'actual seed?',hex((cand[0]*1234567)&0xffffffff),hex(feal.key[5]))\n                break\n        break\nelse:\n    print('none')\nPY",
+   "timeout": 180
+  },
+  {
+   "kind": "model",
+   "at_ms": 179405,
+   "dur_ms": 17433,
+   "tokens_in": 28,
+   "tokens_out": 2539,
+   "cache_read": 18624,
+   "cache_write": 448,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 196839,
+   "dur_ms": 1,
+   "tool": "write",
+   "is_error": false,
+   "input": {
+    "path": "/app/attack.py",
+    "content": "#!/usr/bin/env python3\n\"\"\"Chosen-plaintext differential attack recovering FEAL-like key[5].\"\"\"\n\nimport random\n\n\ndef _g(a, b, x):\n    t = (a + b + x) & 0xFF\n    return ((t << 2) | (t >> 6)) & 0xFF\n\n\ndef _f(v):\n    x0 = v & 0xFF\n    x1 = (v >> 8) & 0xFF\n    x2 = (v >> 16) & 0xFF\n    x3 = (v >> 24) & 0xFF\n\n    y2 = _g(x3 ^ x2, x1 ^ x0, 1)\n    y3 = _g(x3, y2, 0)\n    y1 = _g(x1 ^ x0, y2, 0)\n    y0 = _g(x0, y1, 1)\n\n    return y0 | (y1 << 8) | (y2 << 16) | (y3 << 24)\n\n\ndef _getleft(v):\n    return (v >> 32) & 0xFFFFFFFF\n\n\ndef _getright(v):\n    return v & 0xFFFFFFFF\n\n\ndef _merge(left, right):\n    return ((left & 0xFFFFFFFF) << 32) | (right & 0xFFFFFFFF)\n\n\n# key[i] = (seed * 1234567) mod 2**32, with a 16-bit seed.\n_CANDIDATES = [((seed * 1234567) & 0xFFFFFFFF) for seed in range(0x10000)]\n\n# Each entry is (plaintext left diff, plaintext right diff, expected L3 diff).\n#\n# F maps an input byte difference of 0x80 to an output byte difference of 0x02\n# with probability one, since adding 0x80 only flips bit 7.  For the first\n# characteristic below this makes the differential through the first three\n# rounds deterministic and yields delta(L3)=0x80808080 at the last round.\n_CHARACTERISTICS = [\n    (0x02000002, 0x82808082, 0x80808080),\n    (0x00000002, 0x00008082, 0x00008080),\n    (0x02000000, 0x82800000, 0x80800000),\n]\n\n\ndef _usable_bases():\n    # Hand-picked values plus a deterministic stream of pseudorandom values.\n    initial = [\n        0x0123456789ABCDEF,\n        0xFEDCBA9876543210,\n        0x0F1E2D3C4B5A6978,\n        0x8877665544332211,\n        0x13579BDF2468ACE0,\n        0xDEADBEEFCAFEBABE,\n        0x1020304050607080,\n        0xA5A5A5A5A5A5A5A5,\n    ]\n    for value in initial:\n        yield value\n\n    rng = random.Random(0x5EED1234)\n    while True:\n        yield rng.getrandbits(64)\n\n\ndef _filter(candidates, encrypt_fn, delta_l, delta_r, delta_l3, max_queries):\n    bases = _usable_bases()\n    for _ in range(max_queries):\n        base = next(bases)\n        p2 = _merge(\n            _getleft(base) ^ delta_l,\n            _getright(base) ^ delta_r,\n        )\n\n        c1 = encrypt_fn(base)\n        c2 = encrypt_fn(p2)\n\n        c1l, c1r = _getleft(c1), _getright(c1)\n        c2l, c2r = _getleft(c2), _getright(c2)\n\n        # In the last round R3 = C_left XOR C_right.  Also\n        # delta(F) = delta(C_left) XOR delta(L3).\n        r3 = c1l ^ c1r\n        r3p = c2l ^ c2r\n        target = c1l ^ c2l ^ delta_l3\n\n        candidates = [\n            k for k in candidates\n            if (_f(r3 ^ k) ^ _f(r3p ^ k)) == target\n        ]\n\n        if len(candidates) <= 1:\n            return candidates\n\n    return candidates\n\n\ndef attack(encrypt_fn):\n    \"\"\"Recover key[5] using chosen-plaintext differential queries.\"\"\"\n    candidates = _CANDIDATES\n\n    for delta_l, delta_r, delta_l3 in _CHARACTERISTICS:\n        candidates = _filter(\n            candidates, encrypt_fn, delta_l, delta_r, delta_l3, 40\n        )\n        if len(candidates) == 1:\n            return candidates[0]\n        if not candidates:\n            raise RuntimeError(\"differential filtering eliminated all keys\")\n\n    raise RuntimeError(\n        \"could not uniquely identify key[5] ({} candidates remain)\".format(\n            len(candidates)\n        )\n    )\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 196844,
+   "dur_ms": 1814,
+   "tokens_in": 31,
+   "tokens_out": 210,
+   "cache_read": 21632,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 198658,
+   "dur_ms": 33696,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 -m py_compile attack.py && sed -n '90,110p' attack.py && python3 - <<'PY'\nimport time, feal, attack\nstart=time.time()\nfail=0\nfor trial in range(200):\n    feal.create_random_keys()\n    got=attack.attack(feal.encrypt)\n    if got != feal.key[5]:\n        print('FAIL', trial, hex(got), hex(feal.key[5])); fail=1; break\nprint('done', 'fail' if fail else 'all ok', 'avg', (time.time()-start)/max(1,trial+1))\nPY",
+   "timeout": 180
+  },
+  {
+   "kind": "model",
+   "at_ms": 232358,
+   "dur_ms": 4809,
+   "tokens_in": 39,
+   "tokens_out": 642,
+   "cache_read": 21824,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 237167,
+   "dur_ms": 35,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport random\nfrom attack import _f\nfor d in [0x02000002,0x00000002,0x02000000]:\n    print('d',hex(d))\n    for bit in range(32):\n        p=1<<bit\n        ok=True\n        for _ in range(200):\n            x=random.getrandbits(32)\n            if (_f(x)^_f(x^d)) != (_f(x^p)^_f(x^p^d)):\n                ok=False; break\n        if ok:\n            print(' invariant bit',bit)\nPY",
+   "timeout": 60
+  },
+  {
+   "kind": "model",
+   "at_ms": 237205,
+   "dur_ms": 8352,
+   "tokens_in": 20,
+   "tokens_out": 1292,
+   "cache_read": 22656,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 245557,
+   "dur_ms": 933,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\n# Final smoke test with an explicit non-random key, including key[5] edge seeds.\nimport feal, attack\nfor seed in (0, 1, 2, 0x7fff, 0xffff):\n    feal.key[:] = [((s * 1234567) & 0xFFFFFFFF) for s in (10,20,30,40,50,seed)]\n    got = attack.attack(feal.encrypt)\n    print(seed, hex(got), 'OK' if got == feal.key[5] else 'FAIL')\nPY",
+   "timeout": 60
+  },
+  {
+   "kind": "model",
+   "at_ms": 246493,
+   "dur_ms": 746,
+   "tokens_in": 27,
+   "tokens_out": 75,
+   "cache_read": 24000,
+   "cache_write": 64,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.323,
+ "calls": 13,
+ "cell": "TB1e"
+}

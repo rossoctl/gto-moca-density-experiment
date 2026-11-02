@@ -1,0 +1,149 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "multi-source-data-merger",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 34940,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 151,
+  "output": 5161,
+  "cacheRead": 24192,
+  "cacheWrite": 1152,
+  "total": 30656
+ },
+ "totals": {
+  "model_calls": 6,
+  "tool_calls": 7,
+  "model_ms": 30980,
+  "tool_ms": 3346,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1118,
+   "dur_ms": 930,
+   "tokens_in": 36,
+   "tokens_out": 153,
+   "cache_read": 1920,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2051,
+   "dur_ms": 13,
+   "tool": "bash",
+   "is_error": true,
+   "command": "ls -la /data/source_a /data/source_b /data/source_c /app 2>&1; echo \"---\"; file /data/source_a/users.json /data/source_b/users.csv /data/source_c/users.parquet 2>&1"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2051,
+   "dur_ms": 16,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat /data/source_a/users.json; echo \"---CSV---\"; cat /data/source_b/users.csv"
+  },
+  {
+   "kind": "model",
+   "at_ms": 2067,
+   "dur_ms": 1310,
+   "tokens_in": 7,
+   "tokens_out": 122,
+   "cache_read": 2048,
+   "cache_write": 512,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3378,
+   "dur_ms": 680,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport importlib\nfor m in ['pandas','pyarrow','fastparquet']:\n    try:\n        mod=importlib.import_module(m)\n        print(m, getattr(mod,'__version__','?'))\n    except Exception as e:\n        print(m, 'MISSING', e)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 4060,
+   "dur_ms": 748,
+   "tokens_in": 43,
+   "tokens_out": 84,
+   "cache_read": 2688,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4808,
+   "dur_ms": 579,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport pandas as pd\ndf=pd.read_parquet('/data/source_c/users.parquet')\nprint(df)\nprint(df.dtypes)\nprint(df.to_string())\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 5389,
+   "dur_ms": 24346,
+   "tokens_in": 19,
+   "tokens_out": 4346,
+   "cache_read": 2752,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 29736,
+   "dur_ms": 662,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /app/merge_users.py <<'PY'\n#!/usr/bin/env python3\n\"\"\"Merge user records from JSON, CSV, and Parquet sources.\"\"\"\n\nfrom __future__ import annotations\n\nimport json\nfrom datetime import date, datetime\nfrom pathlib import Path\nfrom typing import Any\n\nimport pandas as pd\nimport pyarrow as pa\nimport pyarrow.parquet as pq\n\nSOURCES = [\n    (\"source_a\", Path(\"/data/source_a/users.json\")),\n    (\"source_b\", Path(\"/data/source_b/users.csv\")),\n    (\"source_c\", Path(\"/data/source_c/users.parquet\")),\n]\n\n# Unified field name -> accepted source field names, in lookup order.\nFIELD_ALIASES = {\n    \"user_id\": [\"user_id\", \"id\", \"userId\"],\n    \"name\": [\"full_name\", \"name\", \"userName\"],\n    \"email\": [\"email\", \"email_address\"],\n    \"created_date\": [\"registration_date\", \"created_at\", \"joined\"],\n    \"status\": [\"status\", \"is_active\", \"active\"],\n}\n\nOUTPUT_FIELDS = [\"name\", \"email\", \"created_date\", \"status\"]\n\n\ndef read_source(path: Path) -> list[dict[str, Any]]:\n    suffix = path.suffix.lower()\n    if suffix == \".json\":\n        with path.open(\"r\", encoding=\"utf-8\") as f:\n            data = json.load(f)\n        if isinstance(data, dict):\n            data = [data]\n        return data\n    if suffix == \".csv\":\n        return pd.read_csv(path).to_dict(orient=\"records\")\n    if suffix == \".parquet\":\n        return pd.read_parquet(path).to_dict(orient=\"records\")\n    raise ValueError(f\"Unsupported source format: {path}\")\n\n\ndef is_blank(value: Any) -> bool:\n    if value is None:\n        return True\n    if isinstance(value, float) and pd.isna(value):\n        return True\n    try:\n        return bool(pd.isna(value))\n    except (TypeError, ValueError):\n        return False\n\n\ndef normalize_date(value: Any) -> str | None:\n    if is_blank(value):\n        return None\n    if isinstance(value, (datetime, date, pd.Timestamp)):\n        return value.strftime(\"%Y-%m-%d\")\n    # pandas handles common representations (including ISO datetimes).\n    parsed = pd.to_datetime(value, errors=\"coerce\")\n    if pd.isna(parsed):\n        return str(value)\n    return parsed.strftime(\"%Y-%m-%d\")\n\n\ndef normalize_status(value: Any) -> str | None:\n    if is_blank(value):\n        return None\n    if isinstance(value, bool):\n        return \"active\" if value else \"inactive\"\n    if isinstance(value, (int, float)) and value in (0, 1):\n        return \"active\" if bool(value) else \"inactive\"\n    text = str(value).strip()\n    if text.lower() in {\"true\", \"1\", \"yes\", \"y\", \"active\"}:\n        return \"active\"\n    if text.lower() in {\"false\", \"0\", \"no\", \"n\", \"inactive\"}:\n        return \"inactive\"\n    return text\n\n\ndef normalize_source(name: str, records: list[dict[str, Any]]) -> dict[int, dict[str, Any]]:\n    normalized: dict[int, dict[str, Any]] = {}\n    for raw in records:\n        record: dict[str, Any] = {}\n        for field, aliases in FIELD_ALIASES.items():\n            value = next(\n                (raw[alias] for alias in aliases if alias in raw and not is_blank(raw[alias])),\n                None,\n            )\n            if field == \"user_id\":\n                value = int(value) if value is not None else None\n            elif field == \"created_date\":\n                value = normalize_date(value)\n            elif field == \"status\":\n                value = normalize_status(value)\n            elif value is not None:\n                value = str(value)\n            record[field] = value\n\n        user_id = record[\"user_id\"]\n        if user_id is None:\n            raise ValueError(f\"Missing user id in {name}: {raw}\")\n        if user_id in normalized:\n            raise ValueError(f\"Duplicate user id {user_id} in {name}\")\n        normalized[user_id] = record\n    return normalized\n\n\ndef main() -> None:\n    source_records: dict[str, dict[int, dict[str, Any]]] = {}\n    for source_name, path in SOURCES:\n        source_records[source_name] = normalize_source(source_name, read_source(path))\n\n    all_user_ids = sorted(\n        {user_id for records in source_records.values() for user_id in records}\n    )\n\n    merged_rows: list[dict[str, Any]] = []\n    conflicts: list[dict[str, Any]] = []\n\n    for user_id in all_user_ids:\n        row: dict[str, Any] = {\"user_id\": user_id}\n\n        for field in OUTPUT_FIELDS:\n            # Gather values from all sources where this field is present.\n            values = {\n                source_name: records[user_id][field]\n                for source_name, records in source_records.items()\n                if user_id in records and records[user_id][field] is not None\n            }\n\n            # Highest-priority non-null value wins (source_a > source_b > source_c).\n            selected = next(\n                (\n                    records[user_id][field]\n                    for source_name, records in source_records.items()\n                    if user_id in records and records[user_id][field] is not None\n                ),\n                None,\n            )\n            row[field] = selected\n\n            if len(set(values.values())) > 1:\n                conflicts.append(\n                    {\n                        \"user_id\": user_id,\n                        \"field\": field,\n                        \"values\": {\n                            source_name: values.get(source_name)\n                            for source_name, _ in SOURCES\n                        },\n                        \"selected\": selected,\n                    }\n                )\n\n        merged_rows.append(row)\n\n    schema = pa.schema(\n        [\n            (\"user_id\", pa.int64()),\n            (\"name\", pa.string()),\n            (\"email\", pa.string()),\n            (\"created_date\", pa.string()),\n            (\"status\", pa.string()),\n        ]\n    )\n    table = pa.Table.from_pylist(merged_rows, schema=schema)\n    pq.write_table(table, \"/app/merged_users.parquet\")\n\n    report = {\"total_conflicts\": len(conflicts), \"conflicts\": conflicts}\n    with open(\"/app/conflicts.json\", \"w\", encoding=\"utf-8\") as f:\n        json.dump(report, f, indent=2, ensure_ascii=False)\n        f.write(\"\\n\")\n\n    print(f\"Merged {len(merged_rows)} users with {len(conflicts)} conflicts.\")\n\n\nif __name__ == \"__main__\":\n    main()\nPY\ncd /app && python3 merge_users.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 30402,
+   "dur_ms": 1852,
+   "tokens_in": 35,
+   "tokens_out": 174,
+   "cache_read": 7296,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 32255,
+   "dur_ms": 573,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && ls -l merged_users.parquet conflicts.json && python3 - <<'PY'\nimport pyarrow.parquet as pq\nprint(pq.read_schema('/app/merged_users.parquet'))\nPY"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 32255,
+   "dur_ms": 823,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport pandas as pd, json\np='/app/merged_users.parquet'\ndf=pd.read_parquet(p)\nprint(df)\nprint(df.dtypes)\nprint()\nprint(open('/app/conflicts.json').read())\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 33081,
+   "dur_ms": 1794,
+   "tokens_in": 11,
+   "tokens_out": 282,
+   "cache_read": 7488,
+   "cache_write": 448,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.537,
+ "calls": 7,
+ "cell": "TB1e"
+}

@@ -1,0 +1,147 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "distribution-search",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 46124,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 151,
+  "output": 6276,
+  "cacheRead": 66112,
+  "cacheWrite": 576,
+  "total": 73115
+ },
+ "totals": {
+  "model_calls": 4,
+  "tool_calls": 3,
+  "model_ms": 43083,
+  "tool_ms": 2391,
+  "sandbox_ms": 2032
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 498,
+   "dur_ms": 19256
+  },
+  {
+   "kind": "tool",
+   "at_ms": 19754,
+   "dur_ms": 373,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "pwd\nls -la /app 2>/dev/null || echo \"no /app\"\nls -la /workspace | head\npython3 - <<'PY'\nimport numpy, scipy\nprint(numpy.__version__, scipy.__version__)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 19832,
+     "dur_ms": 242,
+     "exit": 0,
+     "cpu_ms": 325.6,
+     "phases_us": {
+      "acquire": 109,
+      "resume": 21096,
+      "mount": 18612,
+      "run": 185430,
+      "destroy": 34889
+     },
+     "cold": null,
+     "vm": "vm-81"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 20127,
+   "dur_ms": 4600
+  },
+  {
+   "kind": "tool",
+   "at_ms": 24727,
+   "dur_ms": 822,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport numpy as np\nfrom scipy.optimize import root\nN=150000; K=7\ndef calc(r,T):\n    i=np.arange(K)\n    w=np.exp(-r*i); W=w.sum()\n    ph=(1-T)*w/W\n    b=T/(N-K)\n    p=np.empty(N); p[:K]=ph; p[K:]=b\n    fwd=np.sum(p*np.log(p*N))\n    bwd=np.mean(np.log(1/(N*p)))\n    return fwd,bwd,ph,b\nfor r in [0,0.1,0.2,0.3,0.5,0.7,1.0]:\n    # solve T for bwd=10 by brentq\n    from scipy.optimize import brentq\n    def bt(logT):\n        return calc(r,np.exp(logT))[1]-10\n    try:\n        lt=brentq(bt,np.log(1e-8),np.log(1e-3))\n        f,b,ph,b_=calc(r,np.exp(lt))\n        print(r, 'T',np.exp(lt),'fwd',f,'bwd',b,'entropy high low approx')\n    except Exception as e:\n        print(r,e)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 24788,
+     "dur_ms": 750,
+     "exit": 0,
+     "cpu_ms": 952.8,
+     "phases_us": {
+      "acquire": 78,
+      "resume": 20383,
+      "mount": 18014,
+      "run": 685734,
+      "destroy": 43745
+     },
+     "cold": null,
+     "vm": "vm-88"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 25549,
+   "dur_ms": 12444
+  },
+  {
+   "kind": "tool",
+   "at_ms": 37993,
+   "dur_ms": 1196,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put solve_distribution.py <<'EOF'\n#!/usr/bin/env python3\n\"\"\"Construct a vocabulary distribution with KL(P||U) = KL(U||P) = 10.\"\"\"\n\nimport numpy as np\nfrom scipy.optimize import brentq\n\nVOCAB_SIZE = 150_000\nTARGET_KL = 10.0\nTOL = 0.001\n\n# Number of high-probability tokens.  The remaining tokens share a tiny,\n# uniform tail probability.  Seven high-probability tokens give enough\n# entropy range while the tail controls the backward KL divergence.\nN_HIGH = 7\n\n\ndef make_distribution(r: float, tail_mass: float) -> np.ndarray:\n    \"\"\"Geometrically weighted head plus a uniform tail.\n\n    r controls how concentrated the head is; tail_mass is the total\n    probability assigned to all non-head tokens.\n    \"\"\"\n    idx = np.arange(N_HIGH)\n    weights = np.exp(-r * idx)\n    p = np.empty(VOCAB_SIZE, dtype=np.float64)\n    p[:N_HIGH] = (1.0 - tail_mass) * weights / weights.sum()\n    p[N_HIGH:] = tail_mass / (VOCAB_SIZE - N_HIGH)\n    return p\n\n\ndef kl_values(p: np.ndarray) -> tuple[float, float]:\n    \"\"\"Return (KL(P||U), KL(U||P)) for uniform U, using natural logs.\"\"\"\n    u = 1.0 / VOCAB_SIZE\n    forward = float(np.sum(p * np.log(p / u)))\n    backward = float(np.sum(u * np.log(u / p)))\n    return forward, backward\n\n\ndef tail_for_backward_kl(r: float) -> float:\n    \"\"\"Find the tail mass giving backward KL exactly TARGET_KL.\n\n    Work in log-space because the required tail mass is about 4.5e-5.\n    \"\"\"\n    def objective(log_tail_mass: float) -> float:\n        p = make_distribution(r, np.exp(log_tail_mass))\n        return kl_values(p)[1] - TARGET_KL\n\n    log_tail = brentq(objective, np.log(1e-10), np.log(1e-2),\n                      xtol=1e-15, rtol=1e-15, maxiter=200)\n    return float(np.exp(log_tail))\n\n\ndef main() -> None:\n    # For each r, choose the tail so backward KL is exactly 10.  Then solve\n    # for the r that makes forward KL exactly 10.\n    def forward_objective(r: float) -> float:\n        p = make_distribution(r, tail_for_backward_kl(r))\n        return kl_values(p)[0] - TARGET_KL\n\n    r = brentq(forward_objective, 0.0, 2.0,\n               xtol=1e-14, rtol=1e-14, maxiter=200)\n    tail_mass = tail_for_backward_kl(r)\n    p = make_distribution(r, tail_mass)\n\n    # Re-normalize against the last bit of floating-point drift.\n    p /= p.sum()\n\n    forward, backward = kl_values(p)\n\n    assert np.all(p >= 0.0), \"distribution has negative entries\"\n    assert np.isclose(p.sum(), 1.0, atol=1e-12), \"distribution does not sum to 1\"\n    assert abs(forward - TARGET_KL) <= TOL, f\"forward KL = {forward}\"\n    assert abs(backward - TARGET_KL) <= TOL, f\"backward KL = {backward}\"\n\n    np.save(\"/app/dist.npy\", p)\n\n    print(f\"r          = {r:.15g}\")\n    print(f\"tail mass  = {tail_mass:.15g}\")\n    print(f\"sum        = {p.sum():.17g}\")\n    print(f\"KL(P||U)   = {forward:.15g}\")\n    print(f\"KL(U||P)   = {backward:.15g}\")\n    print(f\"min p      = {p.min():.15g}\")\n    print(f\"max p      = {p.max():.15g}\")\n    print(\"saved /app/dist.npy\")\n\n\nif __name__ == \"__main__\":\n    main()\nEOF\nsbx run <<'EOF'\ncd /workspace\npython3 solve_distribution.py\npython3 - <<'PY'\nimport numpy as np\np=np.load('/app/dist.npy')\nN=len(p); u=1/N\nf=np.sum(p*np.log(p/u)); b=np.sum(u*np.log(u/p))\nprint('shape',p.shape,'dtype',p.dtype)\nprint('sum',p.sum(),'min',p.min(),'max',p.max())\nprint('forward',f,'backward',b)\nprint('abs errors',abs(f-10),abs(b-10))\nprint('valid',np.all(p>=0) and np.isclose(p.sum(),1))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 38055,
+     "dur_ms": 61,
+     "exit": 0,
+     "cpu_ms": 40.9,
+     "phases_us": {
+      "acquire": 48,
+      "resume": 20080,
+      "mount": 17779,
+      "run": 7729,
+      "destroy": 33201
+     },
+     "cold": null,
+     "vm": "vm-90"
+    },
+    {
+     "at_ms": 38162,
+     "dur_ms": 979,
+     "exit": 0,
+     "cpu_ms": 1262.3,
+     "phases_us": {
+      "acquire": 5,
+      "resume": 20308,
+      "mount": 17951,
+      "run": 925295,
+      "destroy": 33603
+     },
+     "cold": null,
+     "vm": "vm-78"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 39189,
+   "dur_ms": 6783
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.527,
+ "calls": 3,
+ "cell": "TB1b",
+ "removed": []
+}

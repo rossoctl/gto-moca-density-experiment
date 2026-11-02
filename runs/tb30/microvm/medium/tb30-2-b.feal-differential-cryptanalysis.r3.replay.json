@@ -1,0 +1,237 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "feal-differential-cryptanalysis",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 103899,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 35457,
+  "output": 20973,
+  "cacheRead": 218240,
+  "cacheWrite": 4608,
+  "total": 279278
+ },
+ "totals": {
+  "model_calls": 8,
+  "tool_calls": 6,
+  "model_ms": 94968,
+  "tool_ms": 8134,
+  "sandbox_ms": 7642
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 515,
+   "dur_ms": 913
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1428,
+   "dur_ms": 160,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace 2>/dev/null || cd /app\nls -la\necho \"=== feal.py ===\"\ncat feal.py",
+   "sandbox": [
+    {
+     "at_ms": 1510,
+     "dur_ms": 55,
+     "exit": 0,
+     "cpu_ms": 39.6,
+     "phases_us": {
+      "acquire": 90,
+      "resume": 20273,
+      "mount": 17844,
+      "run": 5754,
+      "destroy": 28902
+     },
+     "cold": null,
+     "vm": "vm-111"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1588,
+   "dur_ms": 62183
+  },
+  {
+   "kind": "model",
+   "at_ms": 63963,
+   "dur_ms": 4185
+  },
+  {
+   "kind": "tool",
+   "at_ms": 68148,
+   "dur_ms": 230,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace 2>/dev/null || cd /app\ncat > /tmp/explore.py <<'PY'\nimport random, itertools\nimport feal\n\nS = [0x00000000, 0x00008080, 0x80800000, 0x80808080]\ndef fdiff_emp(delta, trials=20000):\n    outs=set()\n    for _ in range(trials):\n        u=random.getrandbits(32)\n        outs.add(feal.f_function(u)^feal.f_function(u^delta))\n        if len(outs)>1: break\n    return outs\n\nfor d in S[1:]:\n    print(hex(d), [hex(x) for x in fdiff_emp(d, 5000)])\n\ndef fdet(d):\n    if d==0: return 0\n    if d==0x00008080: return 0x00000002\n    if d==0x80800000: return 0x02000000\n    if d==0x80808080: return 0x02000002\n    return None\n\nprint(\"trails:\")\nfor v in S:\n    A0=fdet(v)\n    for dR1 in S:\n        u = dR1 ^ A0\n        A1=fdet(dR1)\n        dR2 = v ^ A1\n        if dR2 not in S: continue\n        A2=fdet(dR2)\n        dR3 = dR1 ^ A2\n        dL3 = dR2\n        print(\"u=%#010x v=%#010x dR1=%#010x dR2=%#010x dR3=%#010x dL3=%#010x dP=%#018x\" % (u,v,dR1,dR2,dR3,dL3,feal.merge(u, v^u)))\nPY\nPYTHONPATH=/workspace python3 /tmp/explore.py",
+   "sandbox": [
+    {
+     "at_ms": 68204,
+     "dur_ms": 151,
+     "exit": 0,
+     "cpu_ms": 153.2,
+     "phases_us": {
+      "acquire": 61,
+      "resume": 19762,
+      "mount": 17446,
+      "run": 108636,
+      "destroy": 22830
+     },
+     "cold": null,
+     "vm": "vm-120"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 68378,
+   "dur_ms": 5471
+  },
+  {
+   "kind": "tool",
+   "at_ms": 73849,
+   "dur_ms": 1682,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace 2>/dev/null || cd /app\ncat > /tmp/test_attack.py <<'PY'\nimport random, time\nimport feal\n\nS = {0:0, 0x00008080:0x00000002, 0x80800000:0x02000000, 0x80808080:0x02000002}\n\n# choose trail: v=0x00008080, u=0x00000002 -> dP hi=u, lo=v^u ; expected dL3=0x00008080, dR3=0x00000002\nu=0x00000002; v=0x00008080\nDP = feal.merge(u, v^u)\nEXPECTED_dL3 = 0x00008080\ncands = [ (s*1234567)&0xFFFFFFFF for s in range(0x10000) ]\n\ndef attack_test(num_pairs=4):\n    # fresh random key each trial\n    feal.create_random_keys()\n    true = feal.key[5]\n    pairs=[]\n    for _ in range(num_pairs):\n        p = random.getrandbits(64)\n        c1 = feal.encrypt(p)\n        c2 = feal.encrypt(p^DP)\n        pairs.append((c1,c2))\n    # filter\n    alive = cands[:]\n    for (c1,c2) in pairs:\n        R3 = feal.getleft(c1)^feal.getright(c1)\n        R3p= feal.getleft(c2)^feal.getright(c2)\n        dChi = feal.getleft(c1)^feal.getleft(c2)\n        nxt=[]\n        for k in alive:\n            x = R3^k; xp=R3p^k\n            pred = dChi ^ feal.f_function(x) ^ feal.f_function(xp)\n            if pred == EXPECTED_dL3:\n                nxt.append(k)\n        alive=nxt\n        print(\"   after pair, alive=\",len(alive), [hex(a) for a in alive[:5]])\n    return true, alive\n\nstart=time.time()\nfor t in range(5):\n    true, alive = attack_test()\n    print(\"trial\",t,\"true\",hex(true),\"found\", [hex(a) for a in alive], \"OK\" if true in alive and len(alive)==1 else \"FAIL\")\nprint(\"elapsed\", time.time()-start)\nPY\nPYTHONPATH=/workspace python3 /tmp/test_attack.py",
+   "sandbox": [
+    {
+     "at_ms": 73906,
+     "dur_ms": 1577,
+     "exit": 0,
+     "cpu_ms": 1569.4,
+     "phases_us": {
+      "acquire": 87,
+      "resume": 20534,
+      "mount": 17934,
+      "run": 1521354,
+      "destroy": 34971
+     },
+     "cold": null,
+     "vm": "vm-122"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 75531,
+   "dur_ms": 14908
+  },
+  {
+   "kind": "tool",
+   "at_ms": 90439,
+   "dur_ms": 115,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put attack.py <<'SBXEOF'\n#!/usr/bin/env python3\n\"\"\"Chosen-plaintext differential attack that recovers FEAL key[5].\n\nStructure of the cipher (see feal.py):\n\n    L = P_hi ^ K0\n    R = P_lo ^ K1 ^ L                       # pre-round mixing\n    for i in 0..3:\n        (L, R) = (R, L ^ f(R ^ K_{i+2}))\n    C = merge(R, L ^ R)                     # post-round mixing\n\nThe F function has *deterministic* differentials (no key/value dependence):\n\n    f(x) ^ f(x ^ 0x00008080) = 0x00000002\n    f(x) ^ f(x ^ 0x80800000) = 0x02000000\n    f(x) ^ f(x ^ 0x80808080) = 0x02000002\n\nReason: G(a, b, x) = rotl2((a + b + x) mod 256) and a ^ 0x80 == a + 0x80\n(mod 256), so toggling bit 7 of the two bytes feeding a G call leaves its\nsum unchanged; one remaining 0x80 toggle only flips bit 1 of a rotated byte.\n\nPlaintext difference DP = 0x00000002_00008082 gives the trail\n    dL0 = 0x00000002, dR0 = 0x00008080\n    after rounds 0..2:  dR3 = 0x00000002, dL3 = 0x00008080   (certain)\n\nFor the last round, R3 = C_hi ^ C_lo is observable from any ciphertext, and\nL3 = C_hi ^ f(R3 ^ K5).  Hence, for a candidate key k,\n\n    dL3(candidate) = dC_hi ^ f(R3 ^ k) ^ f(R3' ^ k)\n\nmust equal 0x00008080.  The true K5 always passes; a wrong candidate passes\nonly by chance, so a couple of pairs pin the key down.\n\nEvery round key is (seed * 1234567) mod 2^32 for a 16-bit seed, leaving only\n2^16 possible values for K5 -- enumerated below.\n\"\"\"\n\nimport random\n\n_MASK32 = 0xFFFFFFFF\n_MUL = 1234567\n_NUM_SEEDS = 1 << 16\n\n\ndef _getleft(x):\n    return (x >> 32) & _MASK32\n\n\ndef _getright(x):\n    return x & _MASK32\n\n\ndef _merge(left, right):\n    return ((left & _MASK32) << 32) | (right & _MASK32)\n\n\ndef _g(a, b, x):\n    temp = (a + b + x) & 0xFF\n    return ((temp << 2) | (temp >> 6)) & 0xFF\n\n\ndef _f(value):\n    x0 = value & 0xFF\n    x1 = (value >> 8) & 0xFF\n    x2 = (value >> 16) & 0xFF\n    x3 = (value >> 24) & 0xFF\n    y2 = _g(x3 ^ x2, x1 ^ x0, 1)\n    y3 = _g(x3, y2, 0)\n    y1 = _g(x1 ^ x0, y2, 0)\n    y0 = _g(x0, y1, 1)\n    return y0 | (y1 << 8) | (y2 << 16) | (y3 << 24)\n\n\n# Chosen plaintext difference and the certain difference of the left half\n# entering the last round.\n_DP = _merge(0x00000002, 0x00008080 ^ 0x00000002)  # 0x0000000200008082\n_EXPECTED_DL3 = 0x00008080\n\n# All 2^16 possible values of key[5] (seed * 1234567 mod 2^32).\n_CANDIDATES = [(_MUL * seed) & _MASK32 for seed in range(_NUM_SEEDS)]\n\n\ndef attack(encrypt_fn):\n    \"\"\"Recover key[5] using chosen plaintexts; return its uint32 value.\"\"\"\n    alive = _CANDIDATES\n    pairs_used = 0\n\n    while len(alive) > 1 and pairs_used < 16:\n        pairs_used += 1\n        plaintext = random.getrandbits(64)\n        c1 = encrypt_fn(plaintext)\n        c2 = encrypt_fn(plaintext ^ _DP)\n\n        # R3 = L4 = C_hi ^ C_lo (post-round mixing is invertible).\n        r3_1 = _getleft(c1) ^ _getright(c1)\n        r3_2 = _getleft(c2) ^ _getright(c2)\n        dc_hi = _getleft(c1) ^ _getleft(c2)\n\n        survivors = []\n        for candidate in alive:\n            predicted_dl3 = (\n                dc_hi\n                ^ _f(r3_1 ^ candidate)\n                ^ _f(r3_2 ^ candidate)\n            )\n            if predicted_dl3 == _EXPECTED_DL3:\n                survivors.append(candidate)\n        alive = survivors\n\n    # The true key always survives; by now it is normally the only one left.\n    return int(alive[0]) & _MASK32\n\n\nif __name__ == \"__main__\":\n    import feal\n\n    feal.create_random_keys()\n    print(\"true key[5]:\", hex(feal.key[5]))\n    print(\"recovered:  \", hex(attack(feal.encrypt)))\nSBXEOF\necho \"written\"",
+   "sandbox": [
+    {
+     "at_ms": 90496,
+     "dur_ms": 48,
+     "exit": 0,
+     "cpu_ms": 48.9,
+     "phases_us": {
+      "acquire": 86,
+      "resume": 23169,
+      "mount": 19418,
+      "run": 8673,
+      "destroy": 16183
+     },
+     "cold": null,
+     "vm": "vm-123"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 90554,
+   "dur_ms": 1997
+  },
+  {
+   "kind": "tool",
+   "at_ms": 92551,
+   "dur_ms": 5595,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace 2>/dev/null || cd /app\ncat > /tmp/verify.py <<'PY'\nimport time, random, sys\nimport feal, attack\n\nok=0; fails=0; times=[]\nfor t in range(30):\n    feal.create_random_keys()\n    true=feal.key[5]\n    st=time.time()\n    got=attack.attack(feal.encrypt)\n    dt=time.time()-st\n    times.append(dt)\n    if got==true: ok+=1\n    else:\n        fails+=1\n        print(\"FAIL trial\",t,\"true\",hex(true),\"got\",hex(got))\nprint(\"ok\",ok,\"fails\",fails)\nprint(\"time min/avg/max: %.3f / %.3f / %.3f s\" % (min(times), sum(times)/len(times), max(times)))\nPY\nPYTHONPATH=/workspace python3 /tmp/verify.py",
+   "sandbox": [
+    {
+     "at_ms": 92607,
+     "dur_ms": 5529,
+     "exit": 0,
+     "cpu_ms": 5527.3,
+     "phases_us": {
+      "acquire": 66,
+      "resume": 19688,
+      "mount": 17448,
+      "run": 5478325,
+      "destroy": 30995
+     },
+     "cold": null,
+     "vm": "vm-124"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 98146,
+   "dur_ms": 2894
+  },
+  {
+   "kind": "tool",
+   "at_ms": 101040,
+   "dur_ms": 352,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace 2>/dev/null || cd /app\nls -l attack.py\nPYTHONPATH=/workspace python3 attack.py",
+   "sandbox": [
+    {
+     "at_ms": 101095,
+     "dur_ms": 282,
+     "exit": 0,
+     "cpu_ms": 278.7,
+     "phases_us": {
+      "acquire": 60,
+      "resume": 22120,
+      "mount": 19821,
+      "run": 231943,
+      "destroy": 27697
+     },
+     "cold": null,
+     "vm": "vm-125"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 101392,
+   "dur_ms": 2417
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.323,
+ "calls": 7,
+ "cell": "TB1b",
+ "removed": [
+  {
+   "at_ms": 63771,
+   "dur_ms": 192,
+   "tool": "Bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  }
+ ]
+}

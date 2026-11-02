@@ -1,0 +1,275 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "db-wal-recovery",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 89409,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 479,
+  "output": 14083,
+  "cacheRead": 184320,
+  "cacheWrite": 8768,
+  "total": 207650
+ },
+ "totals": {
+  "model_calls": 13,
+  "tool_calls": 14,
+  "model_ms": 87586,
+  "tool_ms": 460,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1217,
+   "dur_ms": 644,
+   "tokens_in": 21,
+   "tokens_out": 60,
+   "cache_read": 1472,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1866,
+   "dur_ms": 9,
+   "tool": "bash",
+   "is_error": true,
+   "command": "cd /app && ls -la && file * 2>/dev/null"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1878,
+   "dur_ms": 826,
+   "tokens_in": 61,
+   "tokens_out": 95,
+   "cache_read": 1728,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2705,
+   "dur_ms": 6,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && xxd main.db-wal | head -100"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2705,
+   "dur_ms": 7,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && xxd main.db | head -60"
+  },
+  {
+   "kind": "model",
+   "at_ms": 2715,
+   "dur_ms": 22490,
+   "tokens_in": 61,
+   "tokens_out": 4094,
+   "cache_read": 1920,
+   "cache_write": 5696,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 25206,
+   "dur_ms": 45,
+   "tool": "bash",
+   "is_error": false,
+   "command": "which sqlite3 python3; python3 -c \"import sqlite3; print(sqlite3.sqlite_version)\""
+  },
+  {
+   "kind": "tool",
+   "at_ms": 25206,
+   "dur_ms": 49,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nfrom pathlib import Path\nb=Path('main.db-wal').read_bytes()\np=bytes(x^0x42 for x in b)\nprint(p[:64].hex())\nprint(p[:32])\n# frame headers offsets\nfor i in range(4):\n    off=32+i*(24+4096)\n    print(i, p[off:off+24].hex())\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 25257,
+   "dur_ms": 2554,
+   "tokens_in": 8,
+   "tokens_out": 403,
+   "cache_read": 11712,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 27812,
+   "dur_ms": 43,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && rm -rf work && mkdir work && cp main.db work/main.db && python3 - <<'PY'\nfrom pathlib import Path\nb=Path('main.db-wal').read_bytes()\np=bytearray(x^0x42 for x in b)\n# restore WAL header version = 1\np[4:8]=(1).to_bytes(4,'big')\nPath('work/main.db-wal').write_bytes(p)\nPY\ncd work && sqlite3 main.db \".tables\" && sqlite3 main.db \"PRAGMA integrity_check; SELECT * FROM sqlite_master;\" && echo '--- data ---' && sqlite3 main.db \"SELECT * FROM items ORDER BY id;\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 27856,
+   "dur_ms": 6928,
+   "tokens_in": 44,
+   "tokens_out": 1171,
+   "cache_read": 12416,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 34796,
+   "dur_ms": 6,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app/work && ls -la && sqlite3 main.db \"PRAGMA journal_mode; PRAGMA wal_checkpoint(FULL); SELECT count(*) FROM items;\" && ls -la && xxd main.db-wal | head -5"
+  },
+  {
+   "kind": "model",
+   "at_ms": 34802,
+   "dur_ms": 11168,
+   "tokens_in": 44,
+   "tokens_out": 1839,
+   "cache_read": 13632,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 45983,
+   "dur_ms": 76,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && rm -rf work2 && mkdir work2 && cp main.db work2/main.db && python3 - <<'PY'\nfrom pathlib import Path\nb=Path('main.db-wal').read_bytes()\np=bytes(x^0x42 for x in b)\nps=4096\nframes=[]\nfor i in range((len(p)-32)//(24+ps)):\n    off=32+i*(24+ps)\n    hdr=p[off:off+24]\n    pg=int.from_bytes(hdr[0:4],'big')\n    dbsz=int.from_bytes(hdr[4:8],'big')\n    data=p[off+24:off+24+ps]\n    frames.append((pg,dbsz,hdr,data))\n    print('frame',i,'page',pg,'dbsz',dbsz,'data starts',data[:16])\ndb=bytearray(Path('work2/main.db').read_bytes())\n# Apply each committed frame in order to correct page\nfor pg,dbsz,hdr,data in frames:\n    if dbsz:\n        # commit frame: apply all accumulated pages of transaction; we'll just overwrite per frame\n        start=(pg-1)*ps\n        if len(db)<start+ps: db.extend(b'\\x00'*(start+ps-len(db)))\n        db[start:start+ps]=data\n        print('applied page',pg,'dbsz',dbsz)\n# But page1 frame0 not committed directly above; apply frame0 page1 too\nfor pg,dbsz,hdr,data in frames:\n    if pg==1:\n        db[0:ps]=data\n        print('applied page1 from uncommitted frame')\n        break\n# truncate per dbsz final commit\nfinal_dbsz=[d for _,d,_,_ in frames if d][-1]\ndb=db[:final_dbsz*ps]\nPath('work2/main.db').write_bytes(db)\nprint('final pages',final_dbsz, 'size',len(db))\nPY\ncd work2 && sqlite3 main.db \"PRAGMA integrity_check; SELECT * FROM items ORDER BY id;\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 46089,
+   "dur_ms": 6543,
+   "tokens_in": 28,
+   "tokens_out": 1038,
+   "cache_read": 15680,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 52674,
+   "dur_ms": 8,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app/work2 && python3 - <<'PY'\nimport sqlite3, json\ncon=sqlite3.connect('main.db')\nrows=[{'id':i,'name':n,'value':v} for i,n,v in con.execute('SELECT id,name,value FROM items ORDER BY id')]\ncon.close()\nwith open('/app/recovered.json','w') as f:\n    json.dump(rows,f,indent=2)\nprint(json.dumps(rows,indent=2))\nPY\ncat /app/recovered.json"
+  },
+  {
+   "kind": "model",
+   "at_ms": 52682,
+   "dur_ms": 10283,
+   "tokens_in": 55,
+   "tokens_out": 1659,
+   "cache_read": 17024,
+   "cache_write": 576,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 62965,
+   "dur_ms": 38,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nfrom pathlib import Path\nimport struct\nb=Path('main.db-wal').read_bytes()\np=bytearray(x^0x42 for x in b)\nhdr=p[:32]\nprint('hdr stored cksum', hdr[24:32].hex())\n\ndef cksum(data, seed=(0,0), endian='big'):\n    s1,s2=seed\n    assert len(data)%8==0\n    for i in range(0,len(data),8):\n        a=int.from_bytes(data[i:i+4],endian)\n        c=int.from_bytes(data[i+4:i+8],endian)\n        s1=(s1+a+s2)&0xffffffff\n        s2=(s2+c+s1)&0xffffffff\n    return s1,s2\nfor endian in ['big','little']:\n    h=cksum(hdr[:24],(0,0),endian)\n    print(endian, 'header', [hex(x) for x in h])\n    for i in range(4):\n        off=32+i*(24+4096)\n        fh=p[off:off+24]\n        pg=int.from_bytes(fh[0:4],'big'); db=int.from_bytes(fh[4:8],'big')\n        # try seed header checksum or stored header cksum or accumulated\n        fseed=cksum(fh[:8], h, endian) if False else None\n        # frame checksum over fh[:8] then page data, seeded by previous\n        # start with header computed\n        c=cksum(fh[:8], h, endian)\n        c=cksum(p[off+24:off+24+4096], c, endian)\n        print(' frame',i,'stored',fh[16:24].hex(),'calc(seed header)', [hex(x) for x in c])\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 63005,
+   "dur_ms": 3691,
+   "tokens_in": 29,
+   "tokens_out": 601,
+   "cache_read": 19264,
+   "cache_write": 384,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 66697,
+   "dur_ms": 46,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && rm -rf work3 && mkdir work3 && cp main.db work3/main.db && python3 - <<'PY'\nfrom pathlib import Path\nb=Path('main.db-wal').read_bytes()\nPath('work3/main.db-wal').write_bytes(bytes(x^0x42 for x in b))\nPY\ncd work3 && sqlite3 main.db \"PRAGMA integrity_check; SELECT count(*), group_concat(id) FROM items; SELECT * FROM items ORDER BY id;\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 66746,
+   "dur_ms": 15263,
+   "tokens_in": 41,
+   "tokens_out": 2184,
+   "cache_read": 20224,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 82009,
+   "dur_ms": 44,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && rm -rf work4 && mkdir work4 && cp work2/main.db work4/main.db && python3 - <<'PY'\nfrom pathlib import Path\nb=Path('main.db-wal').read_bytes()\nPath('work4/main.db-wal').write_bytes(bytes(x^0x42 for x in b))\nPY\ncd work4 && sqlite3 main.db \"PRAGMA integrity_check; SELECT count(*) FROM items; SELECT * FROM items ORDER BY id;\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 82055,
+   "dur_ms": 2898,
+   "tokens_in": 14,
+   "tokens_out": 436,
+   "cache_read": 22528,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 84953,
+   "dur_ms": 69,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && mkdir -p backup && cp -n main.db backup/main.db.original && cp -n main.db-wal backup/main.db-wal.corrupt && cp work2/main.db main.db && python3 - <<'PY'\nfrom pathlib import Path\nb=Path('main.db-wal').read_bytes()\n# decode the XOR-0x42 obfuscation, preserving the valid WAL header/checksums\nPath('main.db-wal').write_bytes(bytes(x ^ 0x42 for x in b))\nPY\nls -la /app && python3 - <<'PY'\nimport json\nrows=json.load(open('/app/recovered.json'))\nassert len(rows)==11\nassert [r['id'] for r in rows]==list(range(1,12))\nprint('recovered.json valid:', len(rows), 'records')\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 85022,
+   "dur_ms": 1868,
+   "tokens_in": 45,
+   "tokens_out": 249,
+   "cache_read": 23104,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 86891,
+   "dur_ms": 14,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && rm -rf work work2 work3 work4 && ls -la && cat recovered.json"
+  },
+  {
+   "kind": "model",
+   "at_ms": 86905,
+   "dur_ms": 2430,
+   "tokens_in": 28,
+   "tokens_out": 254,
+   "cache_read": 23616,
+   "cache_write": 448,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.096,
+ "calls": 14,
+ "cell": "TB1e"
+}

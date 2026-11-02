@@ -1,0 +1,203 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-d",
+ "instance_id": "distribution-search",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 50424,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 1229,
+  "output": 7081,
+  "cacheRead": 53504,
+  "cacheWrite": 0,
+  "total": 61814
+ },
+ "totals": {
+  "model_calls": 5,
+  "tool_calls": 4,
+  "model_ms": 46698,
+  "tool_ms": 2412,
+  "sandbox_ms": 1970
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 110,
+   "dur_ms": 30360,
+   "tokens_in": 305,
+   "tokens_out": 79,
+   "cache_read": 5568,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 30470,
+   "dur_ms": 397,
+   "tool": "bash",
+   "is_error": false,
+   "command": "pwd\nls -la\npython3 - <<'PY'\nimport numpy, scipy\nprint(numpy.__version__, scipy.__version__)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 30578,
+     "dur_ms": 247,
+     "exit": 0,
+     "cpu_ms": 350.7,
+     "phases_us": {
+      "acquire": 76,
+      "resume": 22412,
+      "mount": 19426,
+      "run": 185986,
+      "destroy": 38682
+     },
+     "cold": null,
+     "vm": "vm-9"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 30891,
+   "dur_ms": 8031,
+   "tokens_in": 112,
+   "tokens_out": 381,
+   "cache_read": 10368,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 38922,
+   "dur_ms": 732,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport numpy as np\nfrom scipy.optimize import root\nN=150000\nk=7\nlnN=np.log(N)\n\ndef dist(w,eps):\n    S=1-eps\n    p=np.empty(N)\n    p[0]=S*w\n    p[1:k]=S*(1-w)/(k-1)\n    p[k:]=eps/(N-k)\n    return p\n\ndef eqs(x):\n    w,eps=x\n    p=dist(w,eps)\n    lp=np.log(p)\n    FK=lnN+np.dot(p,lp)\n    BK=-lnN-lp.mean()\n    return [FK-10.0, BK-10.0]\n\nfor w in [0.08,0.1,0.12,0.14,0.142857,0.16,0.18,0.2]:\n    r=eqs([w,np.exp(-10)])\n    print(w, r)\nprint('root')\nsol=root(eqs,[0.1,np.exp(-10)],method='hybr',options={'xtol':1e-12})\nprint(sol)\nw,eps=sol.x\np=dist(w,eps)\nlp=np.log(p)\nprint('sum',p.sum(),'min',p.min(),'max',p.max())\nprint('FK',lnN+np.dot(p,lp),'BK',-lnN-lp.mean(),'H',-np.dot(p,lp),'meanlog',lp.mean())\nprint('w eps',w,eps)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 38976,
+     "dur_ms": 660,
+     "exit": 0,
+     "cpu_ms": 1025.9,
+     "phases_us": {
+      "acquire": 73,
+      "resume": 28880,
+      "mount": 25605,
+      "run": 597327,
+      "destroy": 33716
+     },
+     "cold": null,
+     "vm": "vm-18"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 39671,
+   "dur_ms": 1654,
+   "tokens_in": 528,
+   "tokens_out": 74,
+   "cache_read": 11712,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 41325,
+   "dur_ms": 150,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -ld /app /workspace 2>&1 || true\nreadlink -f /app 2>/dev/null || true",
+   "sandbox": [
+    {
+     "at_ms": 41379,
+     "dur_ms": 84,
+     "exit": 0,
+     "cpu_ms": 37.0,
+     "phases_us": {
+      "acquire": 128,
+      "resume": 43358,
+      "mount": 40886,
+      "run": 5721,
+      "destroy": 34300
+     },
+     "cold": null,
+     "vm": "vm-20"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 41494,
+   "dur_ms": 5574,
+   "tokens_in": 109,
+   "tokens_out": 672,
+   "cache_read": 12416,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 47068,
+   "dur_ms": 1133,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put find_distribution.py <<'EOF'\nimport numpy as np\nfrom scipy.optimize import root\n\nN = 150_000\nK = 7\nTARGET_KL = 10.0\nTOLERANCE = 0.001\nOUTPUT_PATH = \"/app/dist.npy\"\nLOG_N = np.log(N)\n\n\ndef build_distribution(weight, tail_mass):\n    head_mass = 1.0 - tail_mass\n    p = np.empty(N, dtype=np.float64)\n    p[0] = head_mass * weight\n    p[1:K] = head_mass * (1.0 - weight) / (K - 1)\n    p[K:] = tail_mass / (N - K)\n    return p\n\n\ndef kl_divergences(p):\n    log_p = np.log(p)\n    forward = LOG_N + np.dot(p, log_p)\n    backward = -LOG_N - np.mean(log_p)\n    return forward, backward\n\n\ndef equations(x):\n    p = build_distribution(x[0], x[1])\n    forward, backward = kl_divergences(p)\n    return np.array([forward - TARGET_KL, backward - TARGET_KL])\n\n\ninitial_guess = np.array([1.0 / 14.0, np.exp(-10.0)])\nsolution = root(equations, initial_guess, method=\"hybr\", options={\"xtol\": 1e-12})\nif not solution.success:\n    raise RuntimeError(solution.message)\n\np = build_distribution(*solution.x)\nforward, backward = kl_divergences(p)\n\nif not np.all(p > 0.0) or not np.isclose(p.sum(), 1.0, atol=1e-12):\n    raise RuntimeError(\"Invalid probability distribution\")\nif abs(forward - TARGET_KL) > TOLERANCE or abs(backward - TARGET_KL) > TOLERANCE:\n    raise RuntimeError(\"KL divergence targets were not met\")\n\nnp.save(OUTPUT_PATH, p)\nprint(f\"saved {OUTPUT_PATH}\")\nprint(f\"forward KL(P||U) = {forward:.12f}\")\nprint(f\"backward KL(U||P) = {backward:.12f}\")\nprint(f\"sum = {p.sum():.12f}, min = {p.min():.6e}, max = {p.max():.6e}\")\nEOF\nsbx run <<'EOF'\ncd /app\npython3 find_distribution.py\npython3 - <<'PY'\nimport numpy as np\np=np.load('/app/dist.npy')\nN=150000\nU=np.full(N,1/N)\nforward=np.sum(p*np.log(p/U))\nbackward=np.sum(U*np.log(U/p))\nprint(p.shape, p.dtype, p.sum())\nprint('forward', forward)\nprint('backward', backward)\nprint('valid', np.all(p>=0), np.isclose(p.sum(),1.0))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 47119,
+     "dur_ms": 110,
+     "exit": 0,
+     "cpu_ms": 46.5,
+     "phases_us": {
+      "acquire": 34,
+      "resume": 33082,
+      "mount": 16973,
+      "run": 8390,
+      "destroy": 68766
+     },
+     "cold": null,
+     "vm": "vm-21"
+    },
+    {
+     "at_ms": 47276,
+     "dur_ms": 869,
+     "exit": 0,
+     "cpu_ms": 1215.5,
+     "phases_us": {
+      "acquire": 13,
+      "resume": 65795,
+      "mount": 46065,
+      "run": 746879,
+      "destroy": 55529
+     },
+     "cold": null,
+     "vm": "vm-7"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 48217,
+   "dur_ms": 1079,
+   "tokens_in": 175,
+   "tokens_out": 70,
+   "cache_read": 13440,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.527,
+ "calls": 4,
+ "cell": "TB1d",
+ "removed": []
+}

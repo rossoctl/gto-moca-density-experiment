@@ -1,0 +1,188 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "sparql-university",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 61514,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 25217,
+  "output": 11773,
+  "cacheRead": 310208,
+  "cacheWrite": 9472,
+  "total": 356670
+ },
+ "totals": {
+  "model_calls": 12,
+  "tool_calls": 11,
+  "model_ms": 60514,
+  "tool_ms": 339,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 548,
+   "dur_ms": 829
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1377,
+   "dur_ms": 60,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "wc -l /app/university_graph.ttl && ls -la /app/"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1437,
+   "dur_ms": 637
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2074,
+   "dur_ms": 18,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/university_graph.ttl"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 2092,
+   "dur_ms": 15177
+  },
+  {
+   "kind": "tool",
+   "at_ms": 17269,
+   "dur_ms": 30,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "which arq sparql riot 2>/dev/null; python3 -c \"import rdflib; print('rdflib', rdflib.__version__)\" 2>/dev/null; echo \"---done---\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 17299,
+   "dur_ms": 1200
+  },
+  {
+   "kind": "tool",
+   "at_ms": 18499,
+   "dur_ms": 34,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "python3 --version; pip3 --version 2>/dev/null; pip3 install rdflib --quiet 2>&1 | tail -5; python3 -c \"import rdflib; print('rdflib', rdflib.__version__)\" 2>&1"
+  },
+  {
+   "kind": "model",
+   "at_ms": 18533,
+   "dur_ms": 1234
+  },
+  {
+   "kind": "tool",
+   "at_ms": 19767,
+   "dur_ms": 25,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "for c in node npm java ruby perl php go; do command -v $c >/dev/null 2>&1 && echo \"$c: $($c --version 2>&1 | head -1)\"; done; echo \"---\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 19792,
+   "dur_ms": 13275
+  },
+  {
+   "kind": "tool",
+   "at_ms": 33067,
+   "dur_ms": 25,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "grep -nE \"isEnrolledIn|isTaughtIn|worksIn|role|locatedInCountry|belongsTo|hasGraduationDate\" /app/university_graph.ttl | sed -n '1,80p'"
+  },
+  {
+   "kind": "model",
+   "at_ms": 33092,
+   "dur_ms": 4424
+  },
+  {
+   "kind": "tool",
+   "at_ms": 37516,
+   "dur_ms": 20,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/solution.sparql",
+    "content": "PREFIX uni: <http://university.org/ontology/>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n\n# Reference date: 2025-08-16\n# EU member states as of 2025-08-16 (EU-27, ISO 3166-1 alpha-2):\n# AT, BE, BG, HR, CY, CZ, DK, EE, FI, FR, DE, GR, HU, IE, IT,\n# LV, LT, LU, MT, NL, PL, PT, RO, SK, SI, ES, SE\n\nSELECT ?professorName (GROUP_CONCAT(DISTINCT ?country; separator=\", \") AS ?countries)\nWHERE {\n  # 1. Full professors only (exclude Assistant/Associate/Adjunct professors)\n  ?professor a uni:Person ;\n             uni:hasName ?professorName ;\n             uni:role ?role .\n  FILTER(\n    CONTAINS(?role, \"Professor\") &&\n    !CONTAINS(?role, \"Assistant\") &&\n    !CONTAINS(?role, \"Associate\") &&\n    !CONTAINS(?role, \"Adjunct\")\n  )\n\n  # 2. Must work in at least one department of a university in an EU country.\n  ?professor uni:worksIn ?euDept .\n  ?euDept uni:belongsTo ?euUniversity .\n  ?euUniversity uni:locatedInCountry ?euCountry .\n  FILTER(?euCountry IN (\n    \"AT\", \"BE\", \"BG\", \"HR\", \"CY\", \"CZ\", \"DK\", \"EE\", \"FI\", \"FR\",\n    \"DE\", \"GR\", \"HU\", \"IE\", \"IT\", \"LV\", \"LT\", \"LU\", \"MT\", \"NL\",\n    \"PL\", \"PT\", \"RO\", \"SK\", \"SI\", \"ES\", \"SE\"\n  ))\n\n  # 3. At least one department where the professor works must have more than\n  #    10 students currently enrolled in classes taught in that department.\n  {\n    SELECT DISTINCT ?professor\n    WHERE {\n      {\n        SELECT ?professor ?dept\n        WHERE {\n          ?professor uni:worksIn ?dept .\n          ?course uni:isTaughtIn ?dept .\n          ?student uni:isEnrolledIn ?course ;\n                   uni:hasEnrollmentDate ?enrollmentDate .\n          # Currently enrolled: enrolled on/before the reference date ...\n          FILTER(?enrollmentDate <= \"2025-08-16\"^^xsd:date)\n          # ... and has not already graduated on/before the reference date.\n          FILTER NOT EXISTS {\n            ?student uni:hasGraduationDate ?graduationDate .\n            FILTER(?graduationDate <= \"2025-08-16\"^^xsd:date)\n          }\n        }\n        GROUP BY ?professor ?dept\n        HAVING (COUNT(DISTINCT ?student) > 10)\n      }\n    }\n  }\n\n  # All countries where the professor works (for the output column).\n  ?professor uni:worksIn ?workDept .\n  ?workDept uni:belongsTo ?workUniversity .\n  ?workUniversity uni:locatedInCountry ?country .\n}\nGROUP BY ?professorName\nORDER BY ?professorName\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 37536,
+   "dur_ms": 2855
+  },
+  {
+   "kind": "tool",
+   "at_ms": 40391,
+   "dur_ms": 29,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "command -v apt-get curl wget python python3.11 python3.12 2>/dev/null; echo \"---net---\"; timeout 5 curl -sI https://pypi.org 2>&1 | head -3; echo \"exit:$?\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 40420,
+   "dur_ms": 947
+  },
+  {
+   "kind": "tool",
+   "at_ms": 41367,
+   "dur_ms": 51,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "timeout 20 apt-get install -y python3 python3-pip >/tmp/apt.log 2>&1; echo \"exit:$?\"; tail -5 /tmp/apt.log"
+  },
+  {
+   "kind": "model",
+   "at_ms": 41418,
+   "dur_ms": 8451
+  },
+  {
+   "kind": "tool",
+   "at_ms": 49869,
+   "dur_ms": 37,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/check.pl <<'EOF'\nuse strict; use warnings;\nmy $file='/app/university_graph.ttl';\nopen my $fh,'<',$file or die $!; local $/; my $t=<$fh>; close $fh;\n\n# course -> dept\nmy %course_dept;\nwhile($t =~ /uni:(\\w+)\\s+a\\s+uni:Course\\s*;\\s*uni:isTaughtIn\\s+uni:(\\w+)/g){ $course_dept{$1}=$2; }\n# dept -> uni\nmy %dept_uni;\nwhile($t =~ /uni:(\\w+)\\s+a\\s+uni:Department\\s*;\\s*uni:belongsTo\\s+uni:(\\w+)/g){ $dept_uni{$1}=$2; }\n# uni -> country\nmy %uni_country;\nwhile($t =~ /uni:(\\w+)\\s+a\\s+uni:University\\s*;\\s*uni:hasName\\s+\"[^\"]*\"\\s*;\\s*uni:locatedInCountry\\s+\"(\\w+)\"/g){ $uni_country{$1}=$2; }\n# professors: name, role, worksIn\nmy @prof;\nwhile($t =~ /uni:(\\w+)\\s+a\\s+uni:Person\\s*;\\s*uni:hasName\\s+\"([^\"]+)\"\\s*;\\s*uni:role\\s+\"([^\"]+)\"\\s*;\\s*uni:teaches[^;]*;\\s*uni:worksIn\\s+([^.;]+)\\./g){\n  my($id,$name,$role,$w)=($1,$2,$3,$4);\n  my @d = $w =~ /uni:(\\w+)/g;\n  push @prof, {id=>$id,name=>$name,role=>$role,depts=>\\@d};\n}\n# students enrollment + grad\nmy %enroll; # student -> [courses]\nmy %grad;\nwhile($t =~ /uni:(Student\\d+)\\s+uni:isEnrolledIn\\s+([^;]+);\\s*uni:hasEnrollmentDate\\s+\"([^\"]+)\"[^;.]*(?:;\\s*uni:hasGraduationDate\\s+\"([^\"]+)\")?/g){\n  my($s,$cs,$ed,$gd)=($1,$2,$3,$4);\n  my @c = $cs =~ /uni:(\\w+)/g;\n  $enroll{$s}=\\@c; $enroll{$s.'_date'}=$ed; $grad{$s}=$gd if defined $gd;\n}\nmy $ref='2025-08-16';\n# current students\nmy @current;\nfor my $s (grep {/^Student\\d+$/} keys %enroll){\n  my $ed=$enroll{$s.'_date'};\n  next if $ed gt $ref; # ISO dates compare lexically\n  my $gd=$grad{$s};\n  next if defined $gd && $gd le $ref;\n  push @current,$s;\n}\nprint \"Current students (\",scalar(@current),\"): @current\\n\";\n# per dept distinct current students\nmy %dd;\nfor my $s (@current){\n  for my $c (@{$enroll{$s}}){\n    my $d=$course_dept{$c}; next unless $d;\n    $dd{$d}{$s}=1;\n  }\n}\nprint \"\\nDept current-student counts:\\n\";\nfor my $d (sort keys %dd){ my $u=$dept_uni{$d}//'?'; my $co=$uni_country{$u}//'?'; printf \"  %-32s uni=%-12s country=%s count=%d\\n\",$d,$u,$co,scalar(keys %{$dd{$d}}); }\nmy %big = map { $_ => 1 } grep { scalar(keys %{$dd{$_}}) > 10 } keys %dd;\nprint \"\\nDepts with >10: \",join(\", \",sort keys %big),\"\\n\\n\";\nmy @eu = qw(AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IT LV LT LU MT NL PL PT RO SK SI ES SE);\nmy %EU=map{$_=>1}@eu;\nmy %students_big = map { my $d=$_; map {$dd{$d}{$_}=>1} keys %{$dd{$d}} } keys %big;\nprint \"Qualifying full professors:\\n\";\nfor my $p (@prof){\n  next if $p->{role} !~ /Professor/ || $p->{role}=~/Assistant|Associate|Adjunct/;\n  my @countries; my $hasEU=0; my $hasBig=0;\n  for my $d (@{$p->{depts}}){\n    my $u=$dept_uni{$d}; my $co=$uni_country{$u};\n    push @countries,$co if defined $co;\n    $hasEU=1 if defined $co && $EU{$co};\n    $hasBig=1 if $big{$d};\n  }\n  my %seen; my @uc=grep {!$seen{$_}++} @countries;\n  next unless $hasEU && $hasBig;\n  print \"  $p->{name} [role=$p->{role}] depts=@{$p->{depts}} countries=\",join(\", \",@uc),\"\\n\";\n}\nEOF\nperl /tmp/check.pl"
+  },
+  {
+   "kind": "model",
+   "at_ms": 49906,
+   "dur_ms": 8970
+  },
+  {
+   "kind": "tool",
+   "at_ms": 58876,
+   "dur_ms": 10,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/solution.sparql"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 58886,
+   "dur_ms": 2515
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.219,
+ "calls": 11,
+ "cell": "TB1a"
+}

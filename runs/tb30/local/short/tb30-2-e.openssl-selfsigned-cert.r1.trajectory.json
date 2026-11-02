@@ -1,0 +1,174 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "openssl-selfsigned-cert",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 18077,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 240,
+  "output": 2376,
+  "cacheRead": 22912,
+  "cacheWrite": 1472,
+  "total": 27000
+ },
+ "totals": {
+  "model_calls": 8,
+  "tool_calls": 7,
+  "model_ms": 16022,
+  "tool_ms": 805,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1158,
+   "dur_ms": 1109,
+   "tokens_in": 28,
+   "tokens_out": 143,
+   "cache_read": 1472,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2271,
+   "dur_ms": 204,
+   "tool": "bash",
+   "is_error": false,
+   "command": "mkdir -p /app/ssl && cd /app/ssl && openssl genrsa -out server.key 2048 && chmod 600 server.key && openssl req -new -x509 -key server.key -out server.crt -days 365 -subj \"/O=DevOps Team/CN=dev-internal.company.local\" && cat server.key server.crt > server.pem && chmod 644 server.crt server.pem"
+  },
+  {
+   "kind": "model",
+   "at_ms": 2478,
+   "dur_ms": 1095,
+   "tokens_in": 56,
+   "tokens_out": 159,
+   "cache_read": 1792,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3574,
+   "dur_ms": 101,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app/ssl && { echo \"Subject: $(openssl x509 -in server.crt -noout -subject | sed 's/^subject=//')\"; echo \"Validity:\"; openssl x509 -in server.crt -noout -dates; echo \"SHA256 Fingerprint: $(openssl x509 -in server.crt -noout -fingerprint -sha256 | sed 's/^.*=//')\"; } > verification.txt && cat verification.txt && echo \"---\" && ls -l"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3675,
+   "dur_ms": 1891,
+   "tokens_in": 1,
+   "tokens_out": 215,
+   "cache_read": 2112,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5568,
+   "dur_ms": 199,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 -c \"import cryptography; print(cryptography.__version__)\" 2>&1; python3 -c \"import ssl; print(ssl.OPENSSL_VERSION)\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 5767,
+   "dur_ms": 3036,
+   "tokens_in": 38,
+   "tokens_out": 483,
+   "cache_read": 2560,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 8806,
+   "dur_ms": 2,
+   "tool": "write",
+   "is_error": false,
+   "input": {
+    "path": "/app/check_cert.py",
+    "content": "#!/usr/bin/env python3\n\"\"\"Verify the self-signed development server certificate.\"\"\"\n\nimport os\nimport ssl\nimport sys\nfrom datetime import datetime, timezone\n\nCERT_PATH = \"/app/ssl/server.crt\"\n\n\ndef main():\n    if not os.path.isfile(CERT_PATH):\n        print(f\"Error: certificate not found at {CERT_PATH}\")\n        return 1\n\n    try:\n        # Loading via the stdlib also validates the PEM structure.\n        ssl.PEM_cert_to_DER_cert(open(CERT_PATH).read())\n        decoded = ssl._ssl._test_decode_cert(CERT_PATH)\n    except Exception as exc:\n        print(f\"Error: unable to load certificate: {exc}\")\n        return 1\n\n    common_name = None\n    for rdn in decoded.get(\"subject\", ()):\n        for key, value in rdn:\n            if key == \"commonName\":\n                common_name = value\n\n    not_after = datetime.strptime(\n        decoded[\"notAfter\"], \"%b %d %H:%M:%S %Y %Z\"\n    ).replace(tzinfo=timezone.utc)\n\n    print(f\"Common Name: {common_name}\")\n    print(f\"Expiration Date: {not_after.strftime('%Y-%m-%d')}\")\n\n    if not common_name:\n        print(\"Error: certificate has no Common Name\")\n        return 1\n\n    if not_after <= datetime.now(timezone.utc):\n        print(\"Error: certificate has expired\")\n        return 1\n\n    print(\"Certificate verification successful\")\n    return 0\n\n\nif __name__ == \"__main__\":\n    sys.exit(main())\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 8810,
+   "dur_ms": 902,
+   "tokens_in": 35,
+   "tokens_out": 144,
+   "cache_read": 3136,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 9714,
+   "dur_ms": 1,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "path": "/app/check_cert.py"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 9717,
+   "dur_ms": 1273,
+   "tokens_in": 33,
+   "tokens_out": 174,
+   "cache_read": 3264,
+   "cache_write": 384,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 10990,
+   "dur_ms": 172,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && chmod +x check_cert.py && python3 check_cert.py && echo \"--- key/cert match ---\" && diff <(openssl x509 -in ssl/server.crt -noout -pubkey) <(openssl pkey -in ssl/server.key -pubout) && echo MATCH && echo \"--- combined pem ---\" && grep -c \"BEGIN\" ssl/server.pem && openssl x509 -in ssl/server.pem -noout -subject && openssl rsa -in ssl/server.pem -check -noout"
+  },
+  {
+   "kind": "model",
+   "at_ms": 11162,
+   "dur_ms": 5229,
+   "tokens_in": 24,
+   "tokens_out": 823,
+   "cache_read": 3840,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 16391,
+   "dur_ms": 126,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app/ssl && { echo \"Subject: $(openssl x509 -in server.crt -noout -subject | sed 's/^subject=//')\"; echo \"Not Before: $(openssl x509 -in server.crt -noout -startdate | sed 's/^notBefore=//')\"; echo \"Not After: $(openssl x509 -in server.crt -noout -enddate | sed 's/^notAfter=//')\"; echo \"SHA256 Fingerprint: $(openssl x509 -in server.crt -noout -fingerprint -sha256 | sed 's/^.*=//')\"; } > verification.txt && cat verification.txt && echo \"--- files ---\" && ls -l /app/ssl /app/check_cert.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 16517,
+   "dur_ms": 1487,
+   "tokens_in": 25,
+   "tokens_out": 235,
+   "cache_read": 4736,
+   "cache_write": 256,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.232,
+ "calls": 7,
+ "cell": "TB1e"
+}

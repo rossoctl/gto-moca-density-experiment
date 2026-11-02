@@ -1,0 +1,481 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-d",
+ "instance_id": "sparql-university",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 78376,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 5480,
+  "output": 6817,
+  "cacheRead": 193280,
+  "cacheWrite": 0,
+  "total": 205577
+ },
+ "totals": {
+  "model_calls": 14,
+  "tool_calls": 13,
+  "model_ms": 37173,
+  "tool_ms": 39609,
+  "sandbox_ms": 38622
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 107,
+   "dur_ms": 3321,
+   "tokens_in": 50,
+   "tokens_out": 54,
+   "cache_read": 5824,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3428,
+   "dur_ms": 202,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncat /app/university_graph.ttl\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 3540,
+     "dur_ms": 43,
+     "exit": 0,
+     "cpu_ms": 37.8,
+     "phases_us": {
+      "acquire": 110,
+      "resume": 21809,
+      "mount": 19345,
+      "run": 3953,
+      "destroy": 17001
+     },
+     "cold": null,
+     "vm": "vm-153"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 3701,
+   "dur_ms": 14307,
+   "tokens_in": 4035,
+   "tokens_out": 86,
+   "cache_read": 5888,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 18008,
+   "dur_ms": 156,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nwhich arq sparql python3; python3 -c \"import rdflib; print('rdflib', rdflib.__version__)\" 2>/dev/null; ls /app\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 18061,
+     "dur_ms": 76,
+     "exit": 0,
+     "cpu_ms": 83.0,
+     "phases_us": {
+      "acquire": 95,
+      "resume": 22093,
+      "mount": 19361,
+      "run": 33944,
+      "destroy": 20035
+     },
+     "cold": null,
+     "vm": "vm-159"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 18183,
+   "dur_ms": 2904,
+   "tokens_in": 71,
+   "tokens_out": 675,
+   "cache_read": 12992,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 21087,
+   "dur_ms": 4,
+   "tool": "bash",
+   "is_error": true,
+   "command": "sbx put /app/solution.sparql <<'EOF'\nPREFIX uni: <http://university.org/ontology/>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n\nSELECT ?professorName (GROUP_CONCAT(DISTINCT ?country; separator=\", \") AS ?countries)\nWHERE {\n  ?professor a uni:Person ;\n             uni:hasName ?professorName ;\n             uni:role ?role ;\n             uni:worksIn ?workDept .\n\n  # Full professors only (exclude Assistant/Associate professors)\n  FILTER(STRSTARTS(?role, \"Professor\") &&\n         !CONTAINS(?role, \"Assistant\") &&\n         !CONTAINS(?role, \"Associate\"))\n\n  # Every country in which the professor currently works\n  ?workDept uni:belongsTo ?workUni .\n  ?workUni uni:locatedInCountry ?country .\n\n  # Criterion 2: at least one department belongs to a university in an EU country\n  ?professor uni:worksIn ?euDept .\n  ?euDept uni:belongsTo ?euUni .\n  ?euUni uni:locatedInCountry ?euCountry .\n  FILTER(?euCountry IN (\n    \"AT\", \"BE\", \"BG\", \"HR\", \"CY\", \"CZ\", \"DK\", \"EE\", \"FI\", \"FR\",\n    \"DE\", \"GR\", \"HU\", \"IE\", \"IT\", \"LV\", \"LT\", \"LU\", \"MT\", \"NL\",\n    \"PL\", \"PT\", \"RO\", \"SK\", \"SI\", \"ES\", \"SE\"\n  ))\n\n  # Criterion 3: at least one of the professor's departments has more than\n  # 10 students currently enrolled in a course taught in that department\n  ?professor uni:worksIn ?bigDept .\n  {\n    SELECT ?bigDept\n    WHERE {\n      ?course uni:isTaughtIn ?bigDept .\n      ?student uni:isEnrolledIn ?course ;\n               uni:hasEnrollmentDate ?enroll .\n      OPTIONAL { ?student uni:hasGraduationDate ?grad }\n      FILTER(?enroll <= \"2025-08-16\"^^xsd:date)\n      FILTER(!BOUND(?grad) || ?grad > \"2025-08-16\"^^xsd:date)\n    }\n    GROUP BY ?bigDept\n    HAVING (COUNT(DISTINCT ?student) > 10)\n  }\n}\nGROUP BY ?professorName\nORDER BY ?professorName\nEOF\npython3 -m pip install --quiet rdflib 2>&1 | tail -2\npython3 - <<'PY'\nfrom rdflib import Graph\ng=Graph(); g.parse('/app/university_graph.ttl',format='turtle')\nq=open('/app/solution.sparql').read()\nfor r in g.query(q):\n    print(r)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 22198,
+   "dur_ms": 2697,
+   "tokens_in": 160,
+   "tokens_out": 596,
+   "cache_read": 13696,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 24895,
+   "dur_ms": 116,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put /app/solution.sparql <<'EOF'\nPREFIX uni: <http://university.org/ontology/>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n\nSELECT ?professorName (GROUP_CONCAT(DISTINCT ?country; separator=\", \") AS ?countries)\nWHERE {\n  ?professor a uni:Person ;\n             uni:hasName ?professorName ;\n             uni:role ?role ;\n             uni:worksIn ?workDept .\n\n  # Full professors only (exclude Assistant/Associate professors)\n  FILTER(STRSTARTS(?role, \"Professor\") &&\n         !CONTAINS(?role, \"Assistant\") &&\n         !CONTAINS(?role, \"Associate\"))\n\n  # Every country in which the professor currently works\n  ?workDept uni:belongsTo ?workUni .\n  ?workUni uni:locatedInCountry ?country .\n\n  # Criterion 2: at least one department belongs to a university in an EU country\n  ?professor uni:worksIn ?euDept .\n  ?euDept uni:belongsTo ?euUni .\n  ?euUni uni:locatedInCountry ?euCountry .\n  FILTER(?euCountry IN (\n    \"AT\", \"BE\", \"BG\", \"HR\", \"CY\", \"CZ\", \"DK\", \"EE\", \"FI\", \"FR\",\n    \"DE\", \"GR\", \"HU\", \"IE\", \"IT\", \"LV\", \"LT\", \"LU\", \"MT\", \"NL\",\n    \"PL\", \"PT\", \"RO\", \"SK\", \"SI\", \"ES\", \"SE\"\n  ))\n\n  # Criterion 3: at least one of the professor's departments has more than\n  # 10 students currently enrolled in a course taught in that department\n  ?professor uni:worksIn ?bigDept .\n  {\n    SELECT ?bigDept\n    WHERE {\n      ?course uni:isTaughtIn ?bigDept .\n      ?student uni:isEnrolledIn ?course ;\n               uni:hasEnrollmentDate ?enroll .\n      OPTIONAL { ?student uni:hasGraduationDate ?grad }\n      FILTER(?enroll <= \"2025-08-16\"^^xsd:date)\n      FILTER(!BOUND(?grad) || ?grad > \"2025-08-16\"^^xsd:date)\n    }\n    GROUP BY ?bigDept\n    HAVING (COUNT(DISTINCT ?student) > 10)\n  }\n}\nGROUP BY ?professorName\nORDER BY ?professorName\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 24948,
+     "dur_ms": 57,
+     "exit": 0,
+     "cpu_ms": 43.7,
+     "phases_us": {
+      "acquire": 59,
+      "resume": 21469,
+      "mount": 18886,
+      "run": 7643,
+      "destroy": 28029
+     },
+     "cold": null,
+     "vm": "vm-161"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 25027,
+   "dur_ms": 839,
+   "tokens_in": 72,
+   "tokens_out": 120,
+   "cache_read": 14464,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 25866,
+   "dur_ms": 172,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npip install --quiet rdflib 2>&1 | tail -2\npython3 - <<'PY'\nfrom rdflib import Graph\ng=Graph(); g.parse('/app/university_graph.ttl',format='turtle')\nq=open('/app/solution.sparql').read()\nfor r in g.query(q):\n    print(r)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 25919,
+     "dur_ms": 82,
+     "exit": 1,
+     "cpu_ms": 82.7,
+     "phases_us": {
+      "acquire": 7,
+      "resume": 21794,
+      "mount": 19401,
+      "run": 32330,
+      "destroy": 27758
+     },
+     "cold": null,
+     "vm": "vm-171"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 26051,
+   "dur_ms": 808,
+   "tokens_in": 131,
+   "tokens_out": 124,
+   "cache_read": 14592,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 26859,
+   "dur_ms": 204,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 -m pip install --quiet rdflib 2>&1 | tail -3\npython3 - <<'PY'\nfrom rdflib import Graph\ng=Graph(); g.parse('/app/university_graph.ttl',format='turtle')\nq=open('/app/solution.sparql').read()\nfor r in g.query(q):\n    print(r)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 26911,
+     "dur_ms": 104,
+     "exit": 1,
+     "cpu_ms": 102.5,
+     "phases_us": {
+      "acquire": 54,
+      "resume": 21073,
+      "mount": 18814,
+      "run": 52882,
+      "destroy": 30013
+     },
+     "cold": null,
+     "vm": "vm-172"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 27076,
+   "dur_ms": 994,
+   "tokens_in": 119,
+   "tokens_out": 80,
+   "cache_read": 14784,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 28070,
+   "dur_ms": 160,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 -m ensurepip --version 2>&1 | head -2\nwhich node npm apt-get\npython3 -c \"import sys; print(sys.version)\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 28121,
+     "dur_ms": 100,
+     "exit": 0,
+     "cpu_ms": 96.7,
+     "phases_us": {
+      "acquire": 86,
+      "resume": 21313,
+      "mount": 19088,
+      "run": 55054,
+      "destroy": 23767
+     },
+     "cold": null,
+     "vm": "vm-173"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 28245,
+   "dur_ms": 911,
+   "tokens_in": 118,
+   "tokens_out": 140,
+   "cache_read": 14976,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 29156,
+   "dur_ms": 179,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\napt-get update -qq >/dev/null 2>&1\napt-get install -y -qq python3-rdflib >/dev/null 2>&1\npython3 - <<'PY'\nfrom rdflib import Graph\ng=Graph(); g.parse('/app/university_graph.ttl',format='turtle')\nq=open('/app/solution.sparql').read()\nfor r in g.query(q):\n    print(r)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 29208,
+     "dur_ms": 103,
+     "exit": 1,
+     "cpu_ms": 125.9,
+     "phases_us": {
+      "acquire": 54,
+      "resume": 21236,
+      "mount": 19150,
+      "run": 61118,
+      "destroy": 20718
+     },
+     "cold": null,
+     "vm": "vm-174"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 29348,
+   "dur_ms": 781,
+   "tokens_in": 48,
+   "tokens_out": 79,
+   "cache_read": 15232,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 30129,
+   "dur_ms": 148,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\napt-get update -qq 2>&1 | tail -5\napt-get install -y python3-rdflib 2>&1 | tail -15\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 30180,
+     "dur_ms": 86,
+     "exit": 0,
+     "cpu_ms": 85.0,
+     "phases_us": {
+      "acquire": 57,
+      "resume": 21152,
+      "mount": 19085,
+      "run": 34403,
+      "destroy": 30594
+     },
+     "cold": null,
+     "vm": "vm-175"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 30290,
+   "dur_ms": 722,
+   "tokens_in": 108,
+   "tokens_out": 83,
+   "cache_read": 15360,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 31012,
+   "dur_ms": 124,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nid\nsudo -n true 2>&1 && echo sudo-ok || echo no-sudo\nmkdir -p /var/lib/apt/lists/partial 2>&1\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 31063,
+     "dur_ms": 54,
+     "exit": 0,
+     "cpu_ms": 40.6,
+     "phases_us": {
+      "acquire": 53,
+      "resume": 21261,
+      "mount": 19083,
+      "run": 6080,
+      "destroy": 26732
+     },
+     "cold": null,
+     "vm": "vm-176"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 31150,
+   "dur_ms": 943,
+   "tokens_in": 59,
+   "tokens_out": 140,
+   "cache_read": 15552,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 32093,
+   "dur_ms": 36641,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nmkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial /var/lib/dpkg\ntouch /var/lib/dpkg/status\napt-get update -qq 2>&1 | tail -5\napt-get install -y -qq python3-rdflib 2>&1 | tail -8\npython3 -c \"import rdflib; print(rdflib.__version__)\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 32149,
+     "dur_ms": 36550,
+     "exit": 1,
+     "cpu_ms": 8310.8,
+     "phases_us": {
+      "acquire": 39,
+      "resume": 21228,
+      "mount": 19043,
+      "run": 36490934,
+      "destroy": 38124
+     },
+     "cold": null,
+     "vm": "vm-177"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 68751,
+   "dur_ms": 4768,
+   "tokens_in": 267,
+   "tokens_out": 122,
+   "cache_read": 15744,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 73519,
+   "dur_ms": 364,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /tmp\npython3 - <<'PY'\nimport urllib.request, json\nfor pkg in [\"rdflib\",\"pyparsing\",\"isodate\"]:\n    d=json.load(urllib.request.urlopen(f\"https://pypi.org/pypi/{pkg}/json\"))\n    print(pkg, d[\"info\"][\"version\"])\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 73572,
+     "dur_ms": 291,
+     "exit": 0,
+     "cpu_ms": 231.5,
+     "phases_us": {
+      "acquire": 66,
+      "resume": 21229,
+      "mount": 18694,
+      "run": 246911,
+      "destroy": 22925
+     },
+     "cold": null,
+     "vm": "vm-186"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 73901,
+   "dur_ms": 2128,
+   "tokens_in": 43,
+   "tokens_out": 338,
+   "cache_read": 16896,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 76029,
+   "dur_ms": 1139,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /tmp\npython3 - <<'PY'\nimport urllib.request, json, zipfile, io, sys, os\nos.makedirs('/tmp/pylibs', exist_ok=True)\nfor pkg in [\"rdflib\",\"pyparsing\",\"isodate\"]:\n    d=json.load(urllib.request.urlopen(f\"https://pypi.org/pypi/{pkg}/json\"))\n    urls=[u for u in d[\"urls\"] if u[\"filename\"].endswith(\"-py3-none-any.whl\") or u[\"filename\"].endswith(\"-py2.py3-none-any.whl\")]\n    if not urls:\n        urls=[u for u in d[\"urls\"] if u[\"filename\"].endswith(\".whl\")]\n    url=urls[0][\"url\"]\n    print(\"fetch\",urls[0][\"filename\"])\n    data=urllib.request.urlopen(url).read()\n    zipfile.ZipFile(io.BytesIO(data)).extractall('/tmp/pylibs')\nPY\nPYTHONPATH=/tmp/pylibs python3 - <<'PY'\nfrom rdflib import Graph\ng=Graph(); g.parse('/app/university_graph.ttl',format='turtle')\nq=open('/app/solution.sparql').read()\nfor r in g.query(q):\n    print(r)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 76080,
+     "dur_ms": 1076,
+     "exit": 0,
+     "cpu_ms": 869.0,
+     "phases_us": {
+      "acquire": 40,
+      "resume": 20927,
+      "mount": 18614,
+      "run": 1014328,
+      "destroy": 40741
+     },
+     "cold": null,
+     "vm": "vm-190"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 77197,
+   "dur_ms": 1050,
+   "tokens_in": 199,
+   "tokens_out": 100,
+   "cache_read": 17280,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.219,
+ "calls": 13,
+ "cell": "TB1d"
+}

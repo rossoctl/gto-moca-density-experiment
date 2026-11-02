@@ -1,0 +1,278 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "db-wal-recovery",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 42713,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 407,
+  "output": 7502,
+  "cacheRead": 162752,
+  "cacheWrite": 9088,
+  "total": 179749
+ },
+ "totals": {
+  "model_calls": 9,
+  "tool_calls": 8,
+  "model_ms": 38973,
+  "tool_ms": 2308,
+  "sandbox_ms": 1000
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 499,
+   "dur_ms": 1156
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1655,
+   "dur_ms": 156,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -la /app/\necho \"---FILE TYPES---\"\nfile /app/*\necho \"---SIZES---\"\nstat -c '%n %s' /app/*\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 1733,
+     "dur_ms": 61,
+     "exit": 0,
+     "cpu_ms": 58.1,
+     "phases_us": {
+      "acquire": 90,
+      "resume": 20815,
+      "mount": 18415,
+      "run": 16031,
+      "destroy": 23859
+     },
+     "cold": null,
+     "vm": "vm-8"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 1811,
+   "dur_ms": 1599
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3410,
+   "dur_ms": 171,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\necho \"=== DB hexdump first 256 ===\"\nxxd /app/main.db | head -20\necho \"=== WAL hexdump first 512 ===\"\nxxd /app/main.db-wal | head -40\necho \"=== sqlite3 schema/contents ===\"\npython3 - <<'PY'\nimport sqlite3\ntry:\n    c=sqlite3.connect('/app/main.db')\n    print(\"tables:\", c.execute(\"select name,sql from sqlite_master\").fetchall())\n    print(\"rows:\", c.execute(\"select * from items\").fetchall())\n    c.close()\nexcept Exception as e:\n    print(\"ERR\", e)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 3467,
+     "dur_ms": 85,
+     "exit": 0,
+     "cpu_ms": 104.3,
+     "phases_us": {
+      "acquire": 61,
+      "resume": 20227,
+      "mount": 18146,
+      "run": 45897,
+      "destroy": 18972
+     },
+     "cold": null,
+     "vm": "vm-11"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 3581,
+   "dur_ms": 7801
+  },
+  {
+   "kind": "tool",
+   "at_ms": 11382,
+   "dur_ms": 199,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncp /app/main.db /tmp/dec.db\npython3 - <<'PY'\ndata = open('/app/main.db-wal','rb').read()\ndec = bytes(b ^ 0x42 for b in data)\nopen('/tmp/dec.db-wal','wb').write(dec)\nprint(\"orig header:\", data[:32].hex())\nprint(\"dec  header:\", dec[:32].hex())\n# frame headers\nps=4096\nprint(\"WAL size\", len(dec))\nn = (len(dec)-32)//(24+ps)\nprint(\"frames:\", n, \"remainder\", (len(dec)-32)%(24+ps))\nfor i in range(n):\n    off=32+i*(24+ps)\n    h=dec[off:off+24]\n    pg=int.from_bytes(h[0:4],'big'); dbsz=int.from_bytes(h[4:8],'big')\n    print(i,\"page\",pg,\"dbsize\",dbsz,\"salt\",h[8:16].hex(),\"cksum\",h[16:24].hex())\n# dump non-zero regions of first decrypt page\nimport re\nprint(\"printable in decrypted WAL:\", re.findall(rb'[ -~]{4,}', dec)[:40])\nPY\necho \"=== now query with decrypted wal ===\"\npython3 - <<'PY'\nimport sqlite3, shutil, os\nshutil.copy('/tmp/dec.db','/tmp/test.db')\nshutil.copy('/tmp/dec.db-wal','/tmp/test.db-wal')\ntry:\n    c=sqlite3.connect('/tmp/test.db')\n    print(\"tables:\", c.execute(\"select name,sql from sqlite_master\").fetchall())\n    print(\"rows:\", c.execute(\"select * from items order by id\").fetchall())\n    c.close()\nexcept Exception as e:\n    print(\"ERR\", type(e).__name__, e)\nPY\nls -la /tmp/test.db* 2>/dev/null\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 11438,
+     "dur_ms": 125,
+     "exit": 0,
+     "cpu_ms": 124.9,
+     "phases_us": {
+      "acquire": 108,
+      "resume": 20868,
+      "mount": 18626,
+      "run": 69545,
+      "destroy": 34356
+     },
+     "cold": null,
+     "vm": "vm-14"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 11581,
+   "dur_ms": 3420
+  },
+  {
+   "kind": "tool",
+   "at_ms": 15001,
+   "dur_ms": 318,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\necho \"=== /app ===\"; ls -la /app/\necho \"=== /workspace ===\"; ls -la /workspace/ 2>/dev/null\necho \"=== pwd ===\"; pwd\necho \"=== find wal/db ===\"; find / -name '*.db*' -o -name '*wal*' 2>/dev/null | grep -v -E '^/proc|^/sys' | head -50\necho \"=== dec.db in /tmp ===\"; ls -la /tmp/\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 15055,
+     "dur_ms": 245,
+     "exit": 0,
+     "cpu_ms": 249.6,
+     "phases_us": {
+      "acquire": 59,
+      "resume": 20754,
+      "mount": 18098,
+      "run": 195873,
+      "destroy": 27701
+     },
+     "cold": null,
+     "vm": "vm-18"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 15319,
+   "dur_ms": 1680
+  },
+  {
+   "kind": "tool",
+   "at_ms": 16999,
+   "dur_ms": 166,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -la /opt/testbed-src/\nmd5sum /opt/testbed-src/main.db /workspace/main.db\nmd5sum /opt/testbed-src/main.db-wal\nxxd /opt/testbed-src/main.db-wal | head -3\n# restore\ncp /opt/testbed-src/main.db-wal /workspace/main.db-wal\nls -la /workspace/\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 17052,
+     "dur_ms": 66,
+     "exit": 0,
+     "cpu_ms": 55.3,
+     "phases_us": {
+      "acquire": 65,
+      "resume": 19704,
+      "mount": 17523,
+      "run": 14887,
+      "destroy": 30749
+     },
+     "cold": null,
+     "vm": "vm-21"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 17165,
+   "dur_ms": 7627
+  },
+  {
+   "kind": "tool",
+   "at_ms": 24792,
+   "dur_ms": 238,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nmkdir -p /tmp/work\ncp /opt/testbed-src/main.db /tmp/work/main.db\ncp /opt/testbed-src/main.db-wal /tmp/work/orig.wal\npython3 - <<'PY'\ndata=open('/tmp/work/orig.wal','rb').read()\ndec=bytes(b^0x42 for b in data)\nopen('/tmp/work/main.db-wal','wb').write(dec)\nprint(\"orig magic:\",data[:4].hex(),\"-> dec:\",dec[:4].hex(),\"(want 377f0682 or 377f0683)\")\nprint(\"version:\",int.from_bytes(dec[4:8],'big'),\"(want 3007000)\")\nps=int.from_bytes(dec[8:12],'big'); print(\"pagesize:\",ps)\nprint(\"checkpoint seq:\",int.from_bytes(dec[12:16],'big'))\nprint(\"salt:\",dec[16:24].hex())\nprint(\"cksum hdr:\",dec[24:32].hex())\nprint(\"file size:\",len(dec),\"frame size:\",24+ps,\"nframes:\",(len(dec)-32)/(24+ps))\n# verify wal checksums\ndef cksum(data, s0, s1, big):\n    # wal checksum algorithm over 8-byte chunks\n    for i in range(0,len(data),8):\n        x=int.from_bytes(data[i:i+4], 'big' if big else 'little')\n        y=int.from_bytes(data[i+4:i+8], 'big' if big else 'little')\n        s0=(s0+x+s1)&0xffffffff\n        s1=(s1+y+s0)&0xffffffff\n    return s0,s1\nmagic=int.from_bytes(dec[0:4],'big'); big = (magic & 1)==0\ns0=int.from_bytes(dec[24:28],'big'); s1=int.from_bytes(dec[28:32],'big')\n# recompute header checksum: first 24 bytes\nh0,h1=cksum(dec[0:24],0,0,big)\nprint(\"hdr checksum computed:\",hex(h0),hex(h1),\"stored:\",hex(s0),hex(s1),\"match\",(h0,h1)==(s0,s1))\noff=32; i=0\nwhile off+24+ps<=len(dec):\n    h=dec[off:off+24]; frame=dec[off+24:off+24+ps]\n    pg=int.from_bytes(h[0:4],'big'); db=int.from_bytes(h[4:8],'big')\n    fs0,fs1=int.from_bytes(h[16:20],'big'),int.from_bytes(h[20:24],'big')\n    n0,n1=cksum(frame,s0,s1,big)\n    ok=(n0,n1)==(fs0,fs1)\n    print(f\"frame {i}: page={pg} dbsize={db} cksum_ok={ok} salt={h[8:16].hex()}\")\n    if ok: s0,s1=n0,n1\n    else:\n        # try little endian variant\n        n0,n1=cksum(frame,s0,s1,not big)\n        print(\"   little-endian variant ok:\",(n0,n1)==(fs0,fs1))\n        break\n    off+=24+ps; i+=1\nPY\necho \"=== attempt sqlite open on copy ===\"\npython3 - <<'PY'\nimport sqlite3\ntry:\n    c=sqlite3.connect('/tmp/work/main.db')\n    print(\"integrity:\", c.execute(\"pragma integrity_check\").fetchall())\n    print(\"schema:\", c.execute(\"select name,sql from sqlite_master\").fetchall())\n    print(\"rows:\", c.execute(\"select id,name,value from items order by id\").fetchall())\n    c.close()\nexcept Exception as e:\n    print(\"ERR\",type(e).__name__,e)\nPY\necho \"=== files ===\"; ls -la /tmp/work/\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 24851,
+     "dur_ms": 143,
+     "exit": 0,
+     "cpu_ms": 122.8,
+     "phases_us": {
+      "acquire": 82,
+      "resume": 48010,
+      "mount": 45237,
+      "run": 62031,
+      "destroy": 32957
+     },
+     "cold": null,
+     "vm": "vm-24"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 25030,
+   "dur_ms": 10521
+  },
+  {
+   "kind": "tool",
+   "at_ms": 35551,
+   "dur_ms": 865,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nset -e\n# 1) Write decrypted (fixed) WAL into /workspace (= /app), preserving original base db\npython3 - <<'PY'\ndata=open('/opt/testbed-src/main.db-wal','rb').read()\ndec=bytes(b^0x42 for b in data)\nopen('/workspace/main.db-wal','wb').write(dec)\nprint(\"wrote fixed WAL, magic:\", dec[:4].hex())\nPY\n# 2) Verify on an isolated copy so the persistent WAL isn't checkpointed away\nrm -rf /tmp/verify && mkdir -p /tmp/verify\ncp /workspace/main.db /tmp/verify/main.db\ncp /workspace/main.db-wal /tmp/verify/main.db-wal\npython3 - <<'PY'\nimport sqlite3, json\nc=sqlite3.connect('/tmp/verify/main.db')\nprint(\"integrity:\", c.execute(\"pragma integrity_check\").fetchone()[0])\nrows=c.execute(\"select id,name,value from items order by id\").fetchall()\nc.close()\nprint(\"row count:\", len(rows))\nprint(rows)\nwith open('/workspace/recovered.json','w') as f:\n    json.dump([{\"id\":i,\"name\":n,\"value\":v} for i,n,v in rows], f)\nPY\n# 3) Show final artifacts\necho \"=== recovered.json ===\"\ncat /workspace/recovered.json\necho\necho \"=== files in /app ===\"\nls -la /workspace/\npython3 - <<'PY'\nimport json\nd=json.load(open('/workspace/recovered.json'))\nprint(\"JSON records:\",len(d))\nprint(\"sorted by id:\", [x['id'] for x in d]==sorted(x['id'] for x in d))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 36221,
+     "dur_ms": 159,
+     "exit": 0,
+     "cpu_ms": 147.7,
+     "phases_us": {
+      "acquire": 74,
+      "resume": 42016,
+      "mount": 39388,
+      "run": 88680,
+      "destroy": 28251
+     },
+     "cold": null,
+     "vm": "vm-30"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 36416,
+   "dur_ms": 2739
+  },
+  {
+   "kind": "tool",
+   "at_ms": 39155,
+   "dur_ms": 195,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -la /workspace/main.db /workspace/main.db-wal /workspace/recovered.json\nxxd -l 32 /workspace/main.db-wal\necho \"expected magic 377f0682 / version 3007000 / pagesize 4096\"\npython3 -c \"import json;d=json.load(open('/workspace/recovered.json'));print(len(d),d[0],d[-1])\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 39223,
+     "dur_ms": 116,
+     "exit": 0,
+     "cpu_ms": 103.6,
+     "phases_us": {
+      "acquire": 102,
+      "resume": 33531,
+      "mount": 31180,
+      "run": 47713,
+      "destroy": 34761
+     },
+     "cold": null,
+     "vm": "vm-37"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 39350,
+   "dur_ms": 2430
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.096,
+ "calls": 8,
+ "cell": "TB1b"
+}

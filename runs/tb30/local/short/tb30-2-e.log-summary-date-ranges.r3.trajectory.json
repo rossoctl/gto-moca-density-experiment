@@ -1,0 +1,115 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "log-summary-date-ranges",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 8356,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 171,
+  "output": 1285,
+  "cacheRead": 33024,
+  "cacheWrite": 7168,
+  "total": 41648
+ },
+ "totals": {
+  "model_calls": 5,
+  "tool_calls": 4,
+  "model_ms": 6636,
+  "tool_ms": 504,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1132,
+   "dur_ms": 513,
+   "tokens_in": 22,
+   "tokens_out": 66,
+   "cache_read": 1856,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1648,
+   "dur_ms": 22,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app/logs && head -20 /app/logs/*.log | head -100"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1671,
+   "dur_ms": 2567,
+   "tokens_in": 53,
+   "tokens_out": 571,
+   "cache_read": 1920,
+   "cache_write": 6912,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4239,
+   "dur_ms": 311,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport os, re, csv\nfrom datetime import date, timedelta\n\nref = date(2025,8,12)\nranges = {\n    'today': (ref, ref),\n    'last_7_days': (ref - timedelta(days=6), ref),\n    'last_30_days': (ref - timedelta(days=29), ref),\n    'month_to_date': (ref.replace(day=1), ref),\n}\nseverities = ['ERROR','WARNING','INFO']\ncounts = {p:{s:0 for s in severities} for p in list(ranges)+['total']}\n\nfor fn in os.listdir('logs'):\n    m = re.match(r'(\\d{4}-\\d{2}-\\d{2})_.*\\.log$', fn)\n    if not m: continue\n    d = date.fromisoformat(m.group(1))\n    with open(os.path.join('logs',fn), errors='ignore') as f:\n        for line in f:\n            mm = re.search(r'\\[(ERROR|WARNING|INFO)\\]', line)\n            if not mm: continue\n            sev = mm.group(1)\n            counts['total'][sev]+=1\n            for p,(start,end) in ranges.items():\n                if start <= d <= end:\n                    counts[p][sev]+=1\n\nwith open('summary.csv','w',newline='') as f:\n    w=csv.writer(f)\n    w.writerow(['period','severity','count'])\n    for p in ['today','last_7_days','last_30_days','month_to_date','total']:\n        for s in severities:\n            w.writerow([p,s,counts[p][s]])\nprint(open('summary.csv').read())\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 4553,
+   "dur_ms": 1390,
+   "tokens_in": 7,
+   "tokens_out": 227,
+   "cache_read": 9408,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5943,
+   "dur_ms": 136,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && awk 'FNR==1{fn=FILENAME; fd=substr(fn,1,10)} {ld=substr($0,1,10); if(ld!=fd){print fn, $0; exit}}' logs/*.log | head; echo \"mismatch-check-done\"; grep -rhoE '\\[(ERROR|WARNING|INFO)\\]' logs | sort | uniq -c"
+  },
+  {
+   "kind": "model",
+   "at_ms": 6079,
+   "dur_ms": 1073,
+   "tokens_in": 50,
+   "tokens_out": 168,
+   "cache_read": 9792,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 7153,
+   "dur_ms": 35,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && awk '{n=split(FILENAME,a,\"/\"); b=a[n]; fd=substr(b,1,10); ld=substr($0,1,10); if(ld!=fd){print FILENAME, $0; bad[FILENAME]++}} END{for(f in bad) print f, bad[f]}' logs/*.log | head -20"
+  },
+  {
+   "kind": "model",
+   "at_ms": 7191,
+   "dur_ms": 1093,
+   "tokens_in": 39,
+   "tokens_out": 253,
+   "cache_read": 10048,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.192,
+ "calls": 4,
+ "cell": "TB1e"
+}

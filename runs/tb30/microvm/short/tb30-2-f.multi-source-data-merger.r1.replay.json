@@ -1,0 +1,167 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-f",
+ "instance_id": "multi-source-data-merger",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 17309,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 109,
+  "output": 2728,
+  "cacheRead": 9728,
+  "cacheWrite": 1920,
+  "total": 14485
+ },
+ "totals": {
+  "model_calls": 4,
+  "tool_calls": 3,
+  "model_ms": 12987,
+  "tool_ms": 3111,
+  "sandbox_ms": 2834
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1132,
+   "dur_ms": 914,
+   "tokens_in": 10,
+   "tokens_out": 176,
+   "cache_read": 1024,
+   "cache_write": 512,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2050,
+   "dur_ms": 846,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /data/source_a /data/source_b /data/source_c 2>&1\necho \"--- JSON ---\"\nhead -c 3000 /data/source_a/users.json\necho\necho \"--- CSV ---\"\nhead -20 /data/source_b/users.csv\necho \"--- PARQUET ---\"\npython3 -c \"\nimport pandas as pd\ndf = pd.read_parquet('/data/source_c/users.parquet')\nprint(df.dtypes)\nprint(df.head(20).to_string())\nprint('rows', len(df))\n\"",
+   "sandbox": [
+    {
+     "at_ms": 2102,
+     "dur_ms": 790,
+     "exit": 0,
+     "cpu_ms": 1095.5,
+     "phases_us": {
+      "acquire": 16,
+      "resume": 23830,
+      "mount": 21530,
+      "run": 720127,
+      "destroy": 46233
+     },
+     "cold": null,
+     "vm": "vm-10"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 2900,
+   "dur_ms": 1816,
+   "tokens_in": 25,
+   "tokens_out": 283,
+   "cache_read": 1536,
+   "cache_write": 640,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4717,
+   "dur_ms": 874,
+   "tool": "bash",
+   "is_error": false,
+   "command": "echo \"=== JSON full ===\"; cat /data/source_a/users.json\necho; echo \"=== CSV full ===\"; cat /data/source_b/users.csv\necho; echo \"=== PARQUET full ===\"; python3 -c \"\nimport pandas as pd\nprint(pd.read_parquet('/data/source_c/users.parquet').to_string())\n\"\necho; echo \"=== /app or /workspace ===\"; pwd; ls -la /app 2>&1 | head; ls -la /workspace 2>&1 | head",
+   "sandbox": [
+    {
+     "at_ms": 4768,
+     "dur_ms": 783,
+     "exit": 0,
+     "cpu_ms": 1085.5,
+     "phases_us": {
+      "acquire": 132,
+      "resume": 22602,
+      "mount": 20434,
+      "run": 720805,
+      "destroy": 39455
+     },
+     "cold": null,
+     "vm": "vm-12"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 5594,
+   "dur_ms": 8703,
+   "tokens_in": 12,
+   "tokens_out": 1946,
+   "cache_read": 2432,
+   "cache_write": 384,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14298,
+   "dur_ms": 1391,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put merge_users.py <<'EOF'\n\"\"\"Merge user data from JSON, CSV and Parquet sources by priority.\"\"\"\n\nimport json\nfrom pathlib import Path\n\nimport pandas as pd\n\nSOURCE_A = Path(\"/data/source_a/users.json\")\nSOURCE_B = Path(\"/data/source_b/users.csv\")\nSOURCE_C = Path(\"/data/source_c/users.parquet\")\n\nOUTPUT_PARQUET = Path(\"/app/merged_users.parquet\")\nOUTPUT_CONFLICTS = Path(\"/app/conflicts.json\")\n\nSOURCE_NAMES = (\"source_a\", \"source_b\", \"source_c\")\n\n# Maps each source's field names to the unified name.\nFIELD_MAPPINGS = {\n    \"source_a\": {\n        \"user_id\": \"id\",\n        \"name\": \"full_name\",\n        \"email\": \"email\",\n        \"created_date\": \"registration_date\",\n        \"status\": \"status\",\n    },\n    \"source_b\": {\n        \"user_id\": \"user_id\",\n        \"name\": \"name\",\n        \"email\": \"email_address\",\n        \"created_date\": \"created_at\",\n        \"status\": \"is_active\",\n    },\n    \"source_c\": {\n        \"user_id\": \"userId\",\n        \"name\": \"userName\",\n        \"email\": \"email\",\n        \"created_date\": \"joined\",\n        \"status\": \"active\",\n    },\n}\n\n\ndef read_sources():\n    return {\n        \"source_a\": pd.read_json(SOURCE_A),\n        \"source_b\": pd.read_csv(SOURCE_B),\n        \"source_c\": pd.read_parquet(SOURCE_C),\n    }\n\n\ndef normalize_status(value):\n    \"\"\"Convert various status/boolean representations to active/inactive.\"\"\"\n    if value is None or (isinstance(value, float) and pd.isna(value)):\n        return None\n    if isinstance(value, bool):\n        return \"active\" if value else \"inactive\"\n    text = str(value).strip().lower()\n    if text in {\"true\", \"1\", \"yes\", \"y\", \"active\", \"enabled\"}:\n        return \"active\"\n    if text in {\"false\", \"0\", \"no\", \"n\", \"inactive\", \"disabled\"}:\n        return \"inactive\"\n    return text or None\n\n\ndef normalize_date(value):\n    if value is None or (isinstance(value, float) and pd.isna(value)):\n        return None\n    if value == \"\":\n        return None\n    parsed = pd.to_datetime(value, errors=\"coerce\")\n    if pd.isna(parsed):\n        return str(value).strip() or None\n    return parsed.strftime(\"%Y-%m-%d\")\n\n\ndef normalize_text(value):\n    if value is None or (isinstance(value, float) and pd.isna(value)):\n        return None\n    text = str(value).strip()\n    return text or None\n\n\ndef normalize_source(df, source_name):\n    mapping = FIELD_MAPPINGS[source_name]\n    records = []\n    for _, row in df.iterrows():\n        raw_id = row.get(mapping[\"user_id\"])\n        if raw_id is None or pd.isna(raw_id):\n            continue\n        try:\n            user_id = int(float(raw_id))\n        except (TypeError, ValueError):\n            continue\n        record = {\n            \"user_id\": user_id,\n            \"name\": normalize_text(row.get(mapping[\"name\"])),\n            \"email\": normalize_text(row.get(mapping[\"email\"])),\n            \"created_date\": normalize_date(row.get(mapping[\"created_date\"])),\n            \"status\": normalize_status(row.get(mapping[\"status\"])),\n        }\n        records.append(record)\n    return records\n\n\ndef main():\n    frames = read_sources()\n    normalized = {\n        name: normalize_source(frames[name], name) for name in SOURCE_NAMES\n    }\n\n    # user_id -> source_name -> record\n    by_user = {}\n    for source_name in SOURCE_NAMES:\n        for record in normalized[source_name]:\n            by_user.setdefault(record[\"user_id\"], {})[source_name] = record\n\n    merged_rows = []\n    conflicts = []\n    fields = (\"name\", \"email\", \"created_date\", \"status\")\n\n    for user_id in sorted(by_user):\n        per_source = by_user[user_id]\n        merged = {\"user_id\": user_id}\n\n        for field in fields:\n            values = {}\n            for source_name in SOURCE_NAMES:\n                if source_name in per_source:\n                    value = per_source[source_name].get(field)\n                    if value is not None:\n                        values[source_name] = value\n\n            if not values:\n                merged[field] = None\n                continue\n\n            # Sources are already ordered by priority (a > b > c).\n            selected_source = next(iter(values))\n            selected = values[selected_source]\n\n            if len(set(values.values())) > 1:\n                conflicts.append(\n                    {\n                        \"user_id\": user_id,\n                        \"field\": field,\n                        \"values\": values,\n                        \"selected\": selected,\n                    }\n                )\n\n            merged[field] = selected\n\n        merged_rows.append(merged)\n\n    result = pd.DataFrame(\n        merged_rows,\n        columns=[\"user_id\", \"name\", \"email\", \"created_date\", \"status\"],\n    )\n    result[\"user_id\"] = result[\"user_id\"].astype(\"int64\")\n    for column in (\"name\", \"email\", \"created_date\", \"status\"):\n        result[column] = result[column].astype(\"string\")\n\n    OUTPUT_PARQUET.parent.mkdir(parents=True, exist_ok=True)\n    result.to_parquet(OUTPUT_PARQUET, index=False)\n\n    report = {\"total_conflicts\": len(conflicts), \"conflicts\": conflicts}\n    OUTPUT_CONFLICTS.write_text(json.dumps(report, indent=2) + \"\\n\")\n\n    print(f\"Wrote {len(result)} users to {OUTPUT_PARQUET}\")\n    print(f\"Wrote {len(conflicts)} conflicts to {OUTPUT_CONFLICTS}\")\n\n\nif __name__ == \"__main__\":\n    main()\nEOF\nsbx run <<'EOF'\ncd /app && python3 merge_users.py && echo \"--- merged ---\" && python3 -c \"\nimport pandas as pd\ndf=pd.read_parquet('/app/merged_users.parquet')\nprint(df.dtypes)\nprint(df.to_string())\n\" && echo \"--- conflicts ---\" && cat /app/conflicts.json\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 14348,
+     "dur_ms": 60,
+     "exit": 0,
+     "cpu_ms": 46.4,
+     "phases_us": {
+      "acquire": 13,
+      "resume": 22685,
+      "mount": 20028,
+      "run": 8029,
+      "destroy": 29480
+     },
+     "cold": null,
+     "vm": "vm-15"
+    },
+    {
+     "at_ms": 14454,
+     "dur_ms": 1201,
+     "exit": 0,
+     "cpu_ms": 1458.9,
+     "phases_us": {
+      "acquire": 11,
+      "resume": 23305,
+      "mount": 20553,
+      "run": 1130039,
+      "destroy": 46986
+     },
+     "cold": null,
+     "vm": "vm-9"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 15692,
+   "dur_ms": 1554,
+   "tokens_in": 62,
+   "tokens_out": 323,
+   "cache_read": 4736,
+   "cache_write": 384,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.537,
+ "calls": 3,
+ "cell": "TB1f",
+ "removed": []
+}

@@ -1,0 +1,223 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "model-extraction-relu-logits",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 267140,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 389,
+  "output": 25717,
+  "cacheRead": 494976,
+  "cacheWrite": 49856,
+  "total": 570938
+ },
+ "totals": {
+  "model_calls": 15,
+  "tool_calls": 14,
+  "model_ms": 180013,
+  "tool_ms": 86497,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 512,
+   "dur_ms": 1153
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1665,
+   "dur_ms": 65,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /app && echo \"---\" && cat /app/forward.py 2>/dev/null | head -100"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1730,
+   "dur_ms": 43744
+  },
+  {
+   "kind": "tool",
+   "at_ms": 45474,
+   "dur_ms": 425,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport numpy as np, forward\nnp.set_printoptions(precision=4, suppress=True)\nprint('A1', forward.A1.shape)\nprint('A2', forward.A2.ravel())\nprint('b1', forward.b1)\nprint('b2', forward.b2)\nprint('A2 abs min/max', np.abs(forward.A2).min(), np.abs(forward.A2).max())\nprint('A1 row norms', np.linalg.norm(forward.A1,axis=1))\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 45899,
+   "dur_ms": 42562
+  },
+  {
+   "kind": "tool",
+   "at_ms": 88461,
+   "dur_ms": 394,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "cat > /tmp/proto.py <<'EOF'\nimport numpy as np, time\nimport forward\n\nrng = np.random.default_rng(12345)\n\ndef grad(f, x, h=1e-5):\n    g = np.empty(10)\n    for j in range(10):\n        e = np.zeros(10); e[j] = h\n        g[j] = (f(x+e) - f(x-e)) / (2*h)\n    return g\n\ndef canon(u):\n    u = u / np.linalg.norm(u)\n    # canonical sign\n    k = np.argmax(np.abs(u))\n    if u[k] < 0: u = -u\n    return u\n\ndef collect(v, x0, T=50.0, delta=0.02, tol=1e-8):\n    n = int(2*T/delta)\n    ts = np.linspace(-T, T, n+1) + x0[0]*0  # uniform\n    # points\n    xs = x0[None,:] + ts[:,None]*v[None,:]\n    gs = np.array([forward(x) for x in xs])\n    s = np.diff(gs)/delta     # length n, cell k between t_k, t_{k+1}\n    out = []\n    # cell flagged if differs from both neighbors\n    for k in range(1, n-1):\n        if abs(s[k]-s[k-1]) > tol and abs(s[k]-s[k+1]) > tol:\n            left = xs[k] - 0.5*delta*v      # midpoint cell k-1\n            right = xs[k+1] + 0.5*delta*v   # midpoint cell k+1\n            d = grad(forward, right) - grad(forward, left)\n            nrm = np.linalg.norm(d)\n            if nrm > 1e-7:\n                out.append(canon(d))\n    return out\n\nt0=time.time()\nvecs=[]\nL=15\nfor i in range(L):\n    v = rng.normal(size=10); v/=np.linalg.norm(v)\n    x0 = rng.normal(size=10)*1.0\n    vecs += collect(v, x0)\nprint(\"queries/time\", time.time()-t0, \"vecs\", len(vecs))\n\n# cluster\ncenters=[]; counts=[]; members=[]\nfor u in vecs:\n    best=-1; bc=-2\n    for i,c in enumerate(centers):\n        co=abs(np.dot(u,c))\n        if co>bc: bc=co; best=i\n    if bc > 1-1e-4:\n        centers[best] = centers[best]*counts[best] + u\n        counts[best]+=1\n        centers[best]/=np.linalg.norm(centers[best])\n        members[best].append(u)\n    else:\n        centers.append(u.copy()); counts.append(1); members.append([u])\ncounts=np.array(counts)\nprint(\"num clusters\", len(centers))\nprint(\"counts sorted\", np.sort(counts)[::-1])\n# keep clusters with count>=2\nkeep=[i for i in range(len(centers)) if counts[i]>=2]\nM=np.array([centers[i] for i in keep])\nprint(\"kept\", M.shape, \"counts\", counts[keep])\nnp.save('/tmp/M.npy', M)\n\n# compare to true A1 up to permutation+scaling: match each recovered to true row by |cos|\nA=forward.A1\nAn=A/np.linalg.norm(A,axis=1,keepdims=True)\nprint(\"error matrix (recovered x true abs cos):\")\nC=np.abs(M@An.T)\nprint(np.round(C,4))\nprint(\"max per recovered\", C.max(axis=1))\nEOF\ncd /app && python3 /tmp/proto.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 88855,
+   "dur_ms": 1681
+  },
+  {
+   "kind": "tool",
+   "at_ms": 90536,
+   "dur_ms": 243,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "PYTHONPATH=/app python3 /tmp/proto.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 90779,
+   "dur_ms": 1938
+  },
+  {
+   "kind": "tool",
+   "at_ms": 92717,
+   "dur_ms": 826,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sed -i 's/^import forward$/import forward\\nf = forward.forward/' /tmp/proto.py && sed -i 's/forward(x)/f(x)/; s/forward, right/f, right/; s/forward, left/f, left/' /tmp/proto.py && PYTHONPATH=/app python3 /tmp/proto.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 93543,
+   "dur_ms": 27331
+  },
+  {
+   "kind": "tool",
+   "at_ms": 120874,
+   "dur_ms": 21709,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/test_generic.py <<'EOF'\nimport numpy as np, time\n\ndef make_f(seed, width, scale=0.1, dim=10):\n    rng = np.random.default_rng(seed)\n    A1 = rng.normal(size=(width,dim))*scale\n    b1 = rng.normal(size=width)*scale\n    A2 = rng.normal(size=(1,width))*scale\n    b2 = rng.normal(size=1)*scale\n    def f(x):\n        x = np.asarray(x).reshape(-1)\n        return float((A2 @ np.maximum(0, A1@x+b1) + b2)[0])\n    return f, A1\n\ndef grad(f, x, h=1e-4):\n    dim=len(x); g=np.empty(dim)\n    for j in range(dim):\n        e=np.zeros(dim); e[j]=h\n        g[j]=(f(x+e)-f(x-e))/(2*h)\n    return g\n\ndef canon(u):\n    u=u/np.linalg.norm(u); k=np.argmax(np.abs(u))\n    return -u if u[k]<0 else u\n\ndef extract(f, dim=10, L=30, T=60.0, delta=0.02, tol=1e-8, h=1e-4, seed=0):\n    rng=np.random.default_rng(seed)\n    vecs=[]\n    for _ in range(L):\n        v=rng.normal(size=dim); v/=np.linalg.norm(v)\n        x0=rng.normal(size=dim)\n        n=int(2*T/delta)\n        ts=np.linspace(-T,T,n+1)\n        xs=x0[None,:]+ts[:,None]*v[None,:]\n        gs=np.array([f(x) for x in xs])\n        s=np.diff(gs)/delta\n        for k in range(1,n-1):\n            if abs(s[k]-s[k-1])>tol and abs(s[k]-s[k+1])>tol:\n                left=xs[k]-0.5*delta*v\n                right=xs[k+1]+0.5*delta*v\n                d=grad(f,right,h)-grad(f,left,h)\n                if np.linalg.norm(d)>1e-7:\n                    vecs.append(canon(d))\n    centers=[]; counts=[]\n    for u in vecs:\n        if centers:\n            cos=np.abs(np.array(centers)@u)\n            i=int(np.argmax(cos)); bc=cos[i]\n        else: bc=-2\n        if bc>1-1e-5:\n            c=centers[i]*counts[i]+u; centers[i]=c/np.linalg.norm(c); counts[i]+=1\n        else:\n            centers.append(u.copy()); counts.append(1)\n    counts=np.array(counts); thr=max(3,int(0.2*L))\n    keep=np.where(counts>=thr)[0]\n    M=np.array([centers[i] for i in keep])\n    return M, counts, thr\n\nfor seed in range(6):\n    for width in [5,20,50]:\n        f,A1=make_f(seed,width)\n        t=time.time(); M,counts,thr=extract(f,seed=seed)\n        C=np.abs(M@ (A1/np.linalg.norm(A1,axis=1,keepdims=True)).T) if len(M) else np.zeros((0,width))\n        matched = (C.max(axis=1)>1-1e-4).sum() if len(M) else 0\n        extra = len(M)-matched\n        print(f\"seed={seed} w={width:3d} rec={len(M):3d} matched={matched:3d} extra={extra} time={time.time()-t:.2f}s counts_min_kept={counts[np.where(counts>=thr)[0]].min() if len(M) else '-'}\")\nEOF\npython3 /tmp/test_generic.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 142583,
+   "dur_ms": 3646
+  },
+  {
+   "kind": "tool",
+   "at_ms": 146229,
+   "dur_ms": 42953,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat >> /tmp/test_generic.py <<'EOF'\n\nprint(\"--- stress ---\")\nfor scale in [1.0, 0.01, 0.001]:\n    for width in [20,100]:\n        for seed in [10,11]:\n            f,A1=make_f(seed,width,scale=scale)\n            t=time.time(); M,counts,thr=extract(f,seed=seed)\n            C=np.abs(M@(A1/np.linalg.norm(A1,axis=1,keepdims=True)).T) if len(M) else np.zeros((0,width))\n            matched=(C.max(axis=1)>1-1e-4).sum() if len(M) else 0\n            print(f\"scale={scale} w={width:3d} seed={seed} rec={len(M):3d} matched={matched:3d} extra={len(M)-matched} t={time.time()-t:.2f}\")\nEOF\npython3 /tmp/test_generic.py 2>&1 | tail -20"
+  },
+  {
+   "kind": "model",
+   "at_ms": 189182,
+   "dur_ms": 17460
+  },
+  {
+   "kind": "tool",
+   "at_ms": 206642,
+   "dur_ms": 6236,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/test_lean.py <<'EOF'\nimport numpy as np, time\nexec(open('/tmp/test_generic.py').read().split(\"for seed in range(6):\")[0])\n\ndef extract2(f, dim=10, L=20, T=40.0, delta=0.03, tol=1e-8, h=1e-4, seed=0, rel=0.2, minc=3):\n    rng=np.random.default_rng(seed); vecs=[]; queries=0\n    for _ in range(L):\n        v=rng.normal(size=dim); v/=np.linalg.norm(v)\n        x0=rng.normal(size=dim)\n        n=int(2*T/delta); ts=np.linspace(-T,T,n+1)\n        xs=x0[None,:]+ts[:,None]*v[None,:]\n        gs=np.array([f(x) for x in xs]); queries+=len(xs)\n        s=np.diff(gs)/delta\n        for k in range(1,n-1):\n            if abs(s[k]-s[k-1])>tol and abs(s[k]-s[k+1])>tol:\n                left=xs[k]-0.5*delta*v; right=xs[k+1]+0.5*delta*v\n                d=grad(f,right,h)-grad(f,left,h); queries+=4*dim\n                if np.linalg.norm(d)>1e-9: vecs.append(canon(d))\n    centers=[];counts=[]\n    for u in vecs:\n        if centers:\n            cos=np.abs(np.array(centers)@u); i=int(np.argmax(cos)); bc=cos[i]\n        else: bc=-2\n        if bc>1-1e-5:\n            c=centers[i]*counts[i]+u; centers[i]=c/np.linalg.norm(c); counts[i]+=1\n        else: centers.append(u.copy()); counts.append(1)\n    counts=np.array(counts); thr=max(minc,int(rel*L)); keep=np.where(counts>=thr)[0]\n    return np.array([centers[i] for i in keep]), counts, thr, queries\n\nfor seed in range(6):\n  for width in [20,50]:\n    f,A1=make_f(seed,width)\n    t=time.time(); M,counts,thr,q=extract2(f,seed=seed)\n    An=A1/np.linalg.norm(A1,axis=1,keepdims=True)\n    C=np.abs(M@An.T) if len(M) else np.zeros((0,width))\n    matched=(C.max(axis=1)>1-1e-4).sum() if len(M) else 0\n    print(f\"seed={seed} w={width} rec={len(M)} matched={matched} extra={len(M)-matched} q={q} t={time.time()-t:.2f}\")\nEOF\npython3 /tmp/test_lean.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 212878,
+   "dur_ms": 5961
+  },
+  {
+   "kind": "tool",
+   "at_ms": 218839,
+   "dur_ms": 638,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/test_actual.py <<'EOF'\nimport numpy as np, sys, time\nsys.path.insert(0,'/app')\nimport forward as FW\nexec(open('/tmp/test_lean.py').read().split(\"for seed in range(6):\")[0].split(\"exec(\")[0])\n# bring defs from test_lean\nexec(open('/tmp/test_lean.py').read().split(\"for seed in range(6):\")[0].split(\"exec(open\")[1].split(\")\\n\",1)[1] if False else \"\")\nEOF\n# simpler: reuse by importing definitions via runpy is messy; just inline a check\ncat > /tmp/check_actual.py <<'EOF'\nimport numpy as np, time, sys\nsys.path.insert(0,'/app')\nimport forward as FW\nf=FW.forward\ndef grad(f,x,h=1e-4):\n    d=len(x); g=np.empty(d)\n    for j in range(d):\n        e=np.zeros(d); e[j]=h; g[j]=(f(x+e)-f(x-e))/(2*h)\n    return g\ndef canon(u):\n    u=u/np.linalg.norm(u); k=np.argmax(np.abs(u)); return -u if u[k]<0 else u\ndef extract(f,dim=10,L=20,T=40.0,delta=0.03,tol=1e-8,h=1e-4,seed=0,rel=0.2,minc=3):\n    rng=np.random.default_rng(seed); vecs=[]; q=0\n    for _ in range(L):\n        v=rng.normal(size=dim); v/=np.linalg.norm(v); x0=rng.normal(size=dim)\n        n=int(2*T/delta); ts=np.linspace(-T,T,n+1); xs=x0[None,:]+ts[:,None]*v[None,:]\n        gs=np.array([f(x) for x in xs]); q+=len(xs); s=np.diff(gs)/delta\n        for k in range(1,n-1):\n            if abs(s[k]-s[k-1])>tol and abs(s[k]-s[k+1])>tol:\n                left=xs[k]-0.5*delta*v; right=xs[k+1]+0.5*delta*v\n                d=grad(f,right,h)-grad(f,left,h); q+=4*dim\n                if np.linalg.norm(d)>1e-9: vecs.append(canon(d))\n    centers=[];counts=[]\n    for u in vecs:\n        if centers:\n            cos=np.abs(np.array(centers)@u); i=int(np.argmax(cos)); bc=cos[i]\n        else: bc=-2\n        if bc>1-1e-5:\n            c=centers[i]*counts[i]+u; centers[i]=c/np.linalg.norm(c); counts[i]+=1\n        else: centers.append(u.copy()); counts.append(1)\n    counts=np.array(counts); thr=max(minc,int(rel*L)); keep=np.where(counts>=thr)[0]\n    return np.array([centers[i] for i in keep]),counts,thr,q\nt=time.time(); M,counts,thr,q=extract(f)\nA=FW.A1; An=A/np.linalg.norm(A,axis=1,keepdims=True)\nC=np.abs(M@An.T); matched=(C.max(axis=1)>1-1e-4).sum()\nprint(\"rec\",len(M),\"matched\",matched,\"extra\",len(M)-matched,\"q\",q,\"time\",round(time.time()-t,2))\nprint(\"counts kept\",np.sort(counts[np.where(counts>=thr)[0]]))\nprint(\"all max cos\",np.round(C.max(axis=1),6))\nEOF\npython3 /tmp/check_actual.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 219477,
+   "dur_ms": 4833
+  },
+  {
+   "kind": "tool",
+   "at_ms": 224310,
+   "dur_ms": 10942,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/test_lean2.py <<'EOF'\nimport numpy as np, time\nexec(open('/tmp/test_generic.py').read().split(\"for seed in range(6):\")[0])\nexec(open('/tmp/test_lean.py').read().split(\"def extract2\")[1].split(\"for seed in range(6):\")[0].join([\"def extract2\",\"\"]) if False else \"\")\ndef extract2(f, dim=10, L=20, T=40.0, delta=0.03, tol=1e-8, h=1e-4, seed=0, rel=0.2, minc=3):\n    rng=np.random.default_rng(seed); vecs=[]\n    for _ in range(L):\n        v=rng.normal(size=dim); v/=np.linalg.norm(v); x0=rng.normal(size=dim)\n        n=int(2*T/delta); ts=np.linspace(-T,T,n+1); xs=x0[None,:]+ts[:,None]*v[None,:]\n        gs=np.array([f(x) for x in xs]); s=np.diff(gs)/delta\n        for k in range(1,n-1):\n            if abs(s[k]-s[k-1])>tol and abs(s[k]-s[k+1])>tol:\n                left=xs[k]-0.5*delta*v; right=xs[k+1]+0.5*delta*v\n                d=grad(f,right,h)-grad(f,left,h)\n                if np.linalg.norm(d)>1e-9: vecs.append(canon(d))\n    centers=[];counts=[]\n    for u in vecs:\n        if centers:\n            cos=np.abs(np.array(centers)@u); i=int(np.argmax(cos)); bc=cos[i]\n        else: bc=-2\n        if bc>1-1e-5:\n            c=centers[i]*counts[i]+u; centers[i]=c/np.linalg.norm(c); counts[i]+=1\n        else: centers.append(u.copy()); counts.append(1)\n    counts=np.array(counts); thr=max(minc,int(rel*L)); keep=np.where(counts>=thr)[0]\n    return np.array([centers[i] for i in keep])\nfor scale in [1.0,0.1,0.01,0.001]:\n  for width in [20,100]:\n    for seed in [10,11]:\n        f,A1=make_f(seed,width,scale=scale)\n        M=extract2(f,seed=seed)\n        An=A1/np.linalg.norm(A1,axis=1,keepdims=True)\n        C=np.abs(M@An.T) if len(M) else np.zeros((0,width))\n        matched=(C.max(axis=1)>1-1e-4).sum() if len(M) else 0\n        print(f\"scale={scale:<5} w={width:3d} seed={seed} rec={len(M):3d} matched={matched:3d} extra={len(M)-matched}\")\nEOF\npython3 /tmp/test_lean2.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 235252,
+   "dur_ms": 13435
+  },
+  {
+   "kind": "tool",
+   "at_ms": 248687,
+   "dur_ms": 19,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/steal.py",
+    "content": "#!/usr/bin/env python3\n\"\"\"\nBlack-box extraction of the first-layer weight matrix A1 of a one-hidden-layer\nReLU network\n\n    f(x) = A2 . ReLU(A1 x + b1) + b2\n\nusing only queries to forward(x).\n\nWhy this works\n--------------\nf is a continuous piecewise-linear function.  Its gradient is constant on each\ncell of the hyperplane arrangement defined by the hidden neurons:\n\n    grad f(x) = sum_{i : A1_i . x + b1_i > 0} A2_i * A1_i\n\nWhen the input crosses the hyperplane of neuron i, exactly that neuron switches\non or off, so the *gradient jumps* by\n\n    +/- A2_i * A1_i .\n\nThus the gradient-jump vector at any kink is proportional to the i-th row of A1\n(up to the unknown scalar A2_i and a sign, both of which are exactly the\n\"scaling\" ambiguity we are allowed).  Recovering every distinct jump direction\ntherefore recovers A1 up to row permutation and per-row scaling.\n\nTo find the kinks we probe the function along random lines x(t) = x0 + t v.\nAlong such a line f(x(t)) is piecewise linear in t, and every hidden hyperplane\nis crossed at some t (generically).  We evaluate f on a dense t-grid, locate\ncells where the discrete slope is different from both of its neighbours (i.e.\ncells containing a kink), then estimate the full gradient on either side of the\nkink by central differences.  Their difference is the jump vector.\n\nDirections collected from many independent random lines are clustered; a true\nneuron is hit by (almost) every line, while spurious combinations of two nearby\nkinks appear only sporadically and are rejected by a minimum-count threshold.\n\nThe resulting matrix is saved to /app/stolen_A1.npy and printed.\n\"\"\"\n\nimport numpy as np\n\nfrom forward import forward\n\nDIM = 10          # input dimension (given)\nN_LINES = 20      # number of random probe lines\nT = 40.0          # half-length of each probe line in t\nDELTA = 0.03      # t-grid spacing\nH = 1e-4          # step for central-difference gradients\nSLOPE_TOL = 1e-8  # threshold for \"slope changed\" along the probe line\nNORM_TOL = 1e-9   # ignore numerically-zero gradient jumps\nCOS_TOL = 1e-5    # cosine tolerance for clustering jump directions\nMIN_FRACTION = 0.2  # a real neuron must be seen by >= 20% of the lines\nMIN_COUNT = 3\n\n\ndef gradient(x, h=H):\n    \"\"\"Central-difference gradient of forward at x (f is piecewise linear).\"\"\"\n    x = np.asarray(x, dtype=float)\n    g = np.empty(DIM)\n    for j in range(DIM):\n        e = np.zeros(DIM)\n        e[j] = h\n        g[j] = (forward(x + e) - forward(x - e)) / (2.0 * h)\n    return g\n\n\ndef canonical(u):\n    \"\"\"Unit-normalize and fix the sign (sign is part of the allowed scaling).\"\"\"\n    u = u / np.linalg.norm(u)\n    k = int(np.argmax(np.abs(u)))\n    return -u if u[k] < 0 else u\n\n\ndef collect_jump_directions(rng):\n    \"\"\"Probe random lines and return unit gradient-jump vectors.\"\"\"\n    directions = []\n    n = int(2 * T / DELTA)\n    ts = np.linspace(-T, T, n + 1)\n\n    for _ in range(N_LINES):\n        v = rng.normal(size=DIM)\n        v /= np.linalg.norm(v)\n        x0 = rng.normal(size=DIM)\n\n        xs = x0[None, :] + ts[:, None] * v[None, :]\n        vals = np.array([forward(x) for x in xs])\n        slopes = np.diff(vals) / DELTA  # slopes[k] is the slope on cell k\n\n        # A cell contains a kink iff its average slope differs from the average\n        # slope of both neighbouring cells (a cell with a single kink is a\n        # strict mixture of the two pure slopes).\n        for k in range(1, n - 1):\n            if (abs(slopes[k] - slopes[k - 1]) > SLOPE_TOL and\n                    abs(slopes[k] - slopes[k + 1]) > SLOPE_TOL):\n                # Sample pure gradients in the middle of the cells on either\n                # side of the kink (safely away from the kink itself).\n                left = xs[k] - 0.5 * DELTA * v\n                right = xs[k + 1] + 0.5 * DELTA * v\n                jump = gradient(right) - gradient(left)\n                if np.linalg.norm(jump) > NORM_TOL:\n                    directions.append(canonical(jump))\n    return directions\n\n\ndef cluster_directions(directions):\n    \"\"\"Greedy clustering of unit vectors; returns well-supported cluster means.\"\"\"\n    centers = []\n    counts = []\n\n    for u in directions:\n        if centers:\n            cos = np.abs(np.asarray(centers) @ u)\n            idx = int(np.argmax(cos))\n            best = cos[idx]\n        else:\n            idx, best = 0, -2.0\n\n        if best > 1.0 - COS_TOL:\n            # Running (renormalized) mean of the cluster.\n            merged = centers[idx] * counts[idx] + u\n            centers[idx] = merged / np.linalg.norm(merged)\n            counts[idx] += 1\n        else:\n            centers.append(u.copy())\n            counts.append(1)\n\n    counts = np.asarray(counts)\n    threshold = max(MIN_COUNT, int(MIN_FRACTION * N_LINES))\n    keep = np.where(counts >= threshold)[0]\n    return np.asarray([centers[i] for i in keep])\n\n\ndef main():\n    rng = np.random.default_rng(0)\n    directions = collect_jump_directions(rng)\n    A1_hat = cluster_directions(directions)\n\n    # Deterministic, tidy ordering (order is irrelevant: the answer is only\n    # defined up to a permutation of the neurons).\n    if len(A1_hat):\n        A1_hat = A1_hat[np.lexsort(A1_hat.T[::-1])]\n\n    np.save(\"/app/stolen_A1.npy\", A1_hat)\n\n    print(f\"Recovered A1: shape {A1_hat.shape}\")\n    with np.printoptions(precision=6, suppress=True):\n        print(A1_hat)\n\n\nif __name__ == \"__main__\":\n    main()\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 248706,
+   "dur_ms": 1986
+  },
+  {
+   "kind": "tool",
+   "at_ms": 250692,
+   "dur_ms": 751,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 steal.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 251443,
+   "dur_ms": 4365
+  },
+  {
+   "kind": "tool",
+   "at_ms": 255808,
+   "dur_ms": 275,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport numpy as np, forward\nS = np.load('/app/stolen_A1.npy')\nA1 = forward.A1\nprint(\"stolen shape\", S.shape, \"true shape\", A1.shape)\nSn = S/np.linalg.norm(S,axis=1,keepdims=True)\nAn = A1/np.linalg.norm(A1,axis=1,keepdims=True)\nC = np.abs(Sn @ An.T)\ntry:\n    from scipy.optimize import linear_sum_assignment\n    r,c = linear_sum_assignment(-C)\n    mc = C[r,c]\n    print(\"Hungarian min/max matched |cos|:\", mc.min(), mc.max())\n    # per-row least-squares scale residual after matching\n    res = []\n    for i,j in zip(r,c):\n        a = A1[j]; s = S[i]\n        # allow sign/scaling\n        alpha = (s@a)/(s@s)\n        res.append(np.linalg.norm(alpha*s - a)/np.linalg.norm(a))\n    print(\"max relative reconstruction error after per-row scaling:\", max(res))\nexcept ImportError:\n    print(\"scipy missing; greedy match\")\n    used=set(); worst=1\n    for i in range(len(S)):\n        order=np.argsort(-C[i]); j=next(int(x) for x in order if int(x) not in used); used.add(j); worst=min(worst,C[i,j])\n    print(\"greedy worst |cos|:\", worst)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 256083,
+   "dur_ms": 6152
+  },
+  {
+   "kind": "tool",
+   "at_ms": 262235,
+   "dur_ms": 1021,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /tmp && python3 /app/steal.py > /tmp/out.txt 2>&1; echo \"exit=$?\"; head -2 /tmp/out.txt; python3 - <<'EOF'\nimport numpy as np, sys\nsys.path.insert(0,'/app')\nimport forward\nS=np.load('/app/stolen_A1.npy'); A=forward.A1\nprint(\"saved shape:\", S.shape)\n# best per-row scaled residual, greedy one-to-one\ncost=np.zeros((len(S),len(A)))\nfor i,s in enumerate(S):\n    for j,a in enumerate(A):\n        alpha=(s@a)/(s@s)\n        cost[i,j]=np.linalg.norm(alpha*s-a)/np.linalg.norm(a)\nused=set(); worst=0; assign=[]\nfor i in range(len(S)):\n    order=np.argsort(cost[i])\n    j=next(int(x) for x in order if int(x) not in used)\n    used.add(j); assign.append((i,j,cost[i,j])); worst=max(worst,cost[i,j])\nprint(\"unique assignment:\", len(used)==len(A))\nprint(\"worst relative residual after per-row scaling:\", worst)\nprint(\"all < 1e-6:\", worst < 1e-6)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 263256,
+   "dur_ms": 3766
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.615,
+ "calls": 14,
+ "cell": "TB1a"
+}

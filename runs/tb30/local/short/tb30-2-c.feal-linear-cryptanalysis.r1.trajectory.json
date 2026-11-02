@@ -1,0 +1,169 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "feal-linear-cryptanalysis",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 41740,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 4925,
+  "output": 6639,
+  "cacheRead": 99264,
+  "cacheWrite": 0,
+  "total": 110828
+ },
+ "totals": {
+  "model_calls": 7,
+  "tool_calls": 8,
+  "model_ms": 37177,
+  "tool_ms": 3790,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 95,
+   "dur_ms": 3442,
+   "tokens_in": 204,
+   "tokens_out": 120,
+   "cache_read": 6976,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3537,
+   "dur_ms": 185,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app && cat /app/feal.c && echo \"===DECRYPT===\" && cat /app/decrypt.c"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3782,
+   "dur_ms": 23,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat /app/pairs.txt && echo \"===CIPHERTEXTS===\" && cat /app/ciphertexts.txt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3827,
+   "dur_ms": 20558,
+   "tokens_in": 4015,
+   "tokens_out": 160,
+   "cache_read": 7296,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 24385,
+   "dur_ms": 99,
+   "tool": "bash",
+   "is_error": false,
+   "command": "which python3 gcc z3; python3 -c \"import z3; print('z3 ok')\" 2>&1 | head; python3 -c \"import pysat; print('pysat ok')\" 2>&1 | head; ls /usr/bin | grep -i -E 'z3|sage|minisat|cryptominisat' | head"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 24602,
+   "dur_ms": 16,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat /app/opencode.json; nproc; free -h"
+  },
+  {
+   "kind": "model",
+   "at_ms": 24867,
+   "dur_ms": 4419,
+   "tokens_in": 240,
+   "tokens_out": 69,
+   "cache_read": 15488,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 29286,
+   "dur_ms": 2469,
+   "tool": "bash",
+   "is_error": false,
+   "command": "pip install z3-solver 2>&1 | tail -5",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 31775,
+   "dur_ms": 4306,
+   "tokens_in": 178,
+   "tokens_out": 553,
+   "cache_read": 16448,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 36081,
+   "dur_ms": 956,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/solve.py <<'PY'\nfrom z3 import *\nimport re\n\npairs=[]\nfor line in open('/app/pairs.txt'):\n    a,b=line.split()\n    pairs.append((int(a),int(b)))\n\ndef expand(s32):\n    return s32 ^ (s32 << 16) ^ (s32 * BitVecVal(12345,32))\n\ndef g(a,b,x):\n    t = a + b + x\n    return RotateLeft(t,2)\n\ndef F(inp):\n    x=[Extract(8*i+7,8*i,inp) for i in range(4)]\n    y=[None]*4\n    y[2]=g(x[3]^x[2], x[1]^x[0], BitVecVal(1,8))\n    y[3]=g(x[3], y[2], BitVecVal(0,8))\n    y[1]=g(x[1]^x[0], y[2], BitVecVal(0,8))\n    y[0]=g(x[0], y[1], BitVecVal(1,8))\n    out=BitVecVal(0,32)\n    for i in range(4):\n        out = out | (ZeroExt(24,y[i]) << (8*i))\n    return out\n\ns=Solver()\nseeds=[BitVec(f'k{i}',20) for i in range(4)]\nkeys=[expand(ZeroExt(12,z)) for z in seeds]\nfor p,c in pairs:\n    L=BitVecVal((p>>32)&0xffffffff,32)\n    R=BitVecVal(p&0xffffffff,32)\n    R=R^L\n    for r in range(4):\n        mixed=F(R^keys[r])\n        temp=R\n        R=L^mixed\n        L=temp\n    L=L^R\n    CL=R; CR=L\n    s.add(CL==BitVecVal((c>>32)&0xffffffff,32))\n    s.add(CR==BitVecVal(c&0xffffffff,32))\n\nprint(s.check())\nm=s.model()\nvals=[m.eval(z).as_long() for z in seeds]\nprint(vals, [hex(v) for v in vals])\nPY\ntimeout 600 python3 /tmp/solve.py",
+   "timeout": 660000
+  },
+  {
+   "kind": "model",
+   "at_ms": 37062,
+   "dur_ms": 904,
+   "tokens_in": 118,
+   "tokens_out": 92,
+   "cache_read": 17344,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 37966,
+   "dur_ms": 16,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && ./decrypt ciphertexts.txt 68e63 62571 1f61c b74a5 > plaintexts.txt; echo \"exit=$?\"; wc -l plaintexts.txt; head -5 plaintexts.txt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 37995,
+   "dur_ms": 2883,
+   "tokens_in": 119,
+   "tokens_out": 454,
+   "cache_read": 17536,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 40878,
+   "dur_ms": 26,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/verify.py <<'PY'\nM=0xffffffff\ndef expd(s): return (s ^ ((s<<16)&M) ^ ((s*12345)&M))&M\ndef g(a,b,x):\n    t=(a+b+x)&0xff\n    return ((t<<2)|(t>>6))&0xff\ndef F(v):\n    x=[(v>>(8*i))&0xff for i in range(4)]\n    y=[0]*4\n    y[2]=g(x[3]^x[2],x[1]^x[0],1)\n    y[3]=g(x[3],y[2],0)\n    y[1]=g(x[1]^x[0],y[2],0)\n    y[0]=g(x[0],y[1],1)\n    return sum(y[i]<<(8*i) for i in range(4))\nseeds=[0x68e63,0x62571,0x1f61c,0xb74a5]\nK=[expd(s) for s in seeds]\ndef enc(p):\n    L=(p>>32)&M; R=p&M; R^=L\n    for r in range(4):\n        mix=F(R^K[r]); temp=R; R=L^mix; L=temp\n    L^=R\n    return (R<<32)|L\ncts=[int(x) for x in open('/app/ciphertexts.txt')]\npts=[int(x) for x in open('/app/plaintexts.txt')]\nassert len(cts)==len(pts)\nprint('all match:', all(enc(p)==c for p,c in zip(pts,cts)))\nfor line in open('/app/pairs.txt'):\n    p,c=map(int,line.split()); assert enc(p)==c\nprint('pairs all match')\nPY\npython3 /tmp/verify.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 40939,
+   "dur_ms": 665,
+   "tokens_in": 51,
+   "tokens_out": 80,
+   "cache_read": 18176,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.851,
+ "calls": 8,
+ "cell": "TB1c"
+}

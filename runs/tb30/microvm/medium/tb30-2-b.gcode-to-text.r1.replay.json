@@ -1,0 +1,1425 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "gcode-to-text",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 744451,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 1613,
+  "output": 87450,
+  "cacheRead": 3782592,
+  "cacheWrite": 235200,
+  "total": 4106855
+ },
+ "totals": {
+  "model_calls": 51,
+  "tool_calls": 41,
+  "model_ms": 494873,
+  "tool_ms": 169834,
+  "sandbox_ms": 160707
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 515,
+   "dur_ms": 1632
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2147,
+   "dur_ms": 170,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /workspace\necho ---\nls -la /workspace/*.gcode 2>/dev/null\necho ---\nwc -l /workspace/text.gcode 2>/dev/null || find / -name 'text.gcode' 2>/dev/null | head",
+   "sandbox": [
+    {
+     "at_ms": 2235,
+     "dur_ms": 58,
+     "exit": 0,
+     "cpu_ms": 43.5,
+     "phases_us": {
+      "acquire": 79,
+      "resume": 22023,
+      "mount": 19934,
+      "run": 9592,
+      "destroy": 26293
+     },
+     "cold": null,
+     "vm": "vm-9"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 2317,
+   "dur_ms": 1095
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3412,
+   "dur_ms": 133,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "head -100 /workspace/text.gcode\necho '=== TAIL ==='\ntail -60 /workspace/text.gcode\necho '=== SAMPLE EXTRUSION LINES ==='\ngrep -n '^G1.*E' /workspace/text.gcode | head -20\necho '=== COMMENTS ==='\ngrep -n ';' /workspace/text.gcode | head -60",
+   "sandbox": [
+    {
+     "at_ms": 3470,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 49.9,
+     "phases_us": {
+      "acquire": 90,
+      "resume": 21903,
+      "mount": 19738,
+      "run": 10094,
+      "destroy": 23605
+     },
+     "cold": null,
+     "vm": "vm-11"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3545,
+   "dur_ms": 3054
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6599,
+   "dur_ms": 168,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "echo '=== M486 lines with line numbers ==='\ngrep -n 'M486' /workspace/text.gcode | head -50\necho '=== unique Z values (G1/G0 Z) ==='\ngrep -oE 'Z[-0-9.]+' /workspace/text.gcode | sort -t Z -k2 -n | uniq -c | head -80\necho '=== count lines ==='\nawk '{print $1}' /workspace/text.gcode | sort | uniq -c | sort -rn | head -20",
+   "sandbox": [
+    {
+     "at_ms": 6653,
+     "dur_ms": 88,
+     "exit": 0,
+     "cpu_ms": 96.5,
+     "phases_us": {
+      "acquire": 59,
+      "resume": 22193,
+      "mount": 19685,
+      "run": 39386,
+      "destroy": 26661
+     },
+     "cold": null,
+     "vm": "vm-13"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 6767,
+   "dur_ms": 2449
+  },
+  {
+   "kind": "tool",
+   "at_ms": 9216,
+   "dur_ms": 137,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "echo '=== max Z ==='\ngrep -oE 'Z[-0-9.]+' /workspace/text.gcode | sed 's/Z//' | sort -n | tail -5\necho '=== highest Z lines ==='\ngrep -nE 'Z(1[0-9]|[4-9])[0-9]*\\.[0-9]' /workspace/text.gcode | head\necho '=== around 1400-1600 ==='\nsed -n '1395,1545p' /workspace/text.gcode",
+   "sandbox": [
+    {
+     "at_ms": 9272,
+     "dur_ms": 59,
+     "exit": 0,
+     "cpu_ms": 57.6,
+     "phases_us": {
+      "acquire": 90,
+      "resume": 21778,
+      "mount": 19547,
+      "run": 15379,
+      "destroy": 21870
+     },
+     "cold": null,
+     "vm": "vm-18"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 9353,
+   "dur_ms": 6624
+  },
+  {
+   "kind": "tool",
+   "at_ms": 15977,
+   "dur_ms": 603,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport re\nlines=open('/workspace/text.gcode').read().splitlines()\nx=y=z=None\nobj=None\nobjs={}\nzes={}\nfor i,l in enumerate(lines,1):\n    s=l.strip()\n    if s.startswith('M486'):\n        p=s.split()\n        if len(p)>=2 and p[1]=='S-1': obj=None\n        elif len(p)>=2 and p[1].startswith('S'): obj=p[1][1:]\n        continue\n    if not s.startswith(('G0','G1','G2','G3')): continue\n    # crude token parse\n    for tok in s.split()[1:]:\n        c=tok[0]\n        try: v=float(tok[1:])\n        except: continue\n        if c=='Z': z=v\n    if z is None: continue\n    key=(obj,round(z,3))\n    d=objs.setdefault(key,[0,0,1e9,1e9,-1e9,-1e9])\n    d[0]+=1\n    if 'E' in s: d[1]+=1\n    if 'X' in s: d[2]=min(d[2],[float(t[1:]) for t in s.split()[1:] if t[0]=='X'][0]); d[4]=max(d[4],[float(t[1:]) for t in s.split()[1:] if t[0]=='X'][0])\n    if 'Y' in s: d[3]=min(d[3],[float(t[1:]) for t in s.split()[1:] if t[0]=='Y'][0]); d[5]=max(d[5],[float(t[1:]) for t in s.split()[1:] if t[0]=='Y'][0])\nprint('objects:',sorted(set(str(k[0]) for k in objs)))\nfrom collections import defaultdict\nbyz=defaultdict(list)\nfor (o,zz),d in objs.items(): byz[o].append((zz,d))\nfor o in sorted(byz,key=str):\n    zs=sorted(byz[o])\n    print('OBJ',o,'layers',len(zs),'z range',zs[0][0],zs[-1][0])\n    print(' first 5:',[(z,d[:2],d[2:]) for z,d in zs[:5]])\n    print(' last 5:',[(z,d[:2],d[2:]) for z,d in zs[-5:]])\nPY",
+   "sandbox": [
+    {
+     "at_ms": 16045,
+     "dur_ms": 519,
+     "exit": 0,
+     "cpu_ms": 516.8,
+     "phases_us": {
+      "acquire": 74,
+      "resume": 22007,
+      "mount": 19536,
+      "run": 468111,
+      "destroy": 28203
+     },
+     "cold": null,
+     "vm": "vm-20"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 16580,
+   "dur_ms": 12079
+  },
+  {
+   "kind": "tool",
+   "at_ms": 28659,
+   "dur_ms": 543,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport re, math\nlines=open('/workspace/text.gcode').read().splitlines()\nx=y=z=0.0; e=0.0\nabsxyz=True; abse=False\nobj=None\ncur=None\nlayers={}\narcs=[]\ndef pt(toks):\n    d={}\n    for t in toks:\n        if t and t[0] in 'XYZEF':\n            try: d[t[0]]=float(t[1:])\n            except: pass\n    return d\nextruded=[]\nfor i,l in enumerate(lines,1):\n    s=l.strip()\n    if s.startswith('G90'): absxyz=True; continue\n    if s.startswith('G91'): absxyz=False; continue\n    if s.startswith('M82'): abse=False; continue\n    if s.startswith('M83'): abse=True; continue\n    if s.startswith('M486'):\n        p=s.split()\n        if len(p)>=2 and p[1]=='S-1': obj=None\n        elif len(p)>=2 and p[1][0]=='S':\n            try: obj=int(p[1][1:])\n            except: pass\n        continue\n    m=re.match(r'^(G[0-3])\\b(.*)$',s)\n    if not m: continue\n    cmd=m.group(1); d=pt(m.group(2).split())\n    nx,ny,nz,ne=x,y,z,e\n    if 'X' in d: nx=d['X'] if absxyz else x+d['X']\n    if 'Y' in d: ny=d['Y'] if absxyz else y+d['Y']\n    if 'Z' in d: nz=d['Z'] if absxyz else z+d['Z']\n    if 'E' in d: ne=d['E'] if abse else e+d['E']\n    de=ne-e\n    if cmd in ('G0','G1') and de>1e-9 and ('X' in d or 'Y' in d):\n        extruded.append((i,obj,z,nx,ny,de,cmd))\n    x,y,z,e=nx,ny,nz,ne\nfrom collections import defaultdict\ng=defaultdict(lambda:[0,1e9,1e9,-1e9,-1e9,0.0])\nfor i,o,zz,xx,yy,de,cmd in extruded:\n    k=(o,round(zz,3))\n    a=g[k]; a[0]+=1\n    a[1]=min(a[1],xx); a[2]=min(a[2],yy); a[3]=max(a[3],xx); a[4]=max(a[4],yy); a[5]+=de\nfor o in (0,1):\n    ks=sorted([k for k in g if k[0]==o],key=lambda k:k[1])\n    print('=== OBJ',o,'extruding layers',len(ks))\n    for k in ks[:8]+([('...',)] if len(ks)>16 else [])+ks[-8:]:\n        if len(k)==1: print('  ...'); continue\n        a=g[k]\n        print(f'  z={k[1]:.3f} moves={a[0]:5d} bbox=({a[1]:.2f},{a[2]:.2f})-({a[3]:.2f},{a[4]:.2f}) E={a[5]:.3f}')\nPY",
+   "sandbox": [
+    {
+     "at_ms": 28719,
+     "dur_ms": 455,
+     "exit": 0,
+     "cpu_ms": 464.2,
+     "phases_us": {
+      "acquire": 109,
+      "resume": 24641,
+      "mount": 21381,
+      "run": 410640,
+      "destroy": 19150
+     },
+     "cold": null,
+     "vm": "vm-26"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 29202,
+   "dur_ms": 11255
+  },
+  {
+   "kind": "model",
+   "at_ms": 40734,
+   "dur_ms": 2972
+  },
+  {
+   "kind": "tool",
+   "at_ms": 43706,
+   "dur_ms": 581,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport re\nfrom collections import defaultdict\nlines=open('/workspace/text.gcode').read().splitlines()\nx=y=z=0.0;e=0.0;abse=False;absxyz=True;obj=None\ng=defaultdict(lambda:[0,1e9,1e9,-1e9,-1e9,0.0])\nfirstlines={}\ndef pt(toks):\n    d={}\n    for t in toks:\n        if t and t[0] in 'XYZEF':\n            try:d[t[0]]=float(t[1:])\n            except:pass\n    return d\nfor i,l in enumerate(lines,1):\n    s=l.strip()\n    if s.startswith('G90'):absxyz=True;continue\n    if s.startswith('G91'):absxyz=False;continue\n    if s.startswith('M82'):abse=False;continue\n    if s.startswith('M83'):abse=True;continue\n    if s.startswith('M486'):\n        p=s.split()\n        if len(p)>=2:\n            if p[1]=='S-1':obj=None\n            elif p[1][0]=='S':\n                try:obj=int(p[1][1:])\n                except:pass\n        continue\n    m=re.match(r'^(G[0-3])\\b(.*)$',s)\n    if not m:continue\n    cmd=m.group(1);d=pt(m.group(2).split())\n    nx,ny,nz,ne=x,y,z,e\n    if 'X' in d:nx=d['X'] if absxyz else x+d['X']\n    if 'Y' in d:ny=d['Y'] if absxyz else y+d['Y']\n    if 'Z' in d:nz=d['Z'] if absxyz else z+d['Z']\n    if 'E' in d:ne=d['E'] if abse else e+d['E']\n    de=ne-e\n    if cmd in ('G0','G1') and de>1e-9 and ('X' in d or 'Y' in d):\n        k=(obj,round(z,3));a=g[k];a[0]+=1\n        a[1]=min(a[1],nx);a[2]=min(a[2],ny);a[3]=max(a[3],nx);a[4]=max(a[4],ny);a[5]+=de\n        firstlines.setdefault(k,i)\n    x,y,z,e=nx,ny,nz,ne\nks=sorted([k for k in g if k[0]==0],key=lambda k:k[1])\nfor k in ks[::10]:\n    a=g[k];print(f'z={k[1]:7.3f} moves={a[0]:4d} c=({(a[1]+a[3])/2:7.2f},{(a[2]+a[4])/2:7.2f}) {a[3]-a[1]:5.2f}x{a[4]-a[2]:5.2f} L{firstlines[k]}')\nprint('count',len(ks))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 43764,
+     "dur_ms": 496,
+     "exit": 0,
+     "cpu_ms": 498.0,
+     "phases_us": {
+      "acquire": 73,
+      "resume": 21656,
+      "mount": 19666,
+      "run": 457996,
+      "destroy": 16612
+     },
+     "cold": null,
+     "vm": "vm-40"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 44287,
+   "dur_ms": 12672
+  },
+  {
+   "kind": "tool",
+   "at_ms": 56959,
+   "dur_ms": 517,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport re,math\nfrom collections import defaultdict\nlines=open('/workspace/text.gcode').read().splitlines()\nx=y=z=0.0;e=0.0;abse=False;absxyz=True;obj=None\n# parser\nsegs=defaultdict(list)  # (obj, round(z,3)) -> [(x0,y0,x1,y1,de)]\ndef pt(toks):\n    d={}\n    for t in toks:\n        if t and t[0] in 'XYZEFIJK':\n            try:d[t[0]]=float(t[1:])\n            except:pass\n    return d\nfor i,l in enumerate(lines,1):\n    s=l.strip()\n    if s.startswith('G90'):absxyz=True;continue\n    if s.startswith('G91'):absxyz=False;continue\n    if s.startswith('M82'):abse=False;continue\n    if s.startswith('M83'):abse=True;continue\n    if s.startswith('M486'):\n        p=s.split()\n        if len(p)>=2:\n            if p[1]=='S-1':obj=None\n            elif p[1][0]=='S':\n                try:obj=int(p[1][1:])\n                except:pass\n        continue\n    m=re.match(r'^(G[0-3])\\b(.*)$',s)\n    if not m:continue\n    cmd=m.group(1);d=pt(m.group(2).split())\n    nx,ny,nz,ne=x,y,z,e\n    if 'X' in d:nx=d['X'] if absxyz else x+d['X']\n    if 'Y' in d:ny=d['Y'] if absxyz else y+d['Y']\n    if 'Z' in d:nz=d['Z'] if absxyz else z+d['Z']\n    if 'E' in d:ne=d['E'] if abse else e+d['E']\n    de=ne-e\n    if de>1e-9 and ('X' in d or 'Y' in d):\n        if cmd in ('G1','G0'):\n            segs[(obj,round(z,3))].append((x,y,nx,ny,de))\n        elif cmd in ('G2','G3'):\n            # approximate arc: center I,J relative, or R\n            cx = x + d.get('I',0) if absxyz or True else x+d.get('I',0)\n            # in relative IJ always relative\n            cx = x + d.get('I',0); cy = y + d.get('J',0)\n            r = math.hypot(x-cx,y-cy)\n            a0=math.atan2(y-cy,x-cx); a1=math.atan2(ny-cy,nx-cx)\n            ccw = cmd=='G3'\n            if ccw:\n                while a1<=a0: a1+=2*math.pi\n            else:\n                while a1>=a0: a1-=2*math.pi\n            n=max(2,int(abs(a1-a0)*r/0.3))\n            px,py=x,y\n            for k in range(1,n+1):\n                a=a0+(a1-a0)*k/n\n                qx=cx+r*math.cos(a); qy=cy+r*math.sin(a)\n                segs[(obj,round(z,3))].append((px,py,qx,qy,de/n))\n                px,py=qx,qy\n    x,y,z,e=nx,ny,nz,ne\nimport sys\ndef render(key,W=120,H=50,pad=1):\n    ss=segs.get(key)\n    if not ss: return 'no segs'\n    xs=[v for s in ss for v in (s[0],s[2])]; ys=[v for s in ss for v in (s[1],s[3])]\n    x0,x1=min(xs),max(xs); y0,y1=min(ys),max(ys)\n    # expand tiny\n    if x1-x0<1e-6: x1=x0+1\n    if y1-y0<1e-6: y1=y0+1\n    # grid\n    grid=[[' ']*W for _ in range(H)]\n    def put(px,py,ch='#'):\n        gx=int((px-x0)/(x1-x0)*(W-1)); gy=int((y1-py)/(y1-y0)*(H-1))\n        if 0<=gx<W and 0<=gy<H: grid[gy][gx]=ch\n    for x0s,y0s,x1s,y1s,de in ss:\n        n=max(2,int(max(abs(x1s-x0s),abs(y1s-y0s))/0.1))\n        for k in range(n+1):\n            t=k/n; put(x0s+(x1s-x0s)*t, y0s+(y1s-y0s)*t)\n    return '\\n'.join(''.join(r) for r in grid)\nkeys=sorted(segs,key=lambda k:(k[0] if k[0] is not None else -1,k[1]))\nprint('sample keys:',keys[:10])\nfor z in [0.48,0.76,1.04,1.6,3.28,6.08,20.08]:\n    print('\\n===== obj0 z',z,'=====')\n    print(render((0,z)))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 57018,
+     "dur_ms": 437,
+     "exit": 0,
+     "cpu_ms": 441.3,
+     "phases_us": {
+      "acquire": 94,
+      "resume": 22526,
+      "mount": 19642,
+      "run": 390512,
+      "destroy": 23512
+     },
+     "cold": null,
+     "vm": "vm-42"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 57476,
+   "dur_ms": 6835
+  },
+  {
+   "kind": "tool",
+   "at_ms": 64311,
+   "dur_ms": 512,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport re,math\nfrom collections import defaultdict\nlines=open('/workspace/text.gcode').read().splitlines()\nx=y=z=0.0;e=0.0;abse=False;absxyz=True;obj=None\nsegs=defaultdict(list)\ndef pt(toks):\n    d={}\n    for t in toks:\n        if t and t[0] in 'XYZEFIJK':\n            try:d[t[0]]=float(t[1:])\n            except:pass\n    return d\nfor i,l in enumerate(lines,1):\n    s=l.strip()\n    if s.startswith('G90'):absxyz=True;continue\n    if s.startswith('G91'):absxyz=False;continue\n    if s.startswith('M82'):abse=False;continue\n    if s.startswith('M83'):abse=True;continue\n    if s.startswith('M486'):\n        p=s.split()\n        if len(p)>=2:\n            if p[1]=='S-1':obj=None\n            elif p[1][0]=='S':\n                try:obj=int(p[1][1:])\n                except:pass\n        continue\n    m=re.match(r'^(G[0-3])\\b(.*)$',s)\n    if not m:continue\n    cmd=m.group(1);d=pt(m.group(2).split())\n    nx,ny,nz,ne=x,y,z,e\n    if 'X' in d:nx=d['X'] if absxyz else x+d['X']\n    if 'Y' in d:ny=d['Y'] if absxyz else y+d['Y']\n    if 'Z' in d:nz=d['Z'] if absxyz else z+d['Z']\n    if 'E' in d:ne=d['E'] if abse else e+d['E']\n    de=ne-e\n    if de>1e-9 and ('X' in d or 'Y' in d):\n        if cmd in ('G1','G0'): segs[(obj,round(z,3))].append((x,y,nx,ny,de))\n        else:\n            cx=x+d.get('I',0);cy=y+d.get('J',0);r=math.hypot(x-cx,y-cy)\n            a0=math.atan2(y-cy,x-cx);a1=math.atan2(ny-cy,nx-cx)\n            if cmd=='G3':\n                while a1<=a0:a1+=2*math.pi\n            else:\n                while a1>=a0:a1-=2*math.pi\n            n=max(2,int(abs(a1-a0)*r/0.25));px,py=x,y\n            for k in range(1,n+1):\n                a=a0+(a1-a0)*k/n;qx=cx+r*math.cos(a);qy=cy+r*math.sin(a)\n                segs[(obj,round(z,3))].append((px,py,qx,qy,de/n));px,py=qx,qy\n    x,y,z,e=nx,ny,nz,ne\ndef render(key,W=100,H=42,ch='#'):\n    ss=segs.get(key)\n    xs=[v for s in ss for v in (s[0],s[2])]; ys=[v for s in ss for v in (s[1],s[3])]\n    x0,x1=min(xs),max(xs);y0,y1=min(ys),max(ys)\n    grid=[[' ']*W for _ in range(H)]\n    for a,b,c,d,de in ss:\n        n=max(2,int(max(abs(c-a),abs(d-b))/0.05))\n        for k in range(n+1):\n            t=k/n;gx=int((a+(c-a)*t-x0)/(x1-x0)*(W-1));gy=int((y1-(b+(d-b)*t))/(y1-y0)*(H-1))\n            if 0<=gx<W and 0<=gy<H:grid[gy][gx]=ch\n    return '\\n'.join(''.join(r) for r in grid)\nfor z in [20.08]:\n    print('z',z)\n    print(render((0,z)))\nprint('--- z 0.48 raw segments ---')\nfor s in segs[(0,0.48)]: print(s)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 64367,
+     "dur_ms": 441,
+     "exit": 0,
+     "cpu_ms": 444.2,
+     "phases_us": {
+      "acquire": 122,
+      "resume": 22250,
+      "mount": 19689,
+      "run": 394785,
+      "destroy": 23951
+     },
+     "cold": null,
+     "vm": "vm-49"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 64823,
+   "dur_ms": 5519
+  },
+  {
+   "kind": "tool",
+   "at_ms": 70342,
+   "dur_ms": 138,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "echo '=== 15000-15060 ==='\nsed -n '15000,15060p' /workspace/text.gcode\necho '=== 98460-98490 ==='\nsed -n '98460,98490p' /workspace/text.gcode\necho '=== distinct E-positive G1 Z contexts first 60 after 15014 ==='\nawk 'NR>=15014 && NR<=15200' /workspace/text.gcode | head -100",
+   "sandbox": [
+    {
+     "at_ms": 70400,
+     "dur_ms": 62,
+     "exit": 0,
+     "cpu_ms": 60.7,
+     "phases_us": {
+      "acquire": 69,
+      "resume": 22191,
+      "mount": 19746,
+      "run": 21092,
+      "destroy": 17976
+     },
+     "cold": null,
+     "vm": "vm-50"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 70480,
+   "dur_ms": 7976
+  },
+  {
+   "kind": "model",
+   "at_ms": 78720,
+   "dur_ms": 1022
+  },
+  {
+   "kind": "tool",
+   "at_ms": 79742,
+   "dur_ms": 4687,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "pip install --quiet numpy 2>&1 | tail -2\npython3 -c 'import numpy;print(numpy.__version__)'",
+   "sandbox": [
+    {
+     "at_ms": 79798,
+     "dur_ms": 4594,
+     "exit": 0,
+     "cpu_ms": 4624.5,
+     "phases_us": {
+      "acquire": 64,
+      "resume": 21947,
+      "mount": 19792,
+      "run": 4532342,
+      "destroy": 39108
+     },
+     "cold": null,
+     "vm": "vm-54"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 84429,
+   "dur_ms": 4572
+  },
+  {
+   "kind": "tool",
+   "at_ms": 89001,
+   "dur_ms": 5171,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "pip install --quiet numpy >/dev/null 2>&1\npython3 - <<'PY'\nimport re,math\nimport numpy as np\nlines=open('/workspace/text.gcode').read().splitlines()\nx=y=z=0.0;e=0.0;abse=False;absxyz=True;obj=None\npts=[]\ndef pt(toks):\n    d={}\n    for t in toks:\n        if t and t[0] in 'XYZEF':\n            try:d[t[0]]=float(t[1:])\n            except:pass\n    return d\nfor i,l in enumerate(lines,1):\n    s=l.strip()\n    if s.startswith('G90'):absxyz=True;continue\n    if s.startswith('G91'):absxyz=False;continue\n    if s.startswith('M82'):abse=False;continue\n    if s.startswith('M83'):abse=True;continue\n    if s.startswith('M486'):\n        p=s.split()\n        if len(p)>=2:\n            if p[1]=='S-1':obj=None\n            elif p[1][0]=='S':\n                try:obj=int(p[1][1:])\n                except:pass\n        continue\n    m=re.match(r'^(G[0-3])\\b(.*)$',s)\n    if not m:continue\n    cmd=m.group(1);d=pt(m.group(2).split())\n    nx,ny,nz,ne=x,y,z,e\n    if 'X' in d:nx=d['X'] if absxyz else x+d['X']\n    if 'Y' in d:ny=d['Y'] if absxyz else y+d['Y']\n    if 'Z' in d:nz=d['Z'] if absxyz else z+d['Z']\n    if 'E' in d:ne=d['E'] if abse else e+d['E']\n    de=ne-e\n    if obj==0 and de>1e-9 and ('X' in d or 'Y' in d):\n        pts.append((x,y,z));pts.append((nx,ny,nz))\n    x,y,z,e=nx,ny,nz,ne\nP=np.array(pts)\nc=P.mean(0);Q=P-c\nu,s,vt=np.linalg.svd(Q,full_matrices=False)\nprint('n',len(P),'mean',np.round(c,2))\nprint('sing',np.round(s,1))\nprint('axes',np.round(vt,4))\nproj=Q@vt.T\ndef render(A,B,W=150,H=50):\n    a0,a1=A.min(),A.max();b0,b1=B.min(),B.max()\n    g=[[' ']*W for _ in range(H)]\n    for aa,bb in zip(A,B):\n        gx=int((aa-a0)/(a1-a0+1e-9)*(W-1));gy=int((b1-bb)/(b1-b0+1e-9)*(H-1))\n        if 0<=gx<W and 0<=gy<H:g[gy][gx]='#'\n    return '\\n'.join(''.join(r) for r in g)\nprint('=== PC1 vs PC2 ===')\nprint(render(proj[:,0],proj[:,1]))\nprint('=== PC1 vs PC3 ===')\nprint(render(proj[:,0],proj[:,2]))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 89055,
+     "dur_ms": 5082,
+     "exit": 0,
+     "cpu_ms": 4991.0,
+     "phases_us": {
+      "acquire": 17,
+      "resume": 21933,
+      "mount": 19632,
+      "run": 5026209,
+      "destroy": 33907
+     },
+     "cold": null,
+     "vm": "vm-57"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 94172,
+   "dur_ms": 22435
+  },
+  {
+   "kind": "tool",
+   "at_ms": 116607,
+   "dur_ms": 5034,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "pip install --quiet numpy >/dev/null 2>&1\npython3 - <<'PY'\nimport re,math\nimport numpy as np\nlines=open('/workspace/text.gcode').read().splitlines()\nx=y=z=0.0;e=0.0;abse=False;absxyz=True;obj=None\npts=[]\ndef pt(toks):\n    d={}\n    for t in toks:\n        if t and t[0] in 'XYZEF':\n            try:d[t[0]]=float(t[1:])\n            except:pass\n    return d\nfor i,l in enumerate(lines,1):\n    s=l.strip()\n    if s.startswith('G90'):absxyz=True;continue\n    if s.startswith('G91'):absxyz=False;continue\n    if s.startswith('M82'):abse=False;continue\n    if s.startswith('M83'):abse=True;continue\n    if s.startswith('M486'):\n        p=s.split()\n        if len(p)>=2:\n            if p[1]=='S-1':obj=None\n            elif p[1][0]=='S':\n                try:obj=int(p[1][1:])\n                except:pass\n        continue\n    m=re.match(r'^(G[0-3])\\b(.*)$',s)\n    if not m:continue\n    cmd=m.group(1);d=pt(m.group(2).split())\n    nx,ny,nz,ne=x,y,z,e\n    if 'X' in d:nx=d['X'] if absxyz else x+d['X']\n    if 'Y' in d:ny=d['Y'] if absxyz else y+d['Y']\n    if 'Z' in d:nz=d['Z'] if absxyz else z+d['Z']\n    if 'E' in d:ne=d['E'] if abse else e+d['E']\n    de=ne-e\n    if obj==0 and de>1e-9 and ('X' in d or 'Y' in d):\n        pts.append((x,y,z));pts.append((nx,ny,nz))\n    x,y,z,e=nx,ny,nz,ne\nP=np.array(pts); c=P.mean(0); Q=P-c\nu,s,vt=np.linalg.svd(Q,full_matrices=False)\nu1=vt[0]\n# basis perpendicular\ntmp=np.array([0,0,1.0])\nif abs(np.dot(tmp,u1))>0.9: tmp=np.array([1.0,0,0])\ne1=np.cross(u1,tmp);e1/=np.linalg.norm(e1);e2=np.cross(u1,e1)\nt=Q@u1; a1=Q@e1;a2=Q@e2\nr=np.hypot(a1,a2); ang=np.arctan2(a2,a1)\nprint('t range',t.min(),t.max(),'r range',r.min(),r.max(),'r mean',r.mean(),'r percentiles',np.percentile(r,[1,5,50,95,99]))\ndef render(A,B,W=160,H=60,swapx=False):\n    a0,a1_=A.min(),A.max();b0,b1=B.min(),B.max()\n    g=[[' ']*W for _ in range(H)]\n    for aa,bb in zip(A,B):\n        gx=int((aa-a0)/(a1_-a0+1e-9)*(W-1));gy=int((b1-bb)/(b1-b0+1e-9)*(H-1))\n        if 0<=gx<W and 0<=gy<H:g[gy][gx]='#'\n    return '\\n'.join(''.join(rw) for rw in g)\nprint('=== unwrap: t horizontal, angle vertical (radius not shown) ===')\nprint(render(t,ang))\n# radius as height: bin t,ang and take max radius\nW,H=160,80\nti=((t-t.min())/(t.max()-t.min())* (W-1)).astype(int)\nai=((ang+math.pi)/(2*math.pi)*(H-1)).astype(int)\nD=np.full((H,W),-1e9)\nfor xx,yy,rr in zip(ti,ai,r):\n    if rr>D[yy,xx]:D[yy,xx]=rr\n# print as ascii of max radius where points\nprint('=== unwrap radius map (dark=larger radius) ===')\nchars=' .:-=+*#%@'\nmn,mx=D[D>-1e8].min(),D[D>-1e8].max()\nprint('radius span',mn,mx)\nfor row in D:\n    line=''\n    for v in row:\n        if v<-1e8: line+=' '\n        else:\n            k=int((v-mn)/(mx-mn+1e-9)*(len(chars)-1));line+=chars[k]\n    print(line.rstrip())\nPY",
+   "sandbox": [
+    {
+     "at_ms": 116664,
+     "dur_ms": 4947,
+     "exit": 0,
+     "cpu_ms": 4944.4,
+     "phases_us": {
+      "acquire": 98,
+      "resume": 22088,
+      "mount": 19364,
+      "run": 4888560,
+      "destroy": 36051
+     },
+     "cold": null,
+     "vm": "vm-62"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 121641,
+   "dur_ms": 34836
+  },
+  {
+   "kind": "tool",
+   "at_ms": 156477,
+   "dur_ms": 5028,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npip install --quiet numpy >/dev/null 2>&1\npython3 - <<'PY'\nimport re,math\nimport numpy as np\nlines=open('/workspace/text.gcode').read().splitlines()\nx=y=z=0.0;e=0.0;abse=False;absxyz=True;obj=None\nsegs=[]\ndef pt(toks):\n    d={}\n    for t in toks:\n        if t and t[0] in 'XYZEF':\n            try:d[t[0]]=float(t[1:])\n            except:pass\n    return d\nfor i,l in enumerate(lines,1):\n    s=l.strip()\n    if s.startswith('G90'):absxyz=True;continue\n    if s.startswith('G91'):absxyz=False;continue\n    if s.startswith('M82'):abse=False;continue\n    if s.startswith('M83'):abse=True;continue\n    if s.startswith('M486'):\n        p=s.split()\n        if len(p)>=2:\n            if p[1]=='S-1':obj=None\n            elif p[1][0]=='S':\n                try:obj=int(p[1][1:])\n                except:pass\n        continue\n    m=re.match(r'^(G[0-3])\\b(.*)$',s)\n    if not m:continue\n    cmd=m.group(1);d=pt(m.group(2).split())\n    nx,ny,nz,ne=x,y,z,e\n    if 'X' in d:nx=d['X'] if absxyz else x+d['X']\n    if 'Y' in d:ny=d['Y'] if absxyz else y+d['Y']\n    if 'Z' in d:nz=d['Z'] if absxyz else z+d['Z']\n    if 'E' in d:ne=d['E'] if abse else e+d['E']\n    de=ne-e\n    if obj==0 and de>1e-9 and ('X' in d or 'Y' in d) and cmd=='G1':\n        segs.append((x,y,z,nx,ny,nz,de))\n    x,y,z,e=nx,ny,nz,ne\nP=[]\nfor a,b,c,d,ee,f,de in segs:\n    P.append((a,b,c));P.append((d,ee,f))\nP=np.array(P);c0=P.mean(0);Q=P-c0\nu,s,vt=np.linalg.svd(Q,full_matrices=False)\nA=Q@vt[0];B=Q@vt[1]\nprint('extents A',A.min(),A.max(),'B',B.min(),B.max())\n# Save flattened projected segments as a simple point list to workspace for later\nnp.save('/workspace/flat.npy',np.stack([A,B],1))\n# Render chunks\nW=100; H=46\na0,a1=A.min(),A.max();b0,b1=B.min(),B.max()\ndef render_chunk(lo,hi):\n    g=[[' ']*W for _ in range(H)]\n    for aa,bb in zip(A,B):\n        if not (lo<=aa<hi): continue\n        gx=int((aa-lo)/(hi-lo)*(W-1))\n        gy=int((b1-bb)/(b1-b0)*(H-1))\n        if 0<=gx<W and 0<=gy<H:g[gy][gx]='#'\n    return g\nn=4;span=(a1-a0)/n\nfor k in range(n):\n    lo=a0+k*span;hi=lo+span\n    g=render_chunk(lo,hi)\n    print(f'--- chunk {k} A {lo:.1f}..{hi:.1f} ---')\n    for row in g: print(''.join(row).rstrip())\nPY",
+   "sandbox": [
+    {
+     "at_ms": 156532,
+     "dur_ms": 4952,
+     "exit": 0,
+     "cpu_ms": 4929.4,
+     "phases_us": {
+      "acquire": 61,
+      "resume": 22137,
+      "mount": 19265,
+      "run": 4893510,
+      "destroy": 36526
+     },
+     "cold": null,
+     "vm": "vm-69"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 161505,
+   "dur_ms": 38914
+  },
+  {
+   "kind": "model",
+   "at_ms": 205737,
+   "dur_ms": 1632
+  },
+  {
+   "kind": "model",
+   "at_ms": 207522,
+   "dur_ms": 24885
+  },
+  {
+   "kind": "tool",
+   "at_ms": 232407,
+   "dur_ms": 7151,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "pip install --quiet numpy pillow >/dev/null 2>&1\npython3 - <<'PY'\nimport re,math\nimport numpy as np\nfrom PIL import Image, ImageDraw, ImageFilter\nlines=open('/workspace/text.gcode').read().splitlines()\nx=y=z=0.0;e=0.0;abse=False;absxyz=True;obj=None\nsegs=[]\ndef pt(toks):\n    d={}\n    for t in toks:\n        if t and t[0] in 'XYZEF':\n            try:d[t[0]]=float(t[1:])\n            except:pass\n    return d\nfor i,l in enumerate(lines,1):\n    s=l.strip()\n    if s.startswith('G90'):absxyz=True;continue\n    if s.startswith('G91'):absxyz=False;continue\n    if s.startswith('M82'):abse=False;continue\n    if s.startswith('M83'):abse=True;continue\n    if s.startswith('M486'):\n        p=s.split()\n        if len(p)>=2:\n            if p[1]=='S-1':obj=None\n            elif p[1][0]=='S':\n                try:obj=int(p[1][1:])\n                except:pass\n        continue\n    m=re.match(r'^(G[0-3])\\b(.*)$',s)\n    if not m:continue\n    cmd=m.group(1);d=pt(m.group(2).split())\n    nx,ny,nz,ne=x,y,z,e\n    if 'X' in d:nx=d['X'] if absxyz else x+d['X']\n    if 'Y' in d:ny=d['Y'] if absxyz else y+d['Y']\n    if 'Z' in d:nz=d['Z'] if absxyz else z+d['Z']\n    if 'E' in d:ne=d['E'] if abse else e+d['E']\n    de=ne-e\n    if obj==0 and de>1e-9 and ('X' in d or 'Y' in d):\n        if cmd in ('G1','G0'):\n            segs.append((x,y,z,nx,ny,nz,de))\n        elif cmd in ('G2','G3'):\n            cx=x+d.get('I',0);cy=y+d.get('J',0);r=math.hypot(x-cx,y-cy)\n            a0=math.atan2(y-cy,x-cx);a1=math.atan2(ny-cy,nx-cx)\n            if cmd=='G3':\n                while a1<=a0:a1+=2*math.pi\n            else:\n                while a1>=a0:a1-=2*math.pi\n            n=max(2,int(abs(a1-a0)*r/0.1));px,py=x,y\n            for k in range(1,n+1):\n                a=a0+(a1-a0)*k/n;qx=cx+r*math.cos(a);qy=cy+r*math.sin(a)\n                segs.append((px,py,z,qx,qy,z,de/n));px,py=qx,qy\n    x,y,z,e=nx,ny,nz,ne\nP=[]\nfor a,b,c,d,ee,f,de in segs:\n    P.append((a,b,c));P.append((d,ee,f))\nP=np.array(P);c0=P.mean(0);Q=P-c0\nu,s,vt=np.linalg.svd(Q,full_matrices=False)\n# choose plane basis\ne1=vt[0];e2=vt[1]\nA=Q@e1;B=Q@e2\n# scale\nS=8.0 # px per mm\namin,amax=A.min(),A.max();bmin,bmax=B.min(),B.max()\npad=3\nW=int((amax-amin+2*pad)*S);H=int((bmax-bmin+2*pad)*S)\nprint('image',W,H,'word mm',amax-amin,bmax-bmin)\ndef make(flipA,flipB,close_mm=1.2):\n    img=Image.new('L',(W,H),0);dr=ImageDraw.Draw(img)\n    for a,b,c,d,ee,f,de in segs:\n        # project endpoints\n        p1=(np.array([a,b,c])-c0)@e1; q1=(np.array([a,b,c])-c0)@e2\n        p2=(np.array([d,ee,f])-c0)@e1; q2=(np.array([d,ee,f])-c0)@e2\n        if flipA: p1,p2=-p1,-p2\n        if flipB: q1,q2=-q1,-q2\n        x1=(p1-amin+pad)*S; y1=(bmax-q1+pad)*S\n        x2=(p2-amin+pad)*S; y2=(bmax-q2+pad)*S\n        dr.line([x1,y1,x2,y2],fill=255,width=max(1,int(0.5*S)))\n    # closing\n    k=max(3,int(close_mm*S)|1)\n    img=img.filter(ImageFilter.MaxFilter(k)).filter(ImageFilter.MinFilter(k))\n    # also final slight dilate to connect\n    return img\nfor fa in (False,True):\n  for fb in (False,True):\n    img=make(fa,fb)\n    name=f'/workspace/proj_{int(fa)}{int(fb)}.png'\n    img.save(name)\n    print('saved',name)\nprint('done')\nPY",
+   "sandbox": [
+    {
+     "at_ms": 232463,
+     "dur_ms": 7082,
+     "exit": 0,
+     "cpu_ms": 6969.4,
+     "phases_us": {
+      "acquire": 60,
+      "resume": 24054,
+      "mount": 21299,
+      "run": 7020121,
+      "destroy": 37109
+     },
+     "cold": null,
+     "vm": "vm-90"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 239558,
+   "dur_ms": 4788
+  },
+  {
+   "kind": "tool",
+   "at_ms": 244346,
+   "dur_ms": 5356,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "pip install --quiet numpy pillow >/dev/null 2>&1\npython3 - <<'PY'\nfrom PIL import Image\nimport numpy as np\nfor tag in ['00','01','10','11']:\n    im=Image.open(f'/workspace/proj_{tag}.png').convert('L')\n    W,H=im.size\n    ow,oh=196,40\n    a=np.array(im.resize((ow,oh),Image.LANCZOS))\n    print(f'================ orientation {tag} ================')\n    chars=' .:-=+*#%@'\n    for row in a:\n        line=''.join('#' if v>60 else ('+' if v>20 else ' ') for v in row)\n        print(line.rstrip())\nPY",
+   "sandbox": [
+    {
+     "at_ms": 244399,
+     "dur_ms": 5276,
+     "exit": 0,
+     "cpu_ms": 5246.3,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 22085,
+      "mount": 19809,
+      "run": 5209059,
+      "destroy": 44093
+     },
+     "cold": null,
+     "vm": "vm-99"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 249702,
+   "dur_ms": 12037
+  },
+  {
+   "kind": "tool",
+   "at_ms": 261739,
+   "dur_ms": 7726,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "pip install --quiet pillow numpy >/dev/null 2>&1\npython3 - <<'PY'\nfrom PIL import Image\nimport numpy as np\n# braille dot bit map\nbits={(0,0):1,(0,1):2,(0,2):4,(0,3):64,(1,0):8,(1,1):16,(1,2):32,(1,3):128}\ndef braille(arr):\n    H,W=arr.shape\n    rows=[]\n    for by in range(0,H,4):\n        line=[]\n        for bx in range(0,W,2):\n            code=0\n            for dx in range(2):\n                for dy in range(4):\n                    x=bx+dx;y=by+dy\n                    if x<W and y<H and arr[y,x]>0:\n                        code|=bits[(dx,dy)]\n            line.append(chr(0x2800+code) if code else ' ')\n        rows.append(''.join(line).rstrip())\n    return rows\nfor tag in ['00','01','10','11']:\n    im=Image.open(f'/workspace/proj_{tag}.png').convert('L')\n    a=np.array(im)>50\n    rb=braille(a)\n    print(f'######## ORIENT {tag} : first chunk (cols 0-150) ########')\n    for line in rb: print(line[:150])\n    print(f'######## ORIENT {tag} : last chunk (cols 546-696) ########')\n    for line in rb: print(line[546:])\nPY",
+   "sandbox": [
+    {
+     "at_ms": 262707,
+     "dur_ms": 6733,
+     "exit": 0,
+     "cpu_ms": 6750.7,
+     "phases_us": {
+      "acquire": 65,
+      "resume": 22140,
+      "mount": 19474,
+      "run": 6663457,
+      "destroy": 46745
+     },
+     "cold": null,
+     "vm": "vm-102"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 269465,
+   "dur_ms": 4912
+  },
+  {
+   "kind": "tool",
+   "at_ms": 274377,
+   "dur_ms": 8343,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "pip install --quiet pillow numpy >/dev/null 2>&1\npython3 - <<'PY'\nfrom PIL import Image\nimport numpy as np\nbits={(0,0):1,(0,1):2,(0,2):4,(0,3):64,(1,0):8,(1,1):16,(1,2):32,(1,3):128}\ndef braille(arr,x0,x1):\n    H,W=arr.shape;rows=[]\n    for by in range(0,H,4):\n        line=[]\n        for bx in range(x0,x1,2):\n            code=0\n            for dx in range(2):\n                for dy in range(4):\n                    x=bx+dx;y=by+dy\n                    if x<W and y<H and arr[y,x]>0: code|=bits[(dx,dy)]\n            line.append(chr(0x2800+code) if code else ' ')\n        rows.append(''.join(line).rstrip())\n    return rows\nim=Image.open('/workspace/proj_00.png').convert('L');a=np.array(im)>50\nprint('ORIENT 00 chunk 0 (cols 0-170)')\nfor l in braille(a,0,170):print(l)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 274985,
+     "dur_ms": 7714,
+     "exit": 0,
+     "cpu_ms": 5602.8,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 22106,
+      "mount": 19743,
+      "run": 7637667,
+      "destroy": 53757
+     },
+     "cold": null,
+     "vm": "vm-104"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 282720,
+   "dur_ms": 3830
+  },
+  {
+   "kind": "tool",
+   "at_ms": 286550,
+   "dur_ms": 12666,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "pip install --quiet pillow numpy >/dev/null 2>&1\npython3 - <<'PY'\nfrom PIL import Image\nimport numpy as np\nbits={(0,0):1,(0,1):2,(0,2):4,(0,3):64,(1,0):8,(1,1):16,(1,2):32,(1,3):128}\ndef braille(arr,x0,x1):\n    H,W=arr.shape;rows=[]\n    for by in range(0,H,4):\n        line=[]\n        for bx in range(x0,x1,2):\n            code=0\n            for dx in range(2):\n                for dy in range(4):\n                    x=bx+dx;y=by+dy\n                    if x<W and y<H and arr[y,x]>0: code|=bits[(dx,dy)]\n            line.append(chr(0x2800+code) if code else ' ')\n        rows.append(''.join(line).rstrip())\n    return rows\nfor tag in ['01','11']:\n    im=Image.open(f'/workspace/proj_{tag}.png').convert('L');a=np.array(im)>50\n    print(f'===== ORIENT {tag} chunk 0 =====')\n    for l in braille(a,0,170):print(l)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 287177,
+     "dur_ms": 12028,
+     "exit": 0,
+     "cpu_ms": 5873.8,
+     "phases_us": {
+      "acquire": 136,
+      "resume": 22217,
+      "mount": 19641,
+      "run": 11944285,
+      "destroy": 60920
+     },
+     "cold": null,
+     "vm": "vm-107"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 299216,
+   "dur_ms": 5320
+  },
+  {
+   "kind": "tool",
+   "at_ms": 304536,
+   "dur_ms": 10039,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "pip install --quiet rapidocr-onnxruntime >/tmp/pip.log 2>&1; tail -3 /tmp/pip.log\npython3 - <<'PY'\ntry:\n    from rapidocr_onnxruntime import RapidOCR\nexcept Exception as e:\n    print('import fail',e);raise SystemExit\nimport numpy as np\nfrom PIL import Image\nocr=RapidOCR()\nfor tag in ['01','00','11','10']:\n    im=Image.open(f'/workspace/proj_{tag}.png').convert('RGB')\n    im=im.resize((im.width*2,im.height*2),Image.LANCZOS)\n    arr=np.array(im)\n    res,elapse=ocr(arr)\n    print('===',tag,'===')\n    if res:\n        for line in res:\n            print(line[0],'|conf',line[1] if len(line)>1 else '')\n    else: print('no result')\nPY",
+   "sandbox": [
+    {
+     "at_ms": 304590,
+     "dur_ms": 9976,
+     "exit": 0,
+     "cpu_ms": 9913.1,
+     "phases_us": {
+      "acquire": 63,
+      "resume": 22331,
+      "mount": 19741,
+      "run": 9852955,
+      "destroy": 100885
+     },
+     "cold": null,
+     "vm": "vm-112"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 314575,
+   "dur_ms": 2146
+  },
+  {
+   "kind": "model",
+   "at_ms": 328413,
+   "dur_ms": 3775
+  },
+  {
+   "kind": "tool",
+   "at_ms": 332188,
+   "dur_ms": 349,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "echo \"proxy: $http_proxy $https_proxy\"\nls /etc/apt/sources.list.d 2>/dev/null; cat /etc/apt/sources.list 2>/dev/null | head\nfind / -name 'libxcb.so*' 2>/dev/null | head\nfind / -name 'libGL.so*' 2>/dev/null | head\npython3 -c \"import sys;print(sys.version)\"",
+   "sandbox": [
+    {
+     "at_ms": 332241,
+     "dur_ms": 274,
+     "exit": 0,
+     "cpu_ms": 286.1,
+     "phases_us": {
+      "acquire": 38,
+      "resume": 22374,
+      "mount": 20311,
+      "run": 228523,
+      "destroy": 22539
+     },
+     "cold": null,
+     "vm": "vm-133"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 332537,
+   "dur_ms": 3306
+  },
+  {
+   "kind": "tool",
+   "at_ms": 335843,
+   "dur_ms": 130,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat /etc/os-release | head -3\ncat /etc/apt/sources.list.d/debian.sources\necho ---\ncurl -sI http://deb.debian.org/debian/ | head -3",
+   "sandbox": [
+    {
+     "at_ms": 335897,
+     "dur_ms": 59,
+     "exit": 0,
+     "cpu_ms": 41.4,
+     "phases_us": {
+      "acquire": 19,
+      "resume": 21395,
+      "mount": 19279,
+      "run": 6081,
+      "destroy": 30895
+     },
+     "cold": null,
+     "vm": "vm-137"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 335973,
+   "dur_ms": 3769
+  },
+  {
+   "kind": "model",
+   "at_ms": 353104,
+   "dur_ms": 3023
+  },
+  {
+   "kind": "tool",
+   "at_ms": 356127,
+   "dur_ms": 2359,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport urllib.request,lzma,re,io\nurl='http://deb.debian.org/debian/dists/bookworm/main/binary-amd64/Packages.xz'\ntry:\n    data=urllib.request.urlopen(url,timeout=60).read()\n    print('downloaded',len(data))\n    txt=lzma.decompress(data).decode('utf-8','replace')\n    for pkg in ['libxcb1','libxau6','libxdmcp6','libbsd0','libmd0']:\n        m=re.search(r'^Package: '+pkg+r'\\n(.*?)\\n\\n',txt,re.S|re.M)\n        if m:\n            fn=re.search(r'^Filename: (.*)$',m.group(0),re.M)\n            print(pkg,'->',fn.group(1) if fn else '?')\n        else: print(pkg,'not found')\nexcept Exception as e:\n    print('ERR',repr(e))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 356181,
+     "dur_ms": 2283,
+     "exit": 0,
+     "cpu_ms": 2300.3,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 21576,
+      "mount": 19435,
+      "run": 2218600,
+      "destroy": 42967
+     },
+     "cold": null,
+     "vm": "vm-151"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 358486,
+   "dur_ms": 2269
+  },
+  {
+   "kind": "tool",
+   "at_ms": 360755,
+   "dur_ms": 493,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport urllib.request\nu='http://deb.debian.org/debian/pool/main/libx/libxcb/libxcb1_1.15-1_amd64.deb'\ntry:\n    r=urllib.request.urlopen(u,timeout=60);d=r.read();print('status',r.status,'len',len(d));open('/workspace/sysroot/x.deb','wb').write(d)\nexcept Exception as e:\n    print('ERR',repr(e))\nPY\nls -la /workspace/sysroot/ 2>/dev/null",
+   "sandbox": [
+    {
+     "at_ms": 360808,
+     "dur_ms": 417,
+     "exit": 0,
+     "cpu_ms": 415.8,
+     "phases_us": {
+      "acquire": 17,
+      "resume": 22381,
+      "mount": 20221,
+      "run": 370442,
+      "destroy": 24241
+     },
+     "cold": null,
+     "vm": "vm-155"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 361248,
+   "dur_ms": 3643
+  },
+  {
+   "kind": "model",
+   "at_ms": 376749,
+   "dur_ms": 3237
+  },
+  {
+   "kind": "tool",
+   "at_ms": 379986,
+   "dur_ms": 707,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "for l in libGL.so.1 libGLX.so.0 libGLdispatch.so.0 libX11.so.6 libXext.so.6 libSM.so.6 libICE.so.6 libglib-2.0.so.0 libgthread-2.0.so.0 libz.so.1 libstdc++.so.6; do printf '%s: ' $l; find / -name \"$l\" 2>/dev/null | head -1 || true; echo; done",
+   "sandbox": [
+    {
+     "at_ms": 380039,
+     "dur_ms": 633,
+     "exit": 0,
+     "cpu_ms": 728.7,
+     "phases_us": {
+      "acquire": 96,
+      "resume": 22008,
+      "mount": 19787,
+      "run": 584562,
+      "destroy": 25758
+     },
+     "cold": null,
+     "vm": "vm-170"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 380693,
+   "dur_ms": 16605
+  },
+  {
+   "kind": "tool",
+   "at_ms": 397298,
+   "dur_ms": 3172,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /workspace/fetch_debs.py <<'PY'\nimport urllib.request,lzma,re,os,sys,subprocess\nBASE='http://deb.debian.org/debian/'\nIDX='/workspace/Packages.xz'\nif not os.path.exists(IDX):\n    urllib.request.urlretrieve(BASE+'dists/bookworm/main/binary-amd64/Packages.xz',IDX)\ntxt=lzma.open(IDX,'rt',encoding='utf-8',errors='replace').read()\npkgs={}\nfor blk in txt.split('\\n\\n'):\n    m=re.search(r'^Package: (.+)$',blk,re.M)\n    if not m: continue\n    name=m.group(1)\n    fn=re.search(r'^Filename: (.+)$',blk,re.M)\n    if fn: pkgs.setdefault(name,fn.group(1))\n# installed set from dpkg status\ninst=set()\ntry:\n    st=open('/var/lib/dpkg/status',encoding='utf-8',errors='replace').read()\n    for blk in st.split('\\n\\n'):\n        m=re.search(r'^Package: (.+)$',blk,re.M)\n        s=re.search(r'^Status: (.+)$',blk,re.M)\n        if m and s and 'install ok installed' in s.group(1): inst.add(m.group(1))\nexcept Exception as e: print('status err',e)\nos.makedirs('/workspace/sysroot/debs',exist_ok=True)\nos.makedirs('/workspace/sysroot/root',exist_ok=True)\nwant=sys.argv[1:]\ngot=0\nfor name in want:\n    if name in inst:\n        print('installed-skip',name); continue\n    fn=pkgs.get(name)\n    if not fn:\n        print('NOTFOUND',name); continue\n    out='/workspace/sysroot/debs/'+fn.split('/')[-1]\n    if not os.path.exists(out):\n        urllib.request.urlretrieve(BASE+fn,out)\n    subprocess.run(['dpkg-deb','-x',out,'/workspace/sysroot/root'],check=False)\n    print('ok',name,fn.split('/')[-1]);got+=1\nprint('fetched',got)\nPY\npython3 /workspace/fetch_debs.py libgl1 libglvnd0 libglx0 libx11-6 libx11-data libxext6 libsm6 libice6 libglib2.0-0 libpcre2-8-0 libffi8 libmount1 libselinux1 libblkid1 libxrender1 libxfixes3 libxi6 libxrandr2 libxcursor1 libxinerama1 libxkbcommon0 libwayland-client0 libdrm2 libgbm1 libegl1 libxcb1 libxau6 libxdmcp6 libbsd0 libmd0\nfind /workspace/sysroot/root -name '*.so*' | wc -l",
+   "sandbox": [
+    {
+     "at_ms": 397353,
+     "dur_ms": 3108,
+     "exit": 0,
+     "cpu_ms": 3057.9,
+     "phases_us": {
+      "acquire": 22,
+      "resume": 21399,
+      "mount": 18681,
+      "run": 3022828,
+      "destroy": 63949
+     },
+     "cold": null,
+     "vm": "vm-175"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 400470,
+   "dur_ms": 1866
+  },
+  {
+   "kind": "tool",
+   "at_ms": 402336,
+   "dur_ms": 12794,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "export LD_LIBRARY_PATH=/workspace/sysroot/root/usr/lib/x86_64-linux-gnu:/workspace/sysroot/root/lib/x86_64-linux-gnu\npip install --quiet --target /workspace/pylibs opencv-python-headless rapidocr-onnxruntime numpy pillow >/tmp/pip.log 2>&1; tail -3 /tmp/pip.log\nexport PYTHONPATH=/workspace/pylibs\npython3 -c \"import cv2;print('cv2',cv2.__version__)\"\npython3 -c \"from rapidocr_onnxruntime import RapidOCR;print('rapid ok')\"",
+   "sandbox": [
+    {
+     "at_ms": 402389,
+     "dur_ms": 12733,
+     "exit": 0,
+     "cpu_ms": 13278.8,
+     "phases_us": {
+      "acquire": 88,
+      "resume": 24011,
+      "mount": 21710,
+      "run": 12589859,
+      "destroy": 119066
+     },
+     "cold": null,
+     "vm": "vm-198"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 415130,
+   "dur_ms": 2504
+  },
+  {
+   "kind": "model",
+   "at_ms": 418799,
+   "dur_ms": 20189
+  },
+  {
+   "kind": "tool",
+   "at_ms": 438988,
+   "dur_ms": 1287,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "export LD_LIBRARY_PATH=/workspace/sysroot/root/usr/lib/x86_64-linux-gnu:/workspace/sysroot/root/lib/x86_64-linux-gnu\nexport PYTHONPATH=/workspace/pylibs\npython3 - <<'PY'\nimport numpy as np\nfrom PIL import Image, ImageOps\nfrom rapidocr_onnxruntime import RapidOCR\nocr=RapidOCR()\ndef run(img,tag):\n    arr=np.array(img.convert('RGB'))\n    res,_=ocr(arr)\n    print('===',tag,img.size,'===')\n    if not res: print('  no result'); return\n    for box,text,score in res:\n        print('  ',repr(text),round(float(score),3))\nfor tag in ['01','11','00','10']:\n    im=Image.open(f'/workspace/proj_{tag}.png').convert('L')\n    inv=ImageOps.invert(im)\n    run(inv.resize((inv.width*2,inv.height*2),Image.LANCZOS),f'{tag} inv2x')\nPY",
+   "sandbox": [
+    {
+     "at_ms": 439044,
+     "dur_ms": 1220,
+     "exit": 0,
+     "cpu_ms": 1701.2,
+     "phases_us": {
+      "acquire": 22,
+      "resume": 24513,
+      "mount": 21467,
+      "run": 1154441,
+      "destroy": 41091
+     },
+     "cold": null,
+     "vm": "vm-218"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 440275,
+   "dur_ms": 14784
+  },
+  {
+   "kind": "model",
+   "at_ms": 459905,
+   "dur_ms": 4648
+  },
+  {
+   "kind": "tool",
+   "at_ms": 464553,
+   "dur_ms": 19762,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "export LD_LIBRARY_PATH=/workspace/sysroot/root/usr/lib/x86_64-linux-gnu:/workspace/sysroot/root/lib/x86_64-linux-gnu\nexport PYTHONPATH=/workspace/pylibs\npython3 - <<'PY'\nimport numpy as np\nfrom PIL import Image,ImageOps\nfrom rapidocr_onnxruntime import RapidOCR\nfrom PIL import __version__ as pv\nprint('pillow',pv)\nocr=RapidOCR()\ndef run_file(path,tag):\n    im=Image.open(path).convert('L')\n    # im is inverted (dark text on white)\n    a=np.array(im); ys,xs=np.nonzero(a<128)\n    if len(xs)==0: print(tag,'empty');return\n    im=im.crop((xs.min(),ys.min(),xs.max()+1,ys.max()+1))\n    im=im.resize((im.width*2,im.height*2),Image.LANCZOS)\n    res,_=ocr(np.array(im.convert('RGB')))\n    print('===',tag,'size',im.size,'===')\n    if not res: print('  none');return\n    for box,text,score in res: print('  ',repr(text),round(float(score),3))\nfor m in [0,1]:\n    base=f'/workspace/xy_m{m}'\n    for ang in [0,22,-22,68,-68,112,-112,158,-158,180]:\n        im=Image.open(base+'.png').convert('L')\n        r=im.rotate(ang,expand=True,fillcolor=255)\n        p=f'{base}_r{ang}.png'; r.save(p)\n        run_file(p,f'XY m={m} rot={ang}')\nPY",
+   "sandbox": [
+    {
+     "at_ms": 464606,
+     "dur_ms": 19700,
+     "exit": 0,
+     "cpu_ms": 34873.3,
+     "phases_us": {
+      "acquire": 24,
+      "resume": 21922,
+      "mount": 19500,
+      "run": 19537278,
+      "destroy": 140254
+     },
+     "cold": null,
+     "vm": "vm-258"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 484315,
+   "dur_ms": 12322
+  },
+  {
+   "kind": "tool",
+   "at_ms": 496637,
+   "dur_ms": 2869,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "export LD_LIBRARY_PATH=/workspace/sysroot/root/usr/lib/x86_64-linux-gnu:/workspace/sysroot/root/lib/x86_64-linux-gnu\nexport PYTHONPATH=/workspace/pylibs\npython3 - <<'PY'\nimport numpy as np\nfrom PIL import Image,ImageOps\nfrom rapidocr_onnxruntime import RapidOCR\nocr=RapidOCR()\nim=Image.open('/workspace/proj_01.png').convert('L')\ninv=ImageOps.invert(im)  # dark on white\na=np.array(inv); ys,xs=np.nonzero(a<200)\nprint('ink bbox',xs.min(),xs.max(),ys.min(),ys.max())\nx0,x1=xs.min(),xs.max()\n# split into 4 overlapping segments\nn=4\nseg=(x1-x0)//n\npad=20\nfor k in range(n):\n    lo=max(0,x0+k*seg-pad); hi=min(inv.width,x0+(k+1)*seg+pad)\n    c=inv.crop((lo,0,hi,inv.height))\n    c=c.resize((c.width*4,c.height*4),Image.LANCZOS)\n    res,_=ocr(np.array(c.convert('RGB')))\n    print(f'--- seg {k} cols {lo}-{hi} ---')\n    if res:\n        for box,text,score in res: print('   ',repr(text),round(float(score),3))\n    else: print('    none')\nPY",
+   "sandbox": [
+    {
+     "at_ms": 496690,
+     "dur_ms": 2806,
+     "exit": 0,
+     "cpu_ms": 4639.9,
+     "phases_us": {
+      "acquire": 21,
+      "resume": 22167,
+      "mount": 19361,
+      "run": 2690921,
+      "destroy": 92602
+     },
+     "cold": null,
+     "vm": "vm-274"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 499506,
+   "dur_ms": 9231
+  },
+  {
+   "kind": "tool",
+   "at_ms": 508737,
+   "dur_ms": 5009,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "export LD_LIBRARY_PATH=/workspace/sysroot/root/usr/lib/x86_64-linux-gnu:/workspace/sysroot/root/lib/x86_64-linux-gnu\nexport PYTHONPATH=/workspace/pylibs\npython3 - <<'PY'\nimport re,math\nimport numpy as np\nfrom PIL import Image,ImageDraw,ImageFilter,ImageOps\nfrom rapidocr_onnxruntime import RapidOCR\nlines=open('/workspace/text.gcode').read().splitlines()\nx=y=z=0.0;e=0.0;abse=False;absxyz=True;obj=None\nsegs=[]\ndef pt(toks):\n    d={}\n    for t in toks:\n        if t and t[0] in 'XYZEF':\n            try:d[t[0]]=float(t[1:])\n            except:pass\n    return d\nfor i,l in enumerate(lines,1):\n    s=l.strip()\n    if s.startswith('G90'):absxyz=True;continue\n    if s.startswith('G91'):absxyz=False;continue\n    if s.startswith('M82'):abse=False;continue\n    if s.startswith('M83'):abse=True;continue\n    if s.startswith('M486'):\n        p=s.split()\n        if len(p)>=2:\n            if p[1]=='S-1':obj=None\n            elif p[1][0]=='S':\n                try:obj=int(p[1][1:])\n                except:pass\n        continue\n    m=re.match(r'^(G[0-3])\\b(.*)$',s)\n    if not m:continue\n    cmd=m.group(1);d=pt(m.group(2).split())\n    nx,ny,nz,ne=x,y,z,e\n    if 'X' in d:nx=d['X'] if absxyz else x+d['X']\n    if 'Y' in d:ny=d['Y'] if absxyz else y+d['Y']\n    if 'Z' in d:nz=d['Z'] if absxyz else z+d['Z']\n    if 'E' in d:ne=d['E'] if abse else e+d['E']\n    de=ne-e\n    if obj==0 and de>1e-9 and ('X' in d or 'Y' in d) and cmd=='G1':\n        segs.append((x,y,z,nx,ny,nz))\n    x,y,z,e=nx,ny,nz,ne\nP=[]\nfor a,b,c,d,ee,f in segs:\n    P.append((a,b,c));P.append((d,ee,f))\nP=np.array(P);c0=P.mean(0);Q=P-c0\nu,s,vt=np.linalg.svd(Q,full_matrices=False)\ne1,e2=vt[0],vt[1]\nA=Q@e1;B=Q@e2\nS=16;pad=3\nbA=-B\namin,amax=A.min(),A.max();bmin,bmax=bA.min(),bA.max()\nW=int((amax-amin+2*pad)*S);H=int((bmax-bmin+2*pad)*S)\nprint('hi image',W,H)\ndef make(close_mm):\n    img=Image.new('L',(W,H),0);dr=ImageDraw.Draw(img)\n    for a,b,c,d,ee,f in segs:\n        p1=(np.array([a,b,c])-c0)@e1; q1=-(np.array([a,b,c])-c0)@e2\n        p2=(np.array([d,ee,f])-c0)@e1; q2=-(np.array([d,ee,f])-c0)@e2\n        dr.line([((p1-amin+pad)*S,(bmax-q1+pad)*S),((p2-amin+pad)*S,(bmax-q2+pad)*S)],fill=255,width=int(0.5*S))\n    if close_mm>0:\n        k=int(close_mm*S)|1\n        img=img.filter(ImageFilter.MaxFilter(k)).filter(ImageFilter.MinFilter(k))\n    return img\nocr=RapidOCR()\nfor close in [0.0,0.6,0.9,1.2]:\n    img=make(close); img.save(f'/workspace/hi_{close}.png')\n    inv=ImageOps.invert(img)\n    res,_=ocr(np.array(inv.convert('RGB')))\n    print('close',close)\n    if res:\n        for box,text,score in res: print('   ',repr(text),round(float(score),3))\n    else: print('    none')\nPY",
+   "sandbox": [
+    {
+     "at_ms": 508793,
+     "dur_ms": 4941,
+     "exit": 0,
+     "cpu_ms": 5556.4,
+     "phases_us": {
+      "acquire": 81,
+      "resume": 21994,
+      "mount": 19305,
+      "run": 4882117,
+      "destroy": 36663
+     },
+     "cold": null,
+     "vm": "vm-282"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 513746,
+   "dur_ms": 6742
+  },
+  {
+   "kind": "tool",
+   "at_ms": 520488,
+   "dur_ms": 17139,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "pip install --quiet pillow numpy >/dev/null 2>&1\npython3 - <<'PY'\nfrom PIL import Image\nimport numpy as np\nbits={(0,0):1,(0,1):2,(0,2):4,(0,3):64,(1,0):8,(1,1):16,(1,2):32,(1,3):128}\ndef braille(arr,x0,x1,y0,y1):\n    rows=[]\n    for by in range(y0,y1,4):\n        line=[]\n        for bx in range(x0,x1,2):\n            code=0\n            for dx in range(2):\n                for dy in range(4):\n                    x=bx+dx;y=by+dy\n                    if 0<=x<arr.shape[1] and 0<=y<arr.shape[0] and arr[y,x]>0: code|=bits[(dx,dy)]\n            line.append(chr(0x2800+code) if code else ' ')\n        rows.append(''.join(line).rstrip())\n    return rows\nim=Image.open('/workspace/hi_0.6.png').convert('L');a=np.array(im)>60\nys,xs=np.nonzero(a);print('ink x',xs.min(),xs.max(),'y',ys.min(),ys.max())\nx0,x1=xs.min(),xs.max();y0,y1=ys.min(),ys.max()\nprint('=== FIRST 30mm ===')\nfor l in braille(a,max(0,x0-10),min(a.shape[1],x0+480),max(0,y0-8),min(a.shape[0],y1+8)):print(l)\nprint('=== LAST 26mm ===')\nfor l in braille(a,max(0,x1-416),min(a.shape[1],x1+10),max(0,y0-8),min(a.shape[0],y1+8)):print(l)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 523799,
+     "dur_ms": 13817,
+     "exit": 0,
+     "cpu_ms": 5800.3,
+     "phases_us": {
+      "acquire": 65,
+      "resume": 22004,
+      "mount": 19210,
+      "run": 13746524,
+      "destroy": 48562
+     },
+     "cold": null,
+     "vm": "vm-289"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 537627,
+   "dur_ms": 6153
+  },
+  {
+   "kind": "tool",
+   "at_ms": 543780,
+   "dur_ms": 6256,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "pip install --quiet pillow numpy >/dev/null 2>&1\npython3 - <<'PY'\nfrom PIL import Image\nimport numpy as np\nbits={(0,0):1,(0,1):2,(0,2):4,(0,3):64,(1,0):8,(1,1):16,(1,2):32,(1,3):128}\ndef braille(arr,x0,x1,y0,y1):\n    rows=[]\n    for by in range(y0,y1,4):\n        line=[]\n        for bx in range(x0,x1,2):\n            code=0\n            for dx in range(2):\n                for dy in range(4):\n                    x=bx+dx;y=by+dy\n                    if 0<=x<arr.shape[1] and 0<=y<arr.shape[0] and arr[y,x]>0: code|=bits[(dx,dy)]\n            line.append(chr(0x2800+code) if code else ' ')\n        rows.append(''.join(line).rstrip())\n    return rows\nfor fn in ['hi_0.0.png','hi_0.6.png']:\n    im=Image.open('/workspace/'+fn).convert('L');a=np.array(im)>60\n    ys,xs=np.nonzero(a)\n    print('#########',fn,'ink',xs.min(),xs.max(),ys.min(),ys.max())\n    print('--- opening bracket region x430-640 ---')\n    for l in braille(a,430,640,30,260):print(l)\n    print('--- closing bracket region x2570-2760 ---')\n    for l in braille(a,2570,2760,30,260):print(l)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 544460,
+     "dur_ms": 5557,
+     "exit": 0,
+     "cpu_ms": 5565.1,
+     "phases_us": {
+      "acquire": 17,
+      "resume": 21775,
+      "mount": 19181,
+      "run": 5484179,
+      "destroy": 50382
+     },
+     "cold": null,
+     "vm": "vm-301"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 550036,
+   "dur_ms": 9278
+  },
+  {
+   "kind": "tool",
+   "at_ms": 559314,
+   "dur_ms": 5600,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "pip install --quiet pillow numpy >/dev/null 2>&1\npython3 - <<'PY'\nfrom PIL import Image\nimport numpy as np\nim=Image.open('/workspace/hi_0.6.png').convert('L');a=np.array(im)>60\ncol=a.sum(0)\nxs=np.nonzero(col)[0]\n# find gaps\nsegs=[];start=xs[0];prev=xs[0]\nfor x in xs[1:]:\n    if x>prev+1:\n        segs.append((start,prev));start=x\n    prev=x\nsegs.append((start,prev))\nprint('ink x range',xs[0],xs[-1],'S=16px/mm')\nfor i,(s,e) in enumerate(segs):\n    print(i,'px',s,e,'w',e-s+1,'mm',round((s-45)/16,2),round((e-45)/16,2))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 559367,
+     "dur_ms": 5522,
+     "exit": 0,
+     "cpu_ms": 5244.4,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 24340,
+      "mount": 21577,
+      "run": 5448526,
+      "destroy": 48615
+     },
+     "cold": null,
+     "vm": "vm-307"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 564914,
+   "dur_ms": 7455
+  },
+  {
+   "kind": "tool",
+   "at_ms": 572369,
+   "dur_ms": 5255,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "pip install --quiet pillow numpy >/dev/null 2>&1\npython3 - <<'PY'\nfrom PIL import Image\nimport numpy as np\nim=Image.open('/workspace/hi_0.6.png').convert('L');a=np.array(im)>60\ncol=a.sum(0);xs=np.nonzero(col)[0]\nsegs=[];start=xs[0];prev=xs[0]\nfor x in xs[1:]:\n    if x>prev+1: segs.append((start,prev));start=x\n    prev=x\nsegs.append((start,prev))\nprint('baseline info: overall y')\nys=np.nonzero(a.sum(1))[0];print('y range',ys.min(),ys.max(),'height px',ys.max()-ys.min())\nfor i,(s,e) in enumerate(segs):\n    sub=a[:,s:e+1];yy=np.nonzero(sub.sum(1))[0]\n    yy0,yy1=yy.min(),yy.max()\n    # fraction ink in top/mid/bottom thirds of overall text height\n    top=sub[: (ys.min()+ (ys.max()-ys.min())//3),:].sum()\n    mid=sub[(ys.min()+(ys.max()-ys.min())//3):(ys.min()+2*(ys.max()-ys.min())//3),:].sum()\n    bot=sub[(ys.min()+2*(ys.max()-ys.min())//3):,:].sum()\n    print(f'{i:2d} x{s:4d}-{e:4d} w{e-s+1:3d} mmx{(s-45)/16:6.2f}-{(e-45)/16:6.2f} y{yy0:3d}-{yy1:3d} ink top/mid/bot {top:5d}/{mid:5d}/{bot:5d}')\nPY",
+   "sandbox": [
+    {
+     "at_ms": 572424,
+     "dur_ms": 5167,
+     "exit": 0,
+     "cpu_ms": 5148.1,
+     "phases_us": {
+      "acquire": 21,
+      "resume": 22072,
+      "mount": 19734,
+      "run": 5103952,
+      "destroy": 41153
+     },
+     "cold": null,
+     "vm": "vm-314"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 577624,
+   "dur_ms": 13921
+  },
+  {
+   "kind": "tool",
+   "at_ms": 591545,
+   "dur_ms": 5758,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "pip install --quiet pillow numpy >/dev/null 2>&1\npython3 - <<'PY'\nfrom PIL import Image\nimport numpy as np\ndef show(fn,x0,x1,y0,y1,step=3):\n    a=np.array(Image.open('/workspace/'+fn).convert('L'))>60\n    print(f'--- {fn} x{x0}-{x1} y{y0}-{y1} ---')\n    for y in range(y0,y1,step):\n        band=a[y:y+step,x0:x1]\n        row=''.join('#' if band[:,i].any() else ' ' for i in range(x1-x0))\n        print(row.rstrip())\nfor fn in ['hi_0.0.png','hi_0.6.png']:\n    show(fn,370,445,42,243,3)\n    show(fn,2665,2745,42,247,3)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 591601,
+     "dur_ms": 5672,
+     "exit": 0,
+     "cpu_ms": 5479.5,
+     "phases_us": {
+      "acquire": 60,
+      "resume": 25972,
+      "mount": 22670,
+      "run": 5607177,
+      "destroy": 39135
+     },
+     "cold": null,
+     "vm": "vm-319"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 597303,
+   "dur_ms": 39666
+  },
+  {
+   "kind": "tool",
+   "at_ms": 636969,
+   "dur_ms": 5395,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "pip install --quiet pillow numpy >/dev/null 2>&1\npython3 - <<'PY'\nfrom PIL import Image\nimport numpy as np\na=np.array(Image.open('/workspace/hi_0.0.png').convert('L'))>60\ndef show(name,x0,x1,y0=40,y1=250,step=4):\n    print(f'==== {name} x{x0}-{x1} ====')\n    for y in range(y0,y1,step):\n        band=a[y:y+step,x0:x1]\n        print(''.join('#' if band[:,i].any() else '.' for i in range(x1-x0)))\nshow('seg7 candidate 0/O',672,774)\nshow('seg11 candidate i/1',1141,1161)\nshow('seg9 digit 3',903,1005)\nshow('seg17 digit 4',1511,1602)\nshow('seg22 G',2202,2340)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 637028,
+     "dur_ms": 5300,
+     "exit": 0,
+     "cpu_ms": 5208.5,
+     "phases_us": {
+      "acquire": 143,
+      "resume": 25693,
+      "mount": 22278,
+      "run": 5235045,
+      "destroy": 39071
+     },
+     "cold": null,
+     "vm": "vm-328"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 642364,
+   "dur_ms": 15395
+  },
+  {
+   "kind": "tool",
+   "at_ms": 657759,
+   "dur_ms": 282,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "find / -iname '*.ttf' -o -iname '*.otf' 2>/dev/null | head -30",
+   "sandbox": [
+    {
+     "at_ms": 657815,
+     "dur_ms": 218,
+     "exit": 0,
+     "cpu_ms": 258.8,
+     "phases_us": {
+      "acquire": 82,
+      "resume": 25078,
+      "mount": 21510,
+      "run": 176083,
+      "destroy": 16909
+     },
+     "cold": null,
+     "vm": "vm-331"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 658041,
+   "dur_ms": 29767
+  },
+  {
+   "kind": "tool",
+   "at_ms": 687808,
+   "dur_ms": 136,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "grep -n 'G92' /workspace/text.gcode | sed 's/^[0-9]*://' | sort | uniq -c | head -20\necho '--- non E G92 ---'\ngrep -nE 'G92.*[XYZ]' /workspace/text.gcode | head\necho '--- M206/M428/M218 etc ---'\ngrep -nE '^(M206|M428|M218|M221|M220|G10|G11|M600)' /workspace/text.gcode | head",
+   "sandbox": [
+    {
+     "at_ms": 687863,
+     "dur_ms": 58,
+     "exit": 0,
+     "cpu_ms": 65.1,
+     "phases_us": {
+      "acquire": 87,
+      "resume": 24476,
+      "mount": 21171,
+      "run": 18403,
+      "destroy": 15066
+     },
+     "cold": null,
+     "vm": "vm-332"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 687944,
+   "dur_ms": 22806
+  },
+  {
+   "kind": "tool",
+   "at_ms": 710750,
+   "dur_ms": 134,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -ld /app 2>/dev/null || echo 'no /app'\nls -ld /workspace",
+   "sandbox": [
+    {
+     "at_ms": 710807,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 45.3,
+     "phases_us": {
+      "acquire": 116,
+      "resume": 25668,
+      "mount": 22083,
+      "run": 5817,
+      "destroy": 24463
+     },
+     "cold": null,
+     "vm": "vm-333"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 741054,
+   "dur_ms": 1108
+  },
+  {
+   "kind": "tool",
+   "at_ms": 742162,
+   "dur_ms": 245,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put out.txt <<'EOF'\nflag{gc0d3_iz_ch4LLenGiNg}\nEOF\nsbx run <<'EOF'\ncat /app/out.txt\necho '---'\nwc -c /app/out.txt\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 742221,
+     "dur_ms": 63,
+     "exit": 0,
+     "cpu_ms": 52.3,
+     "phases_us": {
+      "acquire": 113,
+      "resume": 25582,
+      "mount": 22033,
+      "run": 8751,
+      "destroy": 28441
+     },
+     "cold": null,
+     "vm": "vm-334"
+    },
+    {
+     "at_ms": 742331,
+     "dur_ms": 48,
+     "exit": 0,
+     "cpu_ms": 40.7,
+     "phases_us": {
+      "acquire": 15,
+      "resume": 23136,
+      "mount": 19448,
+      "run": 4636,
+      "destroy": 20369
+     },
+     "cold": null,
+     "vm": "vm-6"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 742407,
+   "dur_ms": 1920
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 2.875,
+ "calls": 50,
+ "cell": "TB1b",
+ "removed": [
+  {
+   "at_ms": 40457,
+   "dur_ms": 277,
+   "tool": "Bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 78456,
+   "dur_ms": 264,
+   "tool": "Bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 200419,
+   "dur_ms": 5318,
+   "tool": "Bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 207369,
+   "dur_ms": 153,
+   "tool": "Bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 316721,
+   "dur_ms": 11692,
+   "tool": "Bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 339742,
+   "dur_ms": 13362,
+   "tool": "Bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 364891,
+   "dur_ms": 11858,
+   "tool": "Bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 417634,
+   "dur_ms": 1165,
+   "tool": "Bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 455059,
+   "dur_ms": 4846,
+   "tool": "Bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  }
+ ]
+}

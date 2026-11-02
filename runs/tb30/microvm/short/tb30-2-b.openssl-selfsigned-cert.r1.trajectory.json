@@ -1,0 +1,128 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "openssl-selfsigned-cert",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 17647,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 163,
+  "output": 1769,
+  "cacheRead": 39232,
+  "cacheWrite": 3776,
+  "total": 44940
+ },
+ "totals": {
+  "model_calls": 3,
+  "tool_calls": 2,
+  "model_ms": 12965,
+  "tool_ms": 4038,
+  "sandbox_ms": 974
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 544,
+   "dur_ms": 3094
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3638,
+   "dur_ms": 1301,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nset -e\nmkdir -p /app/ssl\ncd /app/ssl\n\n# 1. 2048-bit RSA private key\nopenssl genrsa -out server.key 2048\n\n# 2. Self-signed cert, 365 days, O=DevOps Team, CN=dev-internal.company.local\nopenssl req -new -x509 -key server.key -out server.crt -days 365 \\\n  -subj \"/O=DevOps Team/CN=dev-internal.company.local\" \\\n  -sha256\n\nchmod 600 server.key\n\n# 3. Combined PEM (key + cert)\ncat server.key server.crt > server.pem\nchmod 600 server.pem\n\n# 4. verification.txt\n{\n  echo \"Subject: $(openssl x509 -in server.crt -noout -subject)\"\n  echo \"Not Before: $(openssl x509 -in server.crt -noout -startdate | sed 's/^notBefore=//')\"\n  echo \"Not After: $(openssl x509 -in server.crt -noout -enddate | sed 's/^notAfter=//')\"\n  echo \"SHA-256 Fingerprint: $(openssl x509 -in server.crt -noout -fingerprint -sha256 | sed 's/^SHA256 Fingerprint=//')\"\n} > verification.txt\n\necho \"--- files ---\"\nls -l /app/ssl\necho \"--- verification.txt ---\"\ncat verification.txt\necho \"--- pem sanity ---\"\nopenssl x509 -in server.pem -noout -subject\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 4429,
+     "dur_ms": 470,
+     "exit": 0,
+     "cpu_ms": 480.5,
+     "phases_us": {
+      "acquire": 56,
+      "resume": 20826,
+      "mount": 18135,
+      "run": 425213,
+      "destroy": 24119
+     },
+     "cold": null,
+     "vm": "vm-8"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 4939,
+   "dur_ms": 6775
+  },
+  {
+   "kind": "tool",
+   "at_ms": 11714,
+   "dur_ms": 2737,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nset -e\ncd /app/ssl\n{\n  echo \"Subject: $(openssl x509 -in server.crt -noout -subject | sed 's/^subject=//')\"\n  echo \"Not Before: $(openssl x509 -in server.crt -noout -startdate | sed 's/^notBefore=//')\"\n  echo \"Not After: $(openssl x509 -in server.crt -noout -enddate | sed 's/^notAfter=//')\"\n  echo \"SHA-256 Fingerprint: $(openssl x509 -in server.crt -noout -fingerprint -sha256 | sed 's/^.*Fingerprint=//')\"\n} > verification.txt\ncat verification.txt\nEOF\n\nsbx put check_cert.py <<'PYEOF'\n#!/usr/bin/env python3\n\"\"\"Verify the self-signed development certificate.\"\"\"\n\nimport ssl\nimport sys\nfrom datetime import datetime\nfrom pathlib import Path\n\nCERT_PATH = Path(\"/app/ssl/server.crt\")\n\n\ndef main() -> int:\n    if not CERT_PATH.exists():\n        print(f\"ERROR: certificate not found at {CERT_PATH}\", file=sys.stderr)\n        return 1\n\n    try:\n        with CERT_PATH.open(\"rb\") as f:\n            pem_data = f.read()\n        # Raises SSLError if the certificate cannot be parsed.\n        der_data = ssl.PEM_cert_to_DER_cert(pem_data.decode(\"ascii\"))\n        if not der_data:\n            raise ValueError(\"certificate data is empty\")\n        details = ssl._ssl._test_decode_cert(str(CERT_PATH))\n    except (ssl.SSLError, ValueError, UnicodeDecodeError) as exc:\n        print(f\"ERROR: unable to load certificate: {exc}\", file=sys.stderr)\n        return 1\n\n    common_name = None\n    for rdn in details.get(\"subject\", ()):\n        for key, value in rdn:\n            if key == \"commonName\":\n                common_name = value\n\n    not_after = details.get(\"notAfter\")\n    expiry = datetime.strptime(not_after, \"%b %d %H:%M:%S %Y %Z\").date()\n\n    today = datetime.now().date()\n    if expiry < today:\n        print(f\"ERROR: certificate expired on {expiry.isoformat()}\", file=sys.stderr)\n        return 1\n\n    print(f\"Common Name: {common_name}\")\n    print(f\"Expiration Date: {expiry.isoformat()}\")\n    print(\"Certificate verification successful\")\n    return 0\n\n\nif __name__ == \"__main__\":\n    sys.exit(main())\nPYEOF\n\nsbx run <<'EOF'\nset -e\nchmod +x /app/check_cert.py\npython3 /app/check_cert.py\necho \"--- perms ---\"\nls -l /app/ssl /app/check_cert.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 13829,
+     "dur_ms": 178,
+     "exit": 0,
+     "cpu_ms": 184.6,
+     "phases_us": {
+      "acquire": 59,
+      "resume": 20663,
+      "mount": 18149,
+      "run": 130062,
+      "destroy": 27327
+     },
+     "cold": null,
+     "vm": "vm-14"
+    },
+    {
+     "at_ms": 14066,
+     "dur_ms": 57,
+     "exit": 0,
+     "cpu_ms": 43.5,
+     "phases_us": {
+      "acquire": 15,
+      "resume": 20621,
+      "mount": 17776,
+      "run": 7152,
+      "destroy": 29424
+     },
+     "cold": null,
+     "vm": "vm-5"
+    },
+    {
+     "at_ms": 14170,
+     "dur_ms": 269,
+     "exit": 0,
+     "cpu_ms": 238.9,
+     "phases_us": {
+      "acquire": 21460,
+      "resume": 19805,
+      "mount": 18099,
+      "run": 197690,
+      "destroy": 29533
+     },
+     "cold": "exhausted",
+     "vm": "vm-19"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 14451,
+   "dur_ms": 3096
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.232,
+ "calls": 2,
+ "cell": "TB1b"
+}

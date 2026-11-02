@@ -1,0 +1,115 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "db-wal-recovery",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 10809,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 4340,
+  "output": 1015,
+  "cacheRead": 45696,
+  "cacheWrite": 0,
+  "total": 51051
+ },
+ "totals": {
+  "model_calls": 5,
+  "tool_calls": 4,
+  "model_ms": 8560,
+  "tool_ms": 259,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 107,
+   "dur_ms": 3423,
+   "tokens_in": 46,
+   "tokens_out": 52,
+   "cache_read": 7168,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3530,
+   "dur_ms": 95,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app && file /app/* 2>/dev/null"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3681,
+   "dur_ms": 655,
+   "tokens_in": 166,
+   "tokens_out": 68,
+   "cache_read": 7232,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4336,
+   "dur_ms": 20,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && xxd main.db | head -40 && echo \"---WAL---\" && xxd main.db-wal | head -60"
+  },
+  {
+   "kind": "model",
+   "at_ms": 4384,
+   "dur_ms": 3967,
+   "tokens_in": 3634,
+   "tokens_out": 150,
+   "cache_read": 7424,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 8351,
+   "dur_ms": 87,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && cp main.db-wal /tmp/main.db-wal.orig && python3 -c \"\np='/app/main.db-wal'\nb=bytearray(open(p,'rb').read())\nfor i in range(len(b)): b[i]^=0x42\nopen(p,'wb').write(b)\n\" && xxd main.db-wal | head -6 && sqlite3 main.db \"PRAGMA integrity_check; SELECT * FROM sqlite_master; SELECT count(*) FROM items;\" 2>&1 || true"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 10067,
+   "dur_ms": 57,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && sqlite3 -json main.db \"SELECT id,name,value FROM items ORDER BY id;\" > recovered.json && cat recovered.json && python3 -m json.tool recovered.json > /dev/null && echo VALID"
+  },
+  {
+   "kind": "model",
+   "at_ms": 10073,
+   "dur_ms": 0,
+   "tokens_in": 269,
+   "tokens_out": 85,
+   "cache_read": 11776,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "model",
+   "at_ms": 10143,
+   "dur_ms": 515,
+   "tokens_in": 225,
+   "tokens_out": 43,
+   "cache_read": 12096,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.096,
+ "calls": 4,
+ "cell": "TB1c"
+}

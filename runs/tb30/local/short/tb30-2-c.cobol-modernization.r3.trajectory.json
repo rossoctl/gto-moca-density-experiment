@@ -1,0 +1,455 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "cobol-modernization",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 154048,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 25311,
+  "output": 20898,
+  "cacheRead": 603904,
+  "cacheWrite": 0,
+  "total": 650113
+ },
+ "totals": {
+  "model_calls": 23,
+  "tool_calls": 23,
+  "model_ms": 129105,
+  "tool_ms": 23960,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 106,
+   "dur_ms": 3367,
+   "tokens_in": 55,
+   "tokens_out": 92,
+   "cache_read": 7296,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3473,
+   "dur_ms": 162,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app /app/src /app/data && file /app/data/* /app/src/*"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3650,
+   "dur_ms": 21,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/src/program.cbl"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 3704,
+   "dur_ms": 872,
+   "tokens_in": 2231,
+   "tokens_out": 89,
+   "cache_read": 7424,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4576,
+   "dur_ms": 31,
+   "tool": "bash",
+   "is_error": false,
+   "command": "for f in /app/data/*.DAT /app/src/INPUT.DAT; do echo \"== $f\"; od -c \"$f\"; done; which cobc gnucobol 2>/dev/null; cat /app/opencode.json"
+  },
+  {
+   "kind": "model",
+   "at_ms": 4630,
+   "dur_ms": 4538,
+   "tokens_in": 635,
+   "tokens_out": 113,
+   "cache_read": 9728,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 9168,
+   "dur_ms": 1495,
+   "tool": "bash",
+   "is_error": false,
+   "command": "mkdir -p /tmp/cobtest && cp -r /app/src /app/data /tmp/cobtest/ && cd /tmp/cobtest && cobc -x -o program src/program.cbl && ./program; echo \"exit=$?\"; for f in data/*.DAT; do echo \"== $f\"; od -c \"$f\"; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 10686,
+   "dur_ms": 1089,
+   "tokens_in": 540,
+   "tokens_out": 89,
+   "cache_read": 11200,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 11775,
+   "dur_ms": 26,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp/cobtest && printf 'U001U002B0010000000150' > src/INPUT.DAT && ./program; for f in data/*.DAT; do echo \"== $f\"; od -c \"$f\"; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 11827,
+   "dur_ms": 6227,
+   "tokens_in": 594,
+   "tokens_out": 236,
+   "cache_read": 11840,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 18054,
+   "dur_ms": 178,
+   "tool": "bash",
+   "is_error": false,
+   "command": "rm -rf /tmp/cobtest2 && mkdir -p /tmp/cobtest2 && cp -r /app/src /tmp/cobtest2/ && mkdir /tmp/cobtest2/data && cd /tmp/cobtest2 && printf 'U001%020s%010d' 'John Doe' 100 > data/ACCOUNTS.DAT && printf 'U002%020s%010d' 'Jane Smith' 50 >> data/ACCOUNTS.DAT && printf 'B001%020sU002' 'Python Basics' > data/BOOKS.DAT && printf '' > data/TRANSACTIONS.DAT && printf 'U001U002B0010000000150' > src/INPUT.DAT && cobc -x -o program src/program.cbl && ./program; for f in data/*.DAT; do echo \"== $f\"; od -c \"$f\"; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 18262,
+   "dur_ms": 4534,
+   "tokens_in": 322,
+   "tokens_out": 373,
+   "cache_read": 13440,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 22796,
+   "dur_ms": 1073,
+   "tool": "bash",
+   "is_error": false,
+   "command": "set -e\nrun_case() {\n  bal1=$1; bal2=$2; amt=$3\n  d=/tmp/case_${bal1}_${bal2}_${amt}\n  rm -rf \"$d\"; mkdir -p \"$d/data\"; cp -r /app/src \"$d/\"\n  cd \"$d\"\n  printf 'U001%020s%010d' 'John Doe' \"$bal1\" > data/ACCOUNTS.DAT\n  printf 'U002%020s%010d' 'Jane Smith' \"$bal2\" >> data/ACCOUNTS.DAT\n  printf 'B001%020sU002' 'Python Basics' > data/BOOKS.DAT\n  : > data/TRANSACTIONS.DAT\n  printf 'U001U002B001%010d' \"$amt\" > src/INPUT.DAT\n  cobc -x -o program src/program.cbl\n  ./program >/dev/null\n  echo -n \"bal1=$bal1 bal2=$bal2 amt=$amt -> \"\n  od -An -c data/ACCOUNTS.DAT | tr -d '\\n' | sed 's/  */ /g'\n  echo\n}\nrun_case 100 50 150\nrun_case 0 0 1\nrun_case 100 50 123\nrun_case 9999999999 5 1\nrun_case 50 100 50\nrun_case 50 100 51\nrun_case 5 0 9999999999\n"
+  },
+  {
+   "kind": "model",
+   "at_ms": 23885,
+   "dur_ms": 2578,
+   "tokens_in": 637,
+   "tokens_out": 368,
+   "cache_read": 14592,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 26463,
+   "dur_ms": 750,
+   "tool": "bash",
+   "is_error": false,
+   "command": "set -e\nrun_case() {\n  bal1=$1; bal2=$2; amt=$3\n  d=/tmp/case_${bal1}_${bal2}_${amt}_b\n  rm -rf \"$d\"; mkdir -p \"$d/data\"; cp -r /app/src \"$d/\"\n  cd \"$d\"\n  printf 'U001%020s%010d' 'John Doe' \"$bal1\" > data/ACCOUNTS.DAT\n  printf 'U002%020s%010d' 'Jane Smith' \"$bal2\" >> data/ACCOUNTS.DAT\n  printf 'B001%020sU002' 'Python Basics' > data/BOOKS.DAT\n  : > data/TRANSACTIONS.DAT\n  printf 'U001U002B001%010d' \"$amt\" > src/INPUT.DAT\n  cobc -x -o program src/program.cbl\n  ./program >/dev/null\n  echo -n \"bal1=$bal1 bal2=$bal2 amt=$amt -> \"\n  od -An -c data/ACCOUNTS.DAT | tr -d '\\n' | sed 's/  */ /g'\n  echo\n}\nrun_case 50 9999999999 1\nrun_case 50 9999999999 5000000000\nrun_case 1000000000 0 2000000000\nrun_case 0 50 100\nrun_case 10 0 7000000000"
+  },
+  {
+   "kind": "model",
+   "at_ms": 27229,
+   "dur_ms": 5378,
+   "tokens_in": 461,
+   "tokens_out": 415,
+   "cache_read": 15744,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 32607,
+   "dur_ms": 963,
+   "tool": "bash",
+   "is_error": false,
+   "command": "set -e\nrun_input() {\n  hexname=$1; content=$2\n  d=/tmp/inp_$hexname\n  rm -rf \"$d\"; mkdir -p \"$d/data\"; cp -r /app/src \"$d/\"; cd \"$d\"\n  printf 'U001%020s%010d' 'A' 1000 > data/ACCOUNTS.DAT\n  printf 'U002%020s%010d' 'B' 1000 >> data/ACCOUNTS.DAT\n  printf 'B001%020sU002' 'C' > data/BOOKS.DAT\n  : > data/TRANSACTIONS.DAT\n  printf '%s' \"$content\" > src/INPUT.DAT\n  cobc -x -o program src/program.cbl\n  ./program > out.txt 2>err.txt || true\n  echo \"input='$content' len=${#content}\"; cat out.txt; cat err.txt\n  echo -n \"trans: \"; od -An -c data/TRANSACTIONS.DAT | tr -d '\\n' | sed 's/  */ /g'; echo\n  echo -n \"acct: \"; od -An -c data/ACCOUNTS.DAT | tr -d '\\n' | sed 's/  */ /g'; echo\n}\nrun_input a 'U001U002B0010000000150'\nrun_input b 'U001U002B001000000015'\nrun_input c 'U001U002B00100000001'\nrun_input d 'U001U002B001000000015000'\nrun_input e 'U001U002B001720'\nrun_input f 'U001U002B001        1'"
+  },
+  {
+   "kind": "model",
+   "at_ms": 33600,
+   "dur_ms": 3212,
+   "tokens_in": 781,
+   "tokens_out": 356,
+   "cache_read": 17152,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 36812,
+   "dur_ms": 927,
+   "tool": "bash",
+   "is_error": false,
+   "command": "set -e\nrun_input() {\n  content=$1\n  d=/tmp/inpshort_$((++n))\n  rm -rf \"$d\"; mkdir -p \"$d/data\"; cp -r /app/src \"$d/\"; cd \"$d\"\n  printf 'U001%020s%010d' 'A' 1000 > data/ACCOUNTS.DAT\n  printf 'U002%020s%010d' 'B' 1000 >> data/ACCOUNTS.DAT\n  printf 'B000%020sU002' 'C' > data/BOOKS.DAT\n  printf 'B0%022sU002' 'D' >> data/BOOKS.DAT\n  : > data/TRANSACTIONS.DAT\n  printf '%s' \"$content\" > src/INPUT.DAT\n  cobc -x -o program src/program.cbl\n  ./program > out.txt 2>err.txt || true\n  echo \"input='$content' len=${#content}\"; cat out.txt; cat err.txt\n  echo -n \"trans: \"; od -An -c data/TRANSACTIONS.DAT | tr -d '\\n' | sed 's/  */ /g'; echo\n}\nn=0\nrun_input 'U001U002B0'\nrun_input 'U001U00'\nrun_input 'U0'\nrun_input ''\nrun_input 'U001'\nrun_input 'U001U002B'\n"
+  },
+  {
+   "kind": "model",
+   "at_ms": 37754,
+   "dur_ms": 2414,
+   "tokens_in": 186,
+   "tokens_out": 337,
+   "cache_read": 18560,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 40168,
+   "dur_ms": 325,
+   "tool": "bash",
+   "is_error": false,
+   "command": "set -e\nmkrec(){ id=$(printf '%-4s' \"$1\"); title=$(printf '%-20s' \"$2\"); own=$(printf '%-4s' \"$3\"); printf '%s%s%s' \"$id\" \"$title\" \"$own\"; }\nfor variant in B000 B0sp; do\n  d=/tmp/pad_$variant; rm -rf \"$d\"; mkdir -p \"$d/data\"; cp -r /app/src \"$d/\"; cd \"$d\"\n  printf 'U001%020s%010d' 'A' 1000 > data/ACCOUNTS.DAT\n  printf 'U002%020s%010d' 'B' 1000 >> data/ACCOUNTS.DAT\n  if [ \"$variant\" = B000 ]; then mkrec 'B000' 'x' 'U002' > data/BOOKS.DAT; else mkrec 'B0  ' 'x' 'U002' > data/BOOKS.DAT; fi\n  : > data/TRANSACTIONS.DAT\n  printf 'U001U002B0' > src/INPUT.DAT\n  cobc -x -o program src/program.cbl\n  ./program > out.txt\n  echo \"$variant: $(cat out.txt | tr -d '\\n') trans=$(wc -c < data/TRANSACTIONS.DAT)\"\ndone"
+  },
+  {
+   "kind": "model",
+   "at_ms": 40508,
+   "dur_ms": 4065,
+   "tokens_in": 96,
+   "tokens_out": 369,
+   "cache_read": 19200,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 44573,
+   "dur_ms": 146,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/probe.cbl <<'EOF'\n       IDENTIFICATION DIVISION.\n       PROGRAM-ID. PROBE.\n       ENVIRONMENT DIVISION.\n       INPUT-OUTPUT SECTION.\n       FILE-CONTROL.\n           SELECT INPUT-FILE ASSIGN TO \"src/INPUT.DAT\"\n               ORGANIZATION IS SEQUENTIAL\n               ACCESS MODE IS SEQUENTIAL.\n       DATA DIVISION.\n       FILE SECTION.\n       FD INPUT-FILE.\n       01 INPUT-RECORD.\n           05 INPUT-BUYER-ID   PIC X(4).\n           05 INPUT-SELLER-ID  PIC X(4).\n           05 INPUT-BOOK-ID    PIC X(4).\n           05 INPUT-AMOUNT     PIC 9(10).\n       PROCEDURE DIVISION.\n           OPEN INPUT INPUT-FILE\n           READ INPUT-FILE\n             AT END DISPLAY \"EMPTY\"\n             NOT AT END\n               DISPLAY \"BUYER=[\" INPUT-BUYER-ID \"]\"\n               DISPLAY \"SELLER=[\" INPUT-SELLER-ID \"]\"\n               DISPLAY \"BOOK=[\" INPUT-BOOK-ID \"]\"\n               DISPLAY \"AMOUNT=[\" INPUT-AMOUNT \"]\"\n           END-READ\n           CLOSE INPUT-FILE\n           STOP RUN.\nEOF\ncd /tmp && cobc -x -o probe probe.cbl\nfor content in 'U001U002B0' 'U001U002B001720' '' 'U001U00'; do printf '%s' \"$content\" > src/INPUT.DAT; echo \"-- '$content'\"; ./probe; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 44736,
+   "dur_ms": 887,
+   "tokens_in": 305,
+   "tokens_out": 111,
+   "cache_read": 19840,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 45623,
+   "dur_ms": 41,
+   "tool": "bash",
+   "is_error": false,
+   "command": "mkdir -p /tmp/src; cd /tmp; for content in 'U001U002B0' 'U001U002B001720' 'U001U00' 'U0' 'U001U002B'; do printf '%s' \"$content\" > src/INPUT.DAT; echo \"-- '$content'\"; ./probe; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 45684,
+   "dur_ms": 10575,
+   "tokens_in": 219,
+   "tokens_out": 457,
+   "cache_read": 20224,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 56259,
+   "dur_ms": 1111,
+   "tool": "bash",
+   "is_error": false,
+   "command": "set -e\nrun_amount() {\n  label=$1; amtfield=$2; amount_display=$3\n  d=/tmp/amt_$label; rm -rf \"$d\"; mkdir -p \"$d/data\"; cp -r /app/src \"$d/\"; cd \"$d\"\n  printf 'U001%020s%010d' 'A' 1000 > data/ACCOUNTS.DAT\n  printf 'U002%020s%010d' 'B' 1000 >> data/ACCOUNTS.DAT\n  printf 'B001%020sU002' 'C' > data/BOOKS.DAT\n  : > data/TRANSACTIONS.DAT\n  printf 'U001U002B001%s' \"$amtfield\" > src/INPUT.DAT\n  cobc -x -o program src/program.cbl\n  ./program > out.txt 2>err.txt || true\n  echo \"$label amtfield='$amtfield' ($amount_display): $(tr '\\n' ' ' < out.txt) $(tr '\\n' ' ' < err.txt)\"\n  echo -n \"  trans: \"; od -An -c data/TRANSACTIONS.DAT | tr -d '\\n' | sed 's/  */ /g'; echo\n  echo -n \"  acct: \"; od -An -c data/ACCOUNTS.DAT | tr -d '\\n' | sed 's/  */ /g'; echo\n}\nrun_amount spaces1 '        10' 'spaces+10'\nrun_amount spaces2 '10        ' '10+spaces'\nrun_amount allspace '          ' 'all spaces'\nrun_amount letter '00000001A0' 'A in middle'\nrun_amount sign '0000000+10' 'plus'\nrun_amount sign2 '0000000-10' '-10'\nrun_amount NULs '720       ' 'n/a'"
+  },
+  {
+   "kind": "model",
+   "at_ms": 57387,
+   "dur_ms": 25017,
+   "tokens_in": 946,
+   "tokens_out": 1022,
+   "cache_read": 22336,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 82404,
+   "dur_ms": 47,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /app/program.py <<'PY'\n#!/usr/bin/env python3\nimport os\nimport sys\n\nBASE_DIR = os.path.dirname(os.path.abspath(__file__))\nINPUT_PATH = os.path.join(BASE_DIR, \"src\", \"INPUT.DAT\")\nACCOUNTS_PATH = os.path.join(BASE_DIR, \"data\", \"ACCOUNTS.DAT\")\nBOOKS_PATH = os.path.join(BASE_DIR, \"data\", \"BOOKS.DAT\")\nTRANSACTIONS_PATH = os.path.join(BASE_DIR, \"data\", \"TRANSACTIONS.DAT\")\n\nACCOUNT_SIZE = 34\nBOOK_SIZE = 28\nTRANSACTION_SIZE = 22\nINPUT_SIZE = 22\n\n\ndef read_records(path, size):\n    with open(path, \"rb\") as f:\n        data = f.read()\n    records = []\n    for offset in range(0, len(data), size):\n        chunk = data[offset:offset + size]\n        if len(chunk) < size:\n            chunk += b\"\\x00\" * (size - len(chunk))\n        records.append((offset, chunk))\n    return records\n\n\ndef numeric_value(raw):\n    digits = bytes(48 if (b < 48 or b > 57) else b for b in raw)\n    return int(digits.decode(\"ascii\") or \"0\")\n\n\ndef format_unsigned(value, width):\n    if value < 0:\n        value = -value\n    value %= 10 ** width\n    return str(value).zfill(width).encode(\"ascii\")\n\n\ndef main():\n    try:\n        with open(INPUT_PATH, \"rb\") as f:\n            first = f.read(INPUT_SIZE)\n    except FileNotFoundError:\n        print(\"Error: Input file is empty\")\n        return\n\n    if not first:\n        print(\"Error: Input file is empty\")\n        return\n\n    if len(first) < INPUT_SIZE:\n        first += b\"\\x00\" * (INPUT_SIZE - len(first))\n\n    buyer_id = first[0:4]\n    seller_id = first[4:8]\n    book_id = first[8:12]\n    amount = numeric_value(first[12:22])\n\n    buyer_found = False\n    seller_found = False\n    book_found = False\n    valid_owner = False\n\n    for _offset, record in read_records(ACCOUNTS_PATH, ACCOUNT_SIZE):\n        account_id = record[0:4]\n        if account_id == buyer_id:\n            buyer_found = True\n        if account_id == seller_id:\n            seller_found = True\n\n    for _offset, record in read_records(BOOKS_PATH, BOOK_SIZE):\n        if record[0:4] == book_id:\n            book_found = True\n            if record[24:28] == seller_id:\n                valid_owner = True\n\n    print(\" \")\n\n    if buyer_found and seller_found and book_found and valid_owner:\n        account_records = read_records(ACCOUNTS_PATH, ACCOUNT_SIZE)\n        with open(ACCOUNTS_PATH, \"r+b\") as f:\n            for offset, record in account_records:\n                account_id = record[0:4]\n                is_buyer = account_id == buyer_id\n                is_seller = account_id == seller_id\n                if is_buyer or is_seller:\n                    balance = numeric_value(record[24:34])\n                    if is_buyer:\n                        balance -= amount\n                    if is_seller:\n                        balance += amount\n                    updated = bytearray(record)\n                    updated[24:34] = format_unsigned(balance, 10)\n                    f.seek(offset)\n                    f.write(updated)\n\n        book_records = read_records(BOOKS_PATH, BOOK_SIZE)\n        with open(BOOKS_PATH, \"r+b\") as f:\n            for offset, record in book_records:\n                if record[0:4] == book_id:\n                    updated = bytearray(record)\n                    updated[24:28] = buyer_id\n                    f.seek(offset)\n                    f.write(updated)\n\n        transaction = (\n            book_id\n            + format_unsigned(amount, 10)\n            + seller_id\n            + buyer_id\n        )\n        with open(TRANSACTIONS_PATH, \"ab\") as f:\n            f.write(transaction)\n\n        print(\"Transaction completed successfully\")\n    else:\n        print(\"Transaction failed due to validation errors\")\n\n\nif __name__ == \"__main__\":\n    main()\nPY\nchmod +x /app/program.py\ncd /app && python3 program.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 82649,
+   "dur_ms": 8790,
+   "tokens_in": 31,
+   "tokens_out": 1418,
+   "cache_read": 27648,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 91439,
+   "dur_ms": 4130,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/difftest.py <<'PY'\nimport os, shutil, subprocess, random, sys, tempfile\n\nSRC='/app/src/program.cbl'\nPYSCRIPT='/app/program.py'\nbase=tempfile.mkdtemp(prefix='diff_')\n# compile cobol binary once\ncob_src=os.path.join(base,'program.cbl'); shutil.copy(SRC,cob_src)\nsubprocess.run(['cobc','-x','-o',os.path.join(base,'program'),cob_src],check=True)\n\ndef rec_account(aid,name,bal): return aid.encode().ljust(4)[:4]+name.encode().ljust(20)[:20]+str(bal).zfill(10).encode()\ndef rec_book(bid,title,own): return bid.encode().ljust(4)[:4]+title.encode().ljust(20)[:20]+own.encode().ljust(4)[:4]\ndef rec_trans(bid,amt,seller,buyer): return bid.encode().ljust(4)[:4]+str(amt).zfill(10).encode()+seller.encode().ljust(4)[:4]+buyer.encode().ljust(4)[:4]\n\ndef run_case(name,accounts,books,trans,inputdata, raw=False):\n    results=[]\n    for tool in ('cob','py'):\n        d=os.path.join(base,name+'_'+tool); os.makedirs(os.path.join(d,'data'))\n        os.makedirs(os.path.join(d,'src'))\n        open(os.path.join(d,'data','ACCOUNTS.DAT'),'wb').write(accounts)\n        open(os.path.join(d,'data','BOOKS.DAT'),'wb').write(books)\n        open(os.path.join(d,'data','TRANSACTIONS.DAT'),'wb').write(trans)\n        open(os.path.join(d,'src','INPUT.DAT'),'wb').write(inputdata)\n        if tool=='cob':\n            shutil.copy(os.path.join(base,'program'),os.path.join(d,'program'))\n            p=subprocess.run([os.path.join(d,'program')],cwd=d,capture_output=True)\n        else:\n            p=subprocess.run([sys.executable,PYSCRIPT],cwd=d,capture_output=True)\n        outs={f:open(os.path.join(d,'data',f),'rb').read() for f in ('ACCOUNTS.DAT','BOOKS.DAT','TRANSACTIONS.DAT')}\n        results.append((p.returncode,p.stdout,p.stderr,outs))\n    if results[0][3]!=results[1][3] or results[0][0]!=results[1][0]:\n        print('MISMATCH',name)\n        for label,r in zip(('COB','PY'),results):\n            print(label,'rc',r[0],'stdout',r[1],'stderr',r[2])\n            for k,v in r[3].items(): print(' ',k,len(v),v)\n        return False\n    return True\n\ncases=[]\n# normal random\nfor i in range(200):\n    accs=[]\n    ids=['U001','U002','U003','U004']\n    for j,aid in enumerate(ids):\n        accs.append(rec_account(aid,f'Name{j}',random.randrange(0,10**10)))\n    books=[]\n    bids=['B001','B002','B003']\n    for j,bid in enumerate(bids):\n        books.append(rec_book(bid,f'Title{j}',random.choice(ids)))\n    trans=b''.join(rec_trans(random.choice(bids),random.randrange(0,10**10),random.choice(ids),random.choice(ids)) for _ in range(random.randrange(0,5)))\n    buyer=random.choice(ids+['U999']); seller=random.choice(ids+['U999']); book=random.choice(bids+['B999'])\n    amt=random.randrange(0,10**10)\n    inp=f'{buyer}{seller}{book}{amt:010d}'.encode()\n    cases.append((f'r{i}',b''.join(accs),b''.join(books),trans,inp))\n# duplicates, spaces in numeric, short input, empty input, spaces\naccs=rec_account('U001','A',100)+rec_account('U001','B',5)+rec_account('U002','C',7)+rec_account('U002','D',9)\nbooks=rec_book('B001','X','U002')+rec_book('B001','Y','U001')+rec_book('B001','Z','U002')\ncases.append(('dups',accs,books,b'',b'U001U002B001'+(150).to_bytes(2,'big').rjust(10,b'0')))\ncases.append(('shortin',accs,books,b'',b'U001U002B001000000015'))\ncases.append(('shortin2',accs,books,b'',b'U001U002B001720'))\ncases.append(('emptyin',accs,books,b'',b''))\ncases.append(('spacesin',accs,books,b'',b'U001U002B001        10'))\ncases.append(('trailspacesin',accs,books,b'',b'U001U002B00110        '))\ncases.append(('sameuser',rec_account('U001','A',1000),rec_book('B001','X','U001'),b'',b'U001U001B0010000000100'))\ncases.append(('shortfile',rec_account('U001','A',100)+b'U002XX',rec_book('B001','X','U002')+b'B002YY',b'',b'U001U002B0010000000150'))\ncases.append(('shorttrans',rec_account('U001','A',100)+rec_account('U002','B',100),rec_book('B001','X','U002'),b'B002'+b'123',b'U001U002B0010000000150'))\n\nok=True\nfor c in cases:\n    if not run_case(*c): ok=False\n\nprint('OK' if ok else 'FAIL')\nPY\npython3 /tmp/difftest.py",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 95586,
+   "dur_ms": 10678,
+   "tokens_in": 9080,
+   "tokens_out": 246,
+   "cache_read": 29184,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 106264,
+   "dur_ms": 4161,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\np='/tmp/difftest.py'\ns=open(p).read()\ns=s.replace(\"            p=subprocess.run([sys.executable,PYSCRIPT],cwd=d,capture_output=True)\",\"            shutil.copy(PYSCRIPT,os.path.join(d,'program.py'))\\n            p=subprocess.run([sys.executable,os.path.join(d,'program.py')],cwd=d,capture_output=True)\")\ns=s.replace(\"cases.append(('dups',accs,books,b'',b'U001U002B001'+(150).to_bytes(2,'big').rjust(10,b'0')))\",\"cases.append(('dups',accs,books,b'',b'U001U002B001'+b'0000000150'))\")\nopen(p,'w').write(s)\nPY\npython3 /tmp/difftest.py",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 110452,
+   "dur_ms": 15371,
+   "tokens_in": 2643,
+   "tokens_out": 336,
+   "cache_read": 39936,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 125823,
+   "dur_ms": 4079,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\np='/app/program.py'\ns=open(p).read()\nold='''                if is_buyer or is_seller:\n                    balance = numeric_value(record[24:34])\n                    if is_buyer:\n                        balance -= amount\n                    if is_seller:\n                        balance += amount\n                    updated = bytearray(record)\n                    updated[24:34] = format_unsigned(balance, 10)\n                    f.seek(offset)\n                    f.write(updated)\n'''\nnew='''                if is_buyer or is_seller:\n                    balance = numeric_value(record[24:34])\n                    if is_buyer:\n                        balance -= amount\n                    if is_seller and buyer_id == seller_id:\n                        updated = bytearray(record)\n                        updated[24:34] = format_unsigned(balance, 10)\n                        f.seek(offset)\n                        f.write(updated)\n                        return\n                    if is_seller:\n                        balance += amount\n                    updated = bytearray(record)\n                    updated[24:34] = format_unsigned(balance, 10)\n                    f.seek(offset)\n                    f.write(updated)\n'''\nassert old in s\ns=s.replace(old,new)\nopen(p,'w').write(s)\nPY\npython3 /tmp/difftest.py",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 129921,
+   "dur_ms": 3328,
+   "tokens_in": 3411,
+   "tokens_out": 144,
+   "cache_read": 45184,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 133249,
+   "dur_ms": 4099,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\np='/tmp/difftest.py'\ns=open(p).read()\ns=s.replace(\"    if results[0][3]!=results[1][3] or results[0][0]!=results[1][0]:\",\"    if results[0][3]!=results[1][3]:\")\nopen(p,'w').write(s)\nPY\npython3 /tmp/difftest.py",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 137364,
+   "dur_ms": 8293,
+   "tokens_in": 301,
+   "tokens_out": 80,
+   "cache_read": 48960,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 145657,
+   "dur_ms": 90,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -l /app/data /app/src /app/program.py; od -c /app/src/INPUT.DAT; cd /app && python3 -m py_compile program.py && echo PY_OK"
+  },
+  {
+   "kind": "model",
+   "at_ms": 145777,
+   "dur_ms": 1649,
+   "tokens_in": 241,
+   "tokens_out": 53,
+   "cache_read": 50304,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 147426,
+   "dur_ms": 20,
+   "tool": "bash",
+   "is_error": false,
+   "command": "rm -rf /app/__pycache__ && ls -la /app"
+  },
+  {
+   "kind": "model",
+   "at_ms": 147488,
+   "dur_ms": 1140,
+   "tokens_in": 174,
+   "tokens_out": 43,
+   "cache_read": 50624,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 148628,
+   "dur_ms": 18,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/program.py"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 148689,
+   "dur_ms": 3980,
+   "tokens_in": 1381,
+   "tokens_out": 119,
+   "cache_read": 50816,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 152669,
+   "dur_ms": 67,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\np='/app/program.py'\ns=open(p).read().replace('import os\\nimport sys\\n','import os\\n')\ns=s.replace('TRANSACTION_SIZE = 22\\n','')\nopen(p,'w').write(s)\nPY\ncd /app && python3 -m py_compile program.py && rm -rf __pycache__ && echo OK"
+  },
+  {
+   "kind": "model",
+   "at_ms": 152752,
+   "dur_ms": 1123,
+   "tokens_in": 41,
+   "tokens_out": 71,
+   "cache_read": 52672,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.998,
+ "calls": 23,
+ "cell": "TB1c"
+}

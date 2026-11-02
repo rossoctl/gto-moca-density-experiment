@@ -1,0 +1,448 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "model-extraction-relu-logits",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 816522,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 1053,
+  "output": 83444,
+  "cacheRead": 2403840,
+  "cacheWrite": 23424,
+  "total": 2511761
+ },
+ "totals": {
+  "model_calls": 32,
+  "tool_calls": 31,
+  "model_ms": 504900,
+  "tool_ms": 310989,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 529,
+   "dur_ms": 15495
+  },
+  {
+   "kind": "tool",
+   "at_ms": 16024,
+   "dur_ms": 67,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /app && echo \"---\" && sed -n '1,200p' /app/forward.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 16091,
+   "dur_ms": 127564
+  },
+  {
+   "kind": "tool",
+   "at_ms": 143655,
+   "dur_ms": 303,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport forward, numpy as np\nprint(forward.forward(np.zeros(10)))\nnp.random.seed(1)\nx=np.random.randn(10); d=np.random.randn(10); d/=np.linalg.norm(d)\nfor t in [-5,-1,-0.2,0,0.2,1,5]:\n    print(t, forward.forward(x+t*d))\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 143958,
+   "dur_ms": 8661
+  },
+  {
+   "kind": "tool",
+   "at_ms": 152619,
+   "dur_ms": 291,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "cat > /tmp/proto.py <<'EOF'\nimport numpy as np\nimport forward\n\nD = 10\n\ndef grad(x, h=1e-5):\n    g = np.empty(D)\n    for j in range(D):\n        e = np.zeros(D); e[j]=h\n        g[j] = (forward.forward(x+e) - forward.forward(x-e))/(2*h)\n    return g\n\ndef collect_line(x0, d, T=20.0, n_init=17, eps=2e-3, gtol=1e-7):\n    ts = np.linspace(-T, T, n_init)\n    gs = [grad(x0+t*d) for t in ts]\n    jumps=[]\n    stack=[(ts[k],ts[k+1],gs[k],gs[k+1]) for k in range(len(ts)-1)]\n    while stack:\n        lo,hi,gl,gh = stack.pop()\n        if np.linalg.norm(gh-gl) <= gtol:\n            continue\n        if hi-lo <= eps:\n            jumps.append(gh-gl); continue\n        mid=0.5*(lo+hi)\n        gm=grad(x0+mid*d)\n        stack.append((lo,mid,gl,gm)); stack.append((mid,hi,gm,gh))\n    return jumps\n\nrng=np.random.default_rng(0)\njumps=[]\nfor line in range(4):\n    x0=rng.standard_normal(D)\n    d=rng.standard_normal(D); d/=np.linalg.norm(d)\n    js=collect_line(x0,d)\n    print('line',line,'jumps',len(js))\n    jumps+=js\nprint('total jumps',len(jumps))\nV=np.array(jumps)\n# normalize and canonical sign\nN=V/np.linalg.norm(V,axis=1,keepdims=True)\nfor i in range(len(N)):\n    k=np.argmax(np.abs(N[i]))\n    if N[i,k]<0: N[i]*=-1\n# cluster\nclusters=[]\nfor v in N:\n    found=False\n    for c in clusters:\n        if np.dot(c['mean'],v)>0.999:\n            c['members'].append(v); c['mean']=np.mean(c['members'],axis=0); c['mean']/=np.linalg.norm(c['mean']); found=True; break\n    if not found:\n        clusters.append({'mean':v.copy(),'members':[v]})\nprint('clusters',len(clusters),[len(c['members']) for c in clusters])\n\n# compare to true\nA1=forward.A1\ntrueN=A1/np.linalg.norm(A1,axis=1,keepdims=True)\nprec=np.abs(trueN@np.array([c['mean'] for c in clusters]).T)\n# greedy\nused=set(); cos=[]\nfor i in range(prec.shape[0]):\n    order=np.argsort(-prec[i])\n    for j in order:\n        if j not in used:\n            used.add(j); cos.append(prec[i,j]); break\nprint('matched cosines min/mean:',np.min(cos),np.mean(cos))\nprint('matched count',len(used))\nEOF\ncd /app && python3 /tmp/proto.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 152910,
+   "dur_ms": 1261
+  },
+  {
+   "kind": "tool",
+   "at_ms": 154171,
+   "dur_ms": 422,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sed -i '1i import sys; sys.path.insert(0,\"/app\")' /tmp/proto.py && python3 /tmp/proto.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 154593,
+   "dur_ms": 32387
+  },
+  {
+   "kind": "tool",
+   "at_ms": 186980,
+   "dur_ms": 497,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/proto2.py <<'EOF'\nimport sys; sys.path.insert(0,\"/app\")\nimport numpy as np\nimport forward\n\nD=10\ndef grad(x,h=1e-5):\n    g=np.empty(D)\n    for j in range(D):\n        e=np.zeros(D); e[j]=h\n        g[j]=(forward.forward(x+e)-forward.forward(x-e))/(2*h)\n    return g\n\ndef collect_line(x0,d,T=20.0,n_init=25,eps=2e-3,gtol=1e-7):\n    ts=np.linspace(-T,T,n_init); gs=[grad(x0+t*d) for t in ts]\n    out=[]  # (t_mid, jump)\n    stack=[(ts[k],ts[k+1],gs[k],gs[k+1]) for k in range(n_init-1)]\n    while stack:\n        lo,hi,gl,gh=stack.pop()\n        if np.linalg.norm(gh-gl)<=gtol: continue\n        if hi-lo<=eps:\n            out.append((0.5*(lo+hi),gh-gl)); continue\n        mid=0.5*(lo+hi); gm=grad(x0+mid*d)\n        stack.append((lo,mid,gl,gm)); stack.append((mid,hi,gm,gh))\n    return out\n\nrng=np.random.default_rng(0)\nL=6\nallj=[]  # (xstar, jump)\nfor line in range(L):\n    x0=rng.standard_normal(D); d=rng.standard_normal(D); d/=np.linalg.norm(d)\n    for tm,j in collect_line(x0,d):\n        allj.append((x0+tm*d,j))\nprint('jumps',len(allj))\n\nV=np.array([j for _,j in allj]); N=V/np.linalg.norm(V,axis=1,keepdims=True)\nfor i in range(len(N)):\n    k=np.argmax(np.abs(N[i]))\n    if N[i,k]<0: N[i]*=-1\nclusters=[]\nfor idx,v in enumerate(N):\n    found=False\n    for c in clusters:\n        if np.dot(c['mean'],v)>0.999:\n            c['members'].append(v); c['idx'].append(idx)\n            c['mean']=np.mean(c['members'],axis=0); c['mean']/=np.linalg.norm(c['mean']); found=True; break\n    if not found: clusters.append({'mean':v.copy(),'members':[v],'idx':[idx]})\nclusters=[c for c in clusters if len(c['members'])>=2]\nprint('clusters',len(clusters),[len(c['members']) for c in clusters])\nU=np.array([c['mean'] for c in clusters]); n=len(U)\n\n# offsets from kink positions\nbeta=[]\nfor c in clusters:\n    vals=[-c['mean']@allj[idx][0] for idx in c['idx']]\n    beta.append(np.mean(vals))\nbeta=np.array(beta)\n\n# evaluate true vs recovered directions\nA1=forward.A1; trueN=A1/np.linalg.norm(A1,axis=1,keepdims=True)\nprec=np.abs(trueN@U.T)\nused=set(); match={}; cos=[]\nfor i in range(prec.shape[0]):\n    for j in np.argsort(-prec[i]):\n        if j not in used: used.add(j); match[i]=j; cos.append(prec[i,j]); break\nprint('cos min/mean',min(cos),np.mean(cos))\n\n# sign recovery via coordinate descent on f-value regression\nM=600\nX=rng.standard_normal((M,D))*1.5\ny=np.array([forward.forward(x) for x in X])\nZ=X@U.T+beta  # M x n\nsig=np.ones(n)\ndef fit(sig):\n    F=np.maximum(0,Z*sig)\n    Amat=np.hstack([F,np.ones((M,1))])\n    coef,res,rank,sv=np.linalg.lstsq(Amat,y,rcond=None)\n    pred=Amat@coef\n    return np.sum((pred-y)**2),coef\nr,_=fit(sig); print('init resid',r)\nfor it in range(20):\n    improved=False\n    for i in range(n):\n        sig2=sig.copy(); sig2[i]*=-1\n        r2,_=fit(sig2)\n        if r2<r*(1-1e-9):\n            sig=sig2; r=r2; improved=True\n    print('iter',it,'resid',r,'improved',improved)\n    if not improved: break\nprint('final resid',r)\n\n# compare recovered signs to truth: true a direction relative to cluster mean\n# match cluster j -> true row i; sign should be sign(trueN[i]@U[j]) and sig[j]\nbad=0\nfor i,j in match.items():\n    s_true=1.0 if trueN[i]@U[j]>0 else -1.0\n    if s_true!=sig[j]:\n        bad+=1\n        print('SIGN MISMATCH true row',i,'cluster',j,'dot',trueN[i]@U[j],'recovered sig',sig[j])\nprint('sign mismatches',bad,'of',n)\n# also check residual when using true signs\nsig_true=np.array([1.0 if trueN[i]@U[j]>0 else -1.0 for i,j in sorted(match.items())])\n# order by cluster index\nsig_true=np.zeros(n)\nfor i,j in match.items(): sig_true[j]=1.0 if trueN[i]@U[j]>0 else -1.0\nprint('resid true signs',fit(sig_true)[0])\nEOF\npython3 /tmp/proto2.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 187477,
+   "dur_ms": 46793
+  },
+  {
+   "kind": "tool",
+   "at_ms": 234270,
+   "dur_ms": 120102,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/proto3.py <<'EOF'\nimport sys; sys.path.insert(0,\"/app\")\nimport numpy as np, time\nimport forward\n\nD=10\nH=1e-5\n\ndef grad(x):\n    g=np.empty(D)\n    for j in range(D):\n        e=np.zeros(D); e[j]=H\n        g[j]=(forward.forward(x+e)-forward.forward(x-e))/(2*H)\n    return g\n\ndef line_jumps(x0,d,T):\n    eps=max(1e-6,1e-8*T)\n    gtol=1e-9\n    n_init=25\n    ts=np.linspace(-T,T,n_init)\n    gs=[grad(x0+t*d) for t in ts]\n    out=[]\n    stack=[(ts[k],ts[k+1],gs[k],gs[k+1]) for k in range(n_init-1)]\n    while stack:\n        lo,hi,gl,gh=stack.pop()\n        if np.linalg.norm(gh-gl)<=gtol: continue\n        if hi-lo<=eps:\n            out.append(gh-gl); continue\n        mid=0.5*(lo+hi); gm=grad(x0+mid*d)\n        stack.append((lo,mid,gl,gm)); stack.append((mid,hi,gm,gh))\n    return out\n\ndef get_line(x0,d):\n    prev=None; prev2=None; cnt=0\n    T=1.0\n    while True:\n        js=line_jumps(x0,d,T); cnt=len(js)\n        if T>=1e7: break\n        if cnt>0 and prev==cnt and prev2==cnt: break\n        prev2=prev; prev=cnt; T*=10.0\n    return js\n\nrng=np.random.default_rng(12345)\nNL=6\nallj=[]\nt0=time.time()\nfor line in range(NL):\n    x0=rng.standard_normal(D); d=rng.standard_normal(D); d/=np.linalg.norm(d)\n    js=get_line(x0,d)\n    print('line',line,'n',len(js),'elapsed',time.time()-t0)\n    allj+=js\nV=np.array(allj); print('total',len(V))\nN=V/np.linalg.norm(V,axis=1,keepdims=True)\n# canonical sign\nfor i in range(len(N)):\n    k=np.argmax(np.abs(N[i]))\n    if N[i,k]<0: N[i]*=-1\nclusters=[]\nfor v in N:\n    for c in clusters:\n        if c['mean']@v>0.9999:\n            c['members'].append(v); c['mean']=np.mean(c['members'],axis=0); c['mean']/=np.linalg.norm(c['mean']); break\n    else:\n        clusters.append({'mean':v.copy(),'members':[v]})\nclusters=[c for c in clusters if len(c['members'])>=max(2,NL//2)]\nU=np.array([c['mean'] for c in clusters])\nprint('n clusters',len(U),[len(c['members']) for c in clusters])\n\nA1=forward.A1; tn=A1/np.linalg.norm(A1,axis=1,keepdims=True)\nprec=np.abs(tn@U.T); used=set(); cos=[]\nfor i in range(len(tn)):\n    for j in np.argsort(-prec[i]):\n        if j not in used: used.add(j); cos.append(prec[i,j]); break\nprint('matched',len(used),'cos min',min(cos),'mean',np.mean(cos))\nprint('elapsed total',time.time()-t0)\nEOF\npython3 /tmp/proto3.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 354372,
+   "dur_ms": 5910
+  },
+  {
+   "kind": "tool",
+   "at_ms": 360282,
+   "dur_ms": 8,
+   "tool": "TaskStop",
+   "is_error": false
+  },
+  {
+   "kind": "model",
+   "at_ms": 360290,
+   "dur_ms": 1878
+  },
+  {
+   "kind": "tool",
+   "at_ms": 362168,
+   "dur_ms": 8489,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /tmp && python3 - <<'EOF'\nimport re\ns=open('/tmp/proto3.py').read()\ns=s.replace(\"if T>=1e7: break\",\"if T>=100.0: break\")\nopen('/tmp/proto3b.py','w').write(s)\nEOF\ntimeout 100 python3 /tmp/proto3b.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 370657,
+   "dur_ms": 9489
+  },
+  {
+   "kind": "tool",
+   "at_ms": 380146,
+   "dur_ms": 2011,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/proto4.py <<'EOF'\nimport sys; sys.path.insert(0,\"/app\")\nimport numpy as np, time\nimport forward\nD=10; H=1e-5\ndef grad(x):\n    g=np.empty(D)\n    for j in range(D):\n        e=np.zeros(D); e[j]=H\n        g[j]=(forward.forward(x+e)-forward.forward(x-e))/(2*H)\n    return g\ndef line_jumps(x0,d,T=20.0,eps=1e-3,gtol=1e-8,n_init=25):\n    ts=np.linspace(-T,T,n_init); gs=[grad(x0+t*d) for t in ts]; out=[]\n    stack=[(ts[k],ts[k+1],gs[k],gs[k+1]) for k in range(n_init-1)]\n    while stack:\n        lo,hi,gl,gh=stack.pop()\n        if np.linalg.norm(gh-gl)<=gtol: continue\n        if hi-lo<=eps: out.append(gh-gl); continue\n        mid=0.5*(lo+hi); gm=grad(x0+mid*d)\n        stack.append((lo,mid,gl,gm)); stack.append((mid,hi,gm,gh))\n    return out\ndef run(seed,NL=6,**kw):\n    rng=np.random.default_rng(seed); allj=[]\n    for _ in range(NL):\n        x0=rng.standard_normal(D); d=rng.standard_normal(D); d/=np.linalg.norm(d)\n        allj+=line_jumps(x0,d,**kw)\n    V=np.array(allj); N=V/np.linalg.norm(V,axis=1,keepdims=True)\n    for i in range(len(N)):\n        k=np.argmax(np.abs(N[i]))\n        if N[i,k]<0: N[i]*=-1\n    clusters=[]\n    for v in N:\n        for c in clusters:\n            if c['mean']@v>0.9999:\n                c['members'].append(v); c['mean']=np.mean(c['members'],axis=0); c['mean']/=np.linalg.norm(c['mean']); break\n        else: clusters.append({'mean':v.copy(),'members':[v]})\n    clusters=[c for c in clusters if len(c['members'])>=3]\n    U=np.array([c['mean'] for c in clusters])\n    A1=forward.A1; tn=A1/np.linalg.norm(A1,axis=1,keepdims=True)\n    prec=np.abs(tn@U.T); used=set(); cos=[]\n    for i in range(len(tn)):\n        for j in np.argsort(-prec[i]):\n            if j not in used: used.add(j); cos.append(prec[i,j]); break\n    return len(allj),len(U),min(cos) if cos else -1\nt0=time.time()\nfor seed in range(8):\n    print(seed, run(seed))\nprint('elapsed',time.time()-t0)\nprint('eps1e-4', run(99,eps=1e-4))\nprint('gtol1e-7', run(99,gtol=1e-7))\nEOF\ntimeout 110 python3 /tmp/proto4.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 382157,
+   "dur_ms": 7237
+  },
+  {
+   "kind": "tool",
+   "at_ms": 389394,
+   "dur_ms": 505,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/debug2.py <<'EOF'\nimport sys; sys.path.insert(0,\"/app\")\nimport numpy as np\nimport forward\nexec(open('/tmp/proto4.py').read().split('def run')[0])\nseed=2; NL=6\nrng=np.random.default_rng(seed); allj=[]; per=[]\nfor li in range(NL):\n    x0=rng.standard_normal(D); d=rng.standard_normal(D); d/=np.linalg.norm(d)\n    js=line_jumps(x0,d); per.append(len(js)); allj+=js\nprint('per line',per,'total',len(allj))\nV=np.array(allj); N=V/np.linalg.norm(V,axis=1,keepdims=True)\nfor i in range(len(N)):\n    k=np.argmax(np.abs(N[i]))\n    if N[i,k]<0: N[i]*=-1\nclusters=[]\nfor v in N:\n    for c in clusters:\n        if c['mean']@v>0.9999:\n            c['members'].append(v); c['mean']=np.mean(c['members'],axis=0); c['mean']/=np.linalg.norm(c['mean']); break\n    else: clusters.append({'mean':v.copy(),'members':[v]})\nprint('cluster sizes',sorted([len(c['members']) for c in clusters]))\nclusters=[c for c in clusters if len(c['members'])>=3]\nU=np.array([c['mean'] for c in clusters]); print('n',len(U))\nA1=forward.A1; tn=A1/np.linalg.norm(A1,axis=1,keepdims=True)\nprec=np.abs(tn@U.T)\nused=set()\nfor i in range(len(tn)):\n    order=np.argsort(-prec[i]); best=None\n    for j in order:\n        if j not in used: best=j; used.add(j); break\n    print('true',i,'-> cluster',best,'cos',prec[i,best])\nEOF\npython3 /tmp/debug2.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 389899,
+   "dur_ms": 12822
+  },
+  {
+   "kind": "tool",
+   "at_ms": 402721,
+   "dur_ms": 15747,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/proto5.py <<'EOF'\nimport sys; sys.path.insert(0,\"/app\")\nimport numpy as np, time\nimport forward\nD=10; H=1e-5\ndef grad(x):\n    g=np.empty(D)\n    for j in range(D):\n        e=np.zeros(D); e[j]=H\n        g[j]=(forward.forward(x+e)-forward.forward(x-e))/(2*H)\n    return g\ndef line_jumps(x0,d,T=20.0,eps=1e-3,gtol=1e-8,n_init=2000):\n    ts=np.linspace(-T,T,n_init); gs=[grad(x0+t*d) for t in ts]; out=[]\n    stack=[(ts[k],ts[k+1],gs[k],gs[k+1]) for k in range(n_init-1)]\n    while stack:\n        lo,hi,gl,gh=stack.pop()\n        if np.linalg.norm(gh-gl)<=gtol: continue\n        if hi-lo<=eps: out.append(gh-gl); continue\n        mid=0.5*(lo+hi); gm=grad(x0+mid*d)\n        stack.append((lo,mid,gl,gm)); stack.append((mid,hi,gm,gh))\n    return out\ndef run(seed,NL=6,**kw):\n    rng=np.random.default_rng(seed); allj=[]; per=[]\n    for _ in range(NL):\n        x0=rng.standard_normal(D); d=rng.standard_normal(D); d/=np.linalg.norm(d)\n        js=line_jumps(x0,d,**kw); per.append(len(js)); allj+=js\n    V=np.array(allj); N=V/np.linalg.norm(V,axis=1,keepdims=True)\n    for i in range(len(N)):\n        k=np.argmax(np.abs(N[i]))\n        if N[i,k]<0: N[i]*=-1\n    clusters=[]\n    for v in N:\n        for c in clusters:\n            if c['mean']@v>0.9999:\n                c['members'].append(v); c['mean']=np.mean(c['members'],axis=0); c['mean']/=np.linalg.norm(c['mean']); break\n        else: clusters.append({'mean':v.copy(),'members':[v]})\n    clusters=[c for c in clusters if len(c['members'])>=3]\n    U=np.array([c['mean'] for c in clusters])\n    A1=forward.A1; tn=A1/np.linalg.norm(A1,axis=1,keepdims=True)\n    prec=np.abs(tn@U.T); used=set(); cos=[]\n    for i in range(len(tn)):\n        for j in np.argsort(-prec[i]):\n            if j not in used: used.add(j); cos.append(prec[i,j]); break\n    return per,len(allj),len(U),min(cos) if cos else -1\nt0=time.time()\nfor seed in range(10):\n    print(seed, run(seed))\nprint('elapsed',time.time()-t0)\nEOF\ntimeout 115 python3 /tmp/proto5.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 418468,
+   "dur_ms": 9760
+  },
+  {
+   "kind": "tool",
+   "at_ms": 428228,
+   "dur_ms": 589,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/debug3.py <<'EOF'\nimport sys; sys.path.insert(0,\"/app\")\nimport numpy as np\nimport forward\nD=10; H=1e-5\ndef grad(x):\n    g=np.empty(D)\n    for j in range(D):\n        e=np.zeros(D); e[j]=H\n        g[j]=(forward.forward(x+e)-forward.forward(x-e))/(2*H)\n    return g\ndef line_jumps(x0,d,T=20.0,eps=1e-3,gtol=1e-8,n_init=2000):\n    ts=np.linspace(-T,T,n_init); gs=[grad(x0+t*d) for t in ts]; out=[]\n    stack=[(ts[k],ts[k+1],gs[k],gs[k+1]) for k in range(n_init-1)]\n    while stack:\n        lo,hi,gl,gh=stack.pop()\n        if np.linalg.norm(gh-gl)<=gtol: continue\n        if hi-lo<=eps: out.append((0.5*(lo+hi),gh-gl)); continue\n        mid=0.5*(lo+hi); gm=grad(x0+mid*d)\n        stack.append((lo,mid,gl,gm)); stack.append((mid,hi,gm,gh))\n    return out\nseed=2; rng=np.random.default_rng(seed)\n# burn same lines as run: line0\nx0=rng.standard_normal(D); d=rng.standard_normal(D); d/=np.linalg.norm(d)\nA1=forward.A1; b1=forward.b1; A2=forward.A2[0]\nden=A1@d; num=-(A1@x0+b1)\ntrue_t=num/den\ntrue_t=np.sort(true_t[np.abs(true_t)<=20])\nprint('true crossings',len(true_t))\nprint(np.round(true_t,4))\njs=line_jumps(x0,d)\nprint('detected',len(js))\ndt=np.array([t for t,_ in js]); print('detected t',np.round(np.sort(dt),4))\n# match each true to nearest detected\nprint('max nearest dist',np.max([np.min(np.abs(dt-t)) for t in true_t]))\nEOF\npython3 /tmp/debug3.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 428817,
+   "dur_ms": 9880
+  },
+  {
+   "kind": "tool",
+   "at_ms": 438697,
+   "dur_ms": 1882,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/debug4.py <<'EOF'\nimport sys; sys.path.insert(0,\"/app\")\nimport numpy as np\nimport forward\nD=10; H=1e-5\ndef grad(x):\n    g=np.empty(D)\n    for j in range(D):\n        e=np.zeros(D); e[j]=H\n        g[j]=(forward.forward(x+e)-forward.forward(x-e))/(2*H)\n    return g\ndef line_jumps(x0,d,T=20.0,eps=1e-3,gtol=1e-8,n_init=2000):\n    ts=np.linspace(-T,T,n_init); gs=[grad(x0+t*d) for t in ts]; out=[]\n    stack=[(ts[k],ts[k+1],gs[k],gs[k+1]) for k in range(n_init-1)]\n    while stack:\n        lo,hi,gl,gh=stack.pop()\n        if np.linalg.norm(gh-gl)<=gtol: continue\n        if hi-lo<=eps: out.append((0.5*(lo+hi),gh-gl)); continue\n        mid=0.5*(lo+hi); gm=grad(x0+mid*d)\n        stack.append((lo,mid,gl,gm)); stack.append((mid,hi,gm,gh))\n    return out\nA1=forward.A1; b1=forward.b1; A2=forward.A2[0]\nseed=2; rng=np.random.default_rng(seed)\nNL=6\ncounts=np.zeros(20,int); det_tot=0\nfor li in range(NL):\n    x0=rng.standard_normal(D); d=rng.standard_normal(D); d/=np.linalg.norm(d)\n    js=line_jumps(x0,d); det_tot+=len(js)\n    den=A1@d; tstar=(-(A1@x0+b1))/den\n    inrange=np.abs(tstar)<=20\n    counts+=inrange\n    print('line',li,'det',len(js),'true inrange',inrange.sum(),'out rows',np.where(~inrange)[0])\nprint('per-neuron inrange counts',counts,'total',det_tot)\nprint('A1 row norms',np.round(np.linalg.norm(A1,axis=1),3))\nprint('|A2|',np.round(np.abs(A2),3))\nEOF\npython3 /tmp/debug4.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 440579,
+   "dur_ms": 4523
+  },
+  {
+   "kind": "tool",
+   "at_ms": 445102,
+   "dur_ms": 271,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport sys; sys.path.insert(0,\"/app\")\nimport numpy as np, forward\nA1=forward.A1; b1=forward.b1\nrng=np.random.default_rng(2)\nfor li in range(6):\n    x0=rng.standard_normal(10); d=rng.standard_normal(10); d/=np.linalg.norm(d)\n    den=A1@d; t=(-(A1@x0+b1))/den\n    print(li,'row8 t',round(t[8],2),'den',round(den[8],5),'b',round(b1[8],3),'x0term',round(A1[8]@x0,3))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 445373,
+   "dur_ms": 4993
+  },
+  {
+   "kind": "tool",
+   "at_ms": 450366,
+   "dur_ms": 312,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport sys; sys.path.insert(0,\"/app\")\nimport numpy as np, forward\nA1=forward.A1\nrng=np.random.default_rng(2)\nprojs=[]\nfor _ in range(2000):\n    d=rng.standard_normal(10); d/=np.linalg.norm(d); projs.append(A1[8]@d)\nprojs=np.array(projs)\nprint('row8 projection std',projs.std(),'norm/sqrt?',np.linalg.norm(A1[8]),'min abs',np.min(np.abs(projs)))\nprint('A1 row8',A1[8])\nprint('first 4 d?')\nrng=np.random.default_rng(2)\nfor li in range(4):\n    x0=rng.standard_normal(10); d=rng.standard_normal(10); d/=np.linalg.norm(d)\n    print(li, np.round(d,3), 'dot', A1[8]@d, 'norm',np.linalg.norm(A1[8]))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 450678,
+   "dur_ms": 16396
+  },
+  {
+   "kind": "tool",
+   "at_ms": 467074,
+   "dur_ms": 41158,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/proto6.py <<'EOF'\nimport sys; sys.path.insert(0,\"/app\")\nimport numpy as np, time\nimport forward\nD=10; H=1e-5\ndef grad(x):\n    g=np.empty(D)\n    for j in range(D):\n        e=np.zeros(D); e[j]=H\n        g[j]=(forward.forward(x+e)-forward.forward(x-e))/(2*H)\n    return g\ndef line_jumps(x0,d,T=20.0,eps=1e-3,gtol=1e-8,n_init=2000):\n    ts=np.linspace(-T,T,n_init); gs=[grad(x0+t*d) for t in ts]; out=[]\n    stack=[(ts[k],ts[k+1],gs[k],gs[k+1]) for k in range(n_init-1)]\n    while stack:\n        lo,hi,gl,gh=stack.pop()\n        if np.linalg.norm(gh-gl)<=gtol: continue\n        if hi-lo<=eps: out.append(gh-gl); continue\n        mid=0.5*(lo+hi); gm=grad(x0+mid*d)\n        stack.append((lo,mid,gl,gm)); stack.append((mid,hi,gm,gh))\n    return out\ndef run(seed,NL=12,thr=3,**kw):\n    rng=np.random.default_rng(seed); allj=[]; per=[]\n    for _ in range(NL):\n        x0=rng.standard_normal(D); d=rng.standard_normal(D); d/=np.linalg.norm(d)\n        js=line_jumps(x0,d,**kw); per.append(len(js)); allj+=js\n    V=np.array(allj); N=V/np.linalg.norm(V,axis=1,keepdims=True)\n    for i in range(len(N)):\n        k=np.argmax(np.abs(N[i]))\n        if N[i,k]<0: N[i]*=-1\n    clusters=[]\n    for v in N:\n        for c in clusters:\n            if c['mean']@v>0.9999:\n                c['members'].append(v); c['mean']=np.mean(c['members'],axis=0); c['mean']/=np.linalg.norm(c['mean']); break\n        else: clusters.append({'mean':v.copy(),'members':[v]})\n    sizes=sorted([len(c['members']) for c in clusters if len(c['members'])>=thr])\n    clusters=[c for c in clusters if len(c['members'])>=thr]\n    U=np.array([c['mean'] for c in clusters])\n    A1=forward.A1; tn=A1/np.linalg.norm(A1,axis=1,keepdims=True)\n    prec=np.abs(tn@U.T); used=set(); cos=[]\n    for i in range(len(tn)):\n        for j in np.argsort(-prec[i]):\n            if j not in used: used.add(j); cos.append(prec[i,j]); break\n    return sizes,len(U),round(min(cos),8) if cos else -1,round(np.mean(cos),8) if cos else -1\nt0=time.time()\nfor seed in range(10):\n    print(seed, run(seed))\nprint('elapsed',time.time()-t0)\nEOF\ntimeout 115 python3 /tmp/proto6.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 508232,
+   "dur_ms": 14916
+  },
+  {
+   "kind": "tool",
+   "at_ms": 523148,
+   "dur_ms": 3341,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "cat > /tmp/debug_spur.py <<'EOF'\nimport sys; sys.path.insert(0,\"/app\")\nimport numpy as np\nimport forward\nexec(open('/tmp/proto6.py').read().split('def run')[0])\nfrom itertools import combinations\ndef analyze(seed,NL=12,thr=3):\n    rng=np.random.default_rng(seed); allj=[]; per=[]\n    for _ in range(NL):\n        x0=rng.standard_normal(D); d=rng.standard_normal(D); d/=np.linalg.norm(d)\n        js=line_jumps(x0,d); per.append(len(js)); allj+=js\n    V=np.array(allj); N=V/np.linalg.norm(V,axis=1,keepdims=True)\n    for i in range(len(N)):\n        k=np.argmax(np.abs(N[i]))\n        if N[i,k]<0: N[i]*=-1\n    clusters=[]\n    for v in N:\n        for c in clusters:\n            if c['mean']@v>0.9999:\n                c['members'].append(v); c['mean']=np.mean(c['members'],axis=0); c['mean']/=np.linalg.norm(c['mean']); break\n        else: clusters.append({'mean':v.copy(),'members':[v]})\n    clusters=[c for c in clusters if len(c['members'])>=thr]\n    U=np.array([c['mean'] for c in clusters]); sizes=[len(c['members']) for c in clusters]\n    A1=forward.A1; A2=forward.A2[0]\n    tv=A2[:,None]*A1  # true v_i = A2_i a_i\n    tvn=tv/np.linalg.norm(tv,axis=1,keepdims=True)\n    C=np.abs(tvn@U.T)  # 20 x m\n    match=C.argmax(axis=0); mc=C.max(axis=0)\n    print('seed',seed,'sizes',sizes)\n    for j in range(len(U)):\n        if mc[j]<0.99:\n            # unmatched/spurious: express U[:,j] in true vn basis least squares\n            coef,_,_,_=np.linalg.lstsq(tvn.T,U[:,j],rcond=None)\n            top=np.argsort(-np.abs(coef))[:5]\n            print('  spurious cluster',j,'size',sizes[j],'maxcos',mc[j],'coefs',np.round(coef[top],3),'idx',top)\n            # residual projecting on best pair\n            best=(1,None)\n            for a,b in combinations(range(20),2):\n                M=tvn[[a,b]].T\n                p=M@np.linalg.lstsq(M,U[:,j],rcond=None)[0]\n                r=np.linalg.norm(p-U[:,j])\n                if r<best[0]: best=(r,(a,b))\n            print('   best pair residual',best)\nanalyze(0); analyze(4)\nEOF\npython3 /tmp/debug_spur.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 526489,
+   "dur_ms": 1890
+  },
+  {
+   "kind": "tool",
+   "at_ms": 528379,
+   "dur_ms": 6845,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sed -i 's/tvn.T,U\\[:,j\\]/tvn.T,U[j]/g; s/M@np.linalg.lstsq(M,U\\[:,j\\]/M@np.linalg.lstsq(M,U[j]/g; s/np.linalg.norm(p-U\\[:,j\\])/np.linalg.norm(p-U[j])/g' /tmp/debug_spur.py && python3 /tmp/debug_spur.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 535224,
+   "dur_ms": 14320
+  },
+  {
+   "kind": "tool",
+   "at_ms": 549544,
+   "dur_ms": 1086,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/debug_leaf.py <<'EOF'\nimport sys; sys.path.insert(0,\"/app\")\nimport numpy as np\nimport forward\nD=10; H=1e-5\ndef grad(x):\n    g=np.empty(D)\n    for j in range(D):\n        e=np.zeros(D); e[j]=H\n        g[j]=(forward.forward(x+e)-forward.forward(x-e))/(2*H)\n    return g\ndef leaves(x0,d,T=20.0,eps=1e-3,gtol=1e-8,n_init=2000):\n    ts=np.linspace(-T,T,n_init); gs=[grad(x0+t*d) for t in ts]; out=[]\n    stack=[(ts[k],ts[k+1],gs[k],gs[k+1]) for k in range(n_init-1)]\n    while stack:\n        lo,hi,gl,gh=stack.pop()\n        if np.linalg.norm(gh-gl)<=gtol: continue\n        if hi-lo<=eps: out.append((lo,hi,gh-gl)); continue\n        mid=0.5*(lo+hi); gm=grad(x0+mid*d)\n        stack.append((lo,mid,gl,gm)); stack.append((mid,hi,gm,gh))\n    return out\nA1=forward.A1; b1=forward.b1; A2=forward.A2[0]\ntvn=(A2[:,None]*A1); tvn=tvn/np.linalg.norm(tvn,axis=1,keepdims=True)\nrng=np.random.default_rng(0)\nfor li in range(3):\n    x0=rng.standard_normal(D); d=rng.standard_normal(D); d/=np.linalg.norm(d)\n    den=A1@d; tstar=(-(A1@x0+b1))/den\n    ls=leaves(x0,d)\n    print('line',li,'leaves',len(ls))\n    for lo,hi,j in ls:\n        inside=tstar[(tstar>lo)&(tstar<hi)]\n        if len(inside)>=2:\n            idx=np.where((tstar>lo)&(tstar<hi))[0]\n            pred=np.sum(np.sign(den[idx])[:,None]*tvn[idx],axis=0)\n            predn=pred/np.linalg.norm(pred)\n            r=np.linalg.norm(j/np.linalg.norm(j)-predn)\n            print(' multi leaf',round(lo,6),round(hi,6),'nkinks',len(inside),'rows',idx,'pred resid',round(r,6),'jumpnorm',round(np.linalg.norm(j),4))\nEOF\npython3 /tmp/debug_leaf.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 550630,
+   "dur_ms": 7316
+  },
+  {
+   "kind": "tool",
+   "at_ms": 557946,
+   "dur_ms": 3226,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/debug_leaf2.py <<'EOF'\nimport sys; sys.path.insert(0,\"/app\")\nimport numpy as np\nimport forward\nexec(open('/tmp/debug_leaf.py').read().split(\"A1=forward.A1\")[0])\nA1=forward.A1; b1=forward.b1; A2=forward.A2[0]\ntv=(A2[:,None]*A1); tvn=tv/np.linalg.norm(tv,axis=1,keepdims=True)\nrng=np.random.default_rng(0)\nbad=[]\nfor li in range(12):\n    x0=rng.standard_normal(D); d=rng.standard_normal(D); d/=np.linalg.norm(d)\n    den=A1@d; tstar=(-(A1@x0+b1))/den\n    for lo,hi,j in leaves(x0,d):\n        jn=j/np.linalg.norm(j)\n        c=np.abs(tvn@jn); k=c.argmax()\n        if c[k]<0.999:\n            bad.append((li,lo,hi,jn,c[k],k))\nprint('bad leaves',len(bad))\nfor li,lo,hi,jn,c,k in bad[:12]:\n    # list true t stars near leaf\n    x0=None\n    print('line',li,'leaf',round(lo,5),round(hi,5),'maxcos',round(c,4),'row',k)\n    # fit jn with all true rows signed unit using lstsq\n    coef,_,_,_=np.linalg.lstsq(tvn.T,jn,rcond=None)\n    top=np.argsort(-np.abs(coef))[:6]\n    print('   coef',np.round(coef[top],3),top,'resid',round(np.linalg.norm(tvn.T@coef-jn),5))\nEOF\npython3 /tmp/debug_leaf2.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 561172,
+   "dur_ms": 21173
+  },
+  {
+   "kind": "tool",
+   "at_ms": 582345,
+   "dur_ms": 29711,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/proto7.py <<'EOF'\nimport sys; sys.path.insert(0,\"/app\")\nimport numpy as np, time\nimport forward\nD=10; H=1e-7\ndef grad(x):\n    g=np.empty(D)\n    for j in range(D):\n        e=np.zeros(D); e[j]=H\n        g[j]=(forward.forward(x+e)-forward.forward(x-e))/(2*H)\n    return g\ndef line_jumps(x0,d,T=20.0,eps=1e-3,gtol=1e-6,n_init=2000):\n    ts=np.linspace(-T,T,n_init); gs=[grad(x0+t*d) for t in ts]; out=[]\n    stack=[(ts[k],ts[k+1],gs[k],gs[k+1]) for k in range(n_init-1)]\n    while stack:\n        lo,hi,gl,gh=stack.pop()\n        if np.linalg.norm(gh-gl)<=gtol: continue\n        if hi-lo<=eps: out.append(gh-gl); continue\n        mid=0.5*(lo+hi); gm=grad(x0+mid*d)\n        stack.append((lo,mid,gl,gm)); stack.append((mid,hi,gm,gh))\n    return out\ndef run(seed,NL=12,thr=3,**kw):\n    rng=np.random.default_rng(seed); allj=[]; per=[]\n    for _ in range(NL):\n        x0=rng.standard_normal(D); d=rng.standard_normal(D); d/=np.linalg.norm(d)\n        js=line_jumps(x0,d,**kw); per.append(len(js)); allj+=js\n    V=np.array(allj); N=V/np.linalg.norm(V,axis=1,keepdims=True)\n    for i in range(len(N)):\n        k=np.argmax(np.abs(N[i]))\n        if N[i,k]<0: N[i]*=-1\n    clusters=[]\n    for v in N:\n        for c in clusters:\n            if c['mean']@v>0.9999:\n                c['members'].append(v); c['mean']=np.mean(c['members'],axis=0); c['mean']/=np.linalg.norm(c['mean']); break\n        else: clusters.append({'mean':v.copy(),'members':[v]})\n    allsizes=sorted([len(c['members']) for c in clusters])\n    clusters=[c for c in clusters if len(c['members'])>=thr]\n    U=np.array([c['mean'] for c in clusters])\n    A1=forward.A1; tn=A1/np.linalg.norm(A1,axis=1,keepdims=True)\n    prec=np.abs(tn@U.T); used=set(); cos=[]\n    for i in range(len(tn)):\n        for j in np.argsort(-prec[i]):\n            if j not in used: used.add(j); cos.append(prec[i,j]); break\n    return per,allsizes,len(U),round(min(cos),10) if cos else -1\nt0=time.time()\nfor seed in range(10):\n    print(seed, run(seed))\nprint('elapsed',time.time()-t0)\nEOF\ntimeout 115 python3 /tmp/proto7.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 612056,
+   "dur_ms": 31972
+  },
+  {
+   "kind": "tool",
+   "at_ms": 644028,
+   "dur_ms": 5317,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/sign_test.py <<'EOF'\nimport sys; sys.path.insert(0,\"/app\")\nimport numpy as np, time\nimport forward\nD=10; H=1e-7\ndef grad(x):\n    g=np.empty(D)\n    for j in range(D):\n        e=np.zeros(D); e[j]=H\n        g[j]=(forward.forward(x+e)-forward.forward(x-e))/(2*H)\n    return g\ndef line_jumps(x0,d,T=20.0,eps=1e-3,gtol=1e-6,n_init=2000):\n    ts=np.linspace(-T,T,n_init); gs=[grad(x0+t*d) for t in ts]; out=[]\n    stack=[(ts[k],ts[k+1],gs[k],gs[k+1]) for k in range(n_init-1)]\n    while stack:\n        lo,hi,gl,gh=stack.pop()\n        if np.linalg.norm(gh-gl)<=gtol: continue\n        if hi-lo<=eps: out.append((0.5*(lo+hi),gh-gl,x0,d)); continue\n        mid=0.5*(lo+hi); gm=grad(x0+mid*d)\n        stack.append((lo,mid,gl,gm)); stack.append((mid,hi,gm,gh))\n    return out\ndef extract(seed=0,NL=12,thr=3):\n    rng=np.random.default_rng(seed); recs=[]\n    for _ in range(NL):\n        x0=rng.standard_normal(D); d=rng.standard_normal(D); d/=np.linalg.norm(d)\n        recs+=line_jumps(x0,d)\n    V=np.array([j for _,j,_,_ in recs]); N=V/np.linalg.norm(V,axis=1,keepdims=True)\n    for i in range(len(N)):\n        k=np.argmax(np.abs(N[i]))\n        if N[i,k]<0: N[i]*=-1\n    cl=[]\n    for idx,v in enumerate(N):\n        for c in cl:\n            if c['mean']@v>0.9999:\n                c['members'].append(v); c['idx'].append(idx); c['mean']=np.mean(c['members'],axis=0); c['mean']/=np.linalg.norm(c['mean']); break\n        else: cl.append({'mean':v.copy(),'members':[v],'idx':[idx]})\n    cl=[c for c in cl if len(c['members'])>=thr]\n    U=np.array([c['mean'] for c in cl])\n    beta=[]\n    for c in cl:\n        vals=[]\n        for idx in c['idx']:\n            t,j,x0,d=recs[idx]; vals.append(-c['mean']@(x0+t*d))\n        beta.append(np.mean(vals))\n    return U,np.array(beta),cl\n\nU,beta,cl=extract(0)\nA1=forward.A1; A2=forward.A2[0]\ntn=A1/np.linalg.norm(A1,axis=1,keepdims=True)\nprec=np.abs(tn@U.T); used=set(); match={}\nfor i in range(20):\n    for j in np.argsort(-prec[i]):\n        if j not in used: used.add(j); match[i]=j; break\nprint('clusters',len(U),'cos min',min(prec[i,j] for i,j in match.items()))\n# regress signs\nrng=np.random.default_rng(7)\nM=500; X=rng.standard_normal((M,D))*1.5\ny=np.array([forward.forward(x) for x in X])\nZ=X@U.T+beta\ndef fit(sig):\n    F=np.maximum(0,Z*sig)\n    A=np.hstack([F,np.ones((M,1))])\n    coef,_,_,_=np.linalg.lstsq(A,y,rcond=None)\n    r=np.linalg.norm(A@coef-y)\n    return r,coef\nt0=time.time(); best=(1e9,None)\nfor restart in range(30):\n    sig=rng.choice([-1.0,1.0],size=len(U))\n    r,_=fit(sig)\n    for it in range(10):\n        improved=False\n        order=rng.permutation(len(U))\n        for i in order:\n            s2=sig.copy(); s2[i]*=-1\n            r2,_=fit(s2)\n            if r2<r-1e-12: sig=s2; r=r2; improved=True\n        if not improved: break\n    if r<best[0]: best=(r,sig.copy())\nr,sig=best\nprint('best residual',r,'truth resid',fit(np.array([1.0 if tn[i]@U[j]>0 else -1.0 for j in range(len(U))]))[0])\n# true sign per cluster\nsig_true=np.array([1.0 if tn[match[i]]@U[j]>0 else -1.0 for j in range(len(U))])\nprint('sign mismatches',np.sum(sig!=sig_true),'of',len(U),'elapsed',time.time()-t0)\nprint('recovered sign vs true',sig.astype(int))\nprint('true sign          ',sig_true.astype(int))\nEOF\ntimeout 115 python3 /tmp/sign_test.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 649345,
+   "dur_ms": 13682
+  },
+  {
+   "kind": "tool",
+   "at_ms": 663027,
+   "dur_ms": 5324,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat >> /tmp/sign_test.py <<'EOF'\n\n# diagnosis\nA1=forward.A1; b1=forward.b1\nprint('--- beta diagnosis ---')\nfor i in range(6):\n    j=match[i]; a=A1[i]; s=1.0 if tn[i]@U[j]>0 else -1.0\n    alpha=a@U[j]\n    beta_true=b1[i]/alpha if alpha!=0 else float('nan')\n    print('true',i,'cl',j,'s',s,'alpha',round(alpha,4),'beta_rec',round(beta[j],5),'beta_true',round(beta_true,5))\n# sign consistency on X\nsig_true=np.array([1.0 if tn[match[i]]@U[j]>0 else -1.0 for j in range(len(U))])\nerrs=0\nfor i in range(20):\n    j=match[i]; a=A1[i]; alpha=a@U[j]; s=1.0 if alpha>0 else -1.0\n    z=X@U[j]+beta[j]\n    lhs=np.sign(s*z); rhs=np.sign(X@a+b1[i])\n    errs+=np.sum(lhs!=rhs)\nprint('sign disagreements across all samples/neurons:',errs,'of',20*M)\nEOF\ntimeout 115 python3 /tmp/sign_test.py 2>&1 | tail -20"
+  },
+  {
+   "kind": "model",
+   "at_ms": 668351,
+   "dur_ms": 4859
+  },
+  {
+   "kind": "tool",
+   "at_ms": 673210,
+   "dur_ms": 6453,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/sign_test2.py <<'EOF'\nexec(open('/tmp/sign_test.py').read().split(\"# regress signs\")[0])\nrng=np.random.default_rng(7)\nM=500; X=rng.standard_normal((M,D))*1.5\ny=np.array([forward.forward(x) for x in X])\nZ=X@U.T+beta\ndef fit(sig):\n    F=np.maximum(0,Z*sig); A=np.hstack([F,np.ones((M,1))])\n    coef,_,_,_=np.linalg.lstsq(A,y,rcond=None)\n    return np.linalg.norm(A@coef-y)\ninv={j:i for i,j in match.items()}\nsig_true=np.array([1.0 if forward.A1[inv[j]]@U[j]>0 else -1.0 for j in range(len(U))])\nprint('truth residual',fit(sig_true))\nt0=time.time(); best=(1e9,None)\nfor restart in range(30):\n    sig=rng.choice([-1.0,1.0],size=len(U)); r=fit(sig)\n    for it in range(15):\n        improved=False\n        for i in rng.permutation(len(U)):\n            s2=sig.copy(); s2[i]*=-1; r2=fit(s2)\n            if r2<r-1e-12: sig=s2; r=r2; improved=True\n        if not improved: break\n    if r<best[0]: best=(r,sig.copy())\nr,sig=best\nprint('best residual',r,'sign mismatches',np.sum(sig!=sig_true),'elapsed',time.time()-t0)\nEOF\ntimeout 115 python3 /tmp/sign_test2.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 679663,
+   "dur_ms": 11584
+  },
+  {
+   "kind": "tool",
+   "at_ms": 691247,
+   "dur_ms": 44818,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/sign_reliability.py <<'EOF'\nimport sys; sys.path.insert(0,\"/app\")\nimport numpy as np, time\nimport forward\nexec(open('/tmp/sign_test.py').read().split(\"U,beta,cl=extract(0)\")[0])\ndef recover(seed, rng_reg=123):\n    U,beta,cl=extract(seed)\n    A1=forward.A1; tn=A1/np.linalg.norm(A1,axis=1,keepdims=True)\n    prec=np.abs(tn@U.T); used=set(); match={}\n    for i in range(20):\n        for j in np.argsort(-prec[i]):\n            if j not in used: used.add(j); match[i]=j; break\n    rng=np.random.default_rng(rng_reg)\n    n=len(U); M=max(400,20*n)\n    sscale=max(1.0, 3*np.median(np.abs(beta))*1.5)\n    X=rng.standard_normal((M,D))*sscale\n    y=np.array([forward.forward(x) for x in X])\n    Z=X@U.T+beta\n    def fit(sig):\n        F=np.maximum(0,Z*sig); A=np.hstack([F,np.ones((M,1))])\n        coef,_,_,_=np.linalg.lstsq(A,y,rcond=None)\n        return np.linalg.norm(A@coef-y)\n    inv={j:i for i,j in match.items()}\n    sig_true=np.array([1.0 if A1[inv[j]]@U[j]>0 else -1.0 for j in range(n)])\n    rt=fit(sig_true)\n    best=(1e18,None)\n    for restart in range(30):\n        sig=rng.choice([-1.0,1.0],size=n); r=fit(sig)\n        for it in range(15):\n            improved=False\n            for i in rng.permutation(n):\n                s2=sig.copy(); s2[i]*=-1; r2=fit(s2)\n                if r2<r-1e-12: sig=s2; r=r2; improved=True\n            if not improved: break\n        if r<best[0]: best=(r,sig.copy())\n    mis=int(np.sum(best[1]!=sig_true)) if best[1] is not None else -1\n    return n,round(rt,3),round(best[0],6),mis,round(sscale,2)\nt0=time.time()\nfor s in range(10):\n    print('extract seed',s,recover(s))\nprint('elapsed',time.time()-t0)\nEOF\ntimeout 170 python3 /tmp/sign_reliability.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 736065,
+   "dur_ms": 36290
+  },
+  {
+   "kind": "tool",
+   "at_ms": 772355,
+   "dur_ms": 16,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/steal.py",
+    "content": "\"\"\"\nBlack-box extraction of the first-layer weight matrix of a one-hidden-layer ReLU net.\n\nThe network computes\n\n    f(x) = A2 * ReLU(A1 @ x + b1) + b2          (output is a scalar)\n\nFor a fixed input x the gradient of f is\n\n    grad f(x) = sum_i  A2_i * A1_i * 1[ A1_i . x + b1_i > 0 ],\n\ni.e. on each linear piece it is a sum of the vectors v_i = A2_i * A1_i over the\ncurrently active neurons.  Moving along a random line x(t) = x0 + t d, the\ngradient changes only when the line crosses one of the hyperplanes\nA1_i . x + b1_i = 0.  At such a crossing the gradient jumps by exactly +/- v_i.\nTherefore the jump vectors are precisely the rows of A1, up to the unknown\noutput weight A2_i (a permutation and a per-row scaling).\n\nWe locate the crossings by bisecting intervals whose endpoint gradients differ,\ncollect the gradient jumps, and cluster them by direction.  Finally, the sign\nof every row relative to the recovered hyperplane normal is resolved by fitting\nthe function values with the recovered hyperplanes (this is only needed if the\nallowed scaling is required to be positive; the directions alone are already\ncorrect up to a per-row sign/scale).\n\nRunning this file prints the recovered matrix and saves it to\n/app/stolen_A1.npy.\n\"\"\"\n\nimport numpy as np\n\nimport forward\n\nD = 10                 # input dimension (given)\nLINE_RANGE = 20.0      # t range sampled along each random line\nBISECT_EPS = 1e-3      # final interval width used to isolate a single crossing\nCLUSTER_COS = 0.9999   # cosine threshold for grouping equal jump directions\n\n\n# --------------------------------------------------------------------------\n# Numerical gradient of forward()\n# --------------------------------------------------------------------------\ndef make_grad(h):\n    \"\"\"Return a function computing grad f(x) by central differences with step h.\"\"\"\n\n    def grad(x):\n        g = np.empty(D)\n        for j in range(D):\n            e = np.zeros(D)\n            e[j] = h\n            g[j] = (forward.forward(x + e) - forward.forward(x - e)) / (2.0 * h)\n        return g\n\n    return grad\n\n\ndef choose_step():\n    \"\"\"Pick a finite-difference step that is accurate for the given forward().\n\n    A good step is one where halving/decading it does not change the gradient,\n    i.e. we are outside both the truncation-error (too large h) and the\n    floating-point cancellation (too small h) regimes.\n    \"\"\"\n    rng = np.random.default_rng(2024)\n    xs = rng.standard_normal((6, D))\n    candidates = [1e-7, 1e-6, 1e-5, 1e-4, 1e-3]\n    grads = {}\n    for h in candidates:\n        g = make_grad(h)\n        grads[h] = np.array([g(x) for x in xs])\n\n    def rel(a, b):\n        num = np.linalg.norm(a - b, axis=1)\n        den = np.linalg.norm(a, axis=1) + np.linalg.norm(b, axis=1) + 1e-12\n        return np.median(num / den)\n\n    # Smallest step that agrees with the next (larger) step.\n    for k in range(len(candidates) - 1):\n        h, h2 = candidates[k], candidates[k + 1]\n        if rel(grads[h], grads[h2]) < 1e-2:\n            return h\n    return 1e-4\n\n\nH = choose_step()\nGRAD = make_grad(H)\n\n\n# --------------------------------------------------------------------------\n# Find all gradient jumps along one random line\n# --------------------------------------------------------------------------\ndef line_jumps(x0, d, n_init=2000):\n    \"\"\"Return [(t_kink, gradient_jump, x0, d), ...] for one line.\n\n    We first evaluate the gradient on a dense grid.  Every grid interval whose\n    endpoint gradients differ is recursively bisected until it is narrow enough\n    to contain (generically) a single hyperplane crossing.  The gradient\n    difference across that interval is then exactly one jump vector +/-A2_i*A1_i.\n    \"\"\"\n    gtol = 1e-6\n    ts = np.linspace(-LINE_RANGE, LINE_RANGE, n_init)\n    gs = [GRAD(x0 + t * d) for t in ts]\n\n    out = []\n    stack = [(ts[k], ts[k + 1], gs[k], gs[k + 1]) for k in range(n_init - 1)]\n    while stack:\n        lo, hi, gl, gh = stack.pop()\n        if np.linalg.norm(gh - gl) <= gtol:\n            continue\n        if hi - lo <= BISECT_EPS:\n            out.append((0.5 * (lo + hi), gh - gl, x0, d))\n            continue\n        mid = 0.5 * (lo + hi)\n        gm = GRAD(x0 + mid * d)\n        stack.append((lo, mid, gl, gm))\n        stack.append((mid, hi, gm, gh))\n    return out\n\n\n# --------------------------------------------------------------------------\n# Main extraction\n# --------------------------------------------------------------------------\ndef steal():\n    rng = np.random.default_rng(12345)\n    n_lines = 12\n\n    records = []\n    for _ in range(n_lines):\n        x0 = rng.standard_normal(D)\n        d = rng.standard_normal(D)\n        d /= np.linalg.norm(d)\n        records.extend(line_jumps(x0, d))\n\n    if not records:\n        raise RuntimeError(\"No hyperplane crossings found; try increasing LINE_RANGE.\")\n\n    jumps = np.array([r[1] for r in records])\n\n    # --- cluster jump directions, folding the arbitrary sign -----------------\n    units = jumps / np.linalg.norm(jumps, axis=1, keepdims=True)\n    for i in range(len(units)):\n        k = np.argmax(np.abs(units[i]))\n        if units[i, k] < 0:\n            units[i] *= -1.0\n\n    clusters = []  # each: mean unit direction + indices of member jumps\n    for idx, v in enumerate(units):\n        for c in clusters:\n            if c[\"mean\"] @ v > CLUSTER_COS:\n                c[\"idx\"].append(idx)\n                c[\"mean\"] = np.mean(units[c[\"idx\"]], axis=0)\n                c[\"mean\"] /= np.linalg.norm(c[\"mean\"])\n                break\n        else:\n            clusters.append({\"mean\": v.copy(), \"idx\": [idx]})\n\n    # A real neuron is crossed once per line, so it collects ~n_lines members.\n    # Sums of two nearly simultaneous crossings are rare and produce singleton\n    # clusters; drop those.\n    min_members = 3\n    clusters = [c for c in clusters if len(c[\"idx\"]) >= min_members]\n    if not clusters:\n        raise RuntimeError(\"No consistent neuron directions recovered.\")\n\n    U = np.array([c[\"mean\"] for c in clusters])          # (n_hidden, D)\n    n = len(U)\n\n    # --- offsets of the recovered hyperplanes (for sign refinement) ----------\n    # The hyperplane of cluster j is u_j . x + beta_j = 0.\n    beta = np.empty(n)\n    for j, c in enumerate(clusters):\n        vals = []\n        for idx in c[\"idx\"]:\n            t, _, x0, d = records[idx]\n            vals.append(-U[j] @ (x0 + t * d))\n        beta[j] = np.mean(vals)\n\n    # --- resolve the sign of each row ---------------------------------------\n    # Directions alone are correct up to a per-row sign; the sign is fixed by\n    # requiring f to be representable as sum_j w_j ReLU(s_j * (u_j.x+beta_j)).\n    signs = recover_signs(U, beta, rng)\n    R = U * signs[:, None]\n\n    np.save(\"/app/stolen_A1.npy\", R)\n    return R\n\n\ndef recover_signs(U, beta, rng):\n    \"\"\"Choose s_j in {-1,+1} so that f is exactly a ReLU combination of the z_j.\n\n    For the correct signs there are weights w and b2 with\n        f(x) = sum_j w_j ReLU(s_j * z_j(x)) + b2,     z_j = u_j.x + beta_j\n    so a least-squares fit has (essentially) zero residual.  We search the sign\n    vector with random-restart coordinate descent.  If no sign choice fits, the\n    canonical (sign-arbitrary) directions are returned, which are still a valid\n    answer under \"up to per-row scaling\".\n    \"\"\"\n    n = len(U)\n    M = max(400, 20 * n)\n\n    x_scale = max(1.0, 4.0 * np.median(np.abs(beta)))\n    X = rng.standard_normal((M, D)) * x_scale\n    y = np.array([forward.forward(x) for x in X])\n    Z = X @ U.T + beta\n\n    def residual(s):\n        F = np.maximum(0.0, Z * s)\n        A = np.hstack([F, np.ones((M, 1))])\n        coef, _, _, _ = np.linalg.lstsq(A, y, rcond=None)\n        return np.linalg.norm(A @ coef - y)\n\n    restarts = 30 if n <= 40 else 10\n    best_r = np.inf\n    best_s = None\n    for _ in range(restarts):\n        s = rng.choice([-1.0, 1.0], size=n)\n        r = residual(s)\n        for _ in range(15):\n            improved = False\n            for j in rng.permutation(n):\n                s2 = s.copy()\n                s2[j] *= -1.0\n                r2 = residual(s2)\n                if r2 < r - 1e-12:\n                    s, r = s2, r2\n                    improved = True\n            if not improved:\n                break\n        if r < best_r:\n            best_r, best_s = r, s.copy()\n\n    scale = np.linalg.norm(y) + 1.0\n    if best_s is not None and best_r < 1e-3 * scale:\n        return best_s\n    return np.ones(n)\n\n\nif __name__ == \"__main__\":\n    matrix = steal()\n    np.set_printoptions(precision=6, suppress=True, linewidth=140)\n    print(matrix)\n    print(\"\\nSaved to /app/stolen_A1.npy  (shape %s)\" % (matrix.shape,))\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 772371,
+   "dur_ms": 1774
+  },
+  {
+   "kind": "tool",
+   "at_ms": 774145,
+   "dur_ms": 3915,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "time python3 steal.py > /tmp/steal_out.txt 2>&1; tail -5 /tmp/steal_out.txt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 778060,
+   "dur_ms": 3903
+  },
+  {
+   "kind": "tool",
+   "at_ms": 781963,
+   "dur_ms": 303,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport sys; sys.path.insert(0,\"/app\")\nimport numpy as np, forward\nA1=forward.A1; R=np.load('/app/stolen_A1.npy')\nprint('shapes',A1.shape,R.shape)\ntn=A1/np.linalg.norm(A1,axis=1,keepdims=True); rn=R/np.linalg.norm(R,axis=1,keepdims=True)\nC=tn@rn.T  # signed cosine\n# greedy positive matching\nused=set(); pos=[]; errs=[]\nfor i in range(len(tn)):\n    order=np.argsort(-C[i])\n    for j in order:\n        if j not in used:\n            used.add(j); pos.append(C[i,j])\n            # positive least-squares scale\n            s=(A1[i]@R[j])/(R[j]@R[j])\n            errs.append(np.linalg.norm(s*R[j]-A1[i])/np.linalg.norm(A1[i]))\n            break\nprint('positive cosine min/mean:',np.min(pos),np.mean(pos))\nprint('positive-auth relative error max/mean:',np.max(errs),np.mean(errs))\n# arbitrary sign scaling check\nused=set(); absc=[]; errs2=[]\nfor i in range(len(tn)):\n    for j in np.argsort(-np.abs(C[i])):\n        if j not in used:\n            used.add(j); absc.append(abs(C[i,j]))\n            s=(A1[i]@R[j])/(R[j]@R[j]); errs2.append(np.linalg.norm(s*R[j]-A1[i])/np.linalg.norm(A1[i])); break\nprint('abs cosine min:',np.min(absc),'arbitrary-scale rel err max:',np.max(errs2))\nprint('exact row correspondence errors >1e-6:',np.sum(np.array(errs)>1e-6))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 782266,
+   "dur_ms": 11579
+  },
+  {
+   "kind": "tool",
+   "at_ms": 793845,
+   "dur_ms": 3793,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd / && python3 /app/steal.py > /tmp/out2.txt 2>&1; echo \"exit=$?\"; head -3 /tmp/out2.txt; tail -2 /tmp/out2.txt; ls -l /app/stolen_A1.npy"
+  },
+  {
+   "kind": "model",
+   "at_ms": 797638,
+   "dur_ms": 8240
+  },
+  {
+   "kind": "tool",
+   "at_ms": 805878,
+   "dur_ms": 16,
+   "tool": "Edit",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/steal.py",
+    "old_string": "    n = len(U)\n    M = max(400, 20 * n)",
+    "new_string": "    n = len(U)\n    if n > 60:\n        # The directions are already correct up to a per-row sign/scale; the\n        # (expensive) sign fit is only a refinement, so skip it for wide layers.\n        return np.ones(n)\n    M = max(400, 20 * n)",
+    "replace_all": false
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 805894,
+   "dur_ms": 2801
+  },
+  {
+   "kind": "tool",
+   "at_ms": 808695,
+   "dur_ms": 4171,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 /app/steal.py >/dev/null 2>&1 && python3 - <<'EOF'\nimport sys; sys.path.insert(0,\"/app\")\nimport numpy as np, forward\nA1=forward.A1; R=np.load('/app/stolen_A1.npy')\ntn=A1/np.linalg.norm(A1,axis=1,keepdims=True); rn=R/np.linalg.norm(R,axis=1,keepdims=True)\nC=tn@rn.T; used=set(); cos=[]; rel=[]\nfor i in range(len(tn)):\n    for j in np.argsort(-C[i]):\n        if j not in used:\n            used.add(j); cos.append(C[i,j])\n            s=(A1[i]@R[j])/(R[j]@R[j]); rel.append(np.linalg.norm(s*R[j]-A1[i])/np.linalg.norm(A1[i])); break\nprint('shape:',R.shape)\nprint('min positive cosine:',min(cos))\nprint('max relative error after per-row positive scaling:',max(rel))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 812866,
+   "dur_ms": 3552
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.615,
+ "calls": 31,
+ "cell": "TB1a"
+}

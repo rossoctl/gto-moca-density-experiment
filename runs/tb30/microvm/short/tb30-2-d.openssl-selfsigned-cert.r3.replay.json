@@ -1,0 +1,167 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-d",
+ "instance_id": "openssl-selfsigned-cert",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 14140,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 1324,
+  "output": 1507,
+  "cacheRead": 26432,
+  "cacheWrite": 0,
+  "total": 29263
+ },
+ "totals": {
+  "model_calls": 4,
+  "tool_calls": 3,
+  "model_ms": 12527,
+  "tool_ms": 1308,
+  "sandbox_ms": 947
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 105,
+   "dur_ms": 4490,
+   "tokens_in": 28,
+   "tokens_out": 240,
+   "cache_read": 5888,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4595,
+   "dur_ms": 467,
+   "tool": "bash",
+   "is_error": false,
+   "command": "set -e\nmkdir -p /app/ssl\ncd /app/ssl\nopenssl req -x509 -newkey rsa:2048 -keyout server.key -out server.crt -days 365 -nodes \\\n  -subj \"/O=DevOps Team/CN=dev-internal.company.local\"\nchmod 600 server.key\ncat server.key server.crt > server.pem\nchmod 600 server.pem\nopenssl x509 -in server.crt -noout -subject -dates -fingerprint -sha256 > verification.txt\nprintf 'Subject:\\n' > /app/ssl/verification.txt\nopenssl x509 -in server.crt -noout -subject -dates -fingerprint -sha256 > /app/ssl/verification.txt\ncat /app/ssl/verification.txt\nls -l /app/ssl",
+   "sandbox": [
+    {
+     "at_ms": 4715,
+     "dur_ms": 310,
+     "exit": 0,
+     "cpu_ms": 505.1,
+     "phases_us": {
+      "acquire": 71,
+      "resume": 20628,
+      "mount": 18107,
+      "run": 273851,
+      "destroy": 15411
+     },
+     "cold": null,
+     "vm": "vm-80"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 5094,
+   "dur_ms": 1391,
+   "tokens_in": 808,
+   "tokens_out": 74,
+   "cache_read": 5888,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6485,
+   "dur_ms": 265,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 -c \"import cryptography; print(cryptography.__version__)\" 2>&1 || echo NO_CRYPTOGRAPHY",
+   "sandbox": [
+    {
+     "at_ms": 6537,
+     "dur_ms": 200,
+     "exit": 0,
+     "cpu_ms": 196.3,
+     "phases_us": {
+      "acquire": 84,
+      "resume": 20930,
+      "mount": 18562,
+      "run": 149617,
+      "destroy": 29508
+     },
+     "cold": null,
+     "vm": "vm-86"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 6766,
+   "dur_ms": 5277,
+   "tokens_in": 71,
+   "tokens_out": 677,
+   "cache_read": 6848,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 12043,
+   "dur_ms": 576,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put /app/check_cert.py <<'EOF'\n#!/usr/bin/env python3\nimport os\nimport ssl\nimport subprocess\nimport sys\nfrom datetime import datetime\n\nCERT = \"/app/ssl/server.crt\"\nKEY = \"/app/ssl/server.key\"\nPEM = \"/app/ssl/server.pem\"\n\n\ndef fail(msg):\n    print(\"Certificate verification failed: \" + msg)\n    sys.exit(1)\n\n\ndef openssl(*args):\n    return subprocess.run(\n        [\"openssl\"] + list(args),\n        capture_output=True, text=True, check=True\n    ).stdout\n\n\ndef main():\n    for path in (CERT, KEY, PEM):\n        if not os.path.isfile(path):\n            fail(\"missing file \" + path)\n\n    try:\n        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)\n        ctx.load_cert_chain(certfile=CERT, keyfile=KEY)\n    except Exception as exc:\n        fail(\"could not load certificate: \" + exc)\n\n    subject = openssl(\"x509\", \"-in\", CERT, \"-noout\", \"-subject\").strip()\n    enddate = openssl(\"x509\", \"-in\", CERT, \"-noout\", \"-enddate\").strip()\n    fingerprint = openssl(\"x509\", \"-in\", CERT, \"-noout\", \"-fingerprint\", \"-sha256\").strip()\n\n    cn = None\n    for part in subject.replace(\"subject=\", \"\").split(\",\"):\n        part = part.strip()\n        if part.upper().startswith(\"CN=\") or part.upper().startswith(\"CN =\"):\n            cn = part.split(\"=\", 1)[1].strip()\n            break\n    if not cn:\n        fail(\"Common Name not found\")\n\n    date_str = enddate.split(\"=\", 1)[1].strip()\n    expiry = datetime.strptime(date_str, \"%b %d %H:%M:%S %Y %Z\")\n    expiry_str = expiry.strftime(\"%Y-%m-%d\")\n\n    if expiry < datetime.now():\n        fail(\"certificate has expired\")\n\n    print(\"Common Name: \" + cn)\n    print(\"Expiration Date: \" + expiry_str)\n    print(\"Subject: \" + subject.replace(\"subject=\", \"\"))\n    print(\"Fingerprint: \" + fingerprint.replace(\"sha256 Fingerprint=\", \"\"))\n    print(\"Certificate verification successful\")\n\n\nif __name__ == \"__main__\":\n    main()\nEOF\nsbx run <<'EOF'\nchmod +x /app/check_cert.py\npython3 /app/check_cert.py\necho \"--- verification.txt ---\"\ncat /app/ssl/verification.txt\necho \"--- pem check ---\"\nopenssl x509 -in /app/ssl/server.pem -noout -subject\nopenssl rsa -in /app/ssl/server.pem -check -noout 2>&1 | tail -1\nls -l /app/ssl /app/check_cert.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 12097,
+     "dur_ms": 49,
+     "exit": 0,
+     "cpu_ms": 41.5,
+     "phases_us": {
+      "acquire": 111,
+      "resume": 20789,
+      "mount": 18073,
+      "run": 7352,
+      "destroy": 20989
+     },
+     "cold": null,
+     "vm": "vm-88"
+    },
+    {
+     "at_ms": 12193,
+     "dur_ms": 388,
+     "exit": 0,
+     "cpu_ms": 415.3,
+     "phases_us": {
+      "acquire": 33,
+      "resume": 20194,
+      "mount": 17593,
+      "run": 350719,
+      "destroy": 17403
+     },
+     "cold": null,
+     "vm": "vm-77"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 12634,
+   "dur_ms": 1369,
+   "tokens_in": 417,
+   "tokens_out": 132,
+   "cache_read": 7808,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.232,
+ "calls": 3,
+ "cell": "TB1d",
+ "removed": []
+}

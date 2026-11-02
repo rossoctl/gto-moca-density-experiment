@@ -1,0 +1,124 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "pytorch-model-recovery",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 96969,
+ "resolved": false,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 211,
+  "output": 9000,
+  "cacheRead": 163776,
+  "cacheWrite": 6208,
+  "total": 179195
+ },
+ "totals": {
+  "model_calls": 7,
+  "tool_calls": 7,
+  "model_ms": 48098,
+  "tool_ms": 50535,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 622,
+   "dur_ms": 1699
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1747,
+   "dur_ms": 2405,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la && python -c \"\nimport torch\nw = torch.load('weights.pt', map_location='cpu')\nprint(type(w))\nif isinstance(w, dict):\n    for k,v in w.items():\n        print(k, getattr(v,'shape',None), getattr(v,'dtype',None))\n\""
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2321,
+   "dur_ms": 3563,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python -c \"\nimport torch\nd = torch.load('dataset.pt', map_location='cpu')\nprint(type(d))\nif isinstance(d, dict):\n    for k,v in d.items():\n        print(k, type(v), getattr(v,'shape',None), getattr(v,'dtype',None))\nelif isinstance(d, (list,tuple)):\n    print('len', len(d))\n    for i,x in enumerate(d):\n        print(i, type(x), getattr(x,'shape',None), getattr(x,'dtype',None))\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 5884,
+   "dur_ms": 9156
+  },
+  {
+   "kind": "tool",
+   "at_ms": 15040,
+   "dur_ms": 2265,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python -c \"\nimport torch, math\nd = torch.load('dataset.pt', map_location='cpu')\ns,t = d['src_sequences'], d['tgt_sequences']\nprint('src', s.shape, s.min().item(), s.max().item(), s.mean().item(), s.std().item())\nprint('tgt', t.shape, t.min().item(), t.max().item(), t.mean().item(), t.std().item())\nprint(s[0,:2,:8])\nprint(t[0,:2,:8])\nw = torch.load('weights.pt', map_location='cpu')\npe = w['pos_encoder.pe']\nprint('pe', pe.shape, pe[0,:3,:8])\n# check sinusoidal\nimport torch\nmax_len, d_model = pe.shape[1], pe.shape[2]\nposition = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)\ndiv = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0)/d_model))\ncheck = torch.zeros(max_len, d_model)\ncheck[:,0::2] = torch.sin(position*div); check[:,1::2]=torch.cos(position*div)\nprint('max diff sin/cos order', (pe[0]-check).abs().max().item())\ncheck2 = torch.zeros(max_len,d_model)\ncheck2[:,0::2]=torch.cos(position*div); check2[:,1::2]=torch.sin(position*div)\nprint('alt diff', (pe[0]-check2).abs().max().item())\n\" 2>/dev/null"
+  },
+  {
+   "kind": "model",
+   "at_ms": 17305,
+   "dur_ms": 14482
+  },
+  {
+   "kind": "tool",
+   "at_ms": 31787,
+   "dur_ms": 29604,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /app/explore.py <<'EOF'\nimport torch, torch.nn as nn, math, itertools\ntorch.manual_seed(0)\nW = torch.load('/app/weights.pt', map_location='cpu')\nD = torch.load('/app/dataset.pt', map_location='cpu')\nsrc, tgt = D['src_sequences'], D['tgt_sequences']\n\nclass PE(nn.Module):\n    def __init__(self, d=128):\n        super().__init__()\n        pe = torch.zeros(5000, d)\n        pos = torch.arange(0, 5000, dtype=torch.float).unsqueeze(1)\n        div = torch.exp(torch.arange(0, d, 2).float() * (-math.log(10000.0)/d))\n        pe[:,0::2] = torch.sin(pos*div); pe[:,1::2] = torch.cos(pos*div)\n        self.register_buffer('pe', pe.unsqueeze(0))\n    def forward(self, x):\n        return x + self.pe[:, :x.size(1), :]\n\ndef build(nhead, enc_layers=3, dec_layers=1):\n    class M(nn.Module):\n        def __init__(self):\n            super().__init__()\n            self.embedding = nn.Linear(64,128)\n            self.pos_encoder = PE()\n            self.transformer_encoder = nn.TransformerEncoder(\n                nn.TransformerEncoderLayer(128, nhead, 256, batch_first=True), enc_layers)\n            self.transformer_decoder = nn.TransformerDecoder(\n                nn.TransformerDecoderLayer(128, nhead, 256, batch_first=True), dec_layers)\n            self.output_layer = nn.Linear(128,64)\n        def forward(self, s, t, scale=1.0, pe_tgt=True, causal=False):\n            s = self.pos_encoder(self.embedding(s)*scale)\n            t2 = self.embedding(t)*scale\n            if pe_tgt: t2 = self.pos_encoder(t2)\n            mem = self.transformer_encoder(s)\n            mask = None\n            if causal:\n                n = t.size(1)\n                mask = torch.triu(torch.ones(n,n,dtype=torch.bool), diagonal=1)\n            o = self.transformer_decoder(t2, mem, tgt_mask=mask)\n            return self.output_layer(o)\n    return M()\n\ndef mse(m, **kw):\n    m.eval()\n    with torch.no_grad():\n        out = m(src, tgt, **kw)\n    return nn.functional.mse_loss(out, tgt).item()\n\nfor nhead in [8,4,2,1]:\n    m = build(nhead)\n    try:\n        m.load_state_dict(W, strict=True)\n    except Exception as e:\n        print(nhead, 'load fail', e); continue\n    for scale in [1.0, math.sqrt(128)]:\n        for pe_tgt in [True, False]:\n            for causal in [False, True]:\n                print(f'nhead={nhead} scale={scale:.2f} pe_tgt={pe_tgt} causal={causal} mse={mse(m,scale=scale,pe_tgt=pe_tgt,causal=causal):.6f}')\nEOF\npython /app/explore.py 2>/dev/null"
+  },
+  {
+   "kind": "model",
+   "at_ms": 61391,
+   "dur_ms": 14105
+  },
+  {
+   "kind": "tool",
+   "at_ms": 75496,
+   "dur_ms": 8760,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /app/solution.py <<'EOF'\nimport math, torch, torch.nn as nn\n\ntorch.manual_seed(0)\n\nclass PositionalEncoding(nn.Module):\n    def __init__(self, d_model=128, max_len=5000):\n        super().__init__()\n        pe = torch.zeros(max_len, d_model)\n        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)\n        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))\n        pe[:, 0::2] = torch.sin(position * div_term)\n        pe[:, 1::2] = torch.cos(position * div_term)\n        self.register_buffer('pe', pe.unsqueeze(0))\n\n    def forward(self, x):\n        return x + self.pe[:, : x.size(1), :]\n\n\nclass RecoveredModel(nn.Module):\n    \"\"\"Architecture implied by weights.pt:\n    Linear(64->128) 'embedding' -> sinusoidal PE -> 3-layer TransformerEncoder\n    -> 1-layer TransformerDecoder -> Linear(128->64) 'output_layer'\n    \"\"\"\n    def __init__(self, d_model=128, nhead=8, num_enc_layers=3,\n                 num_dec_layers=1, dim_feedforward=256,\n                 input_dim=64, output_dim=64):\n        super().__init__()\n        self.embedding = nn.Linear(input_dim, d_model)\n        self.pos_encoder = PositionalEncoding(d_model)\n        enc_layer = nn.TransformerEncoderLayer(d_model, nhead, dim_feedforward, batch_first=True)\n        self.transformer_encoder = nn.TransformerEncoder(enc_layer, num_enc_layers)\n        dec_layer = nn.TransformerDecoderLayer(d_model, nhead, dim_feedforward, batch_first=True)\n        self.transformer_decoder = nn.TransformerDecoder(dec_layer, num_dec_layers)\n        self.output_layer = nn.Linear(d_model, output_dim)\n\n    def forward(self, src_sequences, tgt_sequences):\n        src = self.pos_encoder(self.embedding(src_sequences))\n        tgt = self.pos_encoder(self.embedding(tgt_sequences))\n        memory = self.transformer_encoder(src)\n        out = self.transformer_decoder(tgt, memory)\n        return self.output_layer(out)\n\n\ndef main():\n    weights = torch.load('/app/weights.pt', map_location='cpu')\n    data = torch.load('/app/dataset.pt', map_location='cpu')\n    src, tgt = data['src_sequences'], data['tgt_sequences']\n\n    model = RecoveredModel()\n    model.load_state_dict(weights, strict=True)   # exact key/shape match\n    model.eval()\n\n    with torch.no_grad():\n        original_mse = nn.functional.mse_loss(model(src, tgt), tgt).item()\n    print(f'Original MSE: {original_mse:.8f}')\n\n    # Freeze everything except output_layer\n    for p in model.parameters():\n        p.requires_grad_(False)\n\n    # Closed-form least squares for the final linear layer:\n    # min_{W,b} || H W^T + b - Y ||^2 is the global optimum over output_layer.\n    with torch.no_grad():\n        feats = model.output_layer.__class__  # noqa (unused, clarity)\n        h = model.transformer_decoder(\n            model.pos_encoder(model.embedding(tgt)),\n            model.transformer_encoder(model.pos_encoder(model.embedding(src)))\n        )                                      # [B, T, 128]\n        H = h.reshape(-1, h.size(-1)).double()\n        Y = tgt.reshape(-1, tgt.size(-1)).double()\n        H1 = torch.cat([H, torch.ones(H.size(0), 1, dtype=H.dtype)], dim=1)\n        sol = torch.linalg.lstsq(H1, Y).solution        # [129, 64]\n        W_new = sol[:-1].T.contiguous().float()         # [64, 128]\n        b_new = sol[-1].contiguous().float()            # [64]\n\n    # Confirm all other params unchanged\n    model.output_layer.weight.copy_(W_new)\n    model.output_layer.bias.copy_(b_new)\n\n    with torch.no_grad():\n        tuned_mse = nn.functional.mse_loss(model(src, tgt), tgt).item()\n    print(f'Tuned MSE:    {tuned_mse:.8f}')\n    assert tuned_mse < original_mse, 'MSE did not decrease'\n\n    # Verify only output_layer changed relative to the original weights\n    new_sd = model.state_dict()\n    assert set(new_sd.keys()) == set(weights.keys()), 'state dict key mismatch'\n    for k in weights:\n        if k.startswith('output_layer'):\n            continue\n        assert torch.equal(new_sd[k], weights[k]), f'unexpected change in {k}'\n    print('Only output_layer changed:', \n          not torch.equal(new_sd['output_layer.weight'], weights['output_layer.weight']),\n          not torch.equal(new_sd['output_layer.bias'], weights['output_layer.bias']))\n\n    # Save TorchScript\n    model.eval()\n    scripted = torch.jit.script(model)\n    scripted.save('/app/model.pt')\n\n    # Round-trip verification\n    loaded = torch.jit.load('/app/model.pt', map_location='cpu')\n    loaded.eval()\n    reloaded_sd = loaded.state_dict()\n    assert set(reloaded_sd.keys()) == set(weights.keys()), f'script keys: {set(reloaded_sd.keys()) ^ set(weights.keys())}'\n    loaded.load_state_dict(weights, strict=True)   # must accept ORIGINAL weights\n    with torch.no_grad():\n        check_orig = nn.functional.mse_loss(loaded(src, tgt), tgt).item()\n    loaded.load_state_dict(new_sd, strict=True)\n    with torch.no_grad():\n        check_tuned = nn.functional.mse_loss(loaded(src, tgt), tgt).item()\n    print(f'Round-trip: original-weights MSE={check_orig:.8f}, tuned-weights MSE={check_tuned:.8f}')\n    print('Saved /app/model.pt')\n\n\nif __name__ == '__main__':\n    main()\nEOF\ncd /app && python solution.py 2>&1 | grep -v NumPy"
+  },
+  {
+   "kind": "model",
+   "at_ms": 84256,
+   "dur_ms": 3791
+  },
+  {
+   "kind": "tool",
+   "at_ms": 88047,
+   "dur_ms": 3916,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python - <<'EOF' 2>&1 | grep -v -i numpy\nimport torch, hashlib\nw = torch.load('/app/weights.pt', map_location='cpu')\nd = torch.load('/app/dataset.pt', map_location='cpu')\nm = torch.jit.load('/app/model.pt', map_location='cpu'); m.eval()\nsd = m.state_dict()\norig_mse = torch.nn.functional.mse_loss(m(d['src_sequences'], d['tgt_sequences']), d['tgt_sequences']).item()\ndiff = [k for k in w if not torch.equal(w[k], sd[k])]\nprint('state_dict keys match:', set(w) == set(sd))\nprint('changed keys:', diff)\nm.load_state_dict(w, strict=True)\nm.eval()\nbase = torch.nn.functional.mse_loss(m(d['src_sequences'], d['tgt_sequences']), d['tgt_sequences']).item()\nprint(f'MSE(original weights)={base:.6f}  MSE(tuned)={orig_mse:.6f}  improved={orig_mse < base}')\nEOF\nls -l /app/model.pt && md5sum /app/weights.pt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 91963,
+   "dur_ms": 1075
+  },
+  {
+   "kind": "tool",
+   "at_ms": 93038,
+   "dur_ms": 22,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "rm -f /app/explore.py && ls /app"
+  },
+  {
+   "kind": "model",
+   "at_ms": 93060,
+   "dur_ms": 3790
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 2.67,
+ "calls": 7,
+ "cell": "TB1a"
+}

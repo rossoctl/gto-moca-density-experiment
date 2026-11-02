@@ -1,0 +1,40 @@
+tb30-2-a feal-linear-cryptanalysis rep 1: Claude Code, local hands; turn 336.7 s; 19 model calls (332.6 s), 20 tool calls (3.5 s; sandbox 0.0 s); resolved True; tokens: 1327448 total, 58531 output
+     0.6s     1.39s  MODEL  stop None
+     1.5s     0.06s  TOOL   Bash: ls -la /app && echo "---" && cat /app/feal.c
+     1.9s     0.06s  TOOL   Bash: cat /app/decrypt.c && echo "---PAIRS---" && head -20 /app/pairs.txt && echo "---CT---" && head -20 /app/cipher
+     2.0s   133.29s  MODEL  stop None
+   134.7s     0.06s  TOOL   Bash: python3 - <<'EOF' ⏎ pairs=[tuple(map(int,l.split())) for l in open('pairs.txt') if l.strip()] ⏎ print(len(pair
+   135.3s     0.04s  TOOL   Bash: file feal decrypt && strings -a feal | head -50 && echo --- && strings -a decrypt | grep -iE 'key|flag|plain|U
+   135.3s     4.04s  MODEL  stop None
+   139.4s     0.04s  TOOL   Bash: (strings -a feal 2>/dev/null | head -40) ; echo "---decrypt---"; (strings -a decrypt 2>/dev/null | grep -iE 'k
+   139.4s    29.94s  MODEL  stop None
+   169.4s     0.09s  TOOL   Bash: cat > /tmp/analyze.py <<'EOF' ⏎ import random ⏎  ⏎ def rotl2(t): return ((t<<2)|(t>>6))&0xFF ⏎ def g(a,b,x): r
+   169.4s     6.69s  MODEL  stop None
+   176.1s     0.11s  TOOL   Bash: cat > /tmp/analyze2.py <<'EOF' ⏎ import random ⏎  ⏎ def rotl2(t): return ((t<<2)|(t>>6))&0xFF ⏎ def g(a,b,x): 
+   176.2s    23.80s  MODEL  stop None
+   200.0s     0.04s  TOOL   Bash: cat > /tmp/rankcheck.py <<'EOF' ⏎ # Check if exact linear relations constrain key bits at all. ⏎ S_M=[2,8,10,1
+   200.1s    64.81s  MODEL  stop None
+   264.9s     0.16s  TOOL   Bash: cat > /tmp/validate.py <<'EOF' ⏎ import random ⏎ MASK=0xFFFFFFFF ⏎ def rotl2(t): return ((t<<2)|(t>>6))&0xFF ⏎
+   265.1s     5.69s  MODEL  stop None
+   270.7s     0.16s  TOOL   Bash: cd /tmp && sed -i 's/R1 = Lp \^ F(Rp \^ K0)/R1 = Lp ^ F((Rp^Lp) ^ K0)/; s/phi = Lp \^ F(Rp \^ K0)/phi = Lp ^ F
+   270.9s    23.36s  MODEL  stop None
+   294.3s     0.03s  TOOL   Write: /app/attack.c
+   294.3s     3.75s  MODEL  stop None
+   298.0s     0.33s  TOOL   Bash: gcc -O2 -o attack attack.c && echo built && nproc && cat > /tmp/gen_synth.py <<'EOF' ⏎ import random,sys ⏎ exe
+   298.4s     1.28s  MODEL  stop None
+   299.6s     0.54s  TOOL   Bash: time ./attack /tmp/synth_pairs.txt /tmp/synth_ct.txt /tmp/synth_out.txt && echo "--- compare ---" && diff /tmp
+   300.2s     7.22s  MODEL  stop None
+   307.4s     0.13s  TOOL   Bash: cat > /tmp/debug_sig.py <<'EOF' ⏎ import random ⏎ exec(open('/tmp/validate.py').read().split("seeds=[random")[
+   307.5s     5.80s  MODEL  stop None
+   313.3s     0.19s  TOOL   Bash: cat > /tmp/testfn.c <<'EOF' ⏎ #include <stdio.h> ⏎ #include <stdint.h> ⏎ static uint32_t rotl2(uint32_t t){ret
+   313.5s     7.61s  MODEL  stop None
+   321.1s     0.09s  TOOL   Bash: cat > /tmp/dbg2.c <<'EOF' ⏎ #include <stdio.h> ⏎ #include <stdint.h> ⏎ static uint32_t rotl2(uint32_t t){retur
+   321.2s     3.01s  MODEL  stop None
+   324.2s     0.02s  TOOL   Edit: /app/attack.c (edit: 125 -> 125 chars)
+   324.3s     1.38s  MODEL  stop None
+   325.6s     0.72s  TOOL   Bash: gcc -O2 -o attack attack.c && time ./attack /tmp/synth_pairs.txt /tmp/synth_ct.txt /tmp/synth_out.txt && echo 
+   326.4s     1.59s  MODEL  stop None
+   327.9s     0.54s  TOOL   Bash: time ./attack pairs.txt ciphertexts.txt plaintexts.txt
+   328.5s     2.95s  MODEL  stop None
+   331.4s     0.10s  TOOL   Bash: ./decrypt ciphertexts.txt 68E63 62571 1F61C B74A5 > /tmp/verify_decrypt.txt && diff plaintexts.txt /tmp/verify
+   331.5s     4.99s  MODEL  stop None

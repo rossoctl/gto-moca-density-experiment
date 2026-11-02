@@ -1,0 +1,131 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-f",
+ "instance_id": "constraints-scheduling",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 15019,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 87,
+  "output": 2558,
+  "cacheRead": 8960,
+  "cacheWrite": 1792,
+  "total": 13397
+ },
+ "totals": {
+  "model_calls": 3,
+  "tool_calls": 2,
+  "model_ms": 13457,
+  "tool_ms": 396,
+  "sandbox_ms": 228
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1090,
+   "dur_ms": 803,
+   "tokens_in": 32,
+   "tokens_out": 122,
+   "cache_read": 1664,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1897,
+   "dur_ms": 121,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /workspace\necho \"=== ALICE ===\"\ncat /workspace/alice_calendar.ics\necho \"=== BOB ===\"\ncat /workspace/bob_calendar.ics\necho \"=== CAROL ===\"\ncat /workspace/carol_calendar.ics",
+   "sandbox": [
+    {
+     "at_ms": 1948,
+     "dur_ms": 62,
+     "exit": 0,
+     "cpu_ms": 41.6,
+     "phases_us": {
+      "acquire": 78,
+      "resume": 21830,
+      "mount": 19665,
+      "run": 7972,
+      "destroy": 31897
+     },
+     "cold": null,
+     "vm": "vm-36"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 2022,
+   "dur_ms": 10982,
+   "tokens_in": 45,
+   "tokens_out": 2156,
+   "cache_read": 1792,
+   "cache_write": 1536,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 13005,
+   "dur_ms": 275,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put meeting_scheduled.ics <<'EOF'\nBEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Terminal-Bench//Meeting Scheduler//EN\nCALSCALE:GREGORIAN\nMETHOD:PUBLISH\nBEGIN:VEVENT\nUID:team-planning-20240117@example.com\nDTSTAMP:20240115T000000Z\nDTSTART:20240117T110000Z\nDTEND:20240117T120000Z\nSUMMARY:Team Planning Meeting\nDESCRIPTION:1-hour planning meeting for Alice, Bob, and Carol.\nLOCATION:Conference Room\nATTENDEE;CN=Alice;ROLE=REQ-PARTICIPANT:mailto:alice@example.com\nATTENDEE;CN=Bob;ROLE=REQ-PARTICIPANT:mailto:bob@example.com\nATTENDEE;CN=Carol;ROLE=REQ-PARTICIPANT:mailto:carol@example.com\nEND:VEVENT\nEND:VCALENDAR\nEOF\nsbx run <<'EOF'\ncd /workspace\necho \"=== file ===\"\ncat meeting_scheduled.ics\necho \"=== checks ===\"\npython3 - <<'PY'\nfrom pathlib import Path\np=Path('meeting_scheduled.ics')\nt=p.read_text()\nassert t.startswith('BEGIN:VCALENDAR') and t.strip().endswith('END:VCALENDAR')\nassert 'VERSION:2.0' in t and 'PRODID:' in t\nassert 'BEGIN:VEVENT' in t and 'END:VEVENT' in t\nfor e in ['alice@example.com','bob@example.com','carol@example.com']:\n    assert e in t\nassert 'DTSTART:20240117T110000Z' in t and 'DTEND:20240117T120000Z' in t\nprint('All ICS checks passed')\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 13054,
+     "dur_ms": 60,
+     "exit": 0,
+     "cpu_ms": 43.6,
+     "phases_us": {
+      "acquire": 63,
+      "resume": 22105,
+      "mount": 19820,
+      "run": 7917,
+      "destroy": 30101
+     },
+     "cold": null,
+     "vm": "vm-39"
+    },
+    {
+     "at_ms": 13161,
+     "dur_ms": 106,
+     "exit": 0,
+     "cpu_ms": 100.2,
+     "phases_us": {
+      "acquire": 26,
+      "resume": 26648,
+      "mount": 23927,
+      "run": 53269,
+      "destroy": 25359
+     },
+     "cold": null,
+     "vm": "vm-33"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 13283,
+   "dur_ms": 1672,
+   "tokens_in": 10,
+   "tokens_out": 280,
+   "cache_read": 5504,
+   "cache_write": 256,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.069,
+ "calls": 2,
+ "cell": "TB1f",
+ "removed": []
+}

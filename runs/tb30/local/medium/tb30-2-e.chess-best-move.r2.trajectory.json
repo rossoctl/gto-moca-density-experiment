@@ -1,0 +1,629 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "chess-best-move",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 406400,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 921,
+  "output": 23758,
+  "cacheRead": 543168,
+  "cacheWrite": 15872,
+  "total": 583719
+ },
+ "totals": {
+  "model_calls": 33,
+  "tool_calls": 32,
+  "model_ms": 144056,
+  "tool_ms": 261027,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1152,
+   "dur_ms": 487,
+   "tokens_in": 33,
+   "tokens_out": 57,
+   "cache_read": 1536,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1643,
+   "dur_ms": 12,
+   "tool": "bash",
+   "is_error": true,
+   "command": "ls -la /app && file /app/chess_board.png"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1655,
+   "dur_ms": 438,
+   "tokens_in": 60,
+   "tokens_out": 43,
+   "cache_read": 1600,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2094,
+   "dur_ms": 67,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "path": "/app/chess_board.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 2164,
+   "dur_ms": 990,
+   "tokens_in": 21,
+   "tokens_out": 145,
+   "cache_read": 1728,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3154,
+   "dur_ms": 67,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 -c \"import PIL; print(PIL.__version__)\" 2>&1; python3 -c \"import cv2; print(cv2.__version__)\" 2>&1; python3 -c \"import chess; print(chess.__version__)\" 2>&1; which python3"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3221,
+   "dur_ms": 1187,
+   "tokens_in": 62,
+   "tokens_out": 163,
+   "cache_read": 1920,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4409,
+   "dur_ms": 470,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nfrom PIL import Image\nim=Image.open('chess_board.png')\nprint(im.size, im.mode)\nEOF\nwhich stockfish; ls /usr/games 2>/dev/null; pip list 2>/dev/null | head -50"
+  },
+  {
+   "kind": "model",
+   "at_ms": 4884,
+   "dur_ms": 1501,
+   "tokens_in": 27,
+   "tokens_out": 208,
+   "cache_read": 2176,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6385,
+   "dur_ms": 150,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nfrom PIL import Image\nfrom collections import Counter\nim=Image.open('chess_board.png').convert('RGB')\nw,h=im.size\nc=Counter(im.getdata())\nfor col,n in c.most_common(30):\n    print(col,n)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 6537,
+   "dur_ms": 2970,
+   "tokens_in": 33,
+   "tokens_out": 409,
+   "cache_read": 2432,
+   "cache_write": 384,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 9508,
+   "dur_ms": 218,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nfrom PIL import Image\nim=Image.open('chess_board.png').convert('RGB')\n# print grid of average colors per 80px cell\nfor r in range(8):\n    row=[]\n    for c in range(8):\n        box=(c*80,r*80,(c+1)*80,(r+1)*80)\n        px=list(im.crop(box).getdata())\n        # fraction dark (<80 luminance) and near white\n        dark=sum(1 for p in px if sum(p)<150)/len(px)\n        white=sum(1 for p in px if min(p)>200)/len(px)\n        row.append(f\"{dark:.2f}/{white:.2f}\")\n    print(r, ' '.join(row))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 9728,
+   "dur_ms": 3103,
+   "tokens_in": 21,
+   "tokens_out": 456,
+   "cache_read": 3200,
+   "cache_write": 576,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 12832,
+   "dur_ms": 70,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nfrom PIL import Image\nim=Image.open('chess_board.png').convert('RGB')\nfor y in [0,40,79,80,120,159,160,200]:\n    print(y,[im.getpixel((x,y)) for x in [0,40,79,80,120,159,160,200]])\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 12904,
+   "dur_ms": 1423,
+   "tokens_in": 48,
+   "tokens_out": 171,
+   "cache_read": 4224,
+   "cache_write": 576,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14327,
+   "dur_ms": 70,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nfrom PIL import Image\nim=Image.open('chess_board.png')\nprint(im.info)\nprint(im.text if hasattr(im,'text') else None)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 14399,
+   "dur_ms": 994,
+   "tokens_in": 40,
+   "tokens_out": 113,
+   "cache_read": 4992,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 15394,
+   "dur_ms": 8,
+   "tool": "bash",
+   "is_error": false,
+   "command": "find /usr/share/fonts -type f 2>/dev/null | head -50; fc-list 2>/dev/null | head"
+  },
+  {
+   "kind": "model",
+   "at_ms": 15405,
+   "dur_ms": 2467,
+   "tokens_in": 33,
+   "tokens_out": 372,
+   "cache_read": 5120,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 17873,
+   "dur_ms": 81,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nfrom PIL import Image\nfrom collections import Counter\nim=Image.open('chess_board.png').convert('RGB')\ndef stats(r,c):\n    box=(c*80,r*80,(c+1)*80,(r+1)*80)\n    px=list(im.crop(box).getdata())\n    ctr=Counter(px)\n    print('cell',r,c,'top',ctr.most_common(8))\nfor rr,cc in [(5,0),(3,4),(7,7),(0,0),(0,2),(7,0)]:\n    stats(rr,cc)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 17956,
+   "dur_ms": 3302,
+   "tokens_in": 16,
+   "tokens_out": 519,
+   "cache_read": 5696,
+   "cache_write": 640,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 21258,
+   "dur_ms": 638,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nfrom PIL import Image\nimport math\nim=Image.open('chess_board.png').convert('RGB')\ndef is_bg(p, sq):\n    return sum((p[i]-sq[i])**2 for i in range(3)) < 30**2\n# board origin top-left; cell (row from top, col)\nocc=[]\nfor r in range(8):\n  for c in range(8):\n    x0,y0=c*80,r*80\n    sq=(240,217,181) if (r+c)%2==0 else (181,136,99)\n    pts=[]\n    for y in range(y0,y0+80):\n      for x in range(x0,x0+80):\n        if not is_bg(im.getpixel((x,y)),sq):\n          pts.append((x,y,im.getpixel((x,y))))\n    if len(pts)>50:\n      xs=[p[0] for p in pts]; ys=[p[1] for p in pts]\n      # classify color\n      white=sum(1 for p in pts if min(p[2])>200)\n      black=sum(1 for p in pts if max(p[2])<80)\n      occ.append((r,c,len(pts),min(xs)-x0,max(xs)-x0,min(ys)-y0,max(ys)-y0,white,black))\nfor o in occ: print(o)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 21898,
+   "dur_ms": 8836,
+   "tokens_in": 6,
+   "tokens_out": 1360,
+   "cache_read": 6848,
+   "cache_write": 704,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 30734,
+   "dur_ms": 75,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nfrom PIL import Image\nim=Image.open('chess_board.png').convert('RGB')\ndef mask(r,c,color):\n    x0,y0=c*80,r*80\n    m=[]\n    for y in range(y0,y0+80):\n        row=''\n        for x in range(x0,x0+80):\n            p=im.getpixel((x,y))\n            if color=='b':\n                row += '#' if max(p)<100 else ' '\n            else:\n                row += '#' if min(p)>200 else ' '\n        m.append(row)\n    # trim\n    rows=[i for i,row in enumerate(m) if '#' in row]\n    cols=[j for j in range(80) if any(m[i][j]=='#' for i in range(80))]\n    if not rows: return []\n    return [row[min(cols):max(cols)+1] for row in m[min(rows):max(rows)+1]]\ndef show(r,c):\n    color='b' if (r,c) in [(0,0),(0,2),(0,3),(0,5),(1,1),(1,5),(1,6),(2,0),(2,2),(2,4),(3,3),(3,5),(3,6)] else 'w'\n    m=mask(r,c,color)\n    print(f'--- {r},{c} {color} bbox {len(m[0])}x{len(m)}')\n    for row in m[::2]:\n        print(row[::2])\nshow(0,0)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 30811,
+   "dur_ms": 3063,
+   "tokens_in": 13,
+   "tokens_out": 586,
+   "cache_read": 8896,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 33874,
+   "dur_ms": 744,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF' > /app/pieces.txt\nfrom PIL import Image\nim=Image.open('chess_board.png').convert('RGB')\nblacks={(0,0),(0,2),(0,3),(0,5),(1,1),(1,5),(1,6),(2,0),(2,2),(2,4),(3,3),(3,5),(3,6)}\ndef mask(r,c,color):\n    x0,y0=c*80,r*80\n    m=[]\n    for y in range(y0,y0+80):\n        row=''\n        for x in range(x0,x0+80):\n            p=im.getpixel((x,y))\n            if color=='b': row += '#' if max(p)<100 else ' '\n            else: row += '#' if min(p)>200 else ' '\n        m.append(row)\n    rows=[i for i,row in enumerate(m) if '#' in row]\n    cols=[j for j in range(80) if any(m[i][j]=='#' for i in range(80))]\n    return [row[min(cols):max(cols)+1] for row in m[min(rows):max(rows)+1]]\nfor r in range(8):\n  for c in range(8):\n    color='b' if (r,c) in blacks else 'w'\n    x0,y0=c*80,r*80\n    sq=(240,217,181) if (r+c)%2==0 else (181,136,99)\n    pts=0\n    for y in range(y0,y0+80):\n      for x in range(x0,x0+80):\n        p=im.getpixel((x,y))\n        if sum((p[i]-sq[i])**2 for i in range(3))>=30**2: pts+=1\n    if pts>50:\n      m=mask(r,c,color)\n      print(f'=== cell r{r} c{c} {\"BLACK\" if color==\"b\" else \"WHITE\"} size {len(m[0])}x{len(m)}')\n      for row in m[::2]: print(row[::2])\n      print()\nEOF\nwc -l /app/pieces.txt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 34621,
+   "dur_ms": 571,
+   "tokens_in": 41,
+   "tokens_out": 42,
+   "cache_read": 9600,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 35192,
+   "dur_ms": 2,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "path": "/app/pieces.txt"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 35196,
+   "dur_ms": 6940,
+   "tokens_in": 41,
+   "tokens_out": 1275,
+   "cache_read": 9664,
+   "cache_write": 2944,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 42136,
+   "dur_ms": 60,
+   "tool": "bash",
+   "is_error": true,
+   "command": "cd /app && python3 - <<'EOF'\nfrom PIL import Image, ImageDraw, ImageFont\nimport numpy as np\nim=Image.open('chess_board.png').convert('RGB')\nblacks={(0,0),(0,2),(0,3),(0,5),(1,1),(1,5),(1,6),(2,0),(2,2),(2,4),(3,3),(3,5),(3,6)}\n# extract masks\ncells=[]\nfor r in range(8):\n  for c in range(8):\n    color='b' if (r,c) in blacks else 'w'\n    x0,y0=c*80,r*80\n    sq=(240,217,181) if (r+c)%2==0 else (181,136,99)\n    nonbg=0\n    for y in range(y0,y0+80):\n      for x in range(x0,x0+80):\n        p=im.getpixel((x,y))\n        if sum((p[i]-sq[i])**2 for i in range(3))>=30**2: nonbg+=1\n    if nonbg<=50: continue\n    arr=np.zeros((80,80),bool)\n    for y in range(80):\n      for x in range(80):\n        p=im.getpixel((x0+x,y0+y))\n        if color=='b': arr[y,x]=max(p)<100\n        else: arr[y,x]=min(p)>200\n    ys,xs=np.where(arr)\n    arr=arr[ys.min():ys.max()+1, xs.min():xs.max()+1]\n    cells.append((r,c,color,arr))\n\ndef render(ch, size):\n    font=ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', size)\n    img=Image.new('L',(size*2,size*2),0)\n    d=ImageDraw.Draw(img)\n    d.text((size//2,size//2),ch,fill=255,font=font)\n    a=np.array(img)>128\n    ys,xs=np.where(a)\n    return a[ys.min():ys.max()+1, xs.min():xs.max()+1]\n\ndef norm(a,shape):\n    return np.array(Image.fromarray(a.astype(np.uint8)*255).resize((shape[1],shape[0]),Image.NEAREST))>128\n\nnames={0x2654:'K',0x2655:'Q',0x2656:'R',0x2657:'B',0x2658:'N',0x2659:'P',0x265A:'k',0x265B:'q',0x265C:'r',0x265D:'b',0x265E:'n',0x265F:'p'}\n# pre-render at multiple sizes, but normalize to target\nfor r,c,color,tgt in cells:\n    best=[]\n    for cp,nm in names.items():\n      ch=chr(cp)\n      for sz in [48,56,64,72]:\n        m=render(ch,sz)\n        m2=norm(m,tgt.shape)\n        inter=(m2&tgt).sum(); union=(m2|tgt).sum()\n        iou=inter/union\n        best.append((iou,nm,sz))\n    best.sort(reverse=True)\n    print(f'r{r}c{c} {color} shape{tgt.shape}:', ' '.join(f'{nm}{sz}:{iou:.3f}' for iou,nm,sz in best[:4]))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 42199,
+   "dur_ms": 1094,
+   "tokens_in": 23,
+   "tokens_out": 116,
+   "cache_read": 13888,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 43293,
+   "dur_ms": 325,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && timeout 30 pip install numpy python-chess 2>&1 | tail -20",
+   "timeout": 40
+  },
+  {
+   "kind": "model",
+   "at_ms": 43621,
+   "dur_ms": 1125,
+   "tokens_in": 5,
+   "tokens_out": 111,
+   "cache_read": 14080,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 44746,
+   "dur_ms": 4147,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && timeout 90 pip install --break-system-packages numpy python-chess 2>&1 | tail -30",
+   "timeout": 100
+  },
+  {
+   "kind": "model",
+   "at_ms": 48896,
+   "dur_ms": 3859,
+   "tokens_in": 34,
+   "tokens_out": 792,
+   "cache_read": 14400,
+   "cache_write": 576,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 52755,
+   "dur_ms": 1627,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nfrom PIL import Image, ImageDraw, ImageFont\nimport numpy as np\nim=Image.open('chess_board.png').convert('RGB')\nblacks={(0,0),(0,2),(0,3),(0,5),(1,1),(1,5),(1,6),(2,0),(2,2),(2,4),(3,3),(3,5),(3,6)}\ncells=[]\nfor r in range(8):\n  for c in range(8):\n    color='b' if (r,c) in blacks else 'w'\n    x0,y0=c*80,r*80\n    sq=(240,217,181) if (r+c)%2==0 else (181,136,99)\n    arr=np.zeros((80,80),bool)\n    for y in range(80):\n      for x in range(80):\n        p=im.getpixel((x0+x,y0+y))\n        if color=='b': arr[y,x]=max(p)<100\n        else: arr[y,x]=min(p)>200\n    if arr.sum()<50: continue\n    ys,xs=np.where(arr)\n    arr=arr[ys.min():ys.max()+1, xs.min():xs.max()+1]\n    cells.append((r,c,color,arr))\n\ndef render(ch, size):\n    font=ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', size)\n    img=Image.new('L',(size*2,size*2),0)\n    d=ImageDraw.Draw(img)\n    d.text((size//2,size//2),ch,fill=255,font=font)\n    a=np.array(img)>128\n    ys,xs=np.where(a)\n    return a[ys.min():ys.max()+1, xs.min():xs.max()+1]\n\ndef norm(a,shape):\n    return np.array(Image.fromarray(a.astype(np.uint8)*255).resize((shape[1],shape[0]),Image.NEAREST))>128\n\nnames={0x2654:'K',0x2655:'Q',0x2656:'R',0x2657:'B',0x2658:'N',0x2659:'P',0x265A:'k',0x265B:'q',0x265C:'r',0x265D:'b',0x265E:'n',0x265F:'p'}\nfor r,c,color,tgt in cells:\n    best=[]\n    for cp,nm in names.items():\n      for sz in [48,56,64,72,80]:\n        m=norm(render(chr(cp),sz),tgt.shape)\n        iou=(m&tgt).sum()/(m|tgt).sum()\n        best.append((iou,nm,sz))\n    best.sort(reverse=True)\n    print(f'r{r}c{c} {color} shape{tgt.shape}:', ' '.join(f'{nm}{sz}:{iou:.3f}' for iou,nm,sz in best[:5]))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 54385,
+   "dur_ms": 4041,
+   "tokens_in": 56,
+   "tokens_out": 921,
+   "cache_read": 15744,
+   "cache_write": 1088,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 58426,
+   "dur_ms": 2611,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nfrom PIL import Image, ImageDraw, ImageFont\nimport numpy as np\nim=Image.open('chess_board.png').convert('RGB')\nblacks={(0,0),(0,2),(0,3),(0,5),(1,1),(1,5),(1,6),(2,0),(2,2),(2,4),(3,3),(3,5),(3,6)}\ncells=[]\nfor r in range(8):\n  for c in range(8):\n    color='b' if (r,c) in blacks else 'w'\n    x0,y0=c*80,r*80\n    arr=np.zeros((80,80),bool)\n    for y in range(80):\n      for x in range(80):\n        p=im.getpixel((x0+x,y0+y))\n        arr[y,x]= max(p)<100 if color=='b' else min(p)>200\n    if arr.sum()<50: continue\n    ys,xs=np.where(arr)\n    arr=arr[ys.min():ys.max()+1, xs.min():xs.max()+1]\n    cells.append((r,c,color,arr))\n\ndef render(ch, size, fontpath):\n    font=ImageFont.truetype(fontpath, size)\n    img=Image.new('L',(size*2,size*2),0)\n    d=ImageDraw.Draw(img)\n    d.text((size//2,size//2),ch,fill=255,font=font)\n    a=np.array(img)>128\n    ys,xs=np.where(a)\n    return a[ys.min():ys.max()+1, xs.min():xs.max()+1]\ndef norm(a,shape):\n    return np.array(Image.fromarray(a.astype(np.uint8)*255).resize((shape[1],shape[0]),Image.NEAREST))>128\nnames={0x2654:'K',0x2655:'Q',0x2656:'R',0x2657:'B',0x2658:'N',0x2659:'P',0x265A:'k',0x265B:'q',0x265C:'r',0x265D:'b',0x265E:'n',0x265F:'p'}\nfonts=['/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf','/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf','/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf','/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf']\nfor r,c,color,tgt in cells:\n    if color!='w': continue\n    best=[]\n    for cp,nm in names.items():\n      for fi,fp in enumerate(fonts):\n        for sz in [48,56,64,72,80]:\n          m=norm(render(chr(cp),sz,fp),tgt.shape)\n          iou=(m&tgt).sum()/(m|tgt).sum()\n          best.append((iou,nm,fi,sz))\n    best.sort(reverse=True)\n    print(f'r{r}c{c} {color} shape{tgt.shape}:', ' '.join(f'{nm}/f{fi}/{sz}:{iou:.3f}' for iou,nm,fi,sz in best[:6]))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 61040,
+   "dur_ms": 9301,
+   "tokens_in": 0,
+   "tokens_out": 1701,
+   "cache_read": 17792,
+   "cache_write": 832,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 70341,
+   "dur_ms": 1743,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nfrom PIL import Image, ImageDraw, ImageFont\nimport numpy as np\nfrom collections import deque\nim=Image.open('chess_board.png').convert('RGB')\nblacks={(0,0),(0,2),(0,3),(0,5),(1,1),(1,5),(1,6),(2,0),(2,2),(2,4),(3,3),(3,5),(3,6)}\ncells=[]\nfor r in range(8):\n  for c in range(8):\n    color='b' if (r,c) in blacks else 'w'\n    x0,y0=c*80,r*80\n    arr=np.zeros((80,80),bool)\n    for y in range(80):\n      for x in range(80):\n        p=im.getpixel((x0+x,y0+y))\n        arr[y,x]= max(p)<100 if color=='b' else min(p)>200\n    if arr.sum()<50: continue\n    ys,xs=np.where(arr)\n    arr=arr[ys.min():ys.max()+1, xs.min():xs.max()+1]\n    cells.append((r,c,color,arr))\n\ndef fill(m):\n    h,w=m.shape\n    outside=np.zeros_like(m)\n    dq=deque()\n    for x in range(w):\n        for y in [0,h-1]:\n            if not m[y,x] and not outside[y,x]: outside[y,x]=True; dq.append((y,x))\n    for y in range(h):\n        for x in [0,w-1]:\n            if not m[y,x] and not outside[y,x]: outside[y,x]=True; dq.append((y,x))\n    while dq:\n        y,x=dq.popleft()\n        for dy,dx in [(1,0),(-1,0),(0,1),(0,-1)]:\n            ny,nx=y+dy,x+dx\n            if 0<=ny<h and 0<=nx<w and not m[ny,nx] and not outside[ny,nx]:\n                outside[ny,nx]=True; dq.append((ny,nx))\n    return ~outside\n\ndef render(ch, size, fontpath):\n    font=ImageFont.truetype(fontpath, size)\n    img=Image.new('L',(size*2,size*2),0)\n    d=ImageDraw.Draw(img)\n    d.text((size//2,size//2),ch,fill=255,font=font)\n    a=np.array(img)>128\n    ys,xs=np.where(a)\n    return a[ys.min():ys.max()+1, xs.min():xs.max()+1]\ndef norm(a,shape):\n    return np.array(Image.fromarray(a.astype(np.uint8)*255).resize((shape[1],shape[0]),Image.NEAREST))>128\nnames={0x2654:'K',0x2655:'Q',0x2656:'R',0x2657:'B',0x2658:'N',0x2659:'P',0x265A:'k',0x265B:'q',0x265C:'r',0x265D:'b',0x265E:'n',0x265F:'p'}\nfonts=['/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf','/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf']\nfor r,c,color,tgt0 in cells:\n    if color!='w': continue\n    tgt=fill(tgt0)\n    best=[]\n    for cp,nm in names.items():\n      for fi,fp in enumerate(fonts):\n        for sz in [48,56,64,72,80]:\n          m=norm(render(chr(cp),sz,fp),tgt.shape)\n          iou=(m&tgt).sum()/(m|tgt).sum()\n          best.append((iou,nm,fi,sz))\n    best.sort(reverse=True)\n    print(f'r{r}c{c} shape{tgt.shape}:', ' '.join(f'{nm}/f{fi}/{sz}:{iou:.3f}' for iou,nm,fi,sz in best[:6]))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 72087,
+   "dur_ms": 10123,
+   "tokens_in": 8,
+   "tokens_out": 1682,
+   "cache_read": 20288,
+   "cache_write": 832,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 82211,
+   "dur_ms": 346,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nfrom PIL import Image,ImageDraw,ImageFont\nimport numpy as np\nfor ch,nm in [('\u265f','p'),('\u265d','b'),('\u265e','n'),('\u265c','r'),('\u265a','k'),('\u265b','q')]:\n    font=ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',64)\n    img=Image.new('L',(160,160),0); d=ImageDraw.Draw(img); d.text((10,10),ch,fill=255,font=font)\n    a=np.array(img)>128\n    ys,xs=np.where(a); a=a[ys.min():ys.max()+1,xs.min():xs.max()+1]\n    print(f'--- {nm} bbox {a.shape[1]}x{a.shape[0]}')\n    for row in a[::2]: print(''.join('#' if v else ' ' for v in row[::2]))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 82561,
+   "dur_ms": 9949,
+   "tokens_in": 33,
+   "tokens_out": 1742,
+   "cache_read": 22784,
+   "cache_write": 768,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 92510,
+   "dur_ms": 120106,
+   "tool": "bash",
+   "is_error": true,
+   "command": "cd /app && python3 - <<'EOF'\nfrom PIL import Image, ImageDraw, ImageFont\nimport numpy as np\nim=Image.open('chess_board.png').convert('RGB')\nblacks={(0,0),(0,2),(0,3),(0,5),(1,1),(1,5),(1,6),(2,0),(2,2),(2,4),(3,3),(3,5),(3,6)}\ncells=[]\nfor r in range(8):\n  for c in range(8):\n    color='b' if (r,c) in blacks else 'w'\n    x0,y0=c*80,r*80\n    arr=np.zeros((80,80),bool)\n    for y in range(80):\n      for x in range(80):\n        p=im.getpixel((x0+x,y0+y))\n        arr[y,x]= max(p)<100 if color=='b' else min(p)>200\n    if arr.sum()<50: continue\n    cells.append((r,c,color,arr))\nnames={0x265A:'k',0x265B:'q',0x265C:'r',0x265D:'b',0x265E:'n',0x265F:'p'}\nfonts=['/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf','/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf']\n# render glyph on 80x80 with text anchor maybe at (x,y)\ndef render_at(ch,size,fp,x,y):\n    font=ImageFont.truetype(fp,size)\n    img=Image.new('L',(80,80),0); d=ImageDraw.Draw(img); d.text((x,y),ch,fill=255,font=font)\n    return np.array(img)>128\n# For each black piece, search size, font, offset coarse\nfor r,c,color,tgt in cells:\n  if color!='b': continue\n  best=[]\n  ys,xs=np.where(tgt)\n  bbox=(xs.min(),ys.min(),xs.max(),ys.max())\n  for cp,nm in names.items():\n    for fi,fp in enumerate(fonts):\n      for sz in range(42,70,2):\n        # get glyph bbox relative to draw origin\n        for ox in range(-15,16,3):\n          for oy in range(-15,16,3):\n            m=render_at(chr(cp),sz,fp,ox,oy)\n            inter=(m&tgt).sum()\n            if inter==0: continue\n            iou=inter/(m|tgt).sum()\n            best.append((iou,nm,fi,sz,ox,oy))\n  best.sort(reverse=True)\n  print(f'r{r}c{c} bbox{bbox}:', ' | '.join(f'{nm}/f{fi}/s{sz}/o{ox},{oy}:{iou:.3f}' for iou,nm,fi,sz,ox,oy in best[:5]))\nEOF",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 212619,
+   "dur_ms": 3707,
+   "tokens_in": 1,
+   "tokens_out": 912,
+   "cache_read": 25280,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 216326,
+   "dur_ms": 1974,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nfrom PIL import Image, ImageDraw, ImageFont\nimport numpy as np\nim=Image.open('chess_board.png').convert('RGB')\nblacks={(0,0),(0,2),(0,3),(0,5),(1,1),(1,5),(1,6),(2,0),(2,2),(2,4),(3,3),(3,5),(3,6)}\ncells=[]\nfor r in range(8):\n  for c in range(8):\n    color='b' if (r,c) in blacks else 'w'\n    x0,y0=c*80,r*80\n    arr=np.zeros((80,80),bool)\n    for y in range(80):\n      for x in range(80):\n        p=im.getpixel((x0+x,y0+y))\n        arr[y,x]= max(p)<100 if color=='b' else min(p)>200\n    if arr.sum()<50: continue\n    cells.append((r,c,color,arr))\nnames={0x265A:'k',0x265B:'q',0x265C:'r',0x265D:'b',0x265E:'n',0x265F:'p'}\nfonts=['/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf','/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf']\n# precompute glyphs for sizes 40..72, cropped with offsets\nglyphs={}\nfor cp,nm in names.items():\n  for fi,fp in enumerate(fonts):\n    for sz in range(40,73,2):\n      font=ImageFont.truetype(fp,sz)\n      img=Image.new('L',(200,200),0); d=ImageDraw.Draw(img); d.text((20,20),chr(cp),fill=255,font=font)\n      a=np.array(img)>128\n      ys,xs=np.where(a)\n      g=a[ys.min():ys.max()+1,xs.min():xs.max()+1]\n      glyphs[(nm,fi,sz)]=g\nfor r,c,color,tgt in cells:\n  if color!='b': continue\n  ys,xs=np.where(tgt); ty0,tx0=ys.min(),xs.min()\n  H,W=tgt.shape\n  best=[]\n  for (nm,fi,sz),g in glyphs.items():\n    gh,gw=g.shape\n    if abs(gh-(ys.max()-ys.min()+1))>4: continue\n    for dy in range(-4,5):\n      for dx in range(-4,5):\n        y=ty0+dy; x=tx0+dx\n        if y<0 or x<0 or y+gh>80 or x+gw>80: continue\n        m=np.zeros((80,80),bool); m[y:y+gh,x:x+gw]=g\n        inter=(m&tgt).sum(); union=(m|tgt).sum()\n        best.append((inter/union,nm,fi,sz,dx,dy))\n  best.sort(reverse=True)\n  print(f'r{r}c{c} bbox {xs.max()-xs.min()+1}x{ys.max()-ys.min()+1}:', ' | '.join(f'{nm}/f{fi}/s{sz}/d{dx},{dy}:{iou:.3f}' for iou,nm,fi,sz,dx,dy in best[:5]))\nEOF",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 218303,
+   "dur_ms": 10585,
+   "tokens_in": 3,
+   "tokens_out": 1730,
+   "cache_read": 26240,
+   "cache_write": 1088,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 228888,
+   "dur_ms": 817,
+   "tool": "bash",
+   "is_error": true,
+   "command": "which apt-get; apt-cache policy stockfish 2>/dev/null | head; ls /usr/bin | grep -i stock"
+  },
+  {
+   "kind": "model",
+   "at_ms": 229708,
+   "dur_ms": 959,
+   "tokens_in": 15,
+   "tokens_out": 73,
+   "cache_read": 29056,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 230667,
+   "dur_ms": 3590,
+   "tool": "bash",
+   "is_error": false,
+   "command": "apt-get install -y stockfish 2>&1 | tail -20",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 234260,
+   "dur_ms": 12744,
+   "tokens_in": 45,
+   "tokens_out": 2349,
+   "cache_read": 29184,
+   "cache_write": 384,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 247004,
+   "dur_ms": 80,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nimport chess\nfen='r1bq1r2/1p3pp1/p1n1p3/3nPkbP/8/P1N5/1P2QPP1/R1B1K2R w - - 0 1'\nb=chess.Board(fen)\nprint(b)\nprint('legal',b.is_valid(), 'check',b.is_check(), 'status',b.status())\nprint('legal moves', [b.san(m) for m in b.legal_moves])\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 247087,
+   "dur_ms": 3939,
+   "tokens_in": 42,
+   "tokens_out": 555,
+   "cache_read": 31936,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 251026,
+   "dur_ms": 120094,
+   "tool": "bash",
+   "is_error": true,
+   "command": "cd /app && python3 - <<'EOF'\nimport chess, chess.engine\nengine=chess.engine.SimpleEngine.popen_uci('/usr/games/stockfish')\nfen='r1bq1r2/1p3pp1/p1n1p3/3nPkbP/8/P1N5/1P2QPP1/R1B1K2R w - - 0 1'\nb=chess.Board(fen)\nfor depth in [12,16,20]:\n    info=engine.analyse(b, chess.engine.Limit(depth=depth), multipv=10)\n    print('depth',depth)\n    for i,pv in enumerate(info):\n        print(i+1, pv['score'], [b.san(m) for m in pv['pv'][:5]], 'mate',pv.get('score').is_mate())\nengine.quit()\nEOF",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 371124,
+   "dur_ms": 2280,
+   "tokens_in": 7,
+   "tokens_out": 258,
+   "cache_read": 32768,
+   "cache_write": 448,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 373405,
+   "dur_ms": 84,
+   "tool": "bash",
+   "is_error": true,
+   "command": "cd /app && python3 - <<'EOF'\nimport chess\nfen='r1bq1r2/1p3pp1/p1n1p3/3nPkbP/8/P1N5/1P2QPP1/R1B1K2R w - - 0 1'\nb=chess.Board(fen)\nmates=[]\nfor m in b.legal_moves:\n    b.push(m)\n    if b.is_checkmate():\n        mates.append((chess.square_name(m.from_square)+chess.square_name(m.to_square), b.san(m)))\n    b.pop()\nprint(mates)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 373489,
+   "dur_ms": 2338,
+   "tokens_in": 39,
+   "tokens_out": 304,
+   "cache_read": 33472,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 375827,
+   "dur_ms": 77,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nimport chess\nfen='r1bq1r2/1p3pp1/p1n1p3/3nPkbP/8/P1N5/1P2QPP1/R1B1K2R w - - 0 1'\nb=chess.Board(fen)\nmates=[]\nfor m in b.legal_moves:\n    san=b.san(m)\n    b.push(m)\n    chk=b.is_checkmate()\n    b.pop()\n    if chk:\n        mates.append((mu:=chess.square_name(m.from_square)+chess.square_name(m.to_square), san))\nprint(mates)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 375907,
+   "dur_ms": 4875,
+   "tokens_in": 58,
+   "tokens_out": 816,
+   "cache_read": 34112,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 380782,
+   "dur_ms": 379,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nfrom PIL import Image,ImageDraw,ImageFont\nimport numpy as np\nim=Image.open('chess_board.png').convert('RGB')\ndef getmask(r,c):\n    x0,y0=c*80,r*80; arr=np.zeros((80,80),bool)\n    for y in range(80):\n      for x in range(80):\n        p=im.getpixel((x0+x,y0+y)); arr[y,x]=max(p)<100\n    ys,xs=np.where(arr); return arr[ys.min():ys.max()+1,xs.min():xs.max()+1]\ntgt=getmask(3,5)\nprint('TARGET r3c5',tgt.shape)\nfor row in tgt: print(''.join('#' if v else '.' for v in row))\nfor ch,nm in [('\u265a','k'),('\u265e','n'),('\u265b','q'),('\u265d','b')]:\n    font=ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',56)\n    img=Image.new('L',(200,200),0); d=ImageDraw.Draw(img); d.text((20,20),ch,fill=255,font=font)\n    a=np.array(img)>128; ys,xs=np.where(a); a=a[ys.min():ys.max()+1,xs.min():xs.max()+1]\n    print('---',nm,a.shape)\n    for row in a: print(''.join('#' if v else '.' for v in row))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 381165,
+   "dur_ms": 4241,
+   "tokens_in": 4,
+   "tokens_out": 693,
+   "cache_read": 34944,
+   "cache_write": 1472,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 385406,
+   "dur_ms": 289,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nfrom PIL import Image,ImageDraw,ImageFont\nimport numpy as np\nim=Image.open('chess_board.png').convert('RGB')\ndef getmask(r,c):\n    x0,y0=c*80,r*80; arr=np.zeros((80,80),bool)\n    for y in range(80):\n      for x in range(80):\n        p=im.getpixel((x0+x,y0+y)); arr[y,x]=max(p)<100\n    ys,xs=np.where(arr); return arr[ys.min():ys.max()+1,xs.min():xs.max()+1]\nfor rc in [(0,2),(3,6)]:\n    a=getmask(*rc); print('TARGET',rc,a.shape)\n    for row in a: print(''.join('#' if v else '.' for v in row))\nfor ch,nm in [('\u265d','b'),('\u265f','p')]:\n    font=ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',58)\n    img=Image.new('L',(200,200),0); d=ImageDraw.Draw(img); d.text((20,20),ch,fill=255,font=font)\n    a=np.array(img)>128; ys,xs=np.where(a); a=a[ys.min():ys.max()+1,xs.min():xs.max()+1]\n    print('---',nm,a.shape)\n    for row in a: print(''.join('#' if v else '.' for v in row))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 385698,
+   "dur_ms": 16609,
+   "tokens_in": 18,
+   "tokens_out": 2492,
+   "cache_read": 37056,
+   "cache_write": 960,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 402308,
+   "dur_ms": 6,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && printf 'e2e4\\ng2g4\\n' > move.txt && cat move.txt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 402317,
+   "dur_ms": 4015,
+   "tokens_in": 35,
+   "tokens_out": 592,
+   "cache_read": 40512,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.703,
+ "calls": 32,
+ "cell": "TB1e"
+}

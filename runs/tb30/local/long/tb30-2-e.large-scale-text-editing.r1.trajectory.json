@@ -1,0 +1,134 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "large-scale-text-editing",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 56616,
+ "resolved": false,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 232,
+  "output": 3280,
+  "cacheRead": 24704,
+  "cacheWrite": 1664,
+  "total": 29880
+ },
+ "totals": {
+  "model_calls": 6,
+  "tool_calls": 5,
+  "model_ms": 18402,
+  "tool_ms": 37026,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1112,
+   "dur_ms": 708,
+   "tokens_in": 38,
+   "tokens_out": 93,
+   "cache_read": 1472,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1824,
+   "dur_ms": 72,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && ls -la && head -20 input.csv && echo \"---EXPECTED---\" && head -20 expected.csv && echo \"---COUNTS---\" && wc -l input.csv expected.csv"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1896,
+   "dur_ms": 10396,
+   "tokens_in": 30,
+   "tokens_out": 1880,
+   "cache_read": 1792,
+   "cache_write": 832,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 12292,
+   "dur_ms": 4095,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport collections,re\nwith open('input.csv','rb') as f:\n    data=f.read()\nprint('size',len(data),'ends newline',data.endswith(b'\\n'),'CR present',b'\\r' in data)\n# sample non-ascii\nprint('non-ascii',sum(1 for b in data if b>127))\nlines=data.split(b'\\n')\nif lines and lines[-1]==b'': lines=lines[:-1]\nprint('lines',len(lines))\n# count commas distribution\nc=collections.Counter(l.count(b',') for l in lines)\nprint('comma counts',c.most_common(20))\n# char set\nchars=collections.Counter(data)\nprint('chars',sorted((chr(k),v) for k,v in chars.items() if k<128))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 16390,
+   "dur_ms": 1628,
+   "tokens_in": 31,
+   "tokens_out": 258,
+   "cache_read": 4480,
+   "cache_write": 384,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 18019,
+   "dur_ms": 1661,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport sys\nmism=0\nwith open('input.csv') as fi, open('expected.csv') as fe:\n    for i,(a,b) in enumerate(zip(fi,fe),1):\n        a=a.rstrip('\\n'); b=b.rstrip('\\n')\n        parts=[p.strip().upper() for p in a.split(',')]\n        pred=';'.join(reversed(parts))+';OK'\n        if pred!=b:\n            mism+=1\n            if mism<=10: print(i,repr(a),repr(b),repr(pred))\nprint('mismatches',mism)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 19683,
+   "dur_ms": 3337,
+   "tokens_in": 50,
+   "tokens_out": 664,
+   "cache_read": 5120,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 23021,
+   "dur_ms": 58,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && cat > apply_macros.vim <<'EOF'\ncall setreg('a', \":s/\\\\s//g\\r\")\ncall setreg('b', \"gUU\")\ncall setreg('c', \":s/\\\\v([^,]+),([^,]+),([^,]+)/\\\\3;\\\\2;\\\\1;OK/\\r\")\n%normal! @a\n%normal! @b\n%normal! @c\nwq\nEOF\nhead -1000 input.csv > /tmp/test.csv\ncp /tmp/test.csv /tmp/test.orig\nvim -Nu NONE -n -Es /tmp/test.csv -S /app/apply_macros.vim; echo \"exit=$?\"\ndiff <(head -1000 expected.csv) /tmp/test.csv && echo MATCH\nhead -5 /tmp/test.csv | cat -A"
+  },
+  {
+   "kind": "model",
+   "at_ms": 23079,
+   "dur_ms": 1013,
+   "tokens_in": 34,
+   "tokens_out": 154,
+   "cache_read": 5824,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 24093,
+   "dur_ms": 31140,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && cp input.csv /tmp/input.orig.csv && time vim -Nu NONE -n -Es input.csv -S apply_macros.vim; echo \"exit=$?\"; cmp input.csv expected.csv && echo \"BYTE MATCH\"; wc -l input.csv",
+   "timeout": 300
+  },
+  {
+   "kind": "model",
+   "at_ms": 55233,
+   "dur_ms": 1320,
+   "tokens_in": 49,
+   "tokens_out": 231,
+   "cache_read": 6016,
+   "cache_write": 64,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "long",
+ "weight_s_per_command": 17.611,
+ "calls": 5,
+ "cell": "TB1e"
+}

@@ -1,0 +1,228 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "feal-linear-cryptanalysis",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 96137,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 383,
+  "output": 15092,
+  "cacheRead": 364608,
+  "cacheWrite": 6720,
+  "total": 386803
+ },
+ "totals": {
+  "model_calls": 12,
+  "tool_calls": 16,
+  "model_ms": 92303,
+  "tool_ms": 4503,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 516,
+   "dur_ms": 1643
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1393,
+   "dur_ms": 15,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/feal.c"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1615,
+   "dur_ms": 8,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/decrypt.c"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2159,
+   "dur_ms": 68,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /app; echo \"---pairs---\"; head -5 /app/pairs.txt; wc -l /app/pairs.txt; echo \"---ct---\"; head -5 /app/ciphertexts.txt; wc -l /app/ciphertexts.txt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 2227,
+   "dur_ms": 53058
+  },
+  {
+   "kind": "tool",
+   "at_ms": 54722,
+   "dur_ms": 126,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "which z3 cvc5 boolector minisat python3 gcc 2>/dev/null; python3 -c \"import z3; print('z3py', z3.get_version_string())\" 2>&1 | head -2; python3 -c \"import sympy; print('sympy', sympy.__version__)\" 2>&1 | head -2; nproc"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 55285,
+   "dur_ms": 32,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "tail -3 pairs.txt && echo --- && tail -3 ciphertexts.txt && echo --- && file decrypt feal && ./feal 0x123456789abcdef0 0x11111 0x22222 0x33333 0x44444"
+  },
+  {
+   "kind": "model",
+   "at_ms": 55317,
+   "dur_ms": 2744
+  },
+  {
+   "kind": "tool",
+   "at_ms": 57421,
+   "dur_ms": 18,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "./feal 0x123456789abcdef0 0x11111 0x22222 0x33333 0x44444; echo \"exit=$?\""
+  },
+  {
+   "kind": "tool",
+   "at_ms": 58061,
+   "dur_ms": 2251,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "pip install z3-solver 2>&1 | tail -5"
+  },
+  {
+   "kind": "model",
+   "at_ms": 60312,
+   "dur_ms": 7736
+  },
+  {
+   "kind": "tool",
+   "at_ms": 68048,
+   "dur_ms": 17,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/attack_z3.py",
+    "content": "import sys, time\nfrom z3 import *\n\nBM = 0xFFFFFFFF\n\ndef expand_sym(k20):\n    # k20: 20-bit BitVec\n    k = ZeroExt(12, k20)          # uint32\n    return k ^ (k << 16) ^ (k * BitVecVal(12345, 32))\n\ndef g_sym(a, b, x):\n    # a,b: 8-bit BitVecs, x: python int 0/1\n    return RotateLeft(a + b + BitVecVal(x, 8), 2)\n\ndef f_sym(v):\n    x0 = Extract(7, 0, v)\n    x1 = Extract(15, 8, v)\n    x2 = Extract(23, 16, v)\n    x3 = Extract(31, 24, v)\n    y2 = g_sym(x3 ^ x2, x1 ^ x0, 1)\n    y3 = g_sym(x3, y2, 0)\n    y1 = g_sym(x1 ^ x0, y2, 0)\n    y0 = g_sym(x0, y1, 1)\n    out = ZeroExt(24, y0)\n    out = out | (ZeroExt(24, y1) << 8)\n    out = out | (ZeroExt(24, y2) << 16)\n    out = out | (ZeroExt(24, y3) << 24)\n    return out\n\ndef enc_sym(keys, pt):\n    left = BitVecVal((pt >> 32) & BM, 32)\n    right = BitVecVal(pt & BM, 32)\n    right = right ^ left\n    for r in range(4):\n        mixed = f_sym(right ^ keys[r])\n        temp = right\n        right = left ^ mixed\n        left = temp\n    left = left ^ right\n    return Concat(right, left)\n\ndef load_pairs(path):\n    ps = []\n    for line in open(path):\n        a = line.split()\n        if len(a) >= 2:\n            ps.append((int(a[0]), int(a[1])))\n    return ps\n\ndef solve(pairs, timeout_ms=None, extra=None):\n    s = Solver()\n    if timeout_ms:\n        s.set(timeout=timeout_ms)\n    ks = [BitVec(f'k{r}', 20) for r in range(4)]\n    keys = [expand_sym(k) for k in ks]\n    for (p, c) in pairs:\n        s.add(enc_sym(keys, p) == BitVecVal(c, 64))\n    if extra:\n        for e in extra:\n            s.add(e)\n    t = time.time()\n    r = s.check()\n    dt = time.time() - t\n    print(\"check:\", r, \"time %.2fs\" % dt)\n    if r == sat:\n        m = s.model()\n        vals = [m.eval(k).as_long() for k in ks]\n        print(\"keys:\", [hex(v) for v in vals])\n        return vals\n    return None\n\nif __name__ == '__main__':\n    mode = sys.argv[1] if len(sys.argv) > 1 else 'test'\n    if mode == 'test':\n        # known keys, generate pairs\n        import random\n        random.seed(1)\n        keys = [0x12345, 0xABCDE, 0x0F0F0, 0x99999]\n        kexp = [((k ^ ((k << 16) & BM) ^ ((k * 12345) & BM)) & BM) for k in keys]\n        pairs = []\n        for _ in range(4):\n            p = random.getrandbits(64)\n            c = enc_sym([BitVecVal(x, 32) for x in kexp], p)\n            c = simplify(c).as_long()\n            pairs.append((p, c))\n        print(\"true keys\", [hex(k) for k in keys])\n        solve(pairs, timeout_ms=120000)\n    else:\n        pairs = load_pairs('/app/pairs.txt')\n        n = int(sys.argv[2]) if len(sys.argv) > 2 else 4\n        solve(pairs[:n], timeout_ms=300000)\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 68065,
+   "dur_ms": 2096
+  },
+  {
+   "kind": "tool",
+   "at_ms": 70161,
+   "dur_ms": 304,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "timeout 300 python3 attack_z3.py test"
+  },
+  {
+   "kind": "model",
+   "at_ms": 70465,
+   "dur_ms": 1295
+  },
+  {
+   "kind": "tool",
+   "at_ms": 71760,
+   "dur_ms": 371,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "timeout 600 python3 attack_z3.py real 4"
+  },
+  {
+   "kind": "model",
+   "at_ms": 72131,
+   "dur_ms": 6148
+  },
+  {
+   "kind": "tool",
+   "at_ms": 75855,
+   "dur_ms": 1131,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "timeout 600 python3 attack_z3.py real 32"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 78279,
+   "dur_ms": 39,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > verify.py <<'EOF'\nBM=0xFFFFFFFF\ndef expand(k):\n    k &= 0xFFFFF\n    return (k ^ (k<<16) ^ (k*12345)) & BM\ndef g(a,b,x):\n    t=(a+b+x)&0xFF\n    return ((t<<2)|(t>>6))&0xFF\ndef f(v):\n    x=[(v>>(8*i))&0xFF for i in range(4)]\n    y=[0]*4\n    y[2]=g(x[3]^x[2],x[1]^x[0],1)\n    y[3]=g(x[3],y[2],0)\n    y[1]=g(x[1]^x[0],y[2],0)\n    y[0]=g(x[0],y[1],1)\n    return sum(y[i]<<(8*i) for i in range(4))\ndef enc(pt,keys):\n    L=(pt>>32)&BM; R=pt&BM\n    R^=L\n    for r in range(4):\n        m=f(R^keys[r]); T=R; R=L^m; L=T\n    L^=R\n    return ((R&BM)<<32)|(L&BM)\nkeys=[expand(int(x,16)) for x in ['68e63','62571','1f61c','b74a5']]\nok=0; bad=0\nfor line in open('pairs.txt'):\n    a=line.split()\n    if not a: continue\n    p=int(a[0]); c=int(a[1])\n    e=enc(p,keys)\n    if e==c: ok+=1\n    else:\n        bad+=1; print(\"MISMATCH\",p,c,e)\nprint(\"ok\",ok,\"bad\",bad)\nEOF\npython3 verify.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 78318,
+   "dur_ms": 3868
+  },
+  {
+   "kind": "tool",
+   "at_ms": 82186,
+   "dur_ms": 37,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "./decrypt ciphertexts.txt 0x68e63 0x62571 0x1f61c 0xb74a5 > plaintexts.txt; echo \"exit=$?\"; wc -l plaintexts.txt; head -5 plaintexts.txt; echo ...; tail -3 plaintexts.txt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 82223,
+   "dur_ms": 4531
+  },
+  {
+   "kind": "tool",
+   "at_ms": 86754,
+   "dur_ms": 37,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nfrom verify import enc, keys\ncts=[int(l) for l in open('ciphertexts.txt') if l.strip()]\npts=[int(l) for l in open('plaintexts.txt') if l.strip()]\nassert len(cts)==len(pts)==100, (len(cts),len(pts))\nbad=[(i,p,c,enc(p,keys)) for i,(p,c) in enumerate(zip(pts,cts)) if enc(p,keys)!=c]\nprint(\"pairs:\",len(cts),\"mismatches:\",len(bad))\nif bad: print(bad[:3])\n# check if plaintext bytes look like ascii\nallb=b''.join(p.to_bytes(8,'big') for p in pts)\nprintable=sum(32<=b<127 or b in (9,10,13) for b in allb)\nprint(\"printable frac: %.3f\"%(printable/len(allb)))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 86791,
+   "dur_ms": 2980
+  },
+  {
+   "kind": "tool",
+   "at_ms": 89771,
+   "dur_ms": 21,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "P=$(head -1 plaintexts.txt); C=$(head -1 ciphertexts.txt); PH=$(printf '0x%X' \"$P\"); ./feal \"$PH\" 0x68e63 0x62571 0x1f61c 0xb74a5; printf 'expected ciphertext dec=%s hex=0x%X\\n' \"$C\" \"$C\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 89792,
+   "dur_ms": 1693
+  },
+  {
+   "kind": "tool",
+   "at_ms": 91485,
+   "dur_ms": 28,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"print(0x0C4002487FBD131C == 882708037368615708)\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 91513,
+   "dur_ms": 4511
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.851,
+ "calls": 16,
+ "cell": "TB1a"
+}

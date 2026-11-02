@@ -1,0 +1,218 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "pytorch-model-recovery",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 57401,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 145,
+  "output": 7201,
+  "cacheRead": 104576,
+  "cacheWrite": 4480,
+  "total": 116402
+ },
+ "totals": {
+  "model_calls": 6,
+  "tool_calls": 5,
+  "model_ms": 37588,
+  "tool_ms": 19168,
+  "sandbox_ms": 18691
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 552,
+   "dur_ms": 1194
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1746,
+   "dur_ms": 2860,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -la /app\npython3 - <<'PY'\nimport torch\nw = torch.load('/app/weights.pt', map_location='cpu')\nprint(type(w))\nif isinstance(w, dict):\n    for k,v in w.items():\n        print(k, getattr(v,'shape',None), getattr(v,'dtype',None), getattr(v,'device',None))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 1830,
+     "dur_ms": 2760,
+     "exit": 0,
+     "cpu_ms": 3272.7,
+     "phases_us": {
+      "acquire": 73,
+      "resume": 20515,
+      "mount": 18101,
+      "run": 2681891,
+      "destroy": 57856
+     },
+     "cold": null,
+     "vm": "vm-143"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 4606,
+   "dur_ms": 1839
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6445,
+   "dur_ms": 2724,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\nimport torch\nd = torch.load('/app/dataset.pt', map_location='cpu')\nprint(type(d))\nif isinstance(d, dict):\n    for k,v in d.items():\n        print(k, type(v), getattr(v,'shape',None), getattr(v,'dtype',None))\nelse:\n    print(len(d))\n    for i,x in enumerate(d[:4] if isinstance(d,(list,tuple)) else []):\n        print(i, type(x), getattr(x,'shape',None), getattr(x,'dtype',None))\nprint(torch.__version__)\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 6504,
+     "dur_ms": 2654,
+     "exit": 0,
+     "cpu_ms": 3036.6,
+     "phases_us": {
+      "acquire": 20,
+      "resume": 20592,
+      "mount": 18428,
+      "run": 2572438,
+      "destroy": 61229
+     },
+     "cold": null,
+     "vm": "vm-150"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 9169,
+   "dur_ms": 22333
+  },
+  {
+   "kind": "tool",
+   "at_ms": 31502,
+   "dur_ms": 4431,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put solve.py <<'EOF'\nimport math\nimport torch\nimport torch.nn as nn\n\nD_MODEL = 128\nNHEAD = 8\nFF = 256\nN_ENC = 3\nN_DEC = 1\nIN_FEAT = 64\nOUT_FEAT = 64\nMAX_LEN = 5000\n\n\nclass PositionalEncoding(nn.Module):\n    def __init__(self, d_model, max_len=MAX_LEN):\n        super().__init__()\n        pe = torch.zeros(max_len, d_model)\n        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)\n        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))\n        pe[:, 0::2] = torch.sin(position * div_term)\n        pe[:, 1::2] = torch.cos(position * div_term)\n        self.register_buffer('pe', pe.unsqueeze(0))  # [1, max_len, d_model]\n\n    def forward(self, x):\n        return x + self.pe[:, : x.size(1), :]\n\n\nclass RecoveredModel(nn.Module):\n    def __init__(self):\n        super().__init__()\n        # state key \"embedding.weight\" is [128, 64] with bias -> nn.Linear(64, 128)\n        self.embedding = nn.Linear(IN_FEAT, D_MODEL)\n        self.pos_encoder = PositionalEncoding(D_MODEL)\n        enc_layer = nn.TransformerEncoderLayer(\n            d_model=D_MODEL, nhead=NHEAD, dim_feedforward=FF,\n            dropout=0.1, batch_first=True,\n        )\n        self.transformer_encoder = nn.TransformerEncoder(enc_layer, num_layers=N_ENC)\n        dec_layer = nn.TransformerDecoderLayer(\n            d_model=D_MODEL, nhead=NHEAD, dim_feedforward=FF,\n            dropout=0.1, batch_first=True,\n        )\n        self.transformer_decoder = nn.TransformerDecoder(dec_layer, num_layers=N_DEC)\n        self.output_layer = nn.Linear(D_MODEL, OUT_FEAT)\n\n    def forward(self, src, tgt):\n        src = self.pos_encoder(self.embedding(src))\n        tgt = self.pos_encoder(self.embedding(tgt))\n        memory = self.transformer_encoder(src)\n        out = self.transformer_decoder(tgt, memory)\n        return self.output_layer(out)\n\n\ndef mse_loss(model, src, tgt):\n    with torch.no_grad():\n        pred = model(src, tgt)\n        return nn.functional.mse_loss(pred, tgt).item()\n\n\ndef main():\n    torch.manual_seed(0)\n    weights = torch.load('/app/weights.pt', map_location='cpu')\n    data = torch.load('/app/dataset.pt', map_location='cpu')\n    src, tgt = data['src_sequences'], data['tgt_sequences']\n\n    model = RecoveredModel()\n    # strict load: architecture must match the state dict exactly\n    missing, unexpected = model.load_state_dict(weights, strict=True), None\n    model.eval()\n\n    # Sanity: exact key/param match\n    sd = model.state_dict()\n    assert set(sd.keys()) == set(weights.keys()), (\n        set(sd.keys()) ^ set(weights.keys()))\n    for k in weights:\n        assert sd[k].shape == weights[k].shape, k\n\n    orig_loss = mse_loss(model, src, tgt)\n    print('original MSE:', orig_loss)\n\n    # ---- Tune ONLY output_layer ----\n    # Freeze everything except output_layer.\n    for p in model.parameters():\n        p.requires_grad_(False)\n    for p in model.output_layer.parameters():\n        p.requires_grad_(True)\n\n    # Compute frozen decoder features (eval mode => deterministic, no dropout).\n    with torch.no_grad():\n        src_e = model.pos_encoder(model.embedding(src))\n        tgt_e = model.pos_encoder(model.embedding(tgt))\n        memory = model.transformer_encoder(src_e)\n        feats = model.transformer_decoder(tgt_e, memory)          # [B, T, 128]\n        F = feats.reshape(-1, D_MODEL).double()\n        Y = tgt.reshape(-1, OUT_FEAT).double()\n\n    # Closed-form least squares for Linear(128 -> 64): optimal unmasked MSE.\n    A = torch.cat([F, torch.ones(F.size(0), 1, dtype=F.dtype)], dim=1)  # [N, 129]\n    sol = torch.linalg.lstsq(A, Y).solution                           # [129, 64]\n    with torch.no_grad():\n        model.output_layer.weight.copy_(sol[:D_MODEL].T.float())\n        model.output_layer.bias.copy_(sol[D_MODEL].float())\n\n    new_loss = mse_loss(model, src, tgt)\n    print('tuned MSE   :', new_loss)\n    assert new_loss < orig_loss, (new_loss, orig_loss)\n\n    # Confirm all non-output params bit-identical to the originals\n    sd = model.state_dict()\n    for k in sd:\n        if not k.startswith('output_layer.'):\n            assert torch.equal(sd[k], weights[k]), 'changed non-output param: ' + k\n    print('non-output params unchanged: OK')\n\n    # ---- Save TorchScript ----\n    model.eval()\n    scripted = torch.jit.script(model)\n    scripted.save('/app/model.pt')\n    print('saved scripted model')\n\n    # ---- Verify reload from TorchScript loads original weights cleanly ----\n    loaded = torch.jit.load('/app/model.pt', map_location='cpu')\n    loaded.eval()\n    loaded.load_state_dict(weights, strict=True)\n    orig_via_ts = mse_loss(loaded, src, tgt)\n    print('TorchScript forward MSE after loading original weights:', orig_via_ts)\n    ts_keys = set(loaded.state_dict().keys())\n    print('TorchScript state keys match original:', ts_keys == set(weights.keys()))\n\n    # re-save with tuned weights (scripted above already has tuned weights)\n    loaded2 = torch.jit.load('/app/model.pt', map_location='cpu')\n    sd2 = loaded2.state_dict()\n    diffs = [k for k in weights if not torch.equal(sd2[k], weights[k])]\n    print('keys differing from original:', diffs)\n    non_out = [k for k in diffs if not k.startswith('output_layer.')]\n    print('non-output differences (must be empty):', non_out)\n    print('final TorchScript MSE (tuned):', mse_loss(loaded2, src, tgt))\n\n\nif __name__ == '__main__':\n    main()\nEOF\nsbx run <<'EOF'\ncd /workspace && python3 solve.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 31567,
+     "dur_ms": 45,
+     "exit": 0,
+     "cpu_ms": 42.9,
+     "phases_us": {
+      "acquire": 17,
+      "resume": 20417,
+      "mount": 17912,
+      "run": 7440,
+      "destroy": 17300
+     },
+     "cold": null,
+     "vm": "vm-152"
+    },
+    {
+     "at_ms": 31659,
+     "dur_ms": 4261,
+     "exit": 0,
+     "cpu_ms": 4762.2,
+     "phases_us": {
+      "acquire": 22,
+      "resume": 20213,
+      "mount": 17755,
+      "run": 4163620,
+      "destroy": 76544
+     },
+     "cold": null,
+     "vm": "vm-142"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 35933,
+   "dur_ms": 5677
+  },
+  {
+   "kind": "tool",
+   "at_ms": 41610,
+   "dur_ms": 6121,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace && sed -i 's/dropout=0.1/dropout=0.0/g' solve.py && python3 solve.py\npython3 - <<'PY'\nimport torch\nm = torch.jit.load('/app/model.pt', map_location='cpu')\nprint('loaded.training =', m.training)\nprint('num params:', len(list(m.parameters())))\nimport os\nprint('model.pt exists, bytes =', os.path.getsize('/app/model.pt'))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 41667,
+     "dur_ms": 6056,
+     "exit": 0,
+     "cpu_ms": 6377.6,
+     "phases_us": {
+      "acquire": 25,
+      "resume": 20036,
+      "mount": 17558,
+      "run": 5964525,
+      "destroy": 70669
+     },
+     "cold": null,
+     "vm": "vm-158"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 47731,
+   "dur_ms": 4245
+  },
+  {
+   "kind": "tool",
+   "at_ms": 51976,
+   "dur_ms": 3032,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put recovered_model.py <<'EOF'\n\"\"\"Architecture recovered from /app/weights.pt.\n\nstate-dict evidence:\n  embedding.{weight,bias}        Linear(64 -> 128)\n  pos_encoder.pe                 buffer [1, 5000, 128]\n  transformer_encoder.layers.0-2 TransformerEncoderLayer(d_model=128, ff=256, post-norm)\n  transformer_decoder.layers.0   TransformerDecoderLayer(d_model=128, ff=256, post-norm)\n  output_layer.{weight,bias}     Linear(128 -> 64)\n\"\"\"\nimport math\n\nimport torch\nimport torch.nn as nn\n\nD_MODEL = 128\nNHEAD = 8\nFF = 256\nN_ENC = 3\nN_DEC = 1\nIN_FEAT = 64\nOUT_FEAT = 64\nMAX_LEN = 5000\n\n\nclass PositionalEncoding(nn.Module):\n    def __init__(self, d_model, max_len=MAX_LEN):\n        super().__init__()\n        pe = torch.zeros(max_len, d_model)\n        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)\n        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))\n        pe[:, 0::2] = torch.sin(position * div_term)\n        pe[:, 1::2] = torch.cos(position * div_term)\n        self.register_buffer(\"pe\", pe.unsqueeze(0))  # [1, max_len, d_model]\n\n    def forward(self, x):\n        return x + self.pe[:, : x.size(1), :]\n\n\nclass RecoveredModel(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.embedding = nn.Linear(IN_FEAT, D_MODEL)\n        self.pos_encoder = PositionalEncoding(D_MODEL)\n        enc_layer = nn.TransformerEncoderLayer(\n            d_model=D_MODEL, nhead=NHEAD, dim_feedforward=FF, dropout=0.0, batch_first=True\n        )\n        self.transformer_encoder = nn.TransformerEncoder(enc_layer, num_layers=N_ENC)\n        dec_layer = nn.TransformerDecoderLayer(\n            d_model=D_MODEL, nhead=NHEAD, dim_feedforward=FF, dropout=0.0, batch_first=True\n        )\n        self.transformer_decoder = nn.TransformerDecoder(dec_layer, num_layers=N_DEC)\n        self.output_layer = nn.Linear(D_MODEL, OUT_FEAT)\n\n    def forward(self, src, tgt):\n        src = self.pos_encoder(self.embedding(src))\n        tgt = self.pos_encoder(self.embedding(tgt))\n        memory = self.transformer_encoder(src)\n        out = self.transformer_decoder(tgt, memory)\n        return self.output_layer(out)\nEOF\nsbx run <<'EOF'\ncd /workspace && ls -la solve.py recovered_model.py model.pt weights.pt && python3 - <<'PY'\nimport torch\nw = torch.load('/app/weights.pt', map_location='cpu')\nprint('weights.pt keys:', len(w))\nm = torch.jit.load('/app/model.pt', map_location='cpu')\nsd = m.state_dict()\nprint('state_dict keys equal:', set(sd)==set(w))\nprint('differing keys:', [k for k in w if not torch.equal(sd[k], w[k])])\n# fresh class also loads original weights strictly\nimport sys; sys.path.insert(0,'/workspace')\nfrom recovered_model import RecoveredModel\nr = RecoveredModel(); r.load_state_dict(w, strict=True); print('RecoveredModel strict load: OK')\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 52038,
+     "dur_ms": 51,
+     "exit": 0,
+     "cpu_ms": 42.2,
+     "phases_us": {
+      "acquire": 59,
+      "resume": 20415,
+      "mount": 17649,
+      "run": 7143,
+      "destroy": 23283
+     },
+     "cold": null,
+     "vm": "vm-163"
+    },
+    {
+     "at_ms": 52135,
+     "dur_ms": 2864,
+     "exit": 0,
+     "cpu_ms": 3500.4,
+     "phases_us": {
+      "acquire": 17,
+      "resume": 20489,
+      "mount": 17604,
+      "run": 2778863,
+      "destroy": 64144
+     },
+     "cold": null,
+     "vm": "vm-157"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 55008,
+   "dur_ms": 2300
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 2.67,
+ "calls": 5,
+ "cell": "TB1b"
+}

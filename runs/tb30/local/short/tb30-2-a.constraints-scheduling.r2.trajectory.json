@@ -1,0 +1,117 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "constraints-scheduling",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 25630,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 202,
+  "output": 3980,
+  "cacheRead": 102336,
+  "cacheWrite": 2880,
+  "total": 109398
+ },
+ "totals": {
+  "model_calls": 5,
+  "tool_calls": 6,
+  "model_ms": 24819,
+  "tool_ms": 192,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 507,
+   "dur_ms": 1132
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1231,
+   "dur_ms": 15,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/alice_calendar.ics"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1440,
+   "dur_ms": 8,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/bob_calendar.ics"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1639,
+   "dur_ms": 15,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/carol_calendar.ics"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 1654,
+   "dur_ms": 13182
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14836,
+   "dur_ms": 20,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/meeting_scheduled.ics",
+    "content": "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Terminal-Bench//Scheduled Meeting//EN\nCALSCALE:GREGORIAN\nMETHOD:PUBLISH\nBEGIN:VEVENT\nUID:team-planning-meeting-20240117@example.com\nDTSTAMP:20240117T000000Z\nDTSTART:20240117T110000Z\nDTEND:20240117T120000Z\nSUMMARY:Team Planning Meeting\nDESCRIPTION:One-hour team planning meeting for Alice, Bob, and Carol.\nLOCATION:Conference Room\nATTENDEE;CN=Alice;ROLE=REQ-PARTICIPANT:mailto:alice@example.com\nATTENDEE;CN=Bob;ROLE=REQ-PARTICIPANT:mailto:bob@example.com\nATTENDEE;CN=Carol;ROLE=REQ-PARTICIPANT:mailto:carol@example.com\nEND:VEVENT\nEND:VCALENDAR\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 14856,
+   "dur_ms": 2891
+  },
+  {
+   "kind": "tool",
+   "at_ms": 17747,
+   "dur_ms": 25,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/meeting_scheduled.ics"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 17772,
+   "dur_ms": 5807
+  },
+  {
+   "kind": "tool",
+   "at_ms": 23579,
+   "dur_ms": 109,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nfrom datetime import datetime, timedelta\n\ndef parse(path):\n    ev=[]; cur=None\n    for line in open(path):\n        line=line.strip()\n        if line=='BEGIN:VEVENT': cur={}\n        elif line=='END:VEVENT':\n            ev.append((datetime.strptime(cur['DTSTART'],'%Y%m%dT%H%M%SZ'),datetime.strptime(cur['DTEND'],'%Y%m%dT%H%M%SZ')))\n            cur=None\n        elif cur is not None and ':' in line:\n            k,v=line.split(':',1); cur[k.split(';')[0]]=v\n    return ev\n\nbusy={\n 'alice':parse('alice_calendar.ics'),\n 'bob':parse('bob_calendar.ics'),\n 'carol':parse('carol_calendar.ics'),\n}\n\ndef overlap(s,e,b):\n    return any(s < be and e > bs for bs,be in b)\n\ndef valid(s,e,day):\n    # hard windows\n    if s < datetime(2024,1,day,9,0) or e > datetime(2024,1,day,14,0): return False  # Alice hard 9-14\n    if s < datetime(2024,1,day,10,0): return False  # Bob no before 10\n    if day in (16,18) and e > datetime(2024,1,day,16,30): return False  # Bob Tue/Thu leave\n    if e > datetime(2024,1,day,17,0): return False  # Carol 9-17 / Bob afternoon to 5\n    # Carol lunch 12:00-12:30\n    if s < datetime(2024,1,day,12,30) and e > datetime(2024,1,day,12,0): return False\n    for who in busy:\n        if overlap(s,e,busy[who]): return False\n    return True\n\nfor day in range(15,20):\n    t=datetime(2024,1,day,9,0)\n    while t+timedelta(hours=1) <= datetime(2024,1,day,18,0):\n        e=t+timedelta(hours=1)\n        if valid(t,e,day):\n            print('EARLIEST VALID:', t, '->', e, ['Mon','Tue','Wed','Thu','Fri'][t.weekday()])\n            raise SystemExit\n        t+=timedelta(minutes=1)\nprint('none')\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 23688,
+   "dur_ms": 1807
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.069,
+ "calls": 6,
+ "cell": "TB1a"
+}

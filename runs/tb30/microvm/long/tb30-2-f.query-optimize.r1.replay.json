@@ -1,0 +1,485 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-f",
+ "instance_id": "query-optimize",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 673764,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 467,
+  "output": 16392,
+  "cacheRead": 148992,
+  "cacheWrite": 4672,
+  "total": 170523
+ },
+ "totals": {
+  "model_calls": 13,
+  "tool_calls": 12,
+  "model_ms": 71447,
+  "tool_ms": 601082,
+  "sandbox_ms": 600372
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1123,
+   "dur_ms": 652,
+   "tokens_in": 0,
+   "tokens_out": 87,
+   "cache_read": 1024,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1779,
+   "dur_ms": 119,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat /app/my-sql-query.sql\necho \"=== SCHEMA ===\"\nsqlite3 /app/oewn.sqlite \".schema\"",
+   "sandbox": [
+    {
+     "at_ms": 1829,
+     "dur_ms": 59,
+     "exit": 0,
+     "cpu_ms": 52.2,
+     "phases_us": {
+      "acquire": 73,
+      "resume": 21711,
+      "mount": 19374,
+      "run": 11076,
+      "destroy": 26108
+     },
+     "cold": null,
+     "vm": "vm-10"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1902,
+   "dur_ms": 1547,
+   "tokens_in": 28,
+   "tokens_out": 215,
+   "cache_read": 1280,
+   "cache_write": 1536,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3450,
+   "dur_ms": 182,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport sqlite3\nc=sqlite3.connect('/app/oewn.sqlite')\nfor t in ['words','senses','synsets']:\n    print(t, c.execute(f'select count(*) from {t}').fetchone())\nprint(\"indexes:\")\nfor r in c.execute(\"select type,name,tbl_name,sql from sqlite_master where type in ('index','table') order by tbl_name\"):\n    print(r)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 3499,
+     "dur_ms": 120,
+     "exit": 0,
+     "cpu_ms": 146.0,
+     "phases_us": {
+      "acquire": 51,
+      "resume": 21244,
+      "mount": 18973,
+      "run": 73134,
+      "destroy": 25663
+     },
+     "cold": null,
+     "vm": "vm-12"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3635,
+   "dur_ms": 8029,
+   "tokens_in": 63,
+   "tokens_out": 1380,
+   "cache_read": 3008,
+   "cache_write": 1600,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 11665,
+   "dur_ms": 284958,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport sqlite3, time\nc=sqlite3.connect('/app/oewn.sqlite')\nfor t,k in [('synsets','synsetid'),('words','wordid'),('senses','senseid')]:\n    print(t, 'dups', c.execute(f'select count(*) from (select {k}, count(*) c from {t} group by {k} having c>1)').fetchone()[0])\n# sense wordid/synsetid duplicates\nprint('sense word-synset dups', c.execute('select count(*) from (select wordid,synsetid,count(*) c from senses group by wordid,synsetid having c>1)').fetchone()[0])\nq=open('/app/my-sql-query.sql').read()\nt=time.time(); rows=c.execute(q).fetchall(); print('orig time', time.time()-t, 'rows', len(rows))\nprint(rows[:3])\nPY",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 11713,
+     "dur_ms": 284899,
+     "exit": 0,
+     "cpu_ms": 285010.7,
+     "phases_us": {
+      "acquire": 20,
+      "resume": 21599,
+      "mount": 19232,
+      "run": 284853393,
+      "destroy": 24179
+     },
+     "cold": null,
+     "vm": "vm-14"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 296626,
+   "dur_ms": 4743,
+   "tokens_in": 37,
+   "tokens_out": 1115,
+   "cache_read": 6016,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 301370,
+   "dur_ms": 287405,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /app/sol.sql <<'SQL'\nWITH word_synset AS (\n  SELECT\n    s.wordid,\n    s.synsetid,\n    COUNT(*) AS sense_count,\n    syn.domainid,\n    syn.posid\n  FROM senses s\n  JOIN synsets syn ON syn.synsetid = s.synsetid\n  GROUP BY s.wordid, s.synsetid, syn.domainid, syn.posid\n),\nword_stats AS (\n  SELECT\n    wordid,\n    COUNT(*) AS total_synsets,\n    SUM(sense_count) AS total_senses,\n    COUNT(DISTINCT domainid) AS distinct_domains,\n    COUNT(DISTINCT posid) AS distinct_posids\n  FROM word_synset\n  GROUP BY wordid\n  HAVING COUNT(*) >= 2\n     AND COUNT(DISTINCT domainid) >= 2\n     AND SUM(sense_count) >= 2\n),\ntop_synsets AS (\n  SELECT wordid, synsetid, sense_count\n  FROM (\n    SELECT\n      wordid,\n      synsetid,\n      sense_count,\n      ROW_NUMBER() OVER (\n        PARTITION BY wordid\n        ORDER BY sense_count DESC, synsetid ASC\n      ) AS rn\n    FROM word_synset\n  )\n  WHERE rn = 1\n)\nSELECT\n  w.wordid AS word_id,\n  w.word AS word,\n  ws.total_synsets,\n  ws.total_senses,\n  ws.distinct_domains,\n  ws.distinct_posids,\n  ts.synsetid AS top_synsetid,\n  ts.sense_count AS top_synset_sense_count\nFROM word_stats ws\nJOIN words w ON w.wordid = ws.wordid\nJOIN top_synsets ts ON ts.wordid = ws.wordid\nORDER BY\n  ws.total_senses DESC,\n  ws.total_synsets DESC,\n  ws.distinct_domains DESC,\n  w.wordid ASC\nLIMIT 500;\nSQL\npython3 - <<'PY'\nimport sqlite3,time\nc=sqlite3.connect('/app/oewn.sqlite')\norig=open('/app/my-sql-query.sql').read()\nnew=open('/app/sol.sql').read()\nt=time.time(); a=c.execute(orig).fetchall(); print('orig',time.time()-t,len(a))\nt=time.time(); b=c.execute(new).fetchall(); print('new',time.time()-t,len(b))\nprint('equal',a==b)\nif a!=b:\n    for i,(x,y) in enumerate(zip(a,b)):\n        if x!=y:\n            print('first diff',i,x,y);break\nPY",
+   "timeout": 600,
+   "sandbox": [
+    {
+     "at_ms": 301419,
+     "dur_ms": 287353,
+     "exit": 0,
+     "cpu_ms": 287435.0,
+     "phases_us": {
+      "acquire": 21308,
+      "resume": 21101,
+      "mount": 18905,
+      "run": 287278650,
+      "destroy": 31360
+     },
+     "cold": "parked",
+     "vm": "vm-40"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 588777,
+   "dur_ms": 8290,
+   "tokens_in": 39,
+   "tokens_out": 2002,
+   "cache_read": 7232,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 597068,
+   "dur_ms": 6818,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport sqlite3,time\nc=sqlite3.connect('/app/oewn.sqlite')\nnew=open('/app/sol.sql').read()\n# Variant B\nb='''\nWITH word_stats AS (\n  SELECT s.wordid,\n    COUNT(DISTINCT s.synsetid) AS total_synsets,\n    COUNT(*) AS total_senses,\n    COUNT(DISTINCT syn.domainid) AS distinct_domains,\n    COUNT(DISTINCT syn.posid) AS distinct_posids\n  FROM senses s JOIN synsets syn ON syn.synsetid = s.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(DISTINCT s.synsetid) >= 2\n     AND COUNT(DISTINCT syn.domainid) >= 2\n     AND COUNT(*) >= 2\n),\ntop_synsets AS (\n  SELECT wordid, synsetid, sense_count FROM (\n    SELECT s.wordid, s.synsetid, COUNT(*) AS sense_count,\n      ROW_NUMBER() OVER (PARTITION BY s.wordid ORDER BY COUNT(*) DESC, s.synsetid ASC) AS rn\n    FROM senses s JOIN word_stats ws ON ws.wordid=s.wordid\n    GROUP BY s.wordid, s.synsetid\n  ) WHERE rn=1\n)\nSELECT w.wordid AS word_id, w.word AS word, ws.total_synsets, ws.total_senses,\n  ws.distinct_domains, ws.distinct_posids, ts.synsetid AS top_synsetid,\n  ts.sense_count AS top_synset_sense_count\nFROM word_stats ws JOIN words w ON w.wordid=ws.wordid\nJOIN top_synsets ts ON ts.wordid=ws.wordid\nORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, w.wordid ASC\nLIMIT 500;\n'''\n# Variant C (group only wordid,synsetid)\ncc='''\nWITH word_synset AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS sense_count, syn.domainid, syn.posid\n  FROM senses s JOIN synsets syn ON syn.synsetid = s.synsetid\n  GROUP BY s.wordid, s.synsetid\n),\nword_stats AS (\n  SELECT wordid, COUNT(*) AS total_synsets, SUM(sense_count) AS total_senses,\n    COUNT(DISTINCT domainid) AS distinct_domains, COUNT(DISTINCT posid) AS distinct_posids\n  FROM word_synset GROUP BY wordid\n  HAVING COUNT(*) >= 2 AND COUNT(DISTINCT domainid) >= 2 AND SUM(sense_count) >= 2\n),\ntop_synsets AS (\n  SELECT wordid, synsetid, sense_count FROM (\n    SELECT wordid, synsetid, sense_count,\n      ROW_NUMBER() OVER (PARTITION BY wordid ORDER BY sense_count DESC, synsetid ASC) AS rn\n    FROM word_synset\n  ) WHERE rn=1\n)\nSELECT w.wordid AS word_id, w.word AS word, ws.total_synsets, ws.total_senses,\n  ws.distinct_domains, ws.distinct_posids, ts.synsetid AS top_synsetid,\n  ts.sense_count AS top_synset_sense_count\nFROM word_stats ws JOIN words w ON w.wordid=ws.wordid\nJOIN top_synsets ts ON ts.wordid=ws.wordid\nORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, w.wordid ASC\nLIMIT 500;\n'''\nfor name,q in [('A',new),('B',b),('C',cc)]:\n    for i in range(3):\n        t=time.time(); r=c.execute(q).fetchall(); dt=time.time()-t\n        print(name,i,round(dt,3),len(r))\nPY",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 597116,
+     "dur_ms": 6763,
+     "exit": 0,
+     "cpu_ms": 6761.8,
+     "phases_us": {
+      "acquire": 30145,
+      "resume": 21118,
+      "mount": 18987,
+      "run": 6684943,
+      "destroy": 26220
+     },
+     "cold": "parked",
+     "vm": "vm-57"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 603889,
+   "dur_ms": 6113,
+   "tokens_in": 29,
+   "tokens_out": 1510,
+   "cache_read": 9280,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 610002,
+   "dur_ms": 3575,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport sqlite3,time\nc=sqlite3.connect('/app/oewn.sqlite')\n# save B for explain\nb='''\nWITH word_stats AS (\n  SELECT s.wordid,\n    COUNT(DISTINCT s.synsetid) AS total_synsets,\n    COUNT(*) AS total_senses,\n    COUNT(DISTINCT syn.domainid) AS distinct_domains,\n    COUNT(DISTINCT syn.posid) AS distinct_posids\n  FROM senses s JOIN synsets syn ON syn.synsetid = s.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(DISTINCT s.synsetid) >= 2\n     AND COUNT(DISTINCT syn.domainid) >= 2\n     AND COUNT(*) >= 2\n),\ntop_synsets AS (\n  SELECT wordid, synsetid, sense_count FROM (\n    SELECT s.wordid, s.synsetid, COUNT(*) AS sense_count,\n      ROW_NUMBER() OVER (PARTITION BY s.wordid ORDER BY COUNT(*) DESC, s.synsetid ASC) AS rn\n    FROM senses s JOIN word_stats ws ON ws.wordid=s.wordid\n    GROUP BY s.wordid, s.synsetid\n  ) WHERE rn=1\n)\nSELECT w.wordid AS word_id, w.word AS word, ws.total_synsets, ws.total_senses,\n  ws.distinct_domains, ws.distinct_posids, ts.synsetid AS top_synsetid,\n  ts.sense_count AS top_synset_sense_count\nFROM word_stats ws JOIN words w ON w.wordid=ws.wordid\nJOIN top_synsets ts ON ts.wordid=ws.wordid\nORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, w.wordid ASC\nLIMIT 500;\n'''\nfor r in c.execute('EXPLAIN QUERY PLAN '+b): print(r)\n\n# variant D max join instead of window\nd='''\nWITH word_stats AS (\n  SELECT s.wordid,\n    COUNT(DISTINCT s.synsetid) AS total_synsets,\n    COUNT(*) AS total_senses,\n    COUNT(DISTINCT syn.domainid) AS distinct_domains,\n    COUNT(DISTINCT syn.posid) AS distinct_posids\n  FROM senses s JOIN synsets syn ON syn.synsetid = s.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(DISTINCT s.synsetid) >= 2\n     AND COUNT(DISTINCT syn.domainid) >= 2\n     AND COUNT(*) >= 2\n),\nsynset_counts AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS sense_count\n  FROM senses s JOIN word_stats ws ON ws.wordid=s.wordid\n  GROUP BY s.wordid, s.synsetid\n),\nmax_counts AS (\n  SELECT wordid, MAX(sense_count) AS sense_count\n  FROM synset_counts GROUP BY wordid\n),\ntop_synsets AS (\n  SELECT sc.wordid, MIN(sc.synsetid) AS synsetid, mc.sense_count\n  FROM synset_counts sc JOIN max_counts mc\n    ON mc.wordid=sc.wordid AND mc.sense_count=sc.sense_count\n  GROUP BY sc.wordid\n)\nSELECT w.wordid AS word_id, w.word AS word, ws.total_synsets, ws.total_senses,\n  ws.distinct_domains, ws.distinct_posids, ts.synsetid AS top_synsetid,\n  ts.sense_count AS top_synset_sense_count\nFROM word_stats ws JOIN words w ON w.wordid=ws.wordid\nJOIN top_synsets ts ON ts.wordid=ws.wordid\nORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, w.wordid ASC\nLIMIT 500;\n'''\nfor name,q in [('B',b),('D',d)]:\n    for i in range(3):\n        t=time.time(); r=c.execute(q).fetchall(); print(name,i,round(time.time()-t,3),len(r))\n        if name=='B': ref=r\n        else: print(' equal',r==ref)\nPY",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 610051,
+     "dur_ms": 3521,
+     "exit": 0,
+     "cpu_ms": 3543.3,
+     "phases_us": {
+      "acquire": 79,
+      "resume": 21496,
+      "mount": 19187,
+      "run": 3469781,
+      "destroy": 29790
+     },
+     "cold": null,
+     "vm": "vm-59"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 613580,
+   "dur_ms": 13733,
+   "tokens_in": 45,
+   "tokens_out": 3274,
+   "cache_read": 10944,
+   "cache_write": 512,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 627313,
+   "dur_ms": 4517,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport sqlite3,time\nc=sqlite3.connect('/app/oewn.sqlite')\n# base D with only HAVING domain\nbase='''\nWITH word_stats AS (\n  SELECT s.wordid,\n    COUNT(DISTINCT s.synsetid) AS total_synsets,\n    COUNT(*) AS total_senses,\n    COUNT(DISTINCT syn.domainid) AS distinct_domains,\n    COUNT(DISTINCT syn.posid) AS distinct_posids\n  FROM senses s JOIN synsets syn ON syn.synsetid = s.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(DISTINCT syn.domainid) >= 2\n),\nsynset_counts AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS sense_count\n  FROM senses s JOIN word_stats ws ON ws.wordid=s.wordid\n  GROUP BY s.wordid, s.synsetid\n),\nmax_counts AS (\n  SELECT wordid, MAX(sense_count) AS sense_count\n  FROM synset_counts GROUP BY wordid\n),\ntop_synsets AS (\n  SELECT sc.wordid, MIN(sc.synsetid) AS synsetid, mc.sense_count\n  FROM synset_counts sc JOIN max_counts mc\n    ON mc.wordid=sc.wordid AND mc.sense_count=sc.sense_count\n  GROUP BY sc.wordid\n)\nSELECT w.wordid AS word_id, w.word AS word, ws.total_synsets, ws.total_senses,\n  ws.distinct_domains, ws.distinct_posids, ts.synsetid AS top_synsetid,\n  ts.sense_count AS top_synset_sense_count\nFROM word_stats ws JOIN words w ON w.wordid=ws.wordid\nJOIN top_synsets ts ON ts.wordid=ws.wordid\nORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, w.wordid ASC\nLIMIT 500;\n'''\n# H early limit with max join\nh='''\nWITH word_stats AS (\n  SELECT s.wordid,\n    COUNT(DISTINCT s.synsetid) AS total_synsets,\n    COUNT(*) AS total_senses,\n    COUNT(DISTINCT syn.domainid) AS distinct_domains,\n    COUNT(DISTINCT syn.posid) AS distinct_posids\n  FROM senses s JOIN synsets syn ON syn.synsetid = s.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(DISTINCT syn.domainid) >= 2\n),\ntop_stats AS (\n  SELECT * FROM word_stats\n  ORDER BY total_senses DESC, total_synsets DESC, distinct_domains DESC, wordid ASC\n  LIMIT 500\n),\nsynset_counts AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS sense_count\n  FROM senses s JOIN top_stats ts ON ts.wordid=s.wordid\n  GROUP BY s.wordid, s.synsetid\n),\nmax_counts AS (\n  SELECT wordid, MAX(sense_count) AS sense_count\n  FROM synset_counts GROUP BY wordid\n),\ntop_synsets AS (\n  SELECT sc.wordid, MIN(sc.synsetid) AS synsetid, mc.sense_count\n  FROM synset_counts sc JOIN max_counts mc\n    ON mc.wordid=sc.wordid AND mc.sense_count=sc.sense_count\n  GROUP BY sc.wordid\n)\nSELECT w.wordid AS word_id, w.word AS word, ts.total_synsets, ts.total_senses,\n  ts.distinct_domains, ts.distinct_posids, tops.synsetid AS top_synsetid,\n  tops.sense_count AS top_synset_sense_count\nFROM top_stats ts JOIN words w ON w.wordid=ts.wordid\nJOIN top_synsets tops ON tops.wordid=ts.wordid\nORDER BY ts.total_senses DESC, ts.total_synsets DESC, ts.distinct_domains DESC, w.wordid ASC\nLIMIT 500;\n'''\n# H window early\nhw=h.replace('''synset_counts AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS sense_count\n  FROM senses s JOIN top_stats ts ON ts.wordid=s.wordid\n  GROUP BY s.wordid, s.synsetid\n),\nmax_counts AS (\n  SELECT wordid, MAX(sense_count) AS sense_count\n  FROM synset_counts GROUP BY wordid\n),\ntop_synsets AS (\n  SELECT sc.wordid, MIN(sc.synsetid) AS synsetid, mc.sense_count\n  FROM synset_counts sc JOIN max_counts mc\n    ON mc.wordid=sc.wordid AND mc.sense_count=sc.sense_count\n  GROUP BY sc.wordid\n)''','''top_synsets AS (\n  SELECT wordid, synsetid, sense_count FROM (\n    SELECT s.wordid, s.synsetid, COUNT(*) AS sense_count,\n      ROW_NUMBER() OVER (PARTITION BY s.wordid ORDER BY COUNT(*) DESC, s.synsetid ASC) AS rn\n    FROM senses s JOIN top_stats ts ON ts.wordid=s.wordid\n    GROUP BY s.wordid, s.synsetid\n  ) WHERE rn=1\n)''')\nfor name,q in [('Dbase',base),('Hmax',h),('Hwin',hw)]:\n    for i in range(3):\n        t=time.time(); r=c.execute(q).fetchall(); print(name,i,round(time.time()-t,3),len(r))\n        if name=='Dbase': ref=r\n        else: print(' equal',r==ref)\nPY",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 627366,
+     "dur_ms": 4457,
+     "exit": 0,
+     "cpu_ms": 4501.0,
+     "phases_us": {
+      "acquire": 62,
+      "resume": 21368,
+      "mount": 18531,
+      "run": 4408896,
+      "destroy": 26797
+     },
+     "cold": null,
+     "vm": "vm-60"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 631833,
+   "dur_ms": 2000,
+   "tokens_in": 55,
+   "tokens_out": 464,
+   "cache_read": 14720,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 633834,
+   "dur_ms": 3383,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport sqlite3,time\nc=sqlite3.connect('/app/oewn.sqlite')\nqs={\n'stats':'''SELECT s.wordid, COUNT(DISTINCT s.synsetid) a, COUNT(*) b, COUNT(DISTINCT syn.domainid) d, COUNT(DISTINCT syn.posid) p FROM senses s JOIN synsets syn ON syn.synsetid=s.synsetid GROUP BY s.wordid HAVING COUNT(DISTINCT syn.domainid)>=2''',\n'stats_top':'''SELECT s.wordid, COUNT(DISTINCT s.synsetid) a, COUNT(*) b, COUNT(DISTINCT syn.domainid) d, COUNT(DISTINCT syn.posid) p FROM senses s JOIN synsets syn ON syn.synsetid=s.synsetid GROUP BY s.wordid HAVING COUNT(DISTINCT syn.domainid)>=2 ORDER BY b DESC,a DESC,d DESC,s.wordid LIMIT 500''',\n'jointop':'''SELECT * FROM (SELECT s.wordid, COUNT(DISTINCT s.synsetid) a, COUNT(*) b, COUNT(DISTINCT syn.domainid) d, COUNT(DISTINCT syn.posid) p FROM senses s JOIN synsets syn ON syn.synsetid=s.synsetid GROUP BY s.wordid HAVING COUNT(DISTINCT syn.domainid)>=2) ORDER BY b DESC,a DESC,d DESC,wordid LIMIT 500''',\n}\nfor n,q in qs.items():\n    for i in range(3):\n        t=time.time(); r=c.execute(q).fetchall(); print(n,i,round(time.time()-t,3),len(r))\nPY",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 633882,
+     "dur_ms": 3331,
+     "exit": 0,
+     "cpu_ms": 3355.6,
+     "phases_us": {
+      "acquire": 74,
+      "resume": 21340,
+      "mount": 19213,
+      "run": 3280167,
+      "destroy": 29636
+     },
+     "cold": null,
+     "vm": "vm-61"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 637220,
+   "dur_ms": 11895,
+   "tokens_in": 53,
+   "tokens_out": 3044,
+   "cache_read": 15360,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 649115,
+   "dur_ms": 5186,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport sqlite3,time\nc=sqlite3.connect('/app/oewn.sqlite')\n# I: prefilter candidate words via word-domain then stats for candidates, early limit\ni='''\nWITH candidate_words AS (\n  SELECT s.wordid\n  FROM senses s JOIN synsets syn ON syn.synsetid=s.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(DISTINCT syn.domainid) >= 2\n),\nword_stats AS (\n  SELECT s.wordid,\n    COUNT(DISTINCT s.synsetid) AS total_synsets,\n    COUNT(*) AS total_senses,\n    COUNT(DISTINCT syn.domainid) AS distinct_domains,\n    COUNT(DISTINCT syn.posid) AS distinct_posids\n  FROM senses s\n  JOIN candidate_words cw ON cw.wordid=s.wordid\n  JOIN synsets syn ON syn.synsetid=s.synsetid\n  GROUP BY s.wordid\n),\ntop_stats AS (\n  SELECT * FROM word_stats\n  ORDER BY total_senses DESC, total_synsets DESC, distinct_domains DESC, wordid ASC\n  LIMIT 500\n),\nsynset_counts AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS sense_count\n  FROM senses s JOIN top_stats ts ON ts.wordid=s.wordid\n  GROUP BY s.wordid, s.synsetid\n),\nmax_counts AS (\n  SELECT wordid, MAX(sense_count) AS sense_count FROM synset_counts GROUP BY wordid\n),\ntop_synsets AS (\n  SELECT sc.wordid, MIN(sc.synsetid) AS synsetid, mc.sense_count\n  FROM synset_counts sc JOIN max_counts mc\n    ON mc.wordid=sc.wordid AND mc.sense_count=sc.sense_count\n  GROUP BY sc.wordid\n)\nSELECT w.wordid AS word_id, w.word AS word, ts.total_synsets, ts.total_senses,\n  ts.distinct_domains, ts.distinct_posids, tops.synsetid AS top_synsetid,\n  tops.sense_count AS top_synset_sense_count\nFROM top_stats ts JOIN words w ON w.wordid=ts.wordid\nJOIN top_synsets tops ON tops.wordid=ts.wordid\nORDER BY ts.total_senses DESC, ts.total_synsets DESC, ts.distinct_domains DESC, w.wordid ASC\nLIMIT 500;\n'''\n# J: synset_info then word_stats, early limit\nj='''\nWITH synset_info AS (\n  SELECT s.wordid, s.synsetid, syn.domainid, syn.posid\n  FROM senses s JOIN synsets syn ON syn.synsetid=s.synsetid\n  GROUP BY s.wordid, s.synsetid\n),\nsense_totals AS (\n  SELECT wordid, COUNT(*) AS total_senses FROM senses GROUP BY wordid\n),\nword_stats AS (\n  SELECT si.wordid,\n    COUNT(*) AS total_synsets,\n    st.total_senses,\n    COUNT(DISTINCT si.domainid) AS distinct_domains,\n    COUNT(DISTINCT si.posid) AS distinct_posids\n  FROM synset_info si JOIN sense_totals st ON st.wordid=si.wordid\n  GROUP BY si.wordid\n  HAVING COUNT(DISTINCT si.domainid) >= 2\n),\ntop_stats AS (\n  SELECT * FROM word_stats\n  ORDER BY total_senses DESC, total_synsets DESC, distinct_domains DESC, wordid ASC\n  LIMIT 500\n),\nsynset_counts AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS sense_count\n  FROM senses s JOIN top_stats ts ON ts.wordid=s.wordid\n  GROUP BY s.wordid, s.synsetid\n),\nmax_counts AS (\n  SELECT wordid, MAX(sense_count) AS sense_count FROM synset_counts GROUP BY wordid\n),\ntop_synsets AS (\n  SELECT sc.wordid, MIN(sc.synsetid) AS synsetid, mc.sense_count\n  FROM synset_counts sc JOIN max_counts mc\n    ON mc.wordid=sc.wordid AND mc.sense_count=sc.sense_count\n  GROUP BY sc.wordid\n)\nSELECT w.wordid AS word_id, w.word AS word, ts.total_synsets, ts.total_senses,\n  ts.distinct_domains, ts.distinct_posids, tops.synsetid AS top_synsetid,\n  tops.sense_count AS top_synset_sense_count\nFROM top_stats ts JOIN words w ON w.wordid=ts.wordid\nJOIN top_synsets tops ON tops.wordid=ts.wordid\nORDER BY ts.total_senses DESC, ts.total_synsets DESC, ts.distinct_domains DESC, w.wordid ASC\nLIMIT 500;\n'''\n# H reference\nh='''\nWITH word_stats AS (\n  SELECT s.wordid,\n    COUNT(DISTINCT s.synsetid) AS total_synsets,\n    COUNT(*) AS total_senses,\n    COUNT(DISTINCT syn.domainid) AS distinct_domains,\n    COUNT(DISTINCT syn.posid) AS distinct_posids\n  FROM senses s JOIN synsets syn ON syn.synsetid = s.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(DISTINCT s.synsetid) >= 2\n     AND COUNT(DISTINCT syn.domainid) >= 2\n     AND COUNT(*) >= 2\n),\ntop_stats AS (\n  SELECT * FROM word_stats\n  ORDER BY total_senses DESC, total_synsets DESC, distinct_domains DESC, wordid ASC\n  LIMIT 500\n),\nsynset_counts AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS sense_count\n  FROM senses s JOIN top_stats ts ON ts.wordid=s.wordid\n  GROUP BY s.wordid, s.synsetid\n),\nmax_counts AS (\n  SELECT wordid, MAX(sense_count) AS sense_count FROM synset_counts GROUP BY wordid\n),\ntop_synsets AS (\n  SELECT sc.wordid, MIN(sc.synsetid) AS synsetid, mc.sense_count\n  FROM synset_counts sc JOIN max_counts mc\n    ON mc.wordid=sc.wordid AND mc.sense_count=sc.sense_count\n  GROUP BY sc.wordid\n)\nSELECT w.wordid AS word_id, w.word AS word, ts.total_synsets, ts.total_senses,\n  ts.distinct_domains, ts.distinct_posids, tops.synsetid AS top_synsetid,\n  tops.sense_count AS top_synset_sense_count\nFROM top_stats ts JOIN words w ON w.wordid=ts.wordid\nJOIN top_synsets tops ON tops.wordid=ts.wordid\nORDER BY ts.total_senses DESC, ts.total_synsets DESC, ts.distinct_domains DESC, w.wordid ASC\nLIMIT 500;\n'''\nfor name,q in [('H',h),('I',i),('J',j)]:\n    for k in range(3):\n        t=time.time(); r=c.execute(q).fetchall(); print(name,k,round(time.time()-t,3),len(r))\n        if name=='H': ref=r\n        else: print(' equal',r==ref)\nPY",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 649164,
+     "dur_ms": 5125,
+     "exit": 0,
+     "cpu_ms": 5173.4,
+     "phases_us": {
+      "acquire": 61,
+      "resume": 21283,
+      "mount": 18245,
+      "run": 5082831,
+      "destroy": 21078
+     },
+     "cold": null,
+     "vm": "vm-62"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 654304,
+   "dur_ms": 4645,
+   "tokens_in": 16,
+   "tokens_out": 917,
+   "cache_read": 18496,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 658950,
+   "dur_ms": 310,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport sqlite3\nc=sqlite3.connect('/app/oewn.sqlite')\nprint(c.execute('select count(*) from senses s left join words w on w.wordid=s.wordid where w.wordid is null').fetchone())\nprint(c.execute('select count(distinct wordid) from senses').fetchone())\nprint(c.execute('select count(*) from words').fetchone())\nPY",
+   "sandbox": [
+    {
+     "at_ms": 658998,
+     "dur_ms": 238,
+     "exit": 0,
+     "cpu_ms": 253.5,
+     "phases_us": {
+      "acquire": 79,
+      "resume": 21326,
+      "mount": 19002,
+      "run": 197166,
+      "destroy": 19469
+     },
+     "cold": null,
+     "vm": "vm-63"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 659263,
+   "dur_ms": 2804,
+   "tokens_in": 61,
+   "tokens_out": 704,
+   "cache_read": 19520,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 662067,
+   "dur_ms": 3124,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport sqlite3,time\nc=sqlite3.connect('/app/oewn.sqlite')\nh=open('/dev/stdin').read() if False else None\nbase='''\nWITH word_stats AS (\n  SELECT s.wordid,%s\n    COUNT(DISTINCT s.synsetid) AS total_synsets,\n    COUNT(*) AS total_senses,\n    COUNT(DISTINCT syn.domainid) AS distinct_domains,\n    COUNT(DISTINCT syn.posid) AS distinct_posids\n  FROM senses s %s JOIN synsets syn ON syn.synsetid = s.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(DISTINCT s.synsetid) >= 2\n     AND COUNT(DISTINCT syn.domainid) >= 2\n     AND COUNT(*) >= 2\n),\ntop_stats AS (\n  SELECT * FROM word_stats\n  ORDER BY total_senses DESC, total_synsets DESC, distinct_domains DESC, wordid ASC\n  LIMIT 500\n),\nsynset_counts AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS sense_count\n  FROM senses s JOIN top_stats ts ON ts.wordid=s.wordid\n  GROUP BY s.wordid, s.synsetid\n),\nmax_counts AS (\n  SELECT wordid, MAX(sense_count) AS sense_count FROM synset_counts GROUP BY wordid\n),\ntop_synsets AS (\n  SELECT sc.wordid, MIN(sc.synsetid) AS synsetid, mc.sense_count\n  FROM synset_counts sc JOIN max_counts mc\n    ON mc.wordid=sc.wordid AND mc.sense_count=sc.sense_count\n  GROUP BY sc.wordid\n)\nSELECT w.wordid AS word_id, w.word AS word, ts.total_synsets, ts.total_senses,\n  ts.distinct_domains, ts.distinct_posids, tops.synsetid AS top_synsetid,\n  tops.sense_count AS top_synset_sense_count\nFROM top_stats ts JOIN words w ON w.wordid=ts.wordid\nJOIN top_synsets tops ON tops.wordid=ts.wordid\nORDER BY ts.total_senses DESC, ts.total_synsets DESC, ts.distinct_domains DESC, w.wordid ASC\nLIMIT 500;\n'''\nqueries={'nw':base%('',''),'jw':base%('','JOIN words w0 ON w0.wordid=s.wordid')}\nfor name,q in queries.items():\n    for k in range(3):\n        t=time.time(); r=c.execute(q).fetchall(); print(name,k,round(time.time()-t,3),len(r))\nPY",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 662115,
+     "dur_ms": 3063,
+     "exit": 0,
+     "cpu_ms": 3101.2,
+     "phases_us": {
+      "acquire": 62,
+      "resume": 21041,
+      "mount": 18855,
+      "run": 3020365,
+      "destroy": 21656
+     },
+     "cold": null,
+     "vm": "vm-64"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 665194,
+   "dur_ms": 6267,
+   "tokens_in": 7,
+   "tokens_out": 1590,
+   "cache_read": 20224,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 671462,
+   "dur_ms": 1505,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /app/sol.sql <<'SQL'\nWITH word_stats AS (\n  SELECT\n    s.wordid,\n    COUNT(DISTINCT s.synsetid) AS total_synsets,\n    COUNT(*) AS total_senses,\n    COUNT(DISTINCT syn.domainid) AS distinct_domains,\n    COUNT(DISTINCT syn.posid) AS distinct_posids\n  FROM senses s\n  JOIN synsets syn ON syn.synsetid = s.synsetid\n  GROUP BY s.wordid\n  HAVING COUNT(DISTINCT s.synsetid) >= 2\n     AND COUNT(DISTINCT syn.domainid) >= 2\n     AND COUNT(*) >= 2\n),\ntop_stats AS (\n  SELECT *\n  FROM word_stats\n  ORDER BY total_senses DESC, total_synsets DESC, distinct_domains DESC, wordid ASC\n  LIMIT 500\n),\nsynset_counts AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS sense_count\n  FROM senses s\n  JOIN top_stats ts ON ts.wordid = s.wordid\n  GROUP BY s.wordid, s.synsetid\n),\nmax_counts AS (\n  SELECT wordid, MAX(sense_count) AS sense_count\n  FROM synset_counts\n  GROUP BY wordid\n),\ntop_synsets AS (\n  SELECT sc.wordid, MIN(sc.synsetid) AS synsetid, mc.sense_count\n  FROM synset_counts sc\n  JOIN max_counts mc\n    ON mc.wordid = sc.wordid AND mc.sense_count = sc.sense_count\n  GROUP BY sc.wordid\n)\nSELECT\n  w.wordid AS word_id,\n  w.word AS word,\n  ts.total_synsets,\n  ts.total_senses,\n  ts.distinct_domains,\n  ts.distinct_posids,\n  tops.synsetid AS top_synsetid,\n  tops.sense_count AS top_synset_sense_count\nFROM top_stats ts\nJOIN words w ON w.wordid = ts.wordid\nJOIN top_synsets tops ON tops.wordid = ts.wordid\nORDER BY\n  ts.total_senses DESC,\n  ts.total_synsets DESC,\n  ts.distinct_domains DESC,\n  w.wordid ASC\nLIMIT 500;\nSQL\npython3 - <<'PY'\nimport sqlite3,time\nc=sqlite3.connect('/app/oewn.sqlite')\n# A is the known-original-equivalent query from the initial verification run\na='''\nWITH word_synset AS (\n  SELECT s.wordid, s.synsetid, COUNT(*) AS sense_count, syn.domainid, syn.posid\n  FROM senses s JOIN synsets syn ON syn.synsetid = s.synsetid\n  GROUP BY s.wordid, s.synsetid, syn.domainid, syn.posid\n),\nword_stats AS (\n  SELECT wordid, COUNT(*) AS total_synsets, SUM(sense_count) AS total_senses,\n    COUNT(DISTINCT domainid) AS distinct_domains, COUNT(DISTINCT posid) AS distinct_posids\n  FROM word_synset GROUP BY wordid\n  HAVING COUNT(*) >= 2 AND COUNT(DISTINCT domainid) >= 2 AND SUM(sense_count) >= 2\n),\ntop_synsets AS (\n  SELECT wordid, synsetid, sense_count FROM (\n    SELECT wordid, synsetid, sense_count,\n      ROW_NUMBER() OVER (PARTITION BY wordid ORDER BY sense_count DESC, synsetid ASC) AS rn\n    FROM word_synset\n  ) WHERE rn = 1\n)\nSELECT w.wordid AS word_id, w.word AS word, ws.total_synsets, ws.total_senses,\n  ws.distinct_domains, ws.distinct_posids, ts.synsetid AS top_synsetid,\n  ts.sense_count AS top_synset_sense_count\nFROM word_stats ws JOIN words w ON w.wordid=ws.wordid\nJOIN top_synsets ts ON ts.wordid=ws.wordid\nORDER BY ws.total_senses DESC, ws.total_synsets DESC, ws.distinct_domains DESC, w.wordid ASC\nLIMIT 500;\n'''\nsol=open('/app/sol.sql').read()\nt=time.time(); expected=c.execute(a).fetchall(); print('reference',round(time.time()-t,3))\nt=time.time(); actual=c.execute(sol).fetchall(); print('solution',round(time.time()-t,3))\nprint('MATCH',expected==actual, 'rows',len(actual))\nprint('statements',sol.count(';'), 'comments', '--' in sol or '/*' in sol)\nPY",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 671511,
+     "dur_ms": 1443,
+     "exit": 0,
+     "cpu_ms": 1482.8,
+     "phases_us": {
+      "acquire": 63,
+      "resume": 21442,
+      "mount": 19040,
+      "run": 1399775,
+      "destroy": 21934
+     },
+     "cold": null,
+     "vm": "vm-65"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 672970,
+   "dur_ms": 729,
+   "tokens_in": 34,
+   "tokens_out": 90,
+   "cache_read": 21888,
+   "cache_write": 64,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "long",
+ "weight_s_per_command": 42.177,
+ "calls": 12,
+ "cell": "TB1f",
+ "removed": []
+}

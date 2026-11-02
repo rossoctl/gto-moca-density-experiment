@@ -1,0 +1,349 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "large-scale-text-editing",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 302007,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 409,
+  "output": 11390,
+  "cacheRead": 212672,
+  "cacheWrite": 2304,
+  "total": 226775
+ },
+ "totals": {
+  "model_calls": 11,
+  "tool_calls": 10,
+  "model_ms": 79985,
+  "tool_ms": 221195,
+  "sandbox_ms": 220377
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 726,
+   "dur_ms": 1503
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2229,
+   "dur_ms": 291,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\nls -la\necho \"--- input head ---\"\nhead -5 input.csv\necho \"--- expected head ---\"\nhead -5 expected.csv\necho \"--- sizes ---\"\nwc -l input.csv expected.csv 2>/dev/null || wc -l /app/input.csv /app/expected.csv",
+   "sandbox": [
+    {
+     "at_ms": 2312,
+     "dur_ms": 164,
+     "exit": 0,
+     "cpu_ms": 176.4,
+     "phases_us": {
+      "acquire": 64,
+      "resume": 22582,
+      "mount": 20301,
+      "run": 112623,
+      "destroy": 28874
+     },
+     "cold": null,
+     "vm": "vm-245"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 2520,
+   "dur_ms": 2657
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5177,
+   "dur_ms": 933,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\nimport collections\nwith open('input.csv','rb') as f:\n    data=f.read()\nlines=data.split(b'\\n')\nprint(\"num lines\", len(lines), \"trailing\", repr(lines[-1]))\nprint(\"CR?\", b'\\r' in data)\n# field counts\ncc=collections.Counter()\nbad=[]\nfor i,l in enumerate(lines):\n    if not l: continue\n    cc[l.count(b',')]+=1\nprint(\"comma counts\", cc)\n# look at odd examples\nfor i,l in enumerate(lines[:20]):\n    print(i, repr(l))\nprint(\"--- last lines\")\nfor l in lines[-5:]:\n    print(repr(l))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 5234,
+     "dur_ms": 861,
+     "exit": 0,
+     "cpu_ms": 878.6,
+     "phases_us": {
+      "acquire": 92,
+      "resume": 22080,
+      "mount": 19258,
+      "run": 801882,
+      "destroy": 36875
+     },
+     "cold": null,
+     "vm": "vm-249"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 6110,
+   "dur_ms": 23117
+  },
+  {
+   "kind": "tool",
+   "at_ms": 29227,
+   "dur_ms": 143,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\nwhich vim; vim --version | head -2\nhead -5 input.csv > /tmp/in.csv\ncat > /tmp/t.vim <<'VIM'\ncall setreg('a', \":s/\\\\s*\\\\([^,]*\\\\)\\\\s*,\\\\s*\\\\([^,]*\\\\)\\\\s*,\\\\s*\\\\([^,]*\\\\)\\\\s*/\\\\U\\\\1;\\\\2;\\\\3/\\r\")\ncall setreg('b', \":s/\\\\([^;]*\\\\);\\\\s*\\\\([^;]*\\\\);\\\\s*\\\\(.*\\\\)/\\\\3;\\\\2;\\\\1/\\r\")\ncall setreg('c', \":s/$/;OK/\\r\")\n:%normal! @a\n:%normal! @b\n:%normal! @c\n:wq\nVIM\nvim -Nu NONE -n -Es /tmp/in.csv -S /tmp/t.vim; echo \"exit=$?\"\ncat /tmp/in.csv\necho \"--- expected\"\nhead -5 expected.csv",
+   "sandbox": [
+    {
+     "at_ms": 29286,
+     "dur_ms": 68,
+     "exit": 0,
+     "cpu_ms": 64.6,
+     "phases_us": {
+      "acquire": 82,
+      "resume": 21723,
+      "mount": 19011,
+      "run": 19609,
+      "destroy": 26837
+     },
+     "cold": null,
+     "vm": "vm-252"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 29370,
+   "dur_ms": 5706
+  },
+  {
+   "kind": "tool",
+   "at_ms": 35076,
+   "dur_ms": 2599,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\nbad=0; examples=[]\nmaxlen=0\nwith open('input.csv') as f:\n    for i,l in enumerate(f):\n        parts=l.rstrip('\\n').split(',')\n        assert len(parts)==3\n        for p in parts:\n            t=p.strip()\n            if ' ' in t or '\\t' in t:\n                bad+=1\n                if len(examples)<10: examples.append((i,repr(p)))\n            maxlen=max(maxlen,len(t))\n        if i>200000 and bad==0:\n            pass\nprint(\"internal-space fields:\",bad,examples,\"maxlen\",maxlen)\n# verify expected structure\nimport re\npat=re.compile(r'^[^;]*;[^;]*;[^;]*;OK$')\nbad2=0\nwith open('expected.csv') as f:\n    for i,l in enumerate(f):\n        if not pat.match(l.rstrip('\\n')):\n            bad2+=1\n            if bad2<5: print(\"odd expected\",i,repr(l))\nprint(\"bad expected lines\",bad2)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 35131,
+     "dur_ms": 2521,
+     "exit": 0,
+     "cpu_ms": 2631.0,
+     "phases_us": {
+      "acquire": 25,
+      "resume": 21288,
+      "mount": 18674,
+      "run": 2479458,
+      "destroy": 20464
+     },
+     "cold": null,
+     "vm": "vm-259"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 37675,
+   "dur_ms": 3575
+  },
+  {
+   "kind": "tool",
+   "at_ms": 41250,
+   "dur_ms": 142,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\nhead -5 input.csv > /tmp/in.csv\ncat > /tmp/t.vim <<'VIM'\ncall setreg('a', \":s/\\\\s*\\\\(\\\\S*\\\\)\\\\s*,\\\\s*\\\\(\\\\S*\\\\)\\\\s*,\\\\s*\\\\(\\\\S*\\\\)\\\\s*/\\\\U\\\\1;\\\\2;\\\\3/\\r\")\ncall setreg('b', \":s/\\\\([^;]*\\\\);\\\\([^;]*\\\\);\\\\(.*\\\\)/\\\\3;\\\\2;\\\\1/\\r\")\ncall setreg('c', \":s/$/;OK/\\r\")\n:%normal! @a\n:%normal! @b\n:%normal! @c\n:wq\nVIM\nvim -Nu NONE -n -Es /tmp/in.csv -S /tmp/t.vim; echo \"exit=$?\"\ncat /tmp/in.csv\necho \"--- diff\"\nhead -5 expected.csv | diff - /tmp/in.csv && echo SAME",
+   "sandbox": [
+    {
+     "at_ms": 41306,
+     "dur_ms": 55,
+     "exit": 0,
+     "cpu_ms": 63.0,
+     "phases_us": {
+      "acquire": 5,
+      "resume": 20965,
+      "mount": 18628,
+      "run": 17600,
+      "destroy": 16669
+     },
+     "cold": null,
+     "vm": "vm-260"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 41392,
+   "dur_ms": 4489
+  },
+  {
+   "kind": "tool",
+   "at_ms": 45881,
+   "dur_ms": 53839,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\ncat > apply_macros.vim <<'VIM'\ncall setreg('a', \":s/\\\\s*\\\\(\\\\S*\\\\)\\\\s*,\\\\s*\\\\(\\\\S*\\\\)\\\\s*,\\\\s*\\\\(\\\\S*\\\\)\\\\s*/\\\\U\\\\1;\\\\2;\\\\3/\\r\")\ncall setreg('b', \":s/\\\\([^;]*\\\\);\\\\([^;]*\\\\);\\\\(.*\\\\)/\\\\3;\\\\2;\\\\1/\\r\")\ncall setreg('c', \":s/$/;OK/\\r\")\n:%normal! @a\n:%normal! @b\n:%normal! @c\n:wq\nVIM\ncp input.csv /tmp/full.csv\ntime vim -Nu NONE -n -Es /tmp/full.csv -S apply_macros.vim; echo \"exit=$?\"\ncmp /tmp/full.csv expected.csv && echo \"BYTE-IDENTICAL\"\n# count macro keystrokes as expanded\npython3 - <<'PY'\na=r\":s/\\s*\\(\\S*\\)\\s*,\\s*\\(\\S*\\)\\s*,\\s*\\(\\S*\\)\\s*/\\U\\1;\\2;\\3/\\r\"\nb=r\":s/\\([^;]*\\);\\([^;]*\\);\\(.*\\)/\\3;\\2;\\1/\\r\"\nc=r\":s/$/;OK/\\r\"\nprint(len(a),len(b),len(c),\"total\",len(a)+len(b)+len(c))\nPY\necho \"--- script ---\"\ncat apply_macros.vim",
+   "sandbox": [
+    {
+     "at_ms": 45936,
+     "dur_ms": 53762,
+     "exit": 0,
+     "cpu_ms": 53848.5,
+     "phases_us": {
+      "acquire": 64,
+      "resume": 21387,
+      "mount": 18826,
+      "run": 53675319,
+      "destroy": 65446
+     },
+     "cold": null,
+     "vm": "vm-261"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 99720,
+   "dur_ms": 5121
+  },
+  {
+   "kind": "tool",
+   "at_ms": 104841,
+   "dur_ms": 158,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\nimport re\nlines=open('apply_macros.vim').read().splitlines()\ntotal=0\nfor l in lines[:3]:\n    m=re.search(r'\"((?:[^\"\\\\]|\\\\.)*)\"',l)\n    s=m.group(1)\n    # raw script chars between quotes\n    print(repr(s), \"rawlen\",len(s), \"backslashes\",s.count('\\\\'))\n    total+=len(s)\nprint(\"raw content total\",total)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 104894,
+     "dur_ms": 80,
+     "exit": 0,
+     "cpu_ms": 90.0,
+     "phases_us": {
+      "acquire": 60,
+      "resume": 21195,
+      "mount": 18749,
+      "run": 40074,
+      "destroy": 18816
+     },
+     "cold": null,
+     "vm": "vm-267"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 104999,
+   "dur_ms": 1941
+  },
+  {
+   "kind": "tool",
+   "at_ms": 106940,
+   "dur_ms": 53057,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\ntime vim -Nu NONE -n -Es /app/input.csv -S /app/apply_macros.vim; echo \"vim exit=$?\"\ncmp /app/input.csv /app/expected.csv && echo \"BYTE-IDENTICAL\"\nls -l /app/apply_macros.vim",
+   "sandbox": [
+    {
+     "at_ms": 106992,
+     "dur_ms": 52996,
+     "exit": 0,
+     "cpu_ms": 53075.9,
+     "phases_us": {
+      "acquire": 71,
+      "resume": 20970,
+      "mount": 18812,
+      "run": 52905122,
+      "destroy": 69965
+     },
+     "cold": null,
+     "vm": "vm-271"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 159997,
+   "dur_ms": 22060
+  },
+  {
+   "kind": "tool",
+   "at_ms": 182057,
+   "dur_ms": 613,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\n# synthesize original-style sample from expected first 5 lines\npython3 - <<'PY'\nout=[]\nfor l in open('expected.csv').read().splitlines()[:5]:\n    a,b,c,ok=l.split(';')\n    out.append(f\"   {c}  ,   {b} ,  {a}  \")\nopen('/tmp/orig5.csv','w').write(\"\\n\".join(out)+\"\\n\")\nopen('/tmp/exp5.csv','w').write(\"\\n\".join(open('expected.csv').read().splitlines()[:5])+\"\\n\")\nPY\ncat > /tmp/idem.vim <<'VIM'\ncall setreg('a', \":s/\\\\s*\\\\(\\\\S*\\\\)\\\\s*,\\\\s*\\\\(\\\\S*\\\\)\\\\s*,\\\\s*\\\\(\\\\S*\\\\)\\\\s*/\\\\U\\\\1;\\\\2;\\\\3/e\\r\")\ncall setreg('b', \":s/^\\\\([^;]*\\\\);\\\\([^;]*\\\\);\\\\([^;]*\\\\)$/\\\\3;\\\\2;\\\\1/e\\r\")\ncall setreg('c', \":s/^\\\\(\\\\([^;]*;\\\\)\\\\{2}[^;]*\\\\)$/\\\\1;OK/e\\r\")\n:%normal! @a\n:%normal! @b\n:%normal! @c\n:wq\nVIM\necho \"== first run ==\"\nvim -Nu NONE -n -Es /tmp/orig5.csv -S /tmp/idem.vim; echo \"exit=$?\"\ndiff /tmp/orig5.csv /tmp/exp5.csv && echo \"MATCH after run1\"\necho \"== second run (idempotency) ==\"\nvim -Nu NONE -n -Es /tmp/orig5.csv -S /tmp/idem.vim; echo \"exit=$?\"\ndiff /tmp/orig5.csv /tmp/exp5.csv && echo \"MATCH after run2\"\ncat /tmp/orig5.csv\npython3 - <<'PY'\nimport re\nfor l in open('/tmp/idem.vim').read().splitlines()[:3]:\n    s=re.search(r'\"((?:[^\"\\\\]|\\\\.)*)\"',l).group(1)\n    print(len(s), repr(s))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 182114,
+     "dur_ms": 520,
+     "exit": 0,
+     "cpu_ms": 552.5,
+     "phases_us": {
+      "acquire": 77,
+      "resume": 21583,
+      "mount": 18956,
+      "run": 471607,
+      "destroy": 26793
+     },
+     "cold": null,
+     "vm": "vm-287"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 182670,
+   "dur_ms": 6911
+  },
+  {
+   "kind": "tool",
+   "at_ms": 189581,
+   "dur_ms": 109420,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\n# build a full synthetic original (varied whitespace incl tabs) from expected\npython3 - <<'PY'\nwith open('/app/expected.csv') as f, open('/tmp/orig_full.csv','w') as o:\n    for i,l in enumerate(f):\n        a,b,c,ok=l.rstrip('\\n').split(';')\n        if i%3==0: o.write(f\"\\t {c}  ,\\t{b}   ,   {a} \\n\")\n        elif i%3==1: o.write(f\"  {c}, {b}\\t,{a}\\t\\n\")\n        else: o.write(f\"   {c}   ,   {b}  ,  {a}   \\n\")\nPY\ncat > /app/apply_macros.vim <<'VIM'\ncall setreg('a', \":s/\\\\s*\\\\(\\\\S*\\\\)\\\\s*,\\\\s*\\\\(\\\\S*\\\\)\\\\s*,\\\\s*\\\\(\\\\S*\\\\)\\\\s*/\\\\U\\\\1;\\\\2;\\\\3/e\\r\")\ncall setreg('b', \":s/^\\\\([^;]*\\\\);\\\\([^;]*\\\\);\\\\([^;]*\\\\)$/\\\\3;\\\\2;\\\\1/e\\r\")\ncall setreg('c', \":s/^\\\\(\\\\([^;]*;\\\\)\\\\{2}[^;]*\\\\)$/\\\\1;OK/e\\r\")\n:%normal! @a\n:%normal! @b\n:%normal! @c\n:wq\nVIM\ntime vim -Nu NONE -n -Es /tmp/orig_full.csv -S /app/apply_macros.vim; echo \"full orig exit=$?\"\ncmp /tmp/orig_full.csv /app/expected.csv && echo \"FULL ORIG->EXPECTED BYTE-IDENTICAL\"\n# idempotency on the real current input (already expected)\ntime vim -Nu NONE -n -Es /app/input.csv -S /app/apply_macros.vim; echo \"current exit=$?\"\ncmp /app/input.csv /app/expected.csv && echo \"CURRENT STILL BYTE-IDENTICAL\"\necho \"--- final script ---\"; cat /app/apply_macros.vim",
+   "sandbox": [
+    {
+     "at_ms": 189637,
+     "dur_ms": 109350,
+     "exit": 0,
+     "cpu_ms": 109492.1,
+     "phases_us": {
+      "acquire": 94,
+      "resume": 21421,
+      "mount": 18739,
+      "run": 109252560,
+      "destroy": 76187
+     },
+     "cold": null,
+     "vm": "vm-288"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 299001,
+   "dur_ms": 2905
+  }
+ ],
+ "class": "long",
+ "weight_s_per_command": 17.611,
+ "calls": 10,
+ "cell": "TB1b",
+ "removed": []
+}

@@ -1,0 +1,431 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "chess-best-move",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 145373,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 16981,
+  "output": 18719,
+  "cacheRead": 396544,
+  "cacheWrite": 0,
+  "total": 432244
+ },
+ "totals": {
+  "model_calls": 22,
+  "tool_calls": 21,
+  "model_ms": 97589,
+  "tool_ms": 46941,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 132,
+   "dur_ms": 3384,
+   "tokens_in": 120,
+   "tokens_out": 56,
+   "cache_read": 6976,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3516,
+   "dur_ms": 91,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/chess_board.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 3643,
+   "dur_ms": 1102,
+   "tokens_in": 87,
+   "tokens_out": 155,
+   "cache_read": 7104,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4745,
+   "dur_ms": 154,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app && which python3 && python3 -c \"import PIL; print('PIL', PIL.__version__)\" 2>&1; python3 -c \"import cv2; print('cv2', cv2.__version__)\" 2>&1; python3 -c \"import chess; print('python-chess', chess.__version__)\" 2>&1; which tesseract 2>&1; which convert 2>&1"
+  },
+  {
+   "kind": "model",
+   "at_ms": 4956,
+   "dur_ms": 3341,
+   "tokens_in": 340,
+   "tokens_out": 120,
+   "cache_read": 7232,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 8297,
+   "dur_ms": 1611,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nfrom PIL import Image\nim = Image.open('chess_board.png')\nprint(im.size, im.mode)\nim2 = im.convert('RGB')\nfrom collections import Counter\nc = Counter(im2.getdata())\nprint(\"num colors\", len(c))\nfor col,n in c.most_common(20):\n    print(col,n)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 9942,
+   "dur_ms": 2322,
+   "tokens_in": 272,
+   "tokens_out": 204,
+   "cache_read": 7872,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 12264,
+   "dur_ms": 64,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nfrom PIL import Image\nimport numpy as np\nim = np.array(Image.open('chess_board.png').convert('RGB'))\nh,w,_ = im.shape\nsq = w//8\nfor r in range(8):\n    row=[]\n    for c in range(8):\n        blk = im[r*sq:(r+1)*sq, c*sq:(c+1)*sq]\n        # count pure-ish black and white\n        black = np.sum(np.all(blk<30, axis=2))\n        white = np.sum(np.all(blk>245, axis=2))\n        row.append(f\"B{black:4d}W{white:4d}\")\n    print(\"row\",r,\" \".join(row))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 12339,
+   "dur_ms": 751,
+   "tokens_in": 62,
+   "tokens_out": 81,
+   "cache_read": 8576,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 13090,
+   "dur_ms": 386,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && pip install --quiet numpy python-chess 2>&1 | tail -5; python3 -c \"import numpy, chess; print('ok', numpy.__version__, chess.__version__)\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 13489,
+   "dur_ms": 650,
+   "tokens_in": 160,
+   "tokens_out": 86,
+   "cache_read": 8704,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14139,
+   "dur_ms": 4598,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && pip install --quiet --break-system-packages numpy python-chess 2>&1 | tail -5; python3 -c \"import numpy, chess; print('ok', numpy.__version__, chess.__version__)\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 18750,
+   "dur_ms": 1353,
+   "tokens_in": 127,
+   "tokens_out": 192,
+   "cache_read": 8896,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 20103,
+   "dur_ms": 268,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nfrom PIL import Image\nimport numpy as np\nim = np.array(Image.open('chess_board.png').convert('RGB'))\nh,w,_ = im.shape\nsq = w//8\nfor r in range(8):\n    row=[]\n    for c in range(8):\n        blk = im[r*sq:(r+1)*sq, c*sq:(c+1)*sq]\n        black = np.sum(np.all(blk<30, axis=2))\n        white = np.sum(np.all(blk>245, axis=2))\n        row.append(f\"{black:4d}/{white:4d}\")\n    print(\"row\",r,\" | \".join(row))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 20391,
+   "dur_ms": 4570,
+   "tokens_in": 483,
+   "tokens_out": 128,
+   "cache_read": 9216,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 24961,
+   "dur_ms": 99,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nimport chess.svg, inspect\nsrc = inspect.getsource(chess.svg)\nfor line in src.splitlines():\n    if 'f0d9b5' in line.lower() or 'b58863' in line.lower() or 'COLORS' in line:\n        print(line)\nprint('PIECES keys', list(chess.svg.PIECES.keys())[:5])\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 25076,
+   "dur_ms": 598,
+   "tokens_in": 73,
+   "tokens_out": 63,
+   "cache_read": 10624,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 25674,
+   "dur_ms": 84,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nimport chess.svg\nprint(chess.svg.DEFAULT_COLORS)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 25771,
+   "dur_ms": 1672,
+   "tokens_in": 134,
+   "tokens_out": 83,
+   "cache_read": 10752,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 27443,
+   "dur_ms": 3182,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && pip install --quiet --break-system-packages cairosvg 2>&1 | tail -3; python3 -c \"import cairosvg; print('cairosvg ok')\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 30638,
+   "dur_ms": 993,
+   "tokens_in": 502,
+   "tokens_out": 115,
+   "cache_read": 11136,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 31631,
+   "dur_ms": 20258,
+   "tool": "bash",
+   "is_error": false,
+   "command": "apt-get update -qq 2>&1 | tail -2; apt-get install -y -qq libcairo2 stockfish 2>&1 | tail -5; which stockfish; python3 -c \"import cairosvg; print('cairosvg ok')\"",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 51905,
+   "dur_ms": 2418,
+   "tokens_in": 123,
+   "tokens_out": 78,
+   "cache_read": 11776,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 54323,
+   "dur_ms": 86,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nimport chess.svg\nfor k,v in chess.svg.PIECES.items():\n    print(k, v[:200])\n    print('---')\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 54423,
+   "dur_ms": 10833,
+   "tokens_in": 1126,
+   "tokens_out": 782,
+   "cache_read": 12288,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 65256,
+   "dur_ms": 957,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nimport chess, chess.svg, cairosvg, io, numpy as np\nfrom PIL import Image\nim = np.array(Image.open('chess_board.png').convert('RGB')).astype(np.int16)\nsq = 80\nlight = np.array([240,217,181]); dark = np.array([181,136,99])\n\ndef render(piece):\n    frag = chess.svg.piece(chess.Piece.from_symbol(piece), size=80)\n    # frag is an <svg ...> maybe\n    svg = frag\n    png = cairosvg.svg2png(bytestring=svg.encode(), output_width=80, output_height=80)\n    a = np.array(Image.open(io.BytesIO(png)).convert('RGBA'))\n    return a\n\n# inspect frag\nfrag = chess.svg.piece(chess.Piece.from_symbol('K'), size=80)\nprint(frag[:300])\nprint(len(frag))\n\n# actual square masks\ndef actual_mask(r,c):\n    blk = im[r*sq:(r+1)*sq, c*sq:(c+1)*sq]\n    bg = light if ((r+c)%2==0) else dark\n    d = np.sqrt(np.sum((blk-bg)**2, axis=2))\n    return d>55, blk\n\nocc=[]\nfor r in range(8):\n    for c in range(8):\n        m,blk = actual_mask(r,c)\n        if m.sum()>100:\n            black = np.sum(np.all(blk<30,axis=2)); white=np.sum(np.all(blk>245,axis=2))\n            occ.append((r,c,'black' if black>white else 'white',int(m.sum())))\nprint(\"occupied\", len(occ))\nfor o in occ: print(o)\n\n# templates\nsyms = {'black':'kqrbnp','white':'KQRBNP'}\ntmpl={}\nfor color,ss in syms.items():\n    for s in ss:\n        a=render(s)\n        alpha=a[:,:,3]\n        tmpl[s]=(alpha>128, a)\n# compute IoU per occupancy with color-appropriate templates\nfor r,c,color,area in occ:\n    m,_=actual_mask(r,c)\n    scores=[]\n    for s in syms[color]:\n        t,_=tmpl[s]\n        # try shifts -3..3 and scales? first exact\n        best=0; bestsh=None\n        for dy in range(-4,5):\n            for dx in range(-4,5):\n                ts=np.roll(np.roll(t,dy,axis=0),dx,axis=1)\n                if dy>0: ts[:dy,:]=False\n                elif dy<0: ts[dy:,:]=False\n                if dx>0: ts[:,:dx]=False\n                elif dx<0: ts[:,dx:]=False\n                inter=np.logical_and(m,ts).sum(); uni=np.logical_or(m,ts).sum()\n                iou=inter/uni if uni else 0\n                if iou>best: best=iou; bestsh=(dy,dx)\n        scores.append((best,s,bestsh))\n    scores.sort(reverse=True)\n    print(f\"({r},{c}) {color:5s} area{area:4d} ->\", [(s,round(v,3)) for v,s,sh in scores])\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 66233,
+   "dur_ms": 6014,
+   "tokens_in": 2397,
+   "tokens_out": 656,
+   "cache_read": 15552,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 72247,
+   "dur_ms": 348,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nfrom PIL import Image\nimport numpy as np\nim = np.array(Image.open('chess_board.png').convert('RGB')).astype(np.int16)\nsq=80; light=np.array([240,217,181]); dark=np.array([181,136,99])\nocc=[]\nfor r in range(8):\n    for c in range(8):\n        blk=im[r*sq:(r+1)*sq,c*sq:(c+1)*sq]\n        bg=light if ((r+c)%2==0) else dark\n        d=np.sqrt(np.sum((blk-bg)**2,axis=2))\n        m=d>55\n        if m.sum()>100:\n            ys,xs=np.where(m)\n            y0,y1,x0,x1=ys.min(),ys.max(),xs.min(),xs.max()\n            black=np.all(blk<30,axis=2); white=np.all(blk>245,axis=2)\n            occ.append((r,c,'B' if black.sum()>white.sum() else 'W',y0,y1,x0,x1))\n\ndef show(r,c):\n    blk=im[r*sq:(r+1)*sq,c*sq:(c+1)*sq]\n    bg=light if ((r+c)%2==0) else dark\n    d=np.sqrt(np.sum((blk-bg)**2,axis=2)); m=d>55\n    ys,xs=np.where(m)\n    y0,y1,x0,x1=ys.min(),ys.max(),xs.min(),xs.max()\n    sub=blk[y0:y1+1,x0:x1+1]; sm=m[y0:y1+1,x0:x1+1]\n    H,W=sub.shape\n    # downsample to width 28 preserving aspect using nearest\n    outw=28; outh=max(1,round(H*outw/W))\n    lines=[]\n    for j in range(outh):\n        line=''\n        for i in range(outw):\n            yy=min(H-1,int(j*H/outh)); xx=min(W-1,int(i*W/outw))\n            px=sub[yy,xx]\n            if not sm[yy,xx]: line+='.'\n            elif np.all(px<30): line+='#'\n            elif np.all(px>245): line+='O'\n            else: line+='+'\n        lines.append(line)\n    return lines\n\nfor r,c,col,*bb in occ:\n    print(f\"=== ({r},{c}) {col} bbox y{bb[0]}-{bb[1]} x{bb[2]}-{bb[3]} h{bb[1]-bb[0]+1} w{bb[3]-bb[2]+1} ===\")\n    for l in show(r,c): print(l)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 72613,
+   "dur_ms": 2592,
+   "tokens_in": 146,
+   "tokens_out": 626,
+   "cache_read": 19136,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 75205,
+   "dur_ms": 415,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nfrom PIL import Image\nimport numpy as np\nim = np.array(Image.open('chess_board.png').convert('RGB')).astype(np.int16)\nsq=80; light=np.array([240,217,181]); dark=np.array([181,136,99])\nocc=[]\nfor r in range(8):\n    for c in range(8):\n        blk=im[r*sq:(r+1)*sq,c*sq:(c+1)*sq]\n        bg=light if ((r+c)%2==0) else dark\n        d=np.sqrt(np.sum((blk-bg)**2,axis=2)); m=d>55\n        if m.sum()>100:\n            ys,xs=np.where(m)\n            black=np.all(blk<30,axis=2); white=np.all(blk>245,axis=2)\n            occ.append((r,c,'B' if black.sum()>white.sum() else 'W'))\n\ndef show(r,c):\n    blk=im[r*sq:(r+1)*sq,c*sq:(c+1)*sq]\n    bg=light if ((r+c)%2==0) else dark\n    d=np.sqrt(np.sum((blk-bg)**2,axis=2)); m=d>55\n    ys,xs=np.where(m); y0,y1,x0,x1=ys.min(),ys.max(),xs.min(),xs.max()\n    sub=blk[y0:y1+1,x0:x1+1]; sm=m[y0:y1+1,x0:x1+1]\n    H,W,_=sub.shape\n    outw=30; outh=max(1,round(H*outw/W))\n    lines=[]\n    for j in range(outh):\n        line=''\n        for i in range(outw):\n            yy=min(H-1,int(j*H/outh)); xx=min(W-1,int(i*W/outw))\n            px=sub[yy,xx]\n            if not sm[yy,xx]: line+='.'\n            elif np.all(px<30): line+='#'\n            elif np.all(px>245): line+='O'\n            else: line+='+'\n        lines.append(line)\n    return lines, (y0,y1,x0,x1)\n\nfor r,c,col in occ:\n    lines,bb=show(r,c)\n    print(f\"=== ({r},{c}) {col} bbox y{bb[0]}-{bb[1]} x{bb[2]}-{bb[3]} h{bb[1]-bb[0]+1} w{bb[3]-bb[2]+1} ===\")\n    for l in lines: print(l)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 75637,
+   "dur_ms": 10119,
+   "tokens_in": 7178,
+   "tokens_out": 103,
+   "cache_read": 19904,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 85756,
+   "dur_ms": 2721,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && pip install --quiet --break-system-packages opencv-python-headless 2>&1 | tail -2; python3 -c \"import cv2; print('cv2', cv2.__version__)\"",
+   "timeout": 180000
+  },
+  {
+   "kind": "model",
+   "at_ms": 88494,
+   "dur_ms": 4866,
+   "tokens_in": 87,
+   "tokens_out": 594,
+   "cache_read": 29056,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 93360,
+   "dur_ms": 1166,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nimport chess, chess.svg, cairosvg, io, numpy as np, cv2\nfrom PIL import Image\nim = np.array(Image.open('chess_board.png').convert('RGB')).astype(np.int16)\nsq=80; light=np.array([240,217,181]); dark=np.array([181,136,99])\nsyms={'black':'kqrbnp','white':'KQRBNP'}\n\ndef render(s,size):\n    frag=chess.svg.piece(chess.Piece.from_symbol(s), size=size)\n    png=cairosvg.svg2png(bytestring=frag.encode(), output_width=size, output_height=size)\n    a=np.array(Image.open(io.BytesIO(png)).convert('RGBA'))\n    return (a[:,:,3]>128).astype(np.float32)\n\n# precompute templates for scales\nscales=list(range(38,61,2))\ntm={}\nfor color,ss in syms.items():\n    for s in ss:\n        tm[s]=[(sz,render(s,sz)) for sz in scales]\n\ndef actual_mask(r,c):\n    blk=im[r*sq:(r+1)*sq,c*sq:(c+1)*sq]\n    bg=light if ((r+c)%2==0) else dark\n    d=np.sqrt(np.sum((blk-bg)**2,axis=2))\n    return (d>55).astype(np.float32),blk\n\n# For each occupied square, match\nfor r in range(8):\n    for c in range(8):\n        M,blk=actual_mask(r,c)\n        if M.sum()<100: continue\n        black=np.all(blk<30,axis=2); white=np.all(blk>245,axis=2)\n        color='black' if black.sum()>white.sum() else 'white'\n        res=[]\n        for s in syms[color]:\n            best=(-9,None)\n            for sz,T in tm[s]:\n                if sz>75: continue\n                R=cv2.matchTemplate(M,T,cv2.TM_CCORR_NORMED)\n                _,mx,_,mxloc=cv2.minMaxLoc(R)\n                if mx>best[0]: best=(mx,(sz,mxloc))\n            res.append((best[0],s,best[1]))\n        res.sort(reverse=True)\n        print(f\"({r},{c}) {color:5s} ->\", [(s,round(v,3),loc) for v,s,loc in res])\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 94543,
+   "dur_ms": 20923,
+   "tokens_in": 2967,
+   "tokens_out": 267,
+   "cache_read": 30080,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 115466,
+   "dur_ms": 10345,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nimport chess, chess.engine\nfen=\"r1bq1r2/1p3pp1/p1n1p3/3nPkbP/8/P1N5/1P2QPP1/R1B1K2R w - - 0 1\"\nb=chess.Board(fen)\nprint(b)\nprint(\"valid\", b.is_valid())\nprint(\"status\", b.status())\nprint(\"in check\", b.is_check())\nprint(\"legal moves\", len(list(b.legal_moves)))\nwith chess.engine.SimpleEngine.popen_uci(\"/usr/games/stockfish\") as eng:\n    info=eng.analyse(b, chess.engine.Limit(depth=25, time=10), multipv=5)\n    for i,pv in enumerate(info):\n        print(i+1, pv.get('score'), pv['pv'][:6], b.san(pv['pv'][0]))\nEOF",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 125830,
+   "dur_ms": 11953,
+   "tokens_in": 389,
+   "tokens_out": 159,
+   "cache_read": 37824,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 137783,
+   "dur_ms": 83,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nimport chess\nfen=\"r1bq1r2/1p3pp1/p1n1p3/3nPkbP/8/P1N5/1P2QPP1/R1B1K2R w - - 0 1\"\nb=chess.Board(fen)\nmates=[]\nfor m in b.legal_moves:\n    b.push(m)\n    if b.is_checkmate():\n        mates.append(m.uci())\n    b.pop()\nprint(\"mate in 1 moves:\", mates)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 137952,
+   "dur_ms": 5478,
+   "tokens_in": 61,
+   "tokens_out": 68,
+   "cache_read": 40576,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 143430,
+   "dur_ms": 10,
+   "tool": "write",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/move.txt",
+    "content": "e2e4\ng2g4\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 143527,
+   "dur_ms": 723,
+   "tokens_in": 56,
+   "tokens_out": 43,
+   "cache_read": 41600,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 144250,
+   "dur_ms": 15,
+   "tool": "read",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/move.txt"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 144288,
+   "dur_ms": 934,
+   "tokens_in": 91,
+   "tokens_out": 99,
+   "cache_read": 41664,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.703,
+ "calls": 21,
+ "cell": "TB1c"
+}

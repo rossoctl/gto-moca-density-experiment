@@ -1,0 +1,1643 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "gcode-to-text",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 666614,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 113794,
+  "output": 107896,
+  "cacheRead": 2952320,
+  "cacheWrite": 58176,
+  "total": 3232186
+ },
+ "totals": {
+  "model_calls": 54,
+  "tool_calls": 53,
+  "model_ms": 566236,
+  "tool_ms": 80045,
+  "sandbox_ms": 73457
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 531,
+   "dur_ms": 1293
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1824,
+   "dur_ms": 166,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -la /workspace\nwc -l /workspace/text.gcode\nhead -50 /workspace/text.gcode\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 1906,
+     "dur_ms": 61,
+     "exit": 0,
+     "cpu_ms": 47.5,
+     "phases_us": {
+      "acquire": 19,
+      "resume": 24291,
+      "mount": 21894,
+      "run": 8663,
+      "destroy": 27602
+     },
+     "cold": null,
+     "vm": "vm-431"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 1990,
+   "dur_ms": 1939
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3929,
+   "dur_ms": 136,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ngrep -n \"M486\" text.gcode | head -40\necho ---\ngrep -n \";LAYER_CHANGE\\|;Z:\" text.gcode | head -40\necho ---\ngrep -n \"G1 .*E\" text.gcode | head -20\necho ---\ngrep -c \"G1\" text.gcode\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 3986,
+     "dur_ms": 62,
+     "exit": 0,
+     "cpu_ms": 54.0,
+     "phases_us": {
+      "acquire": 19,
+      "resume": 21825,
+      "mount": 19787,
+      "run": 14683,
+      "destroy": 25773
+     },
+     "cold": null,
+     "vm": "vm-433"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 4065,
+   "dur_ms": 4415
+  },
+  {
+   "kind": "tool",
+   "at_ms": 8480,
+   "dur_ms": 613,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport re\nlines=open('text.gcode').read().splitlines()\ncur=None; z=0\nblocks=[]\nseg=[]\nx=y=0\nfor i,l in enumerate(lines,1):\n    s=l.strip()\n    if s.startswith('M486 S'):\n        if cur=='S0' and seg:\n            blocks.append((start,i-1,seg,z))\n        v=s.split()[1]\n        if v=='S-1': cur=None\n        else: cur=v\n        seg=[]; start=i\n        continue\n    if s.startswith(';Z:'): z=float(s[3:])\n    mz=re.match(r'G0?1\\s+Z([\\d.]+)',s) or re.match(r'G1\\s+Z([\\d.]+)',s)\n    if mz: z=float(mz.group(1))\n    m=re.match(r'G1\\s+([XYZE][-\\d.]+\\s*)+',s)\n    if cur=='S0' and s.startswith('G1'):\n        vals=dict(re.findall(r'([XYZE])(-?[\\d.]+)',s))\n        if 'E' in vals:\n            e=float(vals['E'])\n            nx=float(vals['X']) if 'X' in vals else x\n            ny=float(vals['Y']) if 'Y' in vals else y\n            if e>0.001:\n                seg.append((x,y,nx,ny,z,e))\n            x,y=nx,ny\n        else:\n            if 'X' in vals: x=float(vals['X'])\n            if 'Y' in vals: y=float(vals['Y'])\nif cur=='S0' and seg: blocks.append((start,len(lines),seg,z))\nprint(\"blocks\",len(blocks))\nfor b in blocks[:20]:\n    xs=[p[0] for p in b[2]]+[p[2] for p in b[2]]\n    ys=[p[1] for p in b[2]]+[p[3] for p in b[2]]\n    print(b[0],b[1],\"n\",len(b[2]),\"z\",b[3],\"bbox\",min(xs),min(ys),max(xs),max(ys))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 8536,
+     "dur_ms": 542,
+     "exit": 0,
+     "cpu_ms": 543.7,
+     "phases_us": {
+      "acquire": 24,
+      "resume": 21652,
+      "mount": 18967,
+      "run": 498028,
+      "destroy": 21600
+     },
+     "cold": null,
+     "vm": "vm-436"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 9093,
+   "dur_ms": 3441
+  },
+  {
+   "kind": "tool",
+   "at_ms": 12534,
+   "dur_ms": 135,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ngrep -n \"M486\" text.gcode | tail -40\necho \"count:\"; grep -c \"M486\" text.gcode\necho \"--- z commands sample\"\ngrep -n \"^G1 Z\" text.gcode | head -30\ngrep -n \"^G1 Z\" text.gcode | tail -30\necho \"--- layers comments\"\ngrep -n \";LAYER_CHANGE\\|;Z:\" text.gcode | head -20\necho \"--- unique z extrusion range\"\ntail -60 text.gcode\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 12589,
+     "dur_ms": 65,
+     "exit": 0,
+     "cpu_ms": 59.0,
+     "phases_us": {
+      "acquire": 51,
+      "resume": 21629,
+      "mount": 19502,
+      "run": 16704,
+      "destroy": 26230
+     },
+     "cold": null,
+     "vm": "vm-442"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 12669,
+   "dur_ms": 4732
+  },
+  {
+   "kind": "tool",
+   "at_ms": 17401,
+   "dur_ms": 142,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nsed -n '14980,15060p' text.gcode\necho '=== around first z big'\nsed -n '15060,15120p' text.gcode\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 17463,
+     "dur_ms": 59,
+     "exit": 0,
+     "cpu_ms": 49.4,
+     "phases_us": {
+      "acquire": 113,
+      "resume": 21918,
+      "mount": 19482,
+      "run": 13796,
+      "destroy": 22863
+     },
+     "cold": null,
+     "vm": "vm-445"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 17543,
+   "dur_ms": 4954
+  },
+  {
+   "kind": "tool",
+   "at_ms": 22497,
+   "dur_ms": 1179,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport re\nlines=open('text.gcode').read().splitlines()\nz=0;cur=None\nblocks=[];curb=None\nx=y=0\nfor i,l in enumerate(lines,1):\n    s=l.strip()\n    if s.startswith('M486 S'):\n        if curb: blocks.append(curb)\n        v=s.split()[1]\n        if v=='S-1': cur=None; curb=None\n        else:\n            cur=v; curb={'obj':v,'start':i,'end':None,'zmin':1e9,'zmax':-1e9,'xmin':1e9,'ymin':1e9,'xmax':-1e9,'ymax':-1e9,'ext':0,'moves':0}\n        continue\n    if curb: curb['end']=i\n    if not (s.startswith('G1') or s.startswith('G0')): continue\n    vals=dict(re.findall(r'([XYZE])(-?[\\d.]+)',s))\n    if 'Z' in vals: z=float(vals['Z'])\n    nx=float(vals['X']) if 'X' in vals else x\n    ny=float(vals['Y']) if 'Y' in vals else y\n    e=float(vals['E']) if 'E' in vals else 0.0\n    if curb:\n        curb['zmin']=min(curb['zmin'],z);curb['zmax']=max(curb['zmax'],z)\n        curb['xmin']=min(curb['xmin'],nx);curb['xmax']=max(curb['xmax'],nx)\n        curb['ymin']=min(curb['ymin'],ny);curb['ymax']=max(curb['ymax'],ny)\n        curb['moves']+=1\n        if e>0.001: curb['ext']+=1\n    x,y=nx,ny\nif curb: blocks.append(curb)\nfor b in blocks:\n    print(f\"{b['obj']:2} {b['start']:6}-{b['end']:6} z[{b['zmin']:.2f},{b['zmax']:.2f}] xy[{b['xmin']:.1f},{b['xmax']:.1f}]x[{b['ymin']:.1f},{b['ymax']:.1f}] ext={b['ext']} moves={b['moves']}\")\nPY",
+   "sandbox": [
+    {
+     "at_ms": 23225,
+     "dur_ms": 427,
+     "exit": 0,
+     "cpu_ms": 424.4,
+     "phases_us": {
+      "acquire": 50,
+      "resume": 22161,
+      "mount": 19687,
+      "run": 385241,
+      "destroy": 19626
+     },
+     "cold": null,
+     "vm": "vm-448"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 23676,
+   "dur_ms": 5672
+  },
+  {
+   "kind": "tool",
+   "at_ms": 29348,
+   "dur_ms": 1011,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport re\nlines=open('text.gcode').read().splitlines()\nz=0;x=y=0\nlayers={}\nfor i,l in enumerate(lines,1):\n    s=l.strip()\n    if not (s.startswith('G1') or s.startswith('G0')): continue\n    vals=dict(re.findall(r'([XYZE])(-?[\\d.]+)',s))\n    if 'Z' in vals: z=float(vals['Z'])\n    nx=float(vals['X']) if 'X' in vals else x\n    ny=float(vals['Y']) if 'Y' in vals else y\n    e=float(vals['E']) if 'E' in vals else 0.0\n    if e>0.001 and ('X' in vals or 'Y' in vals):\n        L=layers.setdefault(round(z,2),{'n':0,'x0':1e9,'x1':-1e9,'y0':1e9,'y1':-1e9})\n        L['n']+=1\n        L['x0']=min(L['x0'],x,nx);L['x1']=max(L['x1'],x,nx)\n        L['y0']=min(L['y0'],y,ny);L['y1']=max(L['y1'],y,ny)\n    x,y=nx,ny\nfor z in sorted(layers):\n    L=layers[z]\n    print(f\"z={z:6.2f} n={L['n']:5d} x[{L['x0']:6.1f},{L['x1']:6.1f}] y[{L['y0']:6.1f},{L['y1']:6.1f}]\")\nprint(\"num layers\",len(layers))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 29925,
+     "dur_ms": 415,
+     "exit": 0,
+     "cpu_ms": 409.0,
+     "phases_us": {
+      "acquire": 5,
+      "resume": 22099,
+      "mount": 19799,
+      "run": 367047,
+      "destroy": 25997
+     },
+     "cold": null,
+     "vm": "vm-452"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 30359,
+   "dur_ms": 7773
+  },
+  {
+   "kind": "tool",
+   "at_ms": 38132,
+   "dur_ms": 137,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ngrep -n \";\" text.gcode | grep -v \"^.*:;$\" | head -100\necho \"=== all unique comment-ish lines\"\ngrep -o \";.*\" text.gcode | sort | uniq -c | sort -rn | head -60\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 38185,
+     "dur_ms": 64,
+     "exit": 0,
+     "cpu_ms": 49.6,
+     "phases_us": {
+      "acquire": 51,
+      "resume": 22217,
+      "mount": 19888,
+      "run": 10636,
+      "destroy": 31252
+     },
+     "cold": null,
+     "vm": "vm-456"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 38269,
+   "dur_ms": 9038
+  },
+  {
+   "kind": "tool",
+   "at_ms": 47307,
+   "dur_ms": 416,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport re\nlines=open('text.gcode').read().splitlines()\nz=0;x=y=0\nsegs={}\ntargets=[3.0,10.0,20.0,30.0,40.0,50.0,60.0]\ncur=None\nfor s in lines:\n    s=s.strip()\n    if not (s.startswith('G1') or s.startswith('G0')): continue\n    v=dict(re.findall(r'([XYZE])(-?[\\d.]+)',s))\n    if 'Z' in v: z=round(float(v['Z']),2)\n    nx=float(v['X']) if 'X' in v else x\n    ny=float(v['Y']) if 'Y' in v else y\n    e=float(v['E']) if 'E' in v else 0.0\n    if e>0.001 and ('X' in v or 'Y' in v) and z in targets:\n        segs.setdefault(z,[]).append((x,y,nx,ny))\n    x,y=nx,ny\nfor z in targets:\n    ss=segs.get(z,[])\n    if not ss: continue\n    x0=min(min(a[0],a[2]) for a in ss);x1=max(max(a[0],a[2]) for a in ss)\n    y0=min(min(a[1],a[3]) for a in ss);y1=max(max(a[1],a[3]) for a in ss)\n    W=110;H=45\n    grid=[[' ']*W for _ in range(H)]\n    def put(ix,iy):\n        if 0<=ix<W and 0<=iy<H: grid[iy][ix]='#'\n    for a in ss:\n        ax,ay,bx,by=a\n        n=int(max(abs(bx-ax)/max(x1-x0,1e-9)*(W-1),abs(by-ay)/max(y1-y0,1e-9)*(H-1))*1.5)+1\n        for k in range(n+1):\n            t=k/n\n            px=ax+(bx-ax)*t; py=ay+(by-ay)*t\n            ix=int((px-x0)/max(x1-x0,1e-9)*(W-1)); iy=int((py-y0)/max(y1-y0,1e-9)*(H-1))\n            put(ix,H-1-iy)\n    print(f\"===== z={z} bbox=({x0:.2f},{y0:.2f})-({x1:.2f},{y1:.2f}) segs={len(ss)}\")\n    for row in grid: print(''.join(row))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 47366,
+     "dur_ms": 337,
+     "exit": 0,
+     "cpu_ms": 332.2,
+     "phases_us": {
+      "acquire": 68,
+      "resume": 21935,
+      "mount": 19436,
+      "run": 290975,
+      "destroy": 24050
+     },
+     "cold": null,
+     "vm": "vm-458"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 47723,
+   "dur_ms": 15454
+  },
+  {
+   "kind": "tool",
+   "at_ms": 63177,
+   "dur_ms": 786,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport re\nlines=open('text.gcode').read().splitlines()\nz=0;x=y=0\npts=[]\n# fit center per layer first\nlayers={}\nfor s in lines:\n    s=s.strip()\n    if not (s.startswith('G1') or s.startswith('G0')): continue\n    v=dict(re.findall(r'([XYZE])(-?[\\d.]+)',s))\n    if 'Z' in v: z=round(float(v['Z']),2)\n    nx=float(v['X']) if 'X' in v else x\n    ny=float(v['Y']) if 'Y' in v else y\n    e=float(v['E']) if 'E' in v else 0.0\n    if e>0.001 and ('X' in v or 'Y' in v) and z>=3:\n        layers.setdefault(z,[]).append((x,y,nx,ny))\n    x,y=nx,ny\nimport statistics\nzs=[];cxs=[];cys=[]\nfor z,ss in layers.items():\n    x0=min(min(a[0],a[2]) for a in ss);x1=max(max(a[0],a[2]) for a in ss)\n    y0=min(min(a[1],a[3]) for a in ss);y1=max(max(a[1],a[3]) for a in ss)\n    zs.append(z);cxs.append((x0+x1)/2);cys.append((y0+y1)/2)\ndef linfit(zs,vs):\n    n=len(zs);sz=sum(zs);sv=sum(vs);szz=sum(a*a for a in zs);szv=sum(a*b for a,b in zip(zs,vs))\n    b=(n*szv-sz*sv)/(n*szz-sz*sz);a=(sv-b*sz)/n;return a,b\nax,bx=linfit(zs,cxs);ay,by=linfit(zs,cys)\nprint(\"cx =\",ax,\"+\",bx,\"z ; cy=\",ay,\"+\",by,\"z\")\n# residuals\nimport math\nprint(\"max resid x\",max(abs(cx-(ax+bx*z)) for z,cx in zip(zs,cxs)))\nprint(\"max resid y\",max(abs(cy-(ay+by*z)) for z,cy in zip(zs,cys)))\n# un-shear all segments and render u,v\nus=[];vs=[]\nfor z,ss in layers.items():\n    for a in ss:\n        us.append(a[0]-bx*z);vs.append(a[1]-by*z)\n        us.append(a[2]-bx*z);vs.append(a[3]-by*z)\nu0,u1=min(us),max(us);v0,v1=min(vs),max(vs)\nprint(\"uv bbox\",u0,u1,v0,v1,\"extent\",u1-u0,v1-v0)\nW=120;H=60\ng=[[' ']*W for _ in range(H)]\ndef put(ix,iy):\n    if 0<=ix<W and 0<=iy<H:g[iy][ix]='#'\nfor z,ss in layers.items():\n    for a in ss:\n        ax_=a[0]-bx*z;ay_=a[1]-by*z;bx_=a[2]-bx*z;by_=a[3]-by*z\n        n=max(int(abs(bx_-ax_)/(u1-u0)*W),int(abs(by_-ay_)/(v1-v0)*H))*2+1\n        for k in range(n+1):\n            t=k/n;px=ax_+(bx_-ax_)*t;py=ay_+(by_-ay_)*t\n            put(int((px-u0)/(u1-u0)*(W-1)),H-1-int((py-v0)/(v1-v0)*(H-1)))\nfor row in g:print(''.join(row))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 63235,
+     "dur_ms": 690,
+     "exit": 0,
+     "cpu_ms": 683.0,
+     "phases_us": {
+      "acquire": 5,
+      "resume": 21780,
+      "mount": 19018,
+      "run": 633709,
+      "destroy": 34620
+     },
+     "cold": null,
+     "vm": "vm-461"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 63963,
+   "dur_ms": 14921
+  },
+  {
+   "kind": "tool",
+   "at_ms": 78884,
+   "dur_ms": 609,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport re,math\nlines=open('text.gcode').read().splitlines()\nz=0;x=y=0\nseg=[]\nfor s in lines:\n    s=s.strip()\n    if not (s.startswith('G1') or s.startswith('G0')): continue\n    v=dict(re.findall(r'([XYZE])(-?[\\d.]+)',s))\n    if 'Z' in v: z=float(v['Z'])\n    nx=float(v['X']) if 'X' in v else x\n    ny=float(v['Y']) if 'Y' in v else y\n    e=float(v['E']) if 'E' in v else 0.0\n    if e>0.001 and ('X' in v or 'Y' in v) and z>=2.99:\n        seg.append((x,y,z,nx,ny,z))\n    x,y=nx,ny\n# expected shift per z from centers fit\nsx,sy=2.4182,1.0006\n# (p,q) direction proportional to (sx,sy); p= k*sx, q=k*sy, k=1/(sx^2+sy^2)\nk=1.0/(sx*sx+sy*sy)\np= k*sx; q=k*sy\nprint(\"p,q\",p,q)\nfor W,H,name in [(150,60,'normal proj')]:\n    us=[];vs=[]\n    for a in seg:\n        for xx,yy,zz in [(a[0],a[1],a[2]),(a[3],a[4],a[5])]:\n            us.append(xx+p*zz);vs.append(yy+q*zz)\n    u0,u1=min(us),max(us);v0,v1=min(vs),max(vs)\n    print(name,\"bbox\",u0,u1,v0,v1,\"extent\",u1-u0,v1-v0)\n    g=[[' ']*W for _ in range(H)]\n    def put(ix,iy):\n        if 0<=ix<W and 0<=iy<H:g[iy][ix]='#'\n    for a in seg:\n        ax,ay,az,bx,by,bz=a\n        au=ax+p*az;av=ay+q*az;bu=bx+p*bz;bv=by+q*bz\n        n=max(int(abs(bu-au)/(u1-u0)*W),int(abs(bv-av)/(v1-v0)*H))*2+1\n        for j in range(n+1):\n            t=j/n;pu=au+(bu-au)*t;pv=av+(bv-av)*t\n            put(int((pu-u0)/(u1-u0)*(W-1)),H-1-int((pv-v0)/(v1-v0)*(H-1)))\n    for row in g: print(''.join(row))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 78938,
+     "dur_ms": 545,
+     "exit": 0,
+     "cpu_ms": 546.0,
+     "phases_us": {
+      "acquire": 3,
+      "resume": 21967,
+      "mount": 19228,
+      "run": 499630,
+      "destroy": 23525
+     },
+     "cold": null,
+     "vm": "vm-466"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 79493,
+   "dur_ms": 6441
+  },
+  {
+   "kind": "tool",
+   "at_ms": 85934,
+   "dur_ms": 485,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport re,math\nlines=open('text.gcode').read().splitlines()\nz=0;x=y=0\nlayers={}\nfor s in lines:\n    s=s.strip()\n    if not (s.startswith('G1') or s.startswith('G0')): continue\n    v=dict(re.findall(r'([XYZE])(-?[\\d.]+)',s))\n    if 'Z' in v: z=round(float(v['Z']),2)\n    nx=float(v['X']) if 'X' in v else x\n    ny=float(v['Y']) if 'Y' in v else y\n    e=float(v['E']) if 'E' in v else 0.0\n    if e>0.001 and ('X' in v or 'Y' in v) and z>=3:\n        layers.setdefault(z,[]).append((x,y,nx,ny))\n    x,y=nx,ny\ncs=[]\nfor z in sorted(layers):\n    ss=layers[z]\n    x0=min(min(a[0],a[2]) for a in ss);x1=max(max(a[0],a[2]) for a in ss)\n    y0=min(min(a[1],a[3]) for a in ss);y1=max(max(a[1],a[3]) for a in ss)\n    cs.append((z,(x0+x1)/2,(y0+y1)/2,x1-x0,y1-y0,len(ss)))\nfor c in cs[::10]:\n    print(\"z=%5.2f c=(%7.2f,%7.2f) wh=(%5.2f,%5.2f) n=%d\"%c)\nprint(\"first/last\",cs[0],cs[-1])\n# Fit circle to centers\npts=[(c[1],c[2]) for c in cs]\n# algebraic circle fit\nimport numpy as np\nA=np.array([[px,py,1] for px,py in pts]);b=np.array([px*px+py*py for px,py in pts])\nsol,*_=np.linalg.lstsq(A,b,rcond=None)\ncx=sol[0]/2;cy=sol[1]/2;r=math.sqrt(sol[2]+cx*cx+cy*cy)\nres=[abs(math.hypot(px-cx,py-cy)-r) for px,py in pts]\nprint(\"circle fit cx,cy,r\",cx,cy,r,\"maxres\",max(res),\"mean\",sum(res)/len(res))\n# fit line\nmx=sum(p[0] for p in pts)/len(pts);my=sum(p[1] for p in pts)/len(pts)\nsxx=sum((p[0]-mx)**2 for p in pts);sxy=sum((p[0]-mx)*(p[1]-my) for p in pts);syy=sum((p[1]-my)**2 for p in pts)\n# principal dir\nang=0.5*math.atan2(2*sxy,sxx-syy)\nprint(\"line angle deg\",math.degrees(ang),\"dir\",math.cos(ang),math.sin(ang))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 85990,
+     "dur_ms": 414,
+     "exit": 1,
+     "cpu_ms": 413.9,
+     "phases_us": {
+      "acquire": 85,
+      "resume": 22088,
+      "mount": 19583,
+      "run": 364067,
+      "destroy": 27036
+     },
+     "cold": null,
+     "vm": "vm-470"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 86419,
+   "dur_ms": 10058
+  },
+  {
+   "kind": "tool",
+   "at_ms": 96477,
+   "dur_ms": 869,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport re\nlines=open('text.gcode').read().splitlines()\nz=0;x=y=0\nseg=[]\nfor s in lines:\n    s=s.strip()\n    if not (s.startswith('G1') or s.startswith('G0')): continue\n    v=dict(re.findall(r'([XYZE])(-?[\\d.]+)',s))\n    if 'Z' in v: z=float(v['Z'])\n    nx=float(v['X']) if 'X' in v else x\n    ny=float(v['Y']) if 'Y' in v else y\n    e=float(v['E']) if 'E' in v else 0.0\n    if e>0.001 and ('X' in v or 'Y' in v) and z>=2.99:\n        seg.append((x,y,z,nx,ny,z))\n    x,y=nx,ny\ndef render(proj,W,H,title):\n    pts=[proj(a) for a in seg for a in [a]]\n    us=[];vs=[]\n    for a in seg:\n        for pt in [(a[0],a[1],a[2]),(a[3],a[4],a[5])]:\n            u,v=proj(pt);us.append(u);vs.append(v)\n    u0,u1=min(us),max(us);v0,v1=min(vs),max(vs)\n    print(f\"=== {title} bbox u[{u0:.2f},{u1:.2f}] v[{v0:.2f},{v1:.2f}]\")\n    g=[[' ']*W for _ in range(H)]\n    for a in seg:\n        au,av=proj((a[0],a[1],a[2]));bu,bv=proj((a[3],a[4],a[5]))\n        n=max(int(abs(bu-au)/(u1-u0)*W),int(abs(bv-av)/(v1-v0)*H))*2+1\n        for j in range(n+1):\n            t=j/n;pu=au+(bu-au)*t;pv=av+(bv-av)*t\n            ix=int((pu-u0)/(u1-u0)*(W-1));iy=H-1-int((pv-v0)/(v1-v0)*(H-1))\n            if 0<=ix<W and 0<=iy<H:g[iy][ix]='#'\n    for row in g:print(''.join(row))\nrender(lambda p:(p[0],p[2]),160,70,'XZ')\nrender(lambda p:(p[1],p[2]),160,70,'YZ')\nrender(lambda p:((p[0]+p[1])/1.414,p[2]),160,70,'(X+Y)Z')\nrender(lambda p:((p[0]-p[1])/1.414,p[2]),160,70,'(X-Y)Z')\nPY",
+   "sandbox": [
+    {
+     "at_ms": 96531,
+     "dur_ms": 802,
+     "exit": 0,
+     "cpu_ms": 801.7,
+     "phases_us": {
+      "acquire": 89,
+      "resume": 22036,
+      "mount": 19273,
+      "run": 756913,
+      "destroy": 23101
+     },
+     "cold": null,
+     "vm": "vm-473"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 97346,
+   "dur_ms": 8181
+  },
+  {
+   "kind": "tool",
+   "at_ms": 105527,
+   "dur_ms": 503,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport re\nlines=open('text.gcode').read().splitlines()\nz=0;x=y=0;cur=None\nsegs={}\nfor s in lines:\n    s=s.strip()\n    if s.startswith('M486 S'):\n        v=s.split()[1]; cur=None if v=='S-1' else v; continue\n    if not (s.startswith('G1') or s.startswith('G0')): continue\n    v=dict(re.findall(r'([XYZE])(-?[\\d.]+)',s))\n    if 'Z' in v: z=round(float(v['Z']),2)\n    nx=float(v['X']) if 'X' in v else x\n    ny=float(v['Y']) if 'Y' in v else y\n    e=float(v['E']) if 'E' in v else 0.0\n    if e>0.001 and ('X' in v or 'Y' in v) and cur:\n        segs.setdefault((cur,z),[]).append((x,y,nx,ny))\n    x,y=nx,ny\ndef show(key,W=120,H=45):\n    ss=segs.get(key,[])\n    x0=min(min(a[0],a[2]) for a in ss);x1=max(max(a[0],a[2]) for a in ss)\n    y0=min(min(a[1],a[3]) for a in ss);y1=max(max(a[1],a[3]) for a in ss)\n    print(f\"=== obj {key} n={len(ss)} bbox ({x0:.1f},{y0:.1f})-({x1:.1f},{y1:.1f})\")\n    g=[[' ']*W for _ in range(H)]\n    for a in ss:\n        ax,ay,bx,by=a\n        n=max(int(abs(bx-ax)/(x1-x0+1e-9)*W),int(abs(by-ay)/(y1-y0+1e-9)*H))*2+1\n        for j in range(n+1):\n            t=j/n;px=ax+(bx-ax)*t;py=ay+(by-ay)*t\n            ix=int((px-x0)/(x1-x0+1e-9)*(W-1));iy=H-1-int((py-y0)/(y1-y0+1e-9)*(H-1))\n            if 0<=ix<W and 0<=iy<H:g[iy][ix]='#'\n    for row in g:print(''.join(row))\nshow(('S0',0.2))\nshow(('S1',0.2))\nshow(('S1',1.88))\nshow(('S0',3.0))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 105582,
+     "dur_ms": 434,
+     "exit": 0,
+     "cpu_ms": 433.0,
+     "phases_us": {
+      "acquire": 3,
+      "resume": 21486,
+      "mount": 19079,
+      "run": 389760,
+      "destroy": 23054
+     },
+     "cold": null,
+     "vm": "vm-476"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 106030,
+   "dur_ms": 13702
+  },
+  {
+   "kind": "tool",
+   "at_ms": 119732,
+   "dur_ms": 5420,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npip install --quiet numpy pillow 2>&1 | tail -2\npython3 -c \"import numpy, PIL; print(numpy.__version__, PIL.__version__)\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 119785,
+     "dur_ms": 5338,
+     "exit": 0,
+     "cpu_ms": 5261.1,
+     "phases_us": {
+      "acquire": 24,
+      "resume": 21940,
+      "mount": 19220,
+      "run": 5268580,
+      "destroy": 46983
+     },
+     "cold": null,
+     "vm": "vm-477"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 125152,
+   "dur_ms": 3328
+  },
+  {
+   "kind": "tool",
+   "at_ms": 128480,
+   "dur_ms": 256,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport re,numpy as np\nlines=open('text.gcode').read().splitlines()\nz=0;x=y=0;cur=None\npts=[]\nfor s in lines:\n    s=s.strip()\n    if s.startswith('M486 S'):\n        v=s.split()[1];cur=None if v=='S-1' else v;continue\n    if not (s.startswith('G1') or s.startswith('G0')):continue\n    v=dict(re.findall(r'([XYZE])(-?[\\d.]+)',s))\n    if 'Z' in v:z=float(v['Z'])\n    nx=float(v['X']) if 'X' in v else x\n    ny=float(v['Y']) if 'Y' in v else y\n    e=float(v['E']) if 'E' in v else 0.0\n    if cur=='S0' and e>0.001 and ('X' in v or 'Y' in v):\n        for t in np.linspace(0,1,4):\n            pts.append([x+(nx-x)*t,y+(ny-y)*t,z])\n    x,y=nx,ny\nP=np.array(pts)\nprint(\"npts\",len(P),\"bbox\",P.min(0),P.max(0))\nC=P.mean(0);Q=P-C\ncov=Q.T@Q/len(Q)\nw,V=np.linalg.eigh(cov)\nprint(\"mean\",C)\nprint(\"eigvals\",w)\nprint(\"eigvecs cols\\n\",V)\n# sorted descending\nidx=np.argsort(w)[::-1];V=V[:,idx];w=w[idx]\nprint(\"sorted eig\",w)\nprint(\"sqrt eig (std)\",np.sqrt(w))\n# project onto top2, report\nproj=Q@V[:,:2]\nprint(\"proj ranges\",proj.min(0),proj.max(0))\n# thickness along normal\nn=Q@V[:,2]\nprint(\"normal range\",n.min(),n.max(),\"std\",n.std())\nPY",
+   "sandbox": [
+    {
+     "at_ms": 128536,
+     "dur_ms": 182,
+     "exit": 1,
+     "cpu_ms": 176.0,
+     "phases_us": {
+      "acquire": 52,
+      "resume": 21644,
+      "mount": 19327,
+      "run": 135081,
+      "destroy": 25446
+     },
+     "cold": null,
+     "vm": "vm-485"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 128736,
+   "dur_ms": 1662
+  },
+  {
+   "kind": "tool",
+   "at_ms": 130398,
+   "dur_ms": 5361,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npip install --quiet --target /workspace/pylib numpy pillow 2>&1 | tail -2\nls /workspace/pylib | head\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 130454,
+     "dur_ms": 5297,
+     "exit": 0,
+     "cpu_ms": 5297.4,
+     "phases_us": {
+      "acquire": 45,
+      "resume": 22019,
+      "mount": 19698,
+      "run": 5217327,
+      "destroy": 57680
+     },
+     "cold": null,
+     "vm": "vm-487"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 135759,
+   "dur_ms": 3217
+  },
+  {
+   "kind": "tool",
+   "at_ms": 138976,
+   "dur_ms": 1286,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport re,numpy as np\nlines=open('text.gcode').read().splitlines()\nz=0;x=y=0;cur=None\npts=[]\nfor s in lines:\n    s=s.strip()\n    if s.startswith('M486 S'):\n        v=s.split()[1];cur=None if v=='S-1' else v;continue\n    if not (s.startswith('G1') or s.startswith('G0')):continue\n    v=dict(re.findall(r'([XYZE])(-?[\\d.]+)',s))\n    if 'Z' in v:z=float(v['Z'])\n    nx=float(v['X']) if 'X' in v else x\n    ny=float(v['Y']) if 'Y' in v else y\n    e=float(v['E']) if 'E' in v else 0.0\n    if cur=='S0' and e>0.001 and ('X' in v or 'Y' in v):\n        for t in np.linspace(0,1,4):\n            pts.append([x+(nx-x)*t,y+(ny-y)*t,z])\n    x,y=nx,ny\nP=np.array(pts)\nprint(\"npts\",len(P),\"bbox\",P.min(0),P.max(0))\nC=P.mean(0);Q=P-C\ncov=Q.T@Q/len(Q)\nw,V=np.linalg.eigh(cov)\nidx=np.argsort(w)[::-1];V=V[:,idx];w=w[idx]\nprint(\"mean\",C)\nprint(\"eig sorted\",w)\nprint(\"std\",np.sqrt(w))\nprint(\"eigvecs (columns)\\n\",V)\nproj=Q@V[:,:2]\nprint(\"proj ranges\",proj.min(0),proj.max(0))\nnrm=Q@V[:,2]\nprint(\"normal range\",nrm.min(),nrm.max(),\"std\",nrm.std())\n# Also PCA on only z>=3\nP2=P[P[:,2]>=3]\nC2=P2.mean(0);Q2=P2-C2;cov2=Q2.T@Q2/len(Q2);w2,V2=np.linalg.eigh(cov2);i2=np.argsort(w2)[::-1];V2=V2[:,i2];w2=w2[i2]\nprint(\"\\nmain z>=3 eig\",w2,\"std\",np.sqrt(w2));print(V2)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 139031,
+     "dur_ms": 1219,
+     "exit": 0,
+     "cpu_ms": 1381.5,
+     "phases_us": {
+      "acquire": 49,
+      "resume": 27053,
+      "mount": 24872,
+      "run": 1153115,
+      "destroy": 38967
+     },
+     "cold": null,
+     "vm": "vm-488"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 140262,
+   "dur_ms": 8065
+  },
+  {
+   "kind": "tool",
+   "at_ms": 148327,
+   "dur_ms": 2976,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport re,numpy as np\nfrom PIL import Image,ImageDraw\nlines=open('text.gcode').read().splitlines()\nz=0;x=y=0;cur=None\nsegs=[]\nfor s in lines:\n    s=s.strip()\n    if s.startswith('M486 S'):\n        v=s.split()[1];cur=None if v=='S-1' else v;continue\n    if not (s.startswith('G1') or s.startswith('G0')):continue\n    v=dict(re.findall(r'([XYZE])(-?[\\d.]+)',s))\n    if 'Z' in v:z=float(v['Z'])\n    nx=float(v['X']) if 'X' in v else x\n    ny=float(v['Y']) if 'Y' in v else y\n    e=float(v['E']) if 'E' in v else 0.0\n    if cur=='S0' and e>0.001 and ('X' in v or 'Y' in v):\n        segs.append((x,y,z,nx,ny,z))\n    x,y=nx,ny\nA=np.array([[a[0],a[1],a[2]] for a in segs])\nB=np.array([[a[3],a[4],a[5]] for a in segs])\nallp=np.vstack([A,B]);C=allp.mean(0);Q=allp-C\ncov=Q.T@Q/len(Q);w,V=np.linalg.eigh(cov);idx=np.argsort(w)[::-1];V=V[:,idx]\n# choose plane axes: longest (reading) and second; flip reading so text left->right\ne1=V[:,0];e2=V[:,1];e3=V[:,2]\n# For rendering, we want u along e1, v along e2. Determine a nice orientation later.\nfor flip1 in [1,-1]:\n  for flip2 in [1,-1]:\n    U=Q@(e1*flip1);Wv=Q@(e2*flip2)\n    u0,u1=U.min(),U.max();v0,v1=Wv.min(),Wv.max()\n    # render image with equal scale\n    scale=10 # px per mm\n    Wpx=int((u1-u0)*scale)+20;Hpx=int((v1-v0)*scale)+20\n    img=Image.new('L',(Wpx,Hpx),255);d=ImageDraw.Draw(img)\n    def to(px,py):\n        return (10+(px-u0)*scale, Hpx-10-(py-v0)*scale)\n    for a in segs:\n        p=np.array(a[:3])-C;q=np.array(a[3:])-C\n        p0=to(p@(e1*flip1),p@(e2*flip2));p1=to(q@(e1*flip1),q@(e2*flip2))\n        d.line([p0,p1],fill=0,width=2)\n    fn=f\"/workspace/proj_{flip1}_{flip2}.png\";img.save(fn)\n    print(fn,Wpx,Hpx,\"axes\",e1*flip1,e2*flip2)\nPY\nls -la /workspace/*.png",
+   "sandbox": [
+    {
+     "at_ms": 148381,
+     "dur_ms": 2897,
+     "exit": 0,
+     "cpu_ms": 3014.2,
+     "phases_us": {
+      "acquire": 56,
+      "resume": 22029,
+      "mount": 19600,
+      "run": 2844835,
+      "destroy": 30102
+     },
+     "cold": null,
+     "vm": "vm-489"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 151303,
+   "dur_ms": 3823
+  },
+  {
+   "kind": "tool",
+   "at_ms": 155126,
+   "dur_ms": 149,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "sbx run <<'EOF'\nwhich tesseract || echo \"no tesseract\"\napt-get update -qq 2>&1 | tail -1\napt-get install -y -qq tesseract-ocr 2>&1 | tail -3\nwhich tesseract && tesseract --version | head -1\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 155179,
+     "dur_ms": 89,
+     "exit": 1,
+     "cpu_ms": 75.7,
+     "phases_us": {
+      "acquire": 56,
+      "resume": 23684,
+      "mount": 21618,
+      "run": 32004,
+      "destroy": 32748
+     },
+     "cold": null,
+     "vm": "vm-491"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 155275,
+   "dur_ms": 7035
+  },
+  {
+   "kind": "tool",
+   "at_ms": 162310,
+   "dur_ms": 3440,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport re,numpy as np\nlines=open('text.gcode').read().splitlines()\nz=0;x=y=0;cur=None;segs=[]\nfor s in lines:\n    s=s.strip()\n    if s.startswith('M486 S'):\n        v=s.split()[1];cur=None if v=='S-1' else v;continue\n    if not (s.startswith('G1') or s.startswith('G0')):continue\n    v=dict(re.findall(r'([XYZE])(-?[\\d.]+)',s))\n    if 'Z' in v:z=float(v['Z'])\n    nx=float(v['X']) if 'X' in v else x;ny=float(v['Y']) if 'Y' in v else y\n    e=float(v['E']) if 'E' in v else 0.0\n    if cur=='S0' and e>0.001 and ('X' in v or 'Y' in v):\n        segs.append((x,y,z,nx,ny,z))\n    x,y=nx,ny\nA=np.array([[a[0],a[1],a[2]] for a in segs]);B=np.array([[a[3],a[4],a[5]] for a in segs])\nallp=np.vstack([A,B]);C=allp.mean(0);Q=allp-C\ncov=Q.T@Q/len(Q);w,V=np.linalg.eigh(cov);idx=np.argsort(w)[::-1];V=V[:,idx]\ne1=V[:,0];e2=V[:,1]\n# choose orientation: u along -e1? v along e2 etc; test all\nfor fl1,fl2,name in [(1,1,'a'),(-1,1,'b'),(1,-1,'c'),(-1,-1,'d')]:\n    P1=Q@(e1*fl1);P2=Q@(e2*fl2)\n    # rasterize at 4 px/mm\n    s=4; u0,u1=P1.min(),P1.max(); v0,v1=P2.min(),P2.max()\n    W=int((u1-u0)*s)+8;H=int((v1-v0)*s)+8\n    grid=np.zeros((H,W),dtype=bool)\n    def pt(p,q):\n        ix=int((p-u0)*s)+4;iy=int((q-v0)*s)+4\n        if 0<=ix<W and 0<=iy<H:grid[iy,ix]=True\n    for a in segs:\n        p=np.array(a[:3])-C;q=np.array(a[3:])-C\n        pa=p@(e1*fl1);pb=p@(e2*fl2);qa=q@(e1*fl1);qb=q@(e2*fl2)\n        n=int(max(abs(qa-pa),abs(qb-pb))*s*1.5)+1\n        for k in range(n+1):\n            t=k/n;pt(pa+(qa-pa)*t,pb+(qb-pb)*t)\n    np.save(f'/workspace/grid_{name}.npy',grid)\n    print(name,\"grid\",grid.shape,\"u range\",u0,u1,\"v range\",v0,v1)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 162364,
+     "dur_ms": 3366,
+     "exit": 0,
+     "cpu_ms": 3466.4,
+     "phases_us": {
+      "acquire": 47,
+      "resume": 21572,
+      "mount": 19141,
+      "run": 3309317,
+      "destroy": 34393
+     },
+     "cold": null,
+     "vm": "vm-492"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 165750,
+   "dur_ms": 3127
+  },
+  {
+   "kind": "tool",
+   "at_ms": 168877,
+   "dur_ms": 436,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport numpy as np\nfor name in ['a']:\n    g=np.load(f'/workspace/grid_{name}.npy')\n    H,W=g.shape\n    # compress vertically 2x, keep width; chunk 170\n    g2=g[:H//2*2].reshape(H//2,2,W).any(axis=1)\n    print(\"##### orientation\",name,g.shape)\n    for c0 in range(0,W,170):\n        ch=g2[:,c0:c0+170]\n        print(f\"--- cols {c0}-{c0+170}\")\n        for row in ch:\n            print(''.join('#' if v else ' ' for v in row))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 168930,
+     "dur_ms": 354,
+     "exit": 0,
+     "cpu_ms": 462.0,
+     "phases_us": {
+      "acquire": 74,
+      "resume": 22184,
+      "mount": 19919,
+      "run": 311502,
+      "destroy": 20448
+     },
+     "cold": null,
+     "vm": "vm-493"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 169313,
+   "dur_ms": 19079
+  },
+  {
+   "kind": "tool",
+   "at_ms": 188392,
+   "dur_ms": 10558,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\ntimeout 240 pip install --quiet --target /workspace/pylib rapidocr_onnxruntime 2>&1 | tail -5\nPYTHONPATH=/workspace/pylib python3 -c \"import rapidocr_onnxruntime; print('ok')\" 2>&1 | tail -3\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 188445,
+     "dur_ms": 10496,
+     "exit": 0,
+     "cpu_ms": 10578.7,
+     "phases_us": {
+      "acquire": 4,
+      "resume": 23391,
+      "mount": 19961,
+      "run": 10389575,
+      "destroy": 83220
+     },
+     "cold": null,
+     "vm": "vm-495"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 198950,
+   "dur_ms": 4082
+  },
+  {
+   "kind": "tool",
+   "at_ms": 203032,
+   "dur_ms": 428,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport numpy as np\ng=np.load('/workspace/grid_a.npy')\nH,W=g.shape\n# print full res chunk 0-200, 56 rows\nfor c0 in [0,200]:\n    ch=g[:,c0:c0+200]\n    print(f\"==== cols {c0} (x from {(c0-4)/4:.1f}mm)\")\n    for row in ch:\n        print(''.join('#' if v else '.' for v in row))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 203085,
+     "dur_ms": 362,
+     "exit": 0,
+     "cpu_ms": 471.8,
+     "phases_us": {
+      "acquire": 24,
+      "resume": 25611,
+      "mount": 22979,
+      "run": 315757,
+      "destroy": 20656
+     },
+     "cold": null,
+     "vm": "vm-501"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 203460,
+   "dur_ms": 8644
+  },
+  {
+   "kind": "tool",
+   "at_ms": 212104,
+   "dur_ms": 1166,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npython3 - <<'PY'\nimport re\nlines=open('text.gcode').read().splitlines()\ncur=None; E={'S0':0.0,'S1':0.0};cnt={'S0':0,'S1':0}\nfor s in lines:\n    s=s.strip()\n    if s.startswith('M486 S'):\n        v=s.split()[1];cur=None if v=='S-1' else v;continue\n    if not (s.startswith('G1') or s.startswith('G0')):continue\n    v=dict(re.findall(r'([XYZE])(-?[\\d.]+)',s))\n    if 'E' in v and cur:\n        e=float(v['E'])\n        if e>0: E[cur]+=e;cnt[cur]+=1\nprint(\"E mm\",E,\"filament volume mm3\",{k:v*2.405 for k,v in E.items()})\nprint(\"counts\",cnt)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 212944,
+     "dur_ms": 314,
+     "exit": 0,
+     "cpu_ms": 305.6,
+     "phases_us": {
+      "acquire": 24,
+      "resume": 21502,
+      "mount": 19004,
+      "run": 263494,
+      "destroy": 28611
+     },
+     "cold": null,
+     "vm": "vm-502"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 213270,
+   "dur_ms": 10605
+  },
+  {
+   "kind": "tool",
+   "at_ms": 223875,
+   "dur_ms": 748,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nid\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 -c \"import rapidocr_onnxruntime\" 2>&1 | tail -20\nls /workspace/pylib | grep -i opencv\nPYTHONPATH=/workspace/pylib python3 -c \"import cv2;print(cv2.__file__, cv2.__version__)\" 2>&1 | tail -5\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 223931,
+     "dur_ms": 671,
+     "exit": 0,
+     "cpu_ms": 883.8,
+     "phases_us": {
+      "acquire": 24,
+      "resume": 21994,
+      "mount": 19218,
+      "run": 623299,
+      "destroy": 25808
+     },
+     "cold": null,
+     "vm": "vm-505"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 224623,
+   "dur_ms": 2206
+  },
+  {
+   "kind": "tool",
+   "at_ms": 226829,
+   "dur_ms": 1853,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nmkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial\napt-get update -qq 2>&1 | tail -2 && apt-get install -y -qq libxcb1 libgl1 libglib2.0-0 2>&1 | tail -3\nwhich tesseract || true\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 226882,
+     "dur_ms": 1780,
+     "exit": 0,
+     "cpu_ms": 1885.2,
+     "phases_us": {
+      "acquire": 89,
+      "resume": 21768,
+      "mount": 19469,
+      "run": 1731958,
+      "destroy": 26280
+     },
+     "cold": null,
+     "vm": "vm-506"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 228682,
+   "dur_ms": 1971
+  },
+  {
+   "kind": "tool",
+   "at_ms": 230653,
+   "dur_ms": 4325,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nmkdir -p /var/lib/dpkg /var/lib/apt/lists/partial /var/cache/apt/archives/partial\ntouch /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock\napt-get update -qq 2>&1 | tail -2\napt-get install -y -qq libxcb1 libgl1 libglib2.0-0 2>&1 | tail -4\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 -c \"import cv2;print('cv2 ok',cv2.__version__)\" 2>&1 | tail -3\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 230666,
+     "dur_ms": 4302,
+     "exit": 0,
+     "cpu_ms": 4690.3,
+     "phases_us": {
+      "acquire": 58,
+      "resume": 21316,
+      "mount": 19212,
+      "run": 4244008,
+      "destroy": 36865
+     },
+     "cold": null,
+     "vm": "vm-508"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 234978,
+   "dur_ms": 1642
+  },
+  {
+   "kind": "tool",
+   "at_ms": 236620,
+   "dur_ms": 7047,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\npip install --quiet --target /workspace/pylib --upgrade --force-reinstall opencv-python-headless 2>&1 | tail -3\nPYTHONPATH=/workspace/pylib python3 -c \"import cv2;print('cv2 ok',cv2.__version__)\" 2>&1 | tail -3\nPYTHONPATH=/workspace/pylib python3 -c \"import rapidocr_onnxruntime;print('rapidocr ok')\" 2>&1 | tail -3\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 236675,
+     "dur_ms": 6984,
+     "exit": 0,
+     "cpu_ms": 7294.2,
+     "phases_us": {
+      "acquire": 80,
+      "resume": 21733,
+      "mount": 19343,
+      "run": 6901005,
+      "destroy": 61366
+     },
+     "cold": null,
+     "vm": "vm-511"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 243667,
+   "dur_ms": 5277
+  },
+  {
+   "kind": "tool",
+   "at_ms": 248944,
+   "dur_ms": 4015,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport re,numpy as np\nfrom PIL import Image,ImageDraw\nlines=open('text.gcode').read().splitlines()\nz=0;x=y=0;cur=None;segs=[]\nfor s in lines:\n    s=s.strip()\n    if s.startswith('M486 S'):\n        v=s.split()[1];cur=None if v=='S-1' else v;continue\n    if not (s.startswith('G1') or s.startswith('G0')):continue\n    v=dict(re.findall(r'([XYZE])(-?[\\d.]+)',s))\n    if 'Z' in v:z=float(v['Z'])\n    nx=float(v['X']) if 'X' in v else x;ny=float(v['Y']) if 'Y' in v else y\n    e=float(v['E']) if 'E' in v else 0.0\n    if cur=='S0' and e>0.001 and ('X' in v or 'Y' in v):\n        segs.append((x,y,z,nx,ny,z))\n    x,y=nx,ny\nA=np.array([[a[0],a[1],a[2]] for a in segs]);B=np.array([[a[3],a[4],a[5]] for a in segs])\nallp=np.vstack([A,B]);C=allp.mean(0);Q=allp-C\ncov=Q.T@Q/len(Q);w,V=np.linalg.eigh(cov);idx=np.argsort(w)[::-1];V=V[:,idx]\ne1,e2=V[:,0],V[:,1]\nfor fl1,fl2,name in [(1,1,'a'),(-1,1,'b'),(1,-1,'c'),(-1,-1,'d')]:\n    P1=Q@(e1*fl1);P2=Q@(e2*fl2)\n    u0,u1=P1.min(),P1.max();v0,v1=P2.min(),P2.max()\n    s=10;pad=20\n    W=int((u1-u0)*s)+2*pad;H=int((v1-v0)*s)+2*pad\n    img=Image.new('L',(W,H),255);d=ImageDraw.Draw(img)\n    for a in segs:\n        p=np.array(a[:3])-C;q=np.array(a[3:])-C\n        pa=p@(e1*fl1);pb=p@(e2*fl2);qa=q@(e1*fl1);qb=q@(e2*fl2)\n        d.line([pad+(pa-u0)*s,H-pad-(pb-v0)*s,pad+(qa-u0)*s,H-pad-(qb-v0)*s],fill=0,width=3)\n    fn=f'/workspace/text_{name}.png';img.save(fn)\n    print(fn,img.size)\nPY\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nfrom rapidocr_onnxruntime import RapidOCR\nocr=RapidOCR()\nfor name in 'abcd':\n    res,_=ocr(f'/workspace/text_{name}.png')\n    print('====',name,res)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 248959,
+     "dur_ms": 3978,
+     "exit": 0,
+     "cpu_ms": 4550.1,
+     "phases_us": {
+      "acquire": 89,
+      "resume": 28484,
+      "mount": 25723,
+      "run": 3920803,
+      "destroy": 28309
+     },
+     "cold": null,
+     "vm": "vm-512"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 252959,
+   "dur_ms": 11755
+  },
+  {
+   "kind": "tool",
+   "at_ms": 264714,
+   "dur_ms": 491,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport numpy as np\n# regenerate grids quickly saved earlier? only grid_a saved. regenerate all compactly by reusing saved a and flipping\na=np.load('/workspace/grid_a.npy')\n# b = flip horizontal of a (u reversed); c = flip vertical; d = both\nb=a[:, ::-1]; c=a[::-1, :]; d=a[::-1, ::-1]\nfor name,g in [('b',b)]:\n    H,W=g.shape\n    print('#####',name)\n    for c0 in range(0,W,170):\n        print(f\"--- x {c0/4-1:.1f}..{(c0+170)/4-1:.1f} mm\")\n        for row in g[:,c0:c0+170]:\n            print(''.join('#' if v else '.' for v in row))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 264767,
+     "dur_ms": 392,
+     "exit": 0,
+     "cpu_ms": 498.8,
+     "phases_us": {
+      "acquire": 83,
+      "resume": 22756,
+      "mount": 19912,
+      "run": 342720,
+      "destroy": 26703
+     },
+     "cold": null,
+     "vm": "vm-513"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 265205,
+   "dur_ms": 14284
+  },
+  {
+   "kind": "tool",
+   "at_ms": 279489,
+   "dur_ms": 1965,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport re,numpy as np\nlines=open('text.gcode').read().splitlines()\nz=0;x=y=0;cur=None;segs=[]\nfor s in lines:\n    s=s.strip()\n    if s.startswith('M486 S'):\n        v=s.split()[1];cur=None if v=='S-1' else v;continue\n    if not (s.startswith('G1') or s.startswith('G0')):continue\n    v=dict(re.findall(r'([XYZE])(-?[\\d.]+)',s))\n    if 'Z' in v:z=float(v['Z'])\n    nx=float(v['X']) if 'X' in v else x;ny=float(v['Y']) if 'Y' in v else y\n    e=float(v['E']) if 'E' in v else 0.0\n    if cur=='S0' and e>0.001 and ('X' in v or 'Y' in v):\n        segs.append((x,y,z,nx,ny,z))\n    x,y=nx,ny\nA=np.array([[a[0],a[1],a[2]] for a in segs]);B=np.array([[a[3],a[4],a[5]] for a in segs])\nallp=np.vstack([A,B]);C=allp.mean(0);Q=allp-C\ncov=Q.T@Q/len(Q);w,V=np.linalg.eigh(cov);idx=np.argsort(w)[::-1];V=V[:,idx];e1,e2=V[:,0],V[:,1]\n# orientation b: u = -e1, v = e2 (matches OCR-readable)\nP1=Q@(-e1);P2=Q@(e2)\n# rasterize sampling at 0.05 mm for profile\ns=20\nu0,u1=P1.min(),P1.max();v0,v1=P2.min(),P2.max()\nW=int((u1-u0)*s)+2;H=int((v1-v0)*s)+2\ngrid=np.zeros((H,W),dtype=bool)\ndef put(px,py):\n    ix=int((px-u0)*s)+1;iy=int((py-v0)*s)+1\n    if 0<=ix<W and 0<=iy<H:grid[iy,ix]=True\nfor a in segs:\n    p=np.array(a[:3])-C;q=np.array(a[3:])-C\n    pa=p@(-e1);pb=p@e2;qa=q@(-e1);qb=q@e2\n    n=int(max(abs(qa-pa),abs(qb-pb))*s*1.5)+1\n    for k in range(n+1):\n        t=k/n;put(pa+(qa-pa)*t,pb+(qb-pb)*t)\nnp.save('/workspace/grid_b.npy',grid)\ncol=grid.any(axis=0)\n# find runs of inked columns\nruns=[];i=0\nwhile i<W:\n    if col[i]:\n        j=i\n        while j<W and col[j]:j+=1\n        runs.append((i,j));i=j\n    else:i+=1\nprint(\"W,H,s\",W,H,s)\nprint(\"num runs\",len(runs))\nfor k,(i,j) in enumerate(runs):\n    sub=grid[:,i:j]\n    rows=np.where(sub.any(axis=1))[0]\n    top=rows.min();bot=rows.max()\n    print(f\"run{k:2d} x[{i/s-0.05:.2f},{(j-1)/s-0.05:.2f}] w={(j-i)/s:.2f}mm  y[{(H-1-bot)/s-0.05:.2f},{(H-1-top)/s-0.05:.2f}] h={(bot-top+1)/s:.2f}mm  ink={sub.sum()}\")\nPY",
+   "sandbox": [
+    {
+     "at_ms": 279542,
+     "dur_ms": 1880,
+     "exit": 0,
+     "cpu_ms": 1991.7,
+     "phases_us": {
+      "acquire": 76,
+      "resume": 22037,
+      "mount": 19143,
+      "run": 1832439,
+      "destroy": 25713
+     },
+     "cold": null,
+     "vm": "vm-515"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 281454,
+   "dur_ms": 59808
+  },
+  {
+   "kind": "tool",
+   "at_ms": 341262,
+   "dur_ms": 3879,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport re,numpy as np\nfrom PIL import Image,ImageDraw\nlines=open('text.gcode').read().splitlines()\nz=0;x=y=0;cur=None;segs=[]\nfor s in lines:\n    s=s.strip()\n    if s.startswith('M486 S'):\n        v=s.split()[1];cur=None if v=='S-1' else v;continue\n    if not (s.startswith('G1') or s.startswith('G0')):continue\n    v=dict(re.findall(r'([XYZE])(-?[\\d.]+)',s))\n    if 'Z' in v:z=float(v['Z'])\n    nx=float(v['X']) if 'X' in v else x;ny=float(v['Y']) if 'Y' in v else y\n    e=float(v['E']) if 'E' in v else 0.0\n    if cur=='S0' and e>0.001 and ('X' in v or 'Y' in v):\n        segs.append((x,y,nx,ny))\n    x,y=nx,ny\nxs=[q for a in segs for q in (a[0],a[2])];ys=[q for a in segs for q in (a[1],a[3])]\nx0,x1=min(xs),max(xs);y0,y1=min(ys),max(ys)\ns=10;pad=20\nW=int((x1-x0)*s)+2*pad;H=int((y1-y0)*s)+2*pad\nimg=Image.new('L',(W,H),255);d=ImageDraw.Draw(img)\nfor a in segs:\n    d.line([pad+(a[0]-x0)*s,H-pad-(a[1]-y0)*s,pad+(a[2]-x0)*s,H-pad-(a[3]-y0)*s],fill=0,width=3)\nimg.save('/workspace/top_xy.png');print('saved',img.size)\n# also y-up standard: +Y up, +X right (above). Also x-mirror for comparison\n# rotations\nbase=img\nfor ang in [0,90,180,270]:\n    im=base.rotate(ang,expand=True,fillcolor=255)\n    im.save(f'/workspace/top_rot{ang}.png')\n# mirror\nbase.transpose(Image.FLIP_LEFT_RIGHT).save('/workspace/top_mirror.png')\nprint('done')\nPY\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nfrom rapidocr_onnxruntime import RapidOCR\nocr=RapidOCR()\nfor f in ['top_xy','top_rot0','top_rot90','top_rot180','top_rot270','top_mirror']:\n    res,_=ocr(f'/workspace/{f}.png')\n    print('====',f,res)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 341323,
+     "dur_ms": 3810,
+     "exit": 0,
+     "cpu_ms": 6190.8,
+     "phases_us": {
+      "acquire": 65,
+      "resume": 21893,
+      "mount": 19098,
+      "run": 3731452,
+      "destroy": 55920
+     },
+     "cold": null,
+     "vm": "vm-517"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 345141,
+   "dur_ms": 11046
+  },
+  {
+   "kind": "tool",
+   "at_ms": 356187,
+   "dur_ms": 1066,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport numpy as np\ng=np.load('/workspace/grid_b.npy')  # rows low->high v\ns=20.0\nchars={'run8_0O':(39.35,45.35),'run12_i1':(68.60,69.60),'run13_zs':(71.10,76.50),'run25_i1':(145.20,146.20)}\ndef show(name,xa,xb,cols=44,rows=32):\n    i0=int((xa+0.05)*s);i1=int((xb+0.05)*s)+1\n    sub=g[:,i0:i1]\n    rowsidx=np.where(sub.any(axis=1))[0]\n    sub=sub[rowsidx.min():rowsidx.max()+1,:]\n    H,W=sub.shape\n    # block pool max\n    out=[]\n    for r in range(rows):\n        line=''\n        for c in range(cols):\n            r0=int(r*H/rows);r1=max(r0+1,int((r+1)*H/rows))\n            c0=int(c*W/cols);c1=max(c0+1,int((c+1)*W/cols))\n            line+='#' if sub[r0:r1,c0:c1].any() else '.'\n        out.append(line)\n    out=out[::-1]  # top first\n    print(f\"===== {name}  x {xa}..{xb} (w {xb-xa:.1f}mm) h {H/s:.2f}mm\")\n    for line in out: print(line)\nfor k,(a,b) in chars.items(): show(k,a,b)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 356825,
+     "dur_ms": 381,
+     "exit": 0,
+     "cpu_ms": 483.3,
+     "phases_us": {
+      "acquire": 66,
+      "resume": 22407,
+      "mount": 19646,
+      "run": 329918,
+      "destroy": 28797
+     },
+     "cold": null,
+     "vm": "vm-525"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 357253,
+   "dur_ms": 10834
+  },
+  {
+   "kind": "tool",
+   "at_ms": 368087,
+   "dur_ms": 1790,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport re,numpy as np,math\nfrom PIL import Image,ImageDraw\nlines=open('text.gcode').read().splitlines()\nz=0;x=y=0;cur=None;segs=[]\nfor s in lines:\n    s=s.strip()\n    if s.startswith('M486 S'):\n        v=s.split()[1];cur=None if v=='S-1' else v;continue\n    if not (s.startswith('G1') or s.startswith('G0')):continue\n    v=dict(re.findall(r'([XYZE])(-?[\\d.]+)',s))\n    if 'Z' in v:z=float(v['Z'])\n    nx=float(v['X']) if 'X' in v else x;ny=float(v['Y']) if 'Y' in v else y\n    e=float(v['E']) if 'E' in v else 0.0\n    if cur=='S0' and e>0.001 and ('X' in v or 'Y' in v):\n        segs.append((x,y,nx,ny))\n    x,y=nx,ny\n# reading direction from earlier PCA\nth=math.atan2(0.355,0.867)  # ~22.3 deg\nprint(\"theta deg\",math.degrees(th),\"cos,sin\",math.cos(th),math.sin(th))\nct,st=math.cos(th),math.sin(th)\ndef tr(px,py): return (ct*px+st*py, -st*px+ct*py)\nP=[(tr(a[0],a[1]),tr(a[2],a[3])) for a in segs]\nus=[q for a in P for q in (a[0][0],a[1][0])];vs=[q for a in P for q in (a[0][1],a[1][1])]\nu0,u1=min(us),max(us);v0,v1=min(vs),max(vs)\ns=12;pad=20\nW=int((u1-u0)*s)+2*pad;H=int((v1-v0)*s)+2*pad\nimg=Image.new('L',(W,H),255);d=ImageDraw.Draw(img)\nfor a in P:\n    d.line([pad+(a[0][0]-u0)*s,H-pad-(a[0][1]-v0)*s,pad+(a[1][0]-u0)*s,H-pad-(a[1][1]-v0)*s],fill=0,width=3)\nimg.save('/workspace/aligned.png');print('aligned',img.size,\"v range\",v0,v1)\nPY\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nfrom rapidocr_onnxruntime import RapidOCR\nocr=RapidOCR()\nfor f in ['aligned']:\n    res,_=ocr(f'/workspace/{f}.png')\n    print('====',f,res)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 368142,
+     "dur_ms": 1724,
+     "exit": 0,
+     "cpu_ms": 2181.7,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 22416,
+      "mount": 19588,
+      "run": 1662616,
+      "destroy": 38874
+     },
+     "cold": null,
+     "vm": "vm-528"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 369877,
+   "dur_ms": 6030
+  },
+  {
+   "kind": "tool",
+   "at_ms": 375907,
+   "dur_ms": 1319,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport re,numpy as np,math\nlines=open('text.gcode').read().splitlines()\nz=0;x=y=0;cur=None;segs=[]\nfor s in lines:\n    s=s.strip()\n    if s.startswith('M486 S'):\n        v=s.split()[1];cur=None if v=='S-1' else v;continue\n    if not (s.startswith('G1') or s.startswith('G0')):continue\n    v=dict(re.findall(r'([XYZE])(-?[\\d.]+)',s))\n    if 'Z' in v:z=float(v['Z'])\n    nx=float(v['X']) if 'X' in v else x;ny=float(v['Y']) if 'Y' in v else y\n    e=float(v['E']) if 'E' in v else 0.0\n    if cur=='S0' and e>0.001 and ('X' in v or 'Y' in v):\n        segs.append((x,y,nx,ny))\n    x,y=nx,ny\nth=math.atan2(0.355,0.867);ct,st=math.cos(th),math.sin(th)\ndef tr(px,py): return (ct*px+st*py,-st*px+ct*py)\nP=[(tr(a[0],a[1]),tr(a[2],a[3])) for a in segs]\nus=[q for a in P for q in (a[0][0],a[1][0])];vs=[q for a in P for q in (a[0][1],a[1][1])]\nu0,u1=min(us),max(us);v0,v1=min(vs),max(vs)\ns=24\nW=int((u1-u0)*s)+2;H=int((v1-v0)*s)+2\ngrid=np.zeros((H,W),dtype=bool)\ndef put(px,py):\n    ix=int((px-u0)*s)+1;iy=int((py-v0)*s)+1\n    if 0<=ix<W and 0<=iy<H:grid[iy,ix]=True\nfor a in P:\n    pa,pb=a[0];qa,qb=a[1]\n    n=int(max(abs(qa-pa),abs(qb-pb))*s*1.5)+1\n    for k in range(n+1):\n        t=k/n;put(pa+(qa-pa)*t,pb+(qb-pb)*t)\nnp.save('/workspace/grid_aligned.npy',grid)\ncol=grid.any(axis=0)\nruns=[];i=0\nwhile i<W:\n    if col[i]:\n        j=i\n        while j<W and col[j]:j+=1\n        runs.append((i,j));i=j\n    else:i+=1\n# merge runs separated by < 0.3mm (7 px)\nmerged=[]\nfor r in runs:\n    if merged and r[0]-merged[-1][1] < int(0.35*s):\n        merged[-1]=(merged[-1][0],r[1])\n    else: merged.append(list(r)); merged[-1]=tuple(merged[-1])\nmerged=[tuple(x) for x in merged]\nprint(\"runs\",len(merged))\nfor k,(i,j) in enumerate(merged):\n    sub=grid[:,i:j];rows=np.where(sub.any(axis=1))[0]\n    print(f\"{k:2d} u[{(i-1)/s+u0:.2f},{(j-1)/s+u0:.2f}] w={(j-i)/s:.2f} v[{(rows.min()-1)/s+v0:.2f},{(rows.max()-1)/s+v0:.2f}] h={(rows.max()-rows.min()+1)/s:.2f}\")\nPY",
+   "sandbox": [
+    {
+     "at_ms": 375963,
+     "dur_ms": 1250,
+     "exit": 0,
+     "cpu_ms": 1343.3,
+     "phases_us": {
+      "acquire": 21,
+      "resume": 21854,
+      "mount": 19487,
+      "run": 1190348,
+      "destroy": 37127
+     },
+     "cold": null,
+     "vm": "vm-529"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 377226,
+   "dur_ms": 17898
+  },
+  {
+   "kind": "tool",
+   "at_ms": 395124,
+   "dur_ms": 444,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport numpy as np\ng=np.load('/workspace/grid_b.npy');s=20.0\n# crop by pixel using x->i=(x+0.05)*s\ndef crop(xa,xb):\n    i0=int((xa+0.05)*s);i1=int((xb+0.05)*s)+1\n    sub=g[:,i0:i1];rows=np.where(sub.any(axis=1))[0]\n    return sub[rows.min():rows.max()+1]\ndef asciiize(sub,cols=26,rows=30):\n    H,W=sub.shape;out=[]\n    for r in range(rows):\n        line=''\n        for c in range(cols):\n            r0=int(r*H/rows);r1=max(r0+1,int((r+1)*H/rows))\n            c0=int(c*W/cols);c1=max(c0+1,int((c+1)*W/cols))\n            line+='#' if sub[r0:r1,c0:c1].any() else '.'\n        out.append(line)\n    return out[::-1]\nlabels=[('run2_l',4.30,5.30),('run12',68.60,69.60),('run25',145.20,146.20),('run1_f',0.15,2.90),('run19_4',98.55,104.60)]\nouts=[asciiize(crop(a,b)) for _,a,b in labels]\nprint(' | '.join(f\"{n:<26}\" for n,_,_ in labels))\nfor r in range(30):\n    print(' | '.join(o[r] for o in outs))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 395183,
+     "dur_ms": 377,
+     "exit": 0,
+     "cpu_ms": 484.4,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 21720,
+      "mount": 18951,
+      "run": 328809,
+      "destroy": 26668
+     },
+     "cold": null,
+     "vm": "vm-533"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 395568,
+   "dur_ms": 16940
+  },
+  {
+   "kind": "tool",
+   "at_ms": 412508,
+   "dur_ms": 539,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nfrom PIL import Image\nimport numpy as np\nim=np.array(Image.open('/workspace/aligned.png').convert('L'))<128\nH,W=im.shape\nprint(\"shape\",H,W)\n# downsample: block 4 vertical, 2 horizontal\nrows=H//4*4; cols=W//2*2\nd=im[:rows,:cols].reshape(rows//4,4,cols//2,2).any(axis=(1,3))\nprint(\"down\",d.shape)\n# pad top/bottom to 50 rows\nD=d.shape[1]\nfor c0 in range(0,D,240):\n    print(f\"### x {c0}-{c0+240} of {D}\")\n    for row in d[:,c0:c0+240]:\n        print(''.join('#' if v else '.' for v in row))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 412561,
+     "dur_ms": 449,
+     "exit": 0,
+     "cpu_ms": 552.5,
+     "phases_us": {
+      "acquire": 24,
+      "resume": 22106,
+      "mount": 19314,
+      "run": 392207,
+      "destroy": 34883
+     },
+     "cold": null,
+     "vm": "vm-535"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 413047,
+   "dur_ms": 6901
+  },
+  {
+   "kind": "tool",
+   "at_ms": 419948,
+   "dur_ms": 429,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport numpy as np\ng=np.load('/workspace/grid_b.npy');s=20.0\ndef crop(xa,xb):\n    i0=int((xa+0.05)*s);i1=int((xb+0.05)*s)+1\n    sub=g[:,i0:i1];rows=np.where(sub.any(axis=1))[0]\n    return sub[rows.min():rows.max()+1]\ndef asc(sub,cols=34,rows=46):\n    H,W=sub.shape;out=[]\n    for r in range(rows):\n        line=''\n        for c in range(cols):\n            r0=int(r*H/rows);r1=max(r0+1,int((r+1)*H/rows))\n            c0=int(c*W/cols);c1=max(c0+1,int((c+1)*W/cols))\n            line+='#' if sub[r0:r1,c0:c1].any() else ' '\n        out.append(line)\n    return out[::-1]\nfor name,a,b in [('open_delim',20.65,24.70),('close_delim',164.25,168.20)]:\n    print('=====',name)\n    for line in asc(crop(a,b)): print(line)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 420002,
+     "dur_ms": 368,
+     "exit": 0,
+     "cpu_ms": 471.0,
+     "phases_us": {
+      "acquire": 73,
+      "resume": 22166,
+      "mount": 19662,
+      "run": 318314,
+      "destroy": 26884
+     },
+     "cold": null,
+     "vm": "vm-538"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 420377,
+   "dur_ms": 7260
+  },
+  {
+   "kind": "tool",
+   "at_ms": 427637,
+   "dur_ms": 437,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport numpy as np\ng=np.load('/workspace/grid_b.npy');s=20.0\ndef crop(xa,xb):\n    i0=int((xa+0.05)*s);i1=int((xb+0.05)*s)+1\n    sub=g[:,i0:i1];rows=np.where(sub.any(axis=1))[0]\n    return sub[rows.min():rows.max()+1]\ndef asc(sub,cols,rows):\n    H,W=sub.shape;out=[]\n    for r in range(rows):\n        line=''\n        for c in range(cols):\n            r0=int(r*H/rows);r1=max(r0+1,int((r+1)*H/rows))\n            c0=int(c*W/cols);c1=max(c0+1,int((c+1)*W/cols))\n            line+='#' if sub[r0:r1,c0:c1].any() else '.'\n        out.append(line)\n    return out[::-1]\nfor name,a,b,cols in [('run13_z_or_s',71.10,76.50,54),('run7_c',32.80,38.25,54),('run12_i_or_1',68.60,69.60,24)]:\n    print('=====',name)\n    for line in asc(crop(a,b),cols,36): print(line)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 427691,
+     "dur_ms": 375,
+     "exit": 0,
+     "cpu_ms": 482.0,
+     "phases_us": {
+      "acquire": 71,
+      "resume": 22768,
+      "mount": 20186,
+      "run": 327294,
+      "destroy": 24885
+     },
+     "cold": null,
+     "vm": "vm-540"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 428074,
+   "dur_ms": 46729
+  },
+  {
+   "kind": "tool",
+   "at_ms": 474803,
+   "dur_ms": 3815,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nfrom PIL import Image\nim=Image.open('/workspace/aligned.png').convert('L')\nW,H=im.size\n# trim whitespace\nimport numpy as np\na=np.array(im)<128\ncols=np.where(a.any(0))[0];rows=np.where(a.any(1))[0]\nim=im.crop((cols.min()-10,rows.min()-10,cols.max()+11,rows.max()+11))\nW,H=im.size\nprint(\"trim\",im.size)\n# split into 2 halves with overlap\nmid=W//2\nim.crop((0,0,mid+40,H)).resize(((mid+40)*2,H*2),Image.LANCZOS).save('/workspace/half1.png')\nim.crop((mid-40,0,W,H)).resize(((W-mid+40)*2,H*2),Image.LANCZOS).save('/workspace/half2.png')\nim.resize((W*2,H*2),Image.LANCZOS).save('/workspace/full2x.png')\nPY\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nfrom rapidocr_onnxruntime import RapidOCR\nocr=RapidOCR()\nfor f in ['full2x','half1','half2']:\n    for _ in range(1):\n        res,_=ocr(f'/workspace/{f}.png')\n        print('====',f,res)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 474858,
+     "dur_ms": 3750,
+     "exit": 0,
+     "cpu_ms": 5973.8,
+     "phases_us": {
+      "acquire": 83,
+      "resume": 22163,
+      "mount": 19081,
+      "run": 3607289,
+      "destroy": 120320
+     },
+     "cold": null,
+     "vm": "vm-542"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 498284,
+   "dur_ms": 3955
+  },
+  {
+   "kind": "tool",
+   "at_ms": 502239,
+   "dur_ms": 427,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport numpy as np\ng=np.load('grid_b.npy')   # shape (rows, cols), True=ink\nprint(g.shape,g.sum())\n# column occupancy, group runs\ncol=g.any(0)\nruns=[];i=0\nwhile i<len(col):\n    if col[i]:\n        j=i\n        while j<len(col) and col[j]:j+=1\n        runs.append((i,j));i=j\n    else:i+=1\nprint(\"nruns\",len(runs))\nfor k,(a,b) in enumerate(runs):\n    sub=g[:,a:b]\n    rr=np.where(sub.any(1))[0]\n    print(k,a,b,\"w=%.2f\"%(b-a),\"h=%.2f\"%(rr.max()-rr.min()+1),\"ink\",int(sub.sum()))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 502296,
+     "dur_ms": 359,
+     "exit": 0,
+     "cpu_ms": 465.9,
+     "phases_us": {
+      "acquire": 93,
+      "resume": 24730,
+      "mount": 21321,
+      "run": 309779,
+      "destroy": 24427
+     },
+     "cold": null,
+     "vm": "vm-552"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 502666,
+   "dur_ms": 9047
+  },
+  {
+   "kind": "tool",
+   "at_ms": 511713,
+   "dur_ms": 430,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport numpy as np\ng=np.load('grid_b.npy')\ndef prof(a,b,label,nrows=70):\n    sub=g[:,a:b]\n    rr=np.where(sub.any(1))[0]\n    r0,r1=rr.min(),rr.max()\n    print(\"=====\",label,\"cols\",a,b,\"rows\",r0,r1)\n    for r in range(r0,min(r0+nrows,r1+1)):\n        line=''.join('#' if v else '.' for v in sub[r])\n        print(\"%3d %s\"%(r,line))\nprof(87,108,'run2 l (flag)')\nprof(1373,1394,'run12 i-or-1 (gc0d3_?)')\nprof(2905,2926,'run25 i-or-1 (G?Ng)')\nPY",
+   "sandbox": [
+    {
+     "at_ms": 511769,
+     "dur_ms": 362,
+     "exit": 0,
+     "cpu_ms": 469.3,
+     "phases_us": {
+      "acquire": 146,
+      "resume": 25532,
+      "mount": 22426,
+      "run": 312200,
+      "destroy": 23726
+     },
+     "cold": null,
+     "vm": "vm-556"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 512143,
+   "dur_ms": 27067
+  },
+  {
+   "kind": "tool",
+   "at_ms": 539210,
+   "dur_ms": 486,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport numpy as np\ng=np.load('grid_b.npy')\nH,W=g.shape\nsy,sx=10,10\nh=H//sy; w=W//sx\nout=np.zeros((h,w),bool)\nfor i in range(h):\n    for j in range(w):\n        out[i,j]=g[i*sy:(i+1)*sy, j*sx:(j+1)*sx].any()\n# rows top->bottom as stored? print both with row index\nprint(\"rows as stored (row0 first):\")\nfor i in range(h):\n    print(''.join('#' if v else ' ' for v in out[i]))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 539266,
+     "dur_ms": 382,
+     "exit": 0,
+     "cpu_ms": 483.6,
+     "phases_us": {
+      "acquire": 95,
+      "resume": 24856,
+      "mount": 21557,
+      "run": 328113,
+      "destroy": 28225
+     },
+     "cold": null,
+     "vm": "vm-558"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 539696,
+   "dur_ms": 10728
+  },
+  {
+   "kind": "tool",
+   "at_ms": 550424,
+   "dur_ms": 677,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport numpy as np\nfrom PIL import Image\ng=np.load('grid_b.npy')   # row0 = bottom\n# dilate with disk radius 5\nr=5\nH,W=g.shape\npad=np.zeros((H+2*r,W+2*r),bool)\npad[r:r+H,r:r+W]=g\nout=np.zeros_like(pad)\nyy,xx=np.mgrid[-r:r+1,-r:r+1]\ndisk=(yy*yy+xx*xx)<=r*r\nfor dy in range(-r,r+1):\n    for dx in range(-r,r+1):\n        if disk[dy+r,dx+r]:\n            out |= np.roll(np.roll(pad,dy,0),dx,1)\nd=out[r:r+H,r:r+W]\nnp.save('grid_dil.npy',d)\n# image: flip vertically so top of text at top; white bg black ink\nimg=Image.fromarray(np.where(d,0,255).astype(np.uint8))\nimg.save('/workspace/clean_full.png')\nprint(\"saved\",d.shape,int(d.sum()))\n# ascii downsample, top row first\nsy,sx=7,7\nh=H//sy; w=W//sx\no=np.zeros((h,w),bool)\nfor i in range(h):\n    for j in range(w):\n        o[i,j]=d[i*sy:(i+1)*sy, j*sx:(j+1)*sx].any()\no=o[::-1]  # top first\nprint(\"W,H chars\",w,h)\n# split halves\nfor part,(c0,c1) in enumerate([(0,w//2+5),(w//2-5,w)]):\n    print(\"======== PART\",part)\n    # ruler\n    tens=''.join(str((c//10)%10) if c%10==0 else ' ' for c in range(c0,c1))\n    ones=''.join(str(c%10) for c in range(c0,c1))\n    print('    '+tens); print('    '+ones)\n    for i in range(h):\n        print('%3d '%i + ''.join('#' if v else ' ' for v in o[i,c0:c1]))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 550481,
+     "dur_ms": 577,
+     "exit": 0,
+     "cpu_ms": 689.0,
+     "phases_us": {
+      "acquire": 37,
+      "resume": 22516,
+      "mount": 19563,
+      "run": 528517,
+      "destroy": 25787
+     },
+     "cold": null,
+     "vm": "vm-559"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 551101,
+   "dur_ms": 19689
+  },
+  {
+   "kind": "tool",
+   "at_ms": 570790,
+   "dur_ms": 1586,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport re, numpy as np\nfrom PIL import Image, ImageDraw\nlines=open('text.gcode').read().splitlines()\nz=0.0;x=y=0.0;cur=None;segs=[];poly=[];polys=[]\ndef flush():\n    global poly\n    if len(poly)>=2: polys.append(poly)\n    poly=[]\nfor s in lines:\n    s=s.strip()\n    if s.startswith('M486 S'):\n        v=s.split()[1]; cur=None if v=='S-1' else v\n        flush(); continue\n    if not (s.startswith('G1') or s.startswith('G0')): continue\n    v=dict(re.findall(r'([XYZE])(-?[\\d.]+)',s))\n    if 'Z' in v:\n        z=float(v['Z'])\n    nx=float(v['X']) if 'X' in v else x\n    ny=float(v['Y']) if 'Y' in v else y\n    e=float(v['E']) if 'E' in v else 0.0\n    if cur=='S0' and e>0.001 and ('X' in v or 'Y' in v):\n        segs.append((x,y,z,nx,ny,z)); poly.append((x,y,z))\n    else:\n        flush()\n    x,y=nx,ny\nflush()\nprint(\"segs\",len(segs),\"polys\",len(polys))\nA=np.array([[a[0],a[1],a[2]] for a in segs]);B=np.array([[a[3],a[4],a[5]] for a in segs])\nallp=np.vstack([A,B]);C=allp.mean(0);Q=allp-C\nw,V=np.linalg.eigh(Q.T@Q/len(Q))\nidx=np.argsort(w)[::-1];V=V[:,idx]\ne1,e2,e3=V[:,0],V[:,1],V[:,2]\nprint(\"e1\",e1,\"e2\",e2,\"e3\",e3,\"det\",np.linalg.det(V))\n# orientation b: U=-(p-C).e1, V2=(p-C).e2\ndef uv(p):\n    d=p-C\n    return -(d@e1), (d@e2)\npts=[]\nfor a,b in zip(A,B):\n    pts.append(uv(a));pts.append(uv(b))\npts=np.array(pts)\numin,umax=pts[:,0].min(),pts[:,0].max()\nvmin,vmax=pts[:,1].min(),pts[:,1].max()\nprint(\"U\",umin,umax,\"V\",vmin,vmax)\ns=20.0;m=20\nWpx=int(np.ceil((umax-umin)*s))+2*m\nHpx=int(np.ceil((vmax-vmin)*s))+2*m\nprint(\"canvas\",Wpx,Hpx)\nimg=Image.new('L',(Wpx,Hpx),0)\ndr=ImageDraw.Draw(img)\ndef imgpts(p):\n    u,v=uv(p)\n    return (m+(u-umin)*s, m+(vmax-v)*s)\n# draw per-polyline\nwd=10\nn=0\nfor pl in polys:\n    ip=[imgpts(p) for p in pl]\n    if len(ip)>=2:\n        dr.line(ip,fill=255,width=wd,joint='curve')\n        n+=1\nprint(\"drawn polys\",n)\nimg.save('/workspace/solid.png')\narr=np.array(img)>127\nnp.save('/workspace/solid.npy',arr)\nprint(\"ink\",int(arr.sum()),\"size\",arr.shape)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 570847,
+     "dur_ms": 1506,
+     "exit": 0,
+     "cpu_ms": 1622.8,
+     "phases_us": {
+      "acquire": 77,
+      "resume": 25615,
+      "mount": 22202,
+      "run": 1449090,
+      "destroy": 31230
+     },
+     "cold": null,
+     "vm": "vm-561"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 572376,
+   "dur_ms": 3217
+  },
+  {
+   "kind": "tool",
+   "at_ms": 575593,
+   "dur_ms": 1292,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nfrom PIL import Image\nimport numpy as np\nfrom rapidocr_onnxruntime import RapidOCR\nim=Image.open('/workspace/solid.png').convert('L')\na=np.array(im)<128\nrr=np.where(a.any(1))[0];cc=np.where(a.any(0))[0]\nim2=im.crop((cc.min()-5,rr.min()-5,cc.max()+6,rr.max()+6))\nim2.save('/workspace/solid_trim.png')\nim2.resize((im2.width*2,im2.height*2),Image.LANCZOS).save('/workspace/solid_trim2x.png')\nocr=RapidOCR()\nfor f in ['solid_trim','solid_trim2x']:\n    res,_=ocr(f'/workspace/{f}.png')\n    print('====',f,res)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 575649,
+     "dur_ms": 1228,
+     "exit": 0,
+     "cpu_ms": 1659.8,
+     "phases_us": {
+      "acquire": 116,
+      "resume": 23392,
+      "mount": 20721,
+      "run": 1148689,
+      "destroy": 55649
+     },
+     "cold": null,
+     "vm": "vm-562"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 576885,
+   "dur_ms": 4165
+  },
+  {
+   "kind": "tool",
+   "at_ms": 581050,
+   "dur_ms": 427,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport numpy as np\na=np.load('solid.npy')\nH,W=a.shape\ncol=a.any(0)\nruns=[];i=0\nwhile i<W:\n    if col[i]:\n        j=i\n        while j<W and col[j]:j+=1\n        runs.append((i,j));i=j\n    else:i+=1\ns=20.0\nprint(\"nruns\",len(runs))\nfor k,(x0,x1) in enumerate(runs):\n    sub=a[:,x0:x1]; rr=np.where(sub.any(1))[0]\n    print(\"%2d x=%4d-%4d w=%5.2fmm h=%5.2fmm top=%5.2f bot=%5.2f ink=%6d\"%(\n        k,x0,x1,(x1-x0)/s,(rr.max()-rr.min()+1)/s,(H-1-rr.min())/s,(H-1-rr.max())/s,int(sub.sum())))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 581105,
+     "dur_ms": 359,
+     "exit": 0,
+     "cpu_ms": 468.6,
+     "phases_us": {
+      "acquire": 68,
+      "resume": 23524,
+      "mount": 21012,
+      "run": 312829,
+      "destroy": 22567
+     },
+     "cold": null,
+     "vm": "vm-563"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 581477,
+   "dur_ms": 13991
+  },
+  {
+   "kind": "tool",
+   "at_ms": 595468,
+   "dur_ms": 592,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport numpy as np, cv2\na=np.load('solid.npy').astype(np.uint8)\nn,lab,stats,cent=cv2.connectedComponentsWithStats(a,connectivity=8)\nprint(\"total components\",n-1)\n# column runs\nH,W=a.shape\ncol=a.any(0); runs=[];i=0\nwhile i<W:\n    if col[i]:\n        j=i\n        while j<W and col[j]:j+=1\n        runs.append((i,j));i=j\n    else:i+=1\nnames='f l a g { g c 0 d 3 _ i z _ c h 4 L L e n G i N g }'.split()\nfor k,(x0,x1) in enumerate(runs):\n    ids=set(lab[:,x0:x1].ravel()); ids.discard(0)\n    info=[]\n    for cid in sorted(ids):\n        x,y,w,h,area=stats[cid]\n        info.append((int(area),int(h)))\n    info.sort(reverse=True)\n    print(\"%2d '%s' w=%5.2f comps=%d sizes=%s\"%(k,names[k],(x1-x0)/20.0,len(ids),info))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 595525,
+     "dur_ms": 490,
+     "exit": 0,
+     "cpu_ms": 719.6,
+     "phases_us": {
+      "acquire": 110,
+      "resume": 25846,
+      "mount": 22543,
+      "run": 438408,
+      "destroy": 25666
+     },
+     "cold": null,
+     "vm": "vm-564"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 596060,
+   "dur_ms": 5817
+  },
+  {
+   "kind": "tool",
+   "at_ms": 601877,
+   "dur_ms": 471,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport numpy as np\na=np.load('solid.npy'); H,W=a.shape\ndef show(x0,x1,label,ds=5):\n    print(\"=========\",label)\n    r=np.where(a[:,x0:x1].any(1))[0]; r0,r1=r.min(),r.max()\n    for y in range(r0,r1+1,ds):\n        row=a[y:min(y+ds,r1+1), x0:x1]\n        line=''.join('#' if row[:,c].any() else '.' for c in range(0,x1-x0,ds))\n        print(line)\nshow(1437,1552,\"run12 z-or-s (between _ and _)\")\nshow(432,517,\"run4 open delim { or (\")\nshow(3301,3389,\"run25 close delim } or )\")\nPY",
+   "sandbox": [
+    {
+     "at_ms": 601935,
+     "dur_ms": 366,
+     "exit": 0,
+     "cpu_ms": 467.9,
+     "phases_us": {
+      "acquire": 190,
+      "resume": 25129,
+      "mount": 21756,
+      "run": 311110,
+      "destroy": 29868
+     },
+     "cold": null,
+     "vm": "vm-566"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 602348,
+   "dur_ms": 33378
+  },
+  {
+   "kind": "tool",
+   "at_ms": 635726,
+   "dur_ms": 466,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\ncd /workspace\nPYTHONPATH=/workspace/pylib python3 - <<'PY'\nimport numpy as np\na=np.load('solid.npy')\ndef show(x0,x1,label,ds=6):\n    print(\"=========\",label)\n    r=np.where(a[:,x0:x1].any(1))[0]; r0,r1=r.min(),r.max()\n    for y in range(r0,r1+1,ds):\n        row=a[y:min(y+ds,r1+1), x0:x1]\n        print(''.join('#' if row[:,c].any() else '.' for c in range(0,x1-x0,ds)))\nshow(803,932,\"run7 0-vs-O\")\nshow(1091,1219,\"run9 3-ref\")\nshow(2142,2266,\"run17 L-ref\")\nshow(2716,2888,\"run21 G-ref\",ds=7)\nshow(2981,3135,\"run23 N-ref\",ds=7)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 635780,
+     "dur_ms": 370,
+     "exit": 0,
+     "cpu_ms": 466.3,
+     "phases_us": {
+      "acquire": 89,
+      "resume": 22132,
+      "mount": 19271,
+      "run": 313851,
+      "destroy": 34143
+     },
+     "cold": null,
+     "vm": "vm-567"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 636192,
+   "dur_ms": 25034
+  },
+  {
+   "kind": "tool",
+   "at_ms": 661226,
+   "dur_ms": 133,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -ld /app /workspace 2>&1\nls -l /workspace/out.txt 2>&1\nreadlink -f /app 2>&1\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 661283,
+     "dur_ms": 57,
+     "exit": 0,
+     "cpu_ms": 43.5,
+     "phases_us": {
+      "acquire": 127,
+      "resume": 24358,
+      "mount": 21104,
+      "run": 7394,
+      "destroy": 25369
+     },
+     "cold": null,
+     "vm": "vm-572"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 661359,
+   "dur_ms": 1767
+  },
+  {
+   "kind": "tool",
+   "at_ms": 663126,
+   "dur_ms": 233,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put out.txt <<'EOF'\nflag{gc0d3_iz_ch4LLenGiNg}\nEOF\nsbx run <<'EOF'\ncat /app/out.txt\necho \"--- hexdump ---\"\nod -c /app/out.txt\nls -l /app/out.txt\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 663185,
+     "dur_ms": 50,
+     "exit": 0,
+     "cpu_ms": 50.9,
+     "phases_us": {
+      "acquire": 109,
+      "resume": 25283,
+      "mount": 22322,
+      "run": 8460,
+      "destroy": 16347
+     },
+     "cold": null,
+     "vm": "vm-573"
+    },
+    {
+     "at_ms": 663282,
+     "dur_ms": 49,
+     "exit": 0,
+     "cpu_ms": 43.5,
+     "phases_us": {
+      "acquire": 39,
+      "resume": 23991,
+      "mount": 19440,
+      "run": 6880,
+      "destroy": 18045
+     },
+     "cold": null,
+     "vm": "vm-427"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 663359,
+   "dur_ms": 3119
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 2.875,
+ "calls": 53,
+ "cell": "TB1b"
+}

@@ -1,0 +1,147 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "multi-source-data-merger",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 42133,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 233,
+  "output": 7410,
+  "cacheRead": 145344,
+  "cacheWrite": 4416,
+  "total": 157403
+ },
+ "totals": {
+  "model_calls": 7,
+  "tool_calls": 9,
+  "model_ms": 37539,
+  "tool_ms": 3905,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 662,
+   "dur_ms": 1226
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1517,
+   "dur_ms": 77,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /data/source_a /data/source_b /data/source_c 2>&1; echo \"---\"; ls -la /app 2>&1"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1888,
+   "dur_ms": 775,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"import pandas, pyarrow; print('pandas', pandas.__version__); print('pyarrow', pyarrow.__version__)\" 2>&1"
+  },
+  {
+   "kind": "model",
+   "at_ms": 2663,
+   "dur_ms": 1912
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3985,
+   "dur_ms": 13,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/data/source_a/users.json"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4162,
+   "dur_ms": 7,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/data/source_b/users.csv"
+   }
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4575,
+   "dur_ms": 634,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport pandas as pd\ndf = pd.read_parquet('/data/source_c/users.parquet')\nprint(df.dtypes)\nprint('---')\nprint(df.to_string())\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 5209,
+   "dur_ms": 19147
+  },
+  {
+   "kind": "tool",
+   "at_ms": 24356,
+   "dur_ms": 19,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/merge_users.py",
+    "content": "#!/usr/bin/env python3\n\"\"\"Merge user records from JSON, CSV, and Parquet sources.\n\nPriority: source_a > source_b > source_c.\n\"\"\"\n\nimport json\nimport math\nimport re\n\nimport pandas as pd\nimport pyarrow as pa\nimport pyarrow.parquet as pq\n\nSOURCE_A = \"/data/source_a/users.json\"\nSOURCE_B = \"/data/source_b/users.csv\"\nSOURCE_C = \"/data/source_c/users.parquet\"\nOUT_PARQUET = \"/app/merged_users.parquet\"\nOUT_CONFLICTS = \"/app/conflicts.json\"\n\nSOURCES = (\"source_a\", \"source_b\", \"source_c\")\n\n# Canonical field -> per-source column candidates (in priority order within a source).\nFIELD_MAP = {\n    \"user_id\": {\"source_a\": (\"user_id\", \"id\", \"userId\"),\n                \"source_b\": (\"user_id\", \"id\", \"userId\"),\n                \"source_c\": (\"user_id\", \"id\", \"userId\")},\n    \"name\": {\"source_a\": (\"full_name\", \"name\", \"userName\"),\n             \"source_b\": (\"full_name\", \"name\", \"userName\"),\n             \"source_c\": (\"full_name\", \"name\", \"userName\")},\n    \"email\": {\"source_a\": (\"email\", \"email_address\"),\n              \"source_b\": (\"email\", \"email_address\"),\n              \"source_c\": (\"email\", \"email_address\")},\n    \"created_date\": {\"source_a\": (\"registration_date\", \"created_at\", \"joined\"),\n                     \"source_b\": (\"registration_date\", \"created_at\", \"joined\"),\n                     \"source_c\": (\"registration_date\", \"created_at\", \"joined\")},\n    \"status\": {\"source_a\": (\"status\", \"is_active\", \"active\"),\n               \"source_b\": (\"status\", \"is_active\", \"active\"),\n               \"source_c\": (\"status\", \"is_active\", \"active\")},\n}\n\n# Fields written to the output, in output order.\nOUTPUT_FIELDS = (\"user_id\", \"name\", \"email\", \"created_date\", \"status\")\n\n\ndef is_missing(value):\n    if value is None:\n        return True\n    if isinstance(value, float) and math.isnan(value):\n        return True\n    if isinstance(value, str) and value.strip() == \"\":\n        return True\n    return False\n\n\ndef clean_text(value):\n    if is_missing(value):\n        return None\n    text = str(value).strip()\n    return text if text else None\n\n\ndef clean_user_id(value):\n    if is_missing(value):\n        return None\n    if isinstance(value, bool):\n        return None\n    if isinstance(value, (int,)):\n        return int(value)\n    if isinstance(value, float):\n        return int(value) if value.is_integer() else None\n    text = str(value).strip()\n    if re.fullmatch(r\"[+-]?\\d+\", text):\n        return int(text)\n    try:\n        number = float(text)\n    except ValueError:\n        return None\n    return int(number) if number.is_integer() else None\n\n\ndef clean_date(value):\n    \"\"\"Normalize a date to YYYY-MM-DD; return None if it cannot be parsed.\"\"\"\n    text = clean_text(value)\n    if text is None:\n        return None\n    # Already an ISO date (optionally with a time component).\n    match = re.match(r\"^(\\d{4})-(\\d{2})-(\\d{2})(?:[T ].*)?$\", text)\n    if match:\n        return f\"{match.group(1)}-{match.group(2)}-{match.group(3)}\"\n    # Slash-separated dates: assume month/day/year when ambiguous.\n    match = re.match(r\"^(\\d{1,2})/(\\d{1,2})/(\\d{4})$\", text)\n    if match:\n        month, day, year = match.groups()\n        return f\"{year}-{int(month):02d}-{int(day):02d}\"\n    parsed = pd.to_datetime(text, errors=\"coerce\")\n    if pd.isna(parsed):\n        return None\n    return parsed.strftime(\"%Y-%m-%d\")\n\n\ndef clean_status(value):\n    \"\"\"Normalize boolean-ish activity flags to a status string.\"\"\"\n    if is_missing(value):\n        return None\n    if isinstance(value, bool):\n        return \"active\" if value else \"inactive\"\n    if isinstance(value, (int, float)):\n        if value == 1:\n            return \"active\"\n        if value == 0:\n            return \"inactive\"\n    text = str(value).strip()\n    lowered = text.lower()\n    if lowered in {\"true\", \"t\", \"yes\", \"y\", \"1\", \"active\", \"enabled\"}:\n        return \"active\"\n    if lowered in {\"false\", \"f\", \"no\", \"n\", \"0\", \"inactive\", \"disabled\"}:\n        return \"inactive\"\n    return text\n\n\nCLEANERS = {\n    \"user_id\": clean_user_id,\n    \"name\": clean_text,\n    \"email\": clean_text,\n    \"created_date\": clean_date,\n    \"status\": clean_status,\n}\n\n\ndef load_source_a(path):\n    with open(path, \"r\", encoding=\"utf-8\") as handle:\n        data = json.load(handle)\n    if isinstance(data, dict):\n        # Accept {\"users\": [...]} or a single record.\n        for key in (\"users\", \"data\", \"records\"):\n            if isinstance(data.get(key), list):\n                data = data[key]\n                break\n        else:\n            data = [data]\n    return pd.DataFrame(data)\n\n\ndef load_sources():\n    return {\n        \"source_a\": load_source_a(SOURCE_A),\n        \"source_b\": pd.read_csv(SOURCE_B, dtype=str, keep_default_na=False),\n        \"source_c\": pd.read_parquet(SOURCE_C),\n    }\n\n\ndef extract_records(raw_sources):\n    \"\"\"Return {user_id: {source: {field: normalized_value}}}.\"\"\"\n    records = {}\n    for source in SOURCES:\n        frame = raw_sources[source]\n        for _, row in frame.iterrows():\n            canonical = {}\n            for field in FIELD_MAP:\n                for column in FIELD_MAP[field][source]:\n                    if column in row.index:\n                        canonical[field] = CLEANERS[field](row[column])\n                        break\n            user_id = canonical.get(\"user_id\")\n            if user_id is None:\n                continue\n            records.setdefault(user_id, {})[source] = canonical\n    return records\n\n\ndef merge(records):\n    merged_rows = []\n    conflicts = []\n\n    for user_id in sorted(records):\n        per_source = records[user_id]\n        row = {\"user_id\": user_id}\n\n        for field in OUTPUT_FIELDS[1:]:\n            present = {src: per_source[src][field]\n                       for src in SOURCES\n                       if src in per_source and per_source[src].get(field) is not None}\n\n            # Winner: highest-priority source that provides a value.\n            selected = None\n            for src in SOURCES:\n                if src in present:\n                    selected = present[src]\n                    break\n\n            distinct = set(present.values())\n            if len(present) > 1 and len(distinct) > 1:\n                conflicts.append({\n                    \"user_id\": user_id,\n                    \"field\": field,\n                    \"values\": {src: present[src] for src in SOURCES if src in present},\n                    \"selected\": selected,\n                })\n\n            row[field] = selected\n\n        merged_rows.append(row)\n\n    return merged_rows, conflicts\n\n\ndef write_outputs(merged_rows, conflicts):\n    schema = pa.schema([\n        (\"user_id\", pa.int64()),\n        (\"name\", pa.string()),\n        (\"email\", pa.string()),\n        (\"created_date\", pa.string()),\n        (\"status\", pa.string()),\n    ])\n    table = pa.Table.from_pylist(merged_rows, schema=schema)\n    pq.write_table(table, OUT_PARQUET)\n\n    report = {\"total_conflicts\": len(conflicts), \"conflicts\": conflicts}\n    with open(OUT_CONFLICTS, \"w\", encoding=\"utf-8\") as handle:\n        json.dump(report, handle, indent=2, ensure_ascii=False)\n        handle.write(\"\\n\")\n\n\ndef main():\n    raw_sources = load_sources()\n    records = extract_records(raw_sources)\n    merged_rows, conflicts = merge(records)\n    write_outputs(merged_rows, conflicts)\n    print(f\"Wrote {len(merged_rows)} users to {OUT_PARQUET}\")\n    print(f\"Wrote {len(conflicts)} conflicts to {OUT_CONFLICTS}\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 24375,
+   "dur_ms": 2343
+  },
+  {
+   "kind": "tool",
+   "at_ms": 26718,
+   "dur_ms": 1163,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 merge_users.py && echo \"=== conflicts ===\" && cat conflicts.json && echo \"=== parquet ===\" && python3 -c \"\nimport pandas as pd, pyarrow.parquet as pq\nt = pq.read_table('/app/merged_users.parquet')\nprint(t.schema)\nprint(pd.read_parquet('/app/merged_users.parquet').to_string())\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 27881,
+   "dur_ms": 5931
+  },
+  {
+   "kind": "tool",
+   "at_ms": 33812,
+   "dur_ms": 602,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "python3 - <<'EOF'\nimport json, re\nimport pandas as pd\nimport pyarrow.parquet as pq\n\nt = pq.read_table('merged_users.parquet')\ndf = t.to_pandas()\nschema = dict(t.schema)\n\n# 1. Types\nassert schema['user_id'] == 'int64', schema\nfor c in ['name','email','created_date','status']:\n    assert str(schema[c]) == 'string', schema\n\n# 2. Unique users across sources\na = pd.read_json('/data/source_a/users.json')\nb = pd.read_csv('/data/source_b/users.csv')\nc = pd.read_parquet('/data/source_c/users.parquet')\nexpected_ids = sorted(set(a['id']) | set(b['user_id']) | set(c['userId']))\nassert sorted(df.user_id) == expected_ids, (sorted(df.user_id), expected_ids)\nassert df.user_id.is_unique\n\n# 3. Dates\nassert df.created_date.map(lambda x: bool(re.fullmatch(r'\\d{4}-\\d{2}-\\d{2}', x))).all()\n\n# 4. Columns exactly as specified\nassert list(df.columns) == ['user_id','name','email','created_date','status'], list(df.columns)\n\n# 5. Priority resolution spot checks\nrow = df.set_index('user_id').loc[101]\nassert row['name']=='John Doe' and row['email']=='john@a.com' and row['created_date']=='2024-01-15'\nr102 = df.set_index('user_id').loc[102]\nassert r102['email']=='jane@a.com' and r102['status']=='inactive'\nr103 = df.set_index('user_id').loc[103]\nassert r103['name']=='Bob Wilson' and r103['email']=='bob@b.com' and r103['created_date']=='2024-03-01'\nr104 = df.set_index('user_id').loc[104]\nassert r104['name']=='Alice Brown' and r104['email']=='alice@c.com' and r104['created_date']=='2024-04-01'\n\n# 6. Conflict report structure + consistency\nrep = json.load(open('conflicts.json'))\nassert rep['total_conflicts'] == len(rep['conflicts']) == 3\nassert set(rep.keys()) == {'total_conflicts','conflicts'}\nfor cf in rep['conflicts']:\n    assert set(cf) == {'user_id','field','values','selected'}\n    assert cf['user_id'] == 101\n    assert cf['field'] in {'name','email','created_date','status'}\n    assert cf['selected'] == cf['values']['source_a']\n    assert len(set(cf['values'].values())) > 1\n\n# 7. No unseen conflicts: recompute naively from raw sources\ndef canonical(source, row):\n    if source=='a':\n        return {'name':row['full_name'],'email':row['email'],'created_date':row['registration_date'],\n                'status':row['status'],'user_id':int(row['id'])}\n    if source=='b':\n        return {'name':row['name'],'email':row['email_address'],'created_date':row['created_at'],\n                'status':'active' if row['is_active'] else 'inactive','user_id':int(row['user_id'])}\n    return {'name':row['userName'],'email':row['email'],'created_date':row['joined'],\n            'status':'active' if row['active'] else 'inactive','user_id':int(row['userId'])}\n\nby_id = {}\nfor src, frame in [('source_a',a),('source_b',b),('source_c',c)]:\n    for _, r in frame.iterrows():\n        d = canonical(src[-1], r)\n        by_id.setdefault(d['user_id'],{})[src] = d\nrecomputed = []\nfor uid, srcs in sorted(by_id.items()):\n    for f in ['name','email','created_date','status']:\n        vals = {s: srcs[s][f] for s in ['source_a','source_b','source_c'] if s in srcs}\n        if len(vals)>1 and len(set(vals.values()))>1:\n            recomputed.append((uid,f))\nreported = [(c['user_id'],c['field']) for c in rep['conflicts']]\nassert recomputed == reported, (recomputed, reported)\n\nprint(\"ALL CHECKS PASSED\")\nprint(f\"users={len(df)} conflicts={len(recomputed)}\")\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 34414,
+   "dur_ms": 4361
+  },
+  {
+   "kind": "tool",
+   "at_ms": 38775,
+   "dur_ms": 615,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport json, re\nimport pandas as pd\nimport pyarrow.parquet as pq\n\nt = pq.read_table('merged_users.parquet')\ndf = t.to_pandas()\nschema = {f.name: str(f.type) for f in t.schema}\n\nassert schema['user_id'] == 'int64', schema\nfor c in ['name','email','created_date','status']:\n    assert schema[c] == 'string', schema\n\na = pd.read_json('/data/source_a/users.json')\nb = pd.read_csv('/data/source_b/users.csv')\nc = pd.read_parquet('/data/source_c/users.parquet')\nexpected_ids = sorted(set(a['id']) | set(b['user_id']) | set(c['userId']))\nassert sorted(df.user_id) == expected_ids\nassert df.user_id.is_unique\n\nassert df.created_date.map(lambda x: bool(re.fullmatch(r'\\d{4}-\\d{2}-\\d{2}', x))).all()\nassert list(df.columns) == ['user_id','name','email','created_date','status']\n\nidx = df.set_index('user_id')\nassert idx.loc[101,'name']=='John Doe' and idx.loc[101,'email']=='john@a.com' and idx.loc[101,'created_date']=='2024-01-15'\nassert idx.loc[102,'email']=='jane@a.com' and idx.loc[102,'status']=='inactive'\nassert idx.loc[103,'name']=='Bob Wilson' and idx.loc[103,'email']=='bob@b.com' and idx.loc[103,'created_date']=='2024-03-01'\nassert idx.loc[104,'name']=='Alice Brown' and idx.loc[104,'email']=='alice@c.com' and idx.loc[104,'created_date']=='2024-04-01'\n\nrep = json.load(open('conflicts.json'))\nassert set(rep) == {'total_conflicts','conflicts'}\nassert rep['total_conflicts'] == len(rep['conflicts']) == 3\nfor cf in rep['conflicts']:\n    assert set(cf) == {'user_id','field','values','selected'}\n    assert cf['user_id'] == 101\n    assert cf['selected'] == cf['values']['source_a']\n    assert len(set(cf['values'].values())) > 1\n\ndef canonical(source, row):\n    if source=='source_a':\n        return {'name':row['full_name'],'email':row['email'],'created_date':row['registration_date'],\n                'status':row['status'],'user_id':int(row['id'])}\n    if source=='source_b':\n        return {'name':row['name'],'email':row['email_address'],'created_date':row['created_at'],\n                'status':'active' if str(row['is_active']).lower()=='true' else 'inactive','user_id':int(row['user_id'])}\n    return {'name':row['userName'],'email':row['email'],'created_date':row['joined'],\n            'status':'active' if row['active'] else 'inactive','user_id':int(row['userId'])}\n\nby_id = {}\nfor src, frame in [('source_a',a),('source_b',b),('source_c',c)]:\n    for _, r in frame.iterrows():\n        d = canonical(src, r)\n        by_id.setdefault(d['user_id'],{})[src] = d\nrecomputed = []\nfor uid, srcs in sorted(by_id.items()):\n    for f in ['name','email','created_date','status']:\n        vals = {s: srcs[s][f] for s in ['source_a','source_b','source_c'] if s in srcs}\n        if len(vals)>1 and len(set(vals.values()))>1:\n            recomputed.append((uid,f))\nreported = [(cf['user_id'],cf['field']) for cf in rep['conflicts']]\nassert recomputed == reported, (recomputed, reported)\n\nprint(\"ALL CHECKS PASSED\")\nprint(f\"users={len(df)} conflicts={len(recomputed)}\")\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 39390,
+   "dur_ms": 2619
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.537,
+ "calls": 9,
+ "cell": "TB1a"
+}

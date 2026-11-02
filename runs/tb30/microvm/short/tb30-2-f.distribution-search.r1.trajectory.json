@@ -1,0 +1,345 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-f",
+ "instance_id": "distribution-search",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 73178,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 322,
+  "output": 11093,
+  "cacheRead": 71744,
+  "cacheWrite": 5056,
+  "total": 88215
+ },
+ "totals": {
+  "model_calls": 9,
+  "tool_calls": 8,
+  "model_ms": 65597,
+  "tool_ms": 6193,
+  "sandbox_ms": 5681
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1112,
+   "dur_ms": 8023,
+   "tokens_in": 25,
+   "tokens_out": 1286,
+   "cache_read": 1024,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 9139,
+   "dur_ms": 323,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npwd\nls -la /workspace\nls -la /app 2>/dev/null || true\npython3 - <<'PY'\nimport numpy as np, scipy\nprint(np.__version__, scipy.__version__)\nimport math\nn=150000\nprint(math.log(n))\nPY\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 9190,
+     "dur_ms": 233,
+     "exit": 0,
+     "cpu_ms": 322.5,
+     "phases_us": {
+      "acquire": 83,
+      "resume": 20606,
+      "mount": 18187,
+      "run": 181407,
+      "destroy": 30927
+     },
+     "cold": null,
+     "vm": "vm-8"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 9466,
+   "dur_ms": 5164,
+   "tokens_in": 30,
+   "tokens_out": 797,
+   "cache_read": 2624,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14631,
+   "dur_ms": 688,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\nimport numpy as np\nfrom scipy.optimize import brentq\nimport math\nn=150000\nlnn=math.log(n)\nHtarget=lnn-10\n\ndef vals(m,b):\n    a=(1-(n-m)*b)/m\n    if a<=0 or b<=0: return None\n    F=lnn + m*a*math.log(a)+(n-m)*b*math.log(b)\n    B=-lnn - (m*math.log(a)+(n-m)*math.log(b))/n\n    return a,b,F,B\n\nfor m in range(1,61):\n    # solve F=10 over b between tiny and 1/(n-m)\n    lo=1e-300; hi=(1-1e-15)/(n-m)\n    # F at lo ~ logn - logm, >10 if m<e^(logn-10)=e^1.918=6.8; so m>=7\n    f=lambda bb: vals(m,bb)[2]-10\n    try:\n        # search log b to handle\n        xs=np.linspace(-30, math.log(hi), 2000)\n        lastx=xs[0]; last=f(lastx)\n        root=None\n        for x in xs[1:]:\n            cur=f(x)\n            if last*cur<=0:\n                root=brentq(f,lastx,x)\n                break\n            lastx=x; last=cur\n        if root is not None:\n            a,b,F,B=vals(m,root)\n            print(m, 'b',b, 'a',a, 'F',F, 'B',B, 'Bdiff',B-10)\n    except Exception as e:\n        print('err',m,e)\nPY\nEOF",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 14679,
+     "dur_ms": 635,
+     "exit": 0,
+     "cpu_ms": 841.5,
+     "phases_us": {
+      "acquire": 65,
+      "resume": 20202,
+      "mount": 17970,
+      "run": 575983,
+      "destroy": 38793
+     },
+     "cold": null,
+     "vm": "vm-12"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 15322,
+   "dur_ms": 6012,
+   "tokens_in": 18,
+   "tokens_out": 937,
+   "cache_read": 3520,
+   "cache_write": 832,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 21335,
+   "dur_ms": 1301,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\nimport numpy as np\nfrom scipy.optimize import brentq\nimport math\nn=150000\nlnn=math.log(n)\n\ndef vals(m,b):\n    a=(1-(n-m)*b)/m\n    if a<=0 or b<=0: return None\n    F=lnn + m*a*math.log(a)+(n-m)*b*math.log(b)\n    B=-lnn - (m*math.log(a)+(n-m)*math.log(b))/n\n    return a,b,F,B\n\nfor m in range(1,101):\n    hi=(1-1e-14)/(n-m)\n    f=lambda bb: vals(m,bb)[2]-10\n    xs=np.linspace(-40, math.log(hi), 5000)\n    prevx=xs[0]; prev=f(math.exp(prevx))\n    root=None\n    for x in xs[1:]:\n        cur=f(math.exp(x))\n        if prev*cur<=0:\n            root=brentq(lambda xx: f(math.exp(xx)),prevx,x)\n            break\n        prevx=x; prev=cur\n    if root is not None:\n        b=math.exp(root)\n        a,b,F,B=vals(m,b)\n        print(f\"m={m:3d} b={b:.12e} a={a:.12e} F={F:.12f} B={B:.12f} Bdiff={B-10:+.6f}\")\nPY\nEOF",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 21384,
+     "dur_ms": 1244,
+     "exit": 0,
+     "cpu_ms": 1453.7,
+     "phases_us": {
+      "acquire": 102,
+      "resume": 20430,
+      "mount": 17856,
+      "run": 1187613,
+      "destroy": 35273
+     },
+     "cold": null,
+     "vm": "vm-14"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 22639,
+   "dur_ms": 21160,
+   "tokens_in": 50,
+   "tokens_out": 3231,
+   "cache_read": 5248,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 43824,
+   "dur_ms": 677,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\nimport numpy as np, math\nfrom scipy.optimize import brentq\nn=150000; m=7; lnn=math.log(n); Ht=lnn-10\nlnn=math.log(n)\ndef dist(a,t):\n    q=np.empty(m)\n    q[0]=a; q[1:]=(1-a)/(m-1)\n    p=np.empty(n)\n    p[:m]=(1-t)*q\n    p[m:]=t/(n-m)\n    return p\ndef F(a,t):\n    p=dist(a,t)\n    return float(np.sum(p*np.log(p*n)))\ndef B(a,t):\n    p=dist(a,t)\n    return float(-np.sum(np.log(p))/n - lnn) # wait B=-lnn - mean log p? Actually -lnn - avg log p. -sum log p/n - lnn\n# check B formula\nfor a in [1/7, 0.143,0.145,0.15,0.16,0.18,0.2]:\n    Hh=-(a*math.log(a)+(1-a)*math.log((1-a)/(m-1)))\n    print('a',a,'Hh',Hh,'F0',lnn-Hh)\n    if Hh>=Ht: continue\n    # find t within (0,1) where F=10. scan log t.\n    def f(logt): return F(a, math.exp(logt))-10\n    xs=np.linspace(math.log(1e-12), math.log(0.999999), 5000)\n    prevx=xs[0]; prev=f(prevx); root=None\n    for x in xs[1:]:\n        cur=f(x)\n        if prev*cur<=0:\n            root=brentq(f,prevx,x)\n            break\n        prevx=x; prev=cur\n    if root is None:\n        print(' no root')\n    else:\n        t=math.exp(root); print('  t',t,'b',t/(n-m),'F',F(a,t),'B',B(a,t))\nPY\nEOF",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 43849,
+     "dur_ms": 644,
+     "exit": 0,
+     "cpu_ms": 833.0,
+     "phases_us": {
+      "acquire": 69,
+      "resume": 21177,
+      "mount": 18044,
+      "run": 585307,
+      "destroy": 36827
+     },
+     "cold": null,
+     "vm": "vm-16"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 44559,
+   "dur_ms": 2063,
+   "tokens_in": 29,
+   "tokens_out": 289,
+   "cache_read": 8832,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 46622,
+   "dur_ms": 721,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\nimport numpy as np, math\nfrom scipy.optimize import brentq\nn=150000; m=7; lnn=math.log(n); Ht=lnn-10\ndef Hh(a): return -(a*math.log(a)+(1-a)*math.log((1-a)/(m-1)))\n# find a for target minus deltas\nfor delta in [1e-1,1e-2,3e-3,1e-3,3e-4,1e-4,1e-5,1e-6,1e-7,0]:\n    target=Ht-delta\n    a=brentq(lambda aa:Hh(aa)-target,1/m,1-1e-15)\n    print(delta,a,Hh(a))\nPY\nEOF",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 46663,
+     "dur_ms": 677,
+     "exit": 0,
+     "cpu_ms": 922.9,
+     "phases_us": {
+      "acquire": 6,
+      "resume": 21104,
+      "mount": 18845,
+      "run": 611171,
+      "destroy": 44612
+     },
+     "cold": null,
+     "vm": "vm-23"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 47406,
+   "dur_ms": 3915,
+   "tokens_in": 38,
+   "tokens_out": 751,
+   "cache_read": 9280,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 51330,
+   "dur_ms": 885,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\nimport numpy as np, math\nfrom scipy.optimize import brentq\nn=150000; m=7; lnn=math.log(n); Ht=lnn-10\ndef Hh(a): return -(a*math.log(a)+(1-a)*math.log((1-a)/(m-1)))\ndef F(a,t):\n    # direct formula avoiding array\n    qa=a; qb=(1-a)/(m-1)\n    b=t/(n-m)\n    return lnn + (m-1)*(1-t)*qb*math.log((1-t)*qb) + (1-t)*a*math.log((1-t)*a) + (n-m)*b*math.log(b)\ndef B(a,t):\n    qa=a; qb=(1-a)/(m-1); b=t/(n-m)\n    return -lnn - ((1-t)*math.log((1-t)*a)+(m-1)*(1-t)*math.log((1-t)*qb)+(n-m)*math.log(b))/n\ndef solve_t(a):\n    def f(logt): return F(a,math.exp(logt))-10\n    xs=np.linspace(math.log(1e-14), math.log(0.9), 2000)\n    px=xs[0]; pv=f(px)\n    for x in xs[1:]:\n        cv=f(x)\n        if pv*cv<=0:\n            return math.exp(brentq(f,px,x))\n        px=x; pv=cv\n    return None\nfor a in np.linspace(0.2310,0.2350,41):\n    if Hh(a)>=Ht:\n        print('skip',a)\n        continue\n    t=solve_t(a)\n    if t is None:\n        print('no root',a,Hh(a))\n    else:\n        print(f\"a={a:.9f} delta={Ht-Hh(a):.6e} t={t:.12e} b={t/(n-m):.6e} F={F(a,t):.9f} B={B(a,t):.9f} Bdiff={B(a,t)-10:+.6f}\")\nPY\nEOF",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 51373,
+     "dur_ms": 840,
+     "exit": 0,
+     "cpu_ms": 936.4,
+     "phases_us": {
+      "acquire": 80,
+      "resume": 57734,
+      "mount": 35476,
+      "run": 701852,
+      "destroy": 80235
+     },
+     "cold": null,
+     "vm": "vm-26"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 52218,
+   "dur_ms": 7936,
+   "tokens_in": 58,
+   "tokens_out": 1517,
+   "cache_read": 10304,
+   "cache_write": 2368,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 60155,
+   "dur_ms": 700,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\nimport numpy as np, math\nfrom scipy.optimize import brentq\n\nn = 150_000\nm = 7\nLOG_N = math.log(n)\nTARGET = 10.0\n\ndef head_probs(a):\n    q = np.empty(m)\n    q[0] = a\n    q[1:] = (1.0 - a) / (m - 1)\n    return q\n\ndef forward_kl(a, t):\n    q = head_probs(a)\n    b = t / (n - m)\n    head = (1.0 - t) * q\n    return LOG_N + float(np.sum(head * np.log(head))) + (n - m) * b * math.log(b)\n\ndef backward_kl(a, t):\n    q = head_probs(a)\n    b = t / (n - m)\n    head = (1.0 - t) * q\n    log_sum = float(np.sum(np.log(head))) + (n - m) * math.log(b)\n    return -LOG_N - log_sum / n\n\ndef tail_mass_for_forward(a):\n    # F increases as t -> 0 because main distribution entropy is below target\n    f = lambda logt: forward_kl(a, math.exp(logt)) - TARGET\n    lo, hi = math.log(1e-15), math.log(0.1)\n    # check bracket\n    flo, fhi = f(lo), f(hi)\n    if flo * fhi > 0:\n        raise RuntimeError(f'no bracket for F=10 at a={a}: {flo}, {fhi}')\n    return math.exp(brentq(f, lo, hi, xtol=1e-15, rtol=1e-14, maxiter=200))\n\ndef backward_residual(a):\n    t = tail_mass_for_forward(a)\n    return backward_kl(a,t) - TARGET, t\n\n# find a bracket\nlo, hi = 0.2325, 0.2326\nfor a in np.linspace(lo,hi,11):\n    print(a, backward_residual(a))\n\na = brentq(lambda aa: backward_residual(aa)[0], lo, hi, xtol=1e-15, rtol=1e-14, maxiter=200)\nt = tail_mass_for_forward(a)\nq = head_probs(a)\np = np.empty(n, dtype=np.float64)\np[:m] = (1.0-t)*q\np[m:] = t/(n-m)\nprint('a',repr(a),'t',repr(t))\nprint('sum',p.sum(), 'min',p.min(), 'max',p.max())\nF=float(np.sum(p*np.log(p*n)))\nB=float(-np.sum(np.log(p))/n - LOG_N)\nprint('F',repr(F),'B',repr(B),'diffs',F-10,B-10)\nprint('head',p[:m])\nprint('tail',p[m])\nnp.save('/app/dist.npy', p)\nr=np.load('/app/dist.npy')\nprint('reloaded',r.shape,r.dtype, np.array_equal(r,p))\nprint('KL F reload',float(np.sum(r*np.log(r*n))))\nprint('KL B reload',float(-np.sum(np.log(r))/n - LOG_N))\nPY\nEOF",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 60204,
+     "dur_ms": 636,
+     "exit": 0,
+     "cpu_ms": 877.8,
+     "phases_us": {
+      "acquire": 59,
+      "resume": 20120,
+      "mount": 17804,
+      "run": 586766,
+      "destroy": 28395
+     },
+     "cold": null,
+     "vm": "vm-28"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 60858,
+   "dur_ms": 9435,
+   "tokens_in": 34,
+   "tokens_out": 1978,
+   "cache_read": 14208,
+   "cache_write": 512,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 70294,
+   "dur_ms": 898,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put /app/solve_dist.py <<'EOF'\n\"\"\"Construct a vocabulary distribution whose forward and backward KL\ndivergences from the uniform distribution are both 10.0.\n\nLet n be the vocabulary size and U(i) = 1/n.  For a distribution P:\n\n    KL(P || U) = log(n) + sum_i P(i) log(P(i))\n    KL(U || P) = -log(n) - (1/n) sum_i log(P(i))\n\nWe use a 7-token head distribution plus a uniform tail over the other\nn - 7 tokens.  The head has slightly less entropy than log(n) - 10, so a\nsmall tail mass can be chosen to make the forward KL exactly 10.  The head\nshape is then adjusted until the backward KL is also exactly 10.\n\"\"\"\n\nimport math\n\nimport numpy as np\nfrom scipy.optimize import brentq\n\nN = 150_000\nM = 7\nTARGET_KL = 10.0\nLOG_N = math.log(N)\nOUTPUT = \"/app/dist.npy\"\n\n\ndef head_distribution(a: float) -> np.ndarray:\n    \"\"\"One large head probability and M-1 equal head probabilities.\"\"\"\n    q = np.empty(M, dtype=np.float64)\n    q[0] = a\n    q[1:] = (1.0 - a) / (M - 1)\n    return q\n\n\ndef forward_kl(a: float, tail_mass: float) -> float:\n    q = head_distribution(a)\n    b = tail_mass / (N - M)\n    head = (1.0 - tail_mass) * q\n    return LOG_N + float(np.dot(head, np.log(head))) + (N - M) * b * math.log(b)\n\n\ndef backward_kl(a: float, tail_mass: float) -> float:\n    q = head_distribution(a)\n    b = tail_mass / (N - M)\n    head = (1.0 - tail_mass) * q\n    log_sum = float(np.sum(np.log(head))) + (N - M) * math.log(b)\n    return -LOG_N - log_sum / N\n\n\ndef tail_mass_for_forward_kl(a: float) -> float:\n    \"\"\"Solve forward_kl(a, tail_mass) = TARGET_KL for the tail mass.\"\"\"\n    def residual(log_tail_mass: float) -> float:\n        return forward_kl(a, math.exp(log_tail_mass)) - TARGET_KL\n\n    lo = math.log(1e-15)\n    hi = math.log(0.1)\n    if residual(lo) * residual(hi) > 0.0:\n        raise RuntimeError(f\"Could not bracket the forward-KL solution for a={a}\")\n    return math.exp(\n        brentq(residual, lo, hi, xtol=1e-15, rtol=1e-14, maxiter=200)\n    )\n\n\ndef backward_residual(a: float) -> float:\n    tail_mass = tail_mass_for_forward_kl(a)\n    return backward_kl(a, tail_mass) - TARGET_KL\n\n\ndef main() -> None:\n    # Bracket found by scanning the head shape near the required entropy.\n    lo, hi = 0.2325, 0.2326\n    a = brentq(\n        backward_residual, lo, hi, xtol=1e-15, rtol=1e-14, maxiter=200\n    )\n    tail_mass = tail_mass_for_forward_kl(a)\n\n    dist = np.empty(N, dtype=np.float64)\n    dist[:M] = (1.0 - tail_mass) * head_distribution(a)\n    dist[M:] = tail_mass / (N - M)\n    dist /= dist.sum()\n\n    fkl = float(np.sum(dist * np.log(dist * N)))\n    bkl = float(-np.sum(np.log(dist)) / N - LOG_N)\n    assert np.all(dist >= 0.0)\n    assert abs(dist.sum() - 1.0) < 1e-12\n    assert abs(fkl - TARGET_KL) <= 1e-9\n    assert abs(bkl - TARGET_KL) <= 1e-9\n\n    np.save(OUTPUT, dist)\n    print(f\"Saved {OUTPUT}\")\n    print(f\"shape={dist.shape}, sum={dist.sum():.17g}\")\n    print(f\"forward KL  = {fkl:.15f}\")\n    print(f\"backward KL = {bkl:.15f}\")\n\n\nif __name__ == \"__main__\":\n    main()\nEOF\nsbx run <<'EOF'\ncd /app\npython3 solve_dist.py\npython3 - <<'PY'\nimport numpy as np, math\np=np.load('/app/dist.npy')\nn=len(p)\nf=float(np.sum(p*np.log(p*n)))\nb=float(-np.sum(np.log(p))/n-math.log(n))\nprint('file:', p.shape, p.dtype)\nprint('valid:', np.all(p>=0), p.sum())\nprint('forward KL:', f, 'diff:', f-10)\nprint('backward KL:', b, 'diff:', b-10)\nprint('within tolerance:', abs(f-10)<=0.001 and abs(b-10)<=0.001)\nPY\nEOF",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 70342,
+     "dur_ms": 44,
+     "exit": 0,
+     "cpu_ms": 42.0,
+     "phases_us": {
+      "acquire": 79,
+      "resume": 20536,
+      "mount": 17966,
+      "run": 7730,
+      "destroy": 15662
+     },
+     "cold": null,
+     "vm": "vm-32"
+    },
+    {
+     "at_ms": 70432,
+     "dur_ms": 728,
+     "exit": 0,
+     "cpu_ms": 1000.1,
+     "phases_us": {
+      "acquire": 16,
+      "resume": 20404,
+      "mount": 17362,
+      "run": 666319,
+      "destroy": 40631
+     },
+     "cold": null,
+     "vm": "vm-5"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 71195,
+   "dur_ms": 1889,
+   "tokens_in": 40,
+   "tokens_out": 307,
+   "cache_read": 16704,
+   "cache_write": 128,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.527,
+ "calls": 8,
+ "cell": "TB1f"
+}

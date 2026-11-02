@@ -1,0 +1,699 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-d",
+ "instance_id": "chess-best-move",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 294636,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 10408,
+  "output": 14021,
+  "cacheRead": 327424,
+  "cacheWrite": 0,
+  "total": 351853
+ },
+ "totals": {
+  "model_calls": 19,
+  "tool_calls": 18,
+  "model_ms": 89819,
+  "tool_ms": 204193,
+  "sandbox_ms": 82587
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 117,
+   "dur_ms": 3394,
+   "tokens_in": 30,
+   "tokens_out": 61,
+   "cache_read": 5632,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3511,
+   "dur_ms": 201,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /workspace\nfile /workspace/chess_board.png",
+   "sandbox": [
+    {
+     "at_ms": 3621,
+     "dur_ms": 58,
+     "exit": 0,
+     "cpu_ms": 44.9,
+     "phases_us": {
+      "acquire": 62,
+      "resume": 20661,
+      "mount": 18589,
+      "run": 9652,
+      "destroy": 27021
+     },
+     "cold": null,
+     "vm": "vm-273"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3783,
+   "dur_ms": 3540,
+   "tokens_in": 168,
+   "tokens_out": 114,
+   "cache_read": 5696,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 7323,
+   "dur_ms": 152,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport importlib\nfor m in ['PIL','numpy','cv2','chess']:\n    try:\n        mod=importlib.import_module(m); print(m,'OK',getattr(mod,'__version__',''))\n    except Exception as e: print(m,'NO',e)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 7375,
+     "dur_ms": 83,
+     "exit": 0,
+     "cpu_ms": 70.3,
+     "phases_us": {
+      "acquire": 85,
+      "resume": 20601,
+      "mount": 18285,
+      "run": 34477,
+      "destroy": 27942
+     },
+     "cold": null,
+     "vm": "vm-276"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 7490,
+   "dur_ms": 1247,
+   "tokens_in": 96,
+   "tokens_out": 116,
+   "cache_read": 6336,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 8737,
+   "dur_ms": 334,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nfrom PIL import Image\nfrom collections import Counter\nim=Image.open('/workspace/chess_board.png').convert('RGB')\nprint(im.size)\nc=Counter(im.getdata())\nprint('unique',len(c))\nfor col,n in c.most_common(30): print(col,n)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 8789,
+     "dur_ms": 235,
+     "exit": 0,
+     "cpu_ms": 242.5,
+     "phases_us": {
+      "acquire": 81,
+      "resume": 20078,
+      "mount": 17715,
+      "run": 182195,
+      "destroy": 32046
+     },
+     "cold": null,
+     "vm": "vm-280"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 9086,
+   "dur_ms": 4319,
+   "tokens_in": 397,
+   "tokens_out": 288,
+   "cache_read": 6592,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 13405,
+   "dur_ms": 388,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nfrom PIL import Image\nim=Image.open('/workspace/chess_board.png').convert('RGB')\nW,H=im.size\npx=im.load()\ndef isbg(c):\n    return (abs(c[0]-240)<12 and abs(c[1]-217)<12 and abs(c[2]-181)<12) or (abs(c[0]-181)<12 and abs(c[1]-136)<12 and abs(c[2]-99)<12)\nfor r in range(8):\n    row=[]\n    for f in range(8):\n        x0=f*80; y0=r*80\n        cnt=0; black=0; white=0\n        for y in range(y0,y0+80):\n            for x in range(x0,x0+80):\n                c=px[x,y]\n                if not isbg(c):\n                    cnt+=1\n                    if sum(c)<150: black+=1\n                    elif sum(c)>650: white+=1\n        row.append(f\"{cnt:4d}/{black:4d}/{white:4d}\")\n    print(r, ' '.join(row))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 13457,
+     "dur_ms": 318,
+     "exit": 0,
+     "cpu_ms": 341.1,
+     "phases_us": {
+      "acquire": 79,
+      "resume": 22123,
+      "mount": 18950,
+      "run": 273269,
+      "destroy": 22563
+     },
+     "cold": null,
+     "vm": "vm-282"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 13808,
+   "dur_ms": 5015,
+   "tokens_in": 560,
+   "tokens_out": 360,
+   "cache_read": 7616,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 18823,
+   "dur_ms": 312,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nfrom PIL import Image\nim=Image.open('/workspace/chess_board.png').convert('RGB')\npx=im.load()\ndef cls(c):\n    if abs(c[0]-240)<15 and abs(c[1]-217)<15 and abs(c[2]-181)<15: return '.'\n    if abs(c[0]-181)<15 and abs(c[1]-136)<15 and abs(c[2]-99)<15: return '.'\n    if sum(c)<200: return '#'\n    if sum(c)>640: return 'O'\n    return '+'\n# identify occupied\nocc=[]\nfor r in range(8):\n    for f in range(8):\n        cnt=0\n        for y in range(r*80,r*80+80,2):\n            for x in range(f*80,f*80+80,2):\n                if cls(px[x,y])!='.': cnt+=1\n        if cnt>40: occ.append((r,f))\nprint('occupied',len(occ))\nfor r,f in occ:\n    print(f\"\\n=== rank {8-r} file {chr(97+f)} (row{r} col{f}) ===\")\n    for yy in range(0,80,4):\n        line=''\n        for xx in range(0,80,4):\n            c=cls(px[f*80+xx+2, r*80+yy+2])\n            line+=c\n        print(line)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 18876,
+     "dur_ms": 215,
+     "exit": 0,
+     "cpu_ms": 225.1,
+     "phases_us": {
+      "acquire": 76,
+      "resume": 22091,
+      "mount": 19251,
+      "run": 157323,
+      "destroy": 35340
+     },
+     "cold": null,
+     "vm": "vm-283"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 19154,
+   "dur_ms": 2258,
+   "tokens_in": 2286,
+   "tokens_out": 89,
+   "cache_read": 8960,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 21412,
+   "dur_ms": 315,
+   "tool": "bash",
+   "is_error": false,
+   "command": "fc-list 2>/dev/null | head -50 || true\nfind / -iname '*.ttf' -o -iname '*.otf' 2>/dev/null | head -50",
+   "sandbox": [
+    {
+     "at_ms": 21467,
+     "dur_ms": 240,
+     "exit": 0,
+     "cpu_ms": 366.7,
+     "phases_us": {
+      "acquire": 63,
+      "resume": 22036,
+      "mount": 19725,
+      "run": 191566,
+      "destroy": 25705
+     },
+     "cold": null,
+     "vm": "vm-286"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 21742,
+   "dur_ms": 7567,
+   "tokens_in": 242,
+   "tokens_out": 611,
+   "cache_read": 11520,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 29309,
+   "dur_ms": 412,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nfrom PIL import Image, ImageFont, ImageDraw\nim=Image.open('/workspace/chess_board.png').convert('RGB'); px=im.load()\ndef color(c):\n    r,g,b=c\n    if r+g+b<300: return 'b'\n    if r+g+b>650: return 'w'\n    return '.'\nocc=[]\nfor r in range(8):\n    for f in range(8):\n        cnt=0\n        for y in range(r*80,r*80+80,2):\n            for x in range(f*80,f*80+80,2):\n                if color(px[x,y])!='.': cnt+=1\n        if cnt>40: occ.append((r,f))\nfor r,f in occ:\n    pts=[(x,y) for y in range(r*80,r*80+80) for x in range(f*80,f*80+80) if color(px[x,y])!='.']\n    xs=[p[0]-f*80 for p in pts]; ys=[p[1]-r*80 for p in pts]\n    cs=set(color(px[p[0],p[1]]) for p in pts)\n    print(f\"r{r} c{f} {8-r}{chr(97+f)} color={'/'.join(sorted(cs))} bbox x{min(xs)}-{max(xs)} y{min(ys)}-{max(ys)} w{max(xs)-min(xs)+1} h{max(ys)-min(ys)+1} n{len(pts)}\")\nprint('--- glyph bbox at sizes ---')\nglyphs='\u2654\u2655\u2656\u2657\u2658\u2659\u265a\u265b\u265c\u265d\u265e\u265f'\nfor path in ['/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf','/fonts/noto.ttf']:\n    print(path)\n    for size in [44,48,52,56,60,64,68,72]:\n        try:\n            font=ImageFont.truetype(path,size)\n        except Exception as e:\n            print(size,e); continue\n        out=[]\n        for g in glyphs:\n            img=Image.new('L',(120,120),0); d=ImageDraw.Draw(img); d.text((10,10),g,fill=255,font=font)\n            bb=img.getbbox()\n            if bb: out.append(f\"{g}:{bb[2]-bb[0]}x{bb[3]-bb[1]}\")\n        print(size,' '.join(out))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 29361,
+     "dur_ms": 346,
+     "exit": 0,
+     "cpu_ms": 349.4,
+     "phases_us": {
+      "acquire": 20,
+      "resume": 20743,
+      "mount": 18500,
+      "run": 300498,
+      "destroy": 24920
+     },
+     "cold": null,
+     "vm": "vm-288"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 29740,
+   "dur_ms": 10342,
+   "tokens_in": 1903,
+   "tokens_out": 927,
+   "cache_read": 12928,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 40082,
+   "dur_ms": 433,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nfrom PIL import Image, ImageFont, ImageDraw\nim=Image.open('/workspace/chess_board.png').convert('RGB'); px=im.load()\ndef col(c):\n    r,g,b=c\n    if r+g+b<300: return 'b'\n    if r+g+b>650: return 'w'\n    return '.'\nocc=[]\nfor r in range(8):\n    for f in range(8):\n        cnt=0\n        for y in range(r*80,r*80+80,2):\n            for x in range(f*80,f*80+80,2):\n                if col(px[x,y])!='.': cnt+=1\n        if cnt>40: occ.append((r,f))\n# actual masks tight\nactual={}\nfor r,f in occ:\n    pts=[(x-f*80,y-r*80) for y in range(r*80,r*80+80) for x in range(f*80,f*80+80) if col(px[x,y])!='.']\n    cs=set(col(px[f*80+x,r*80+y]) for x,y in pts)\n    c='b' if 'b' in cs else 'w'\n    xs=[p[0] for p in pts]; ys=[p[1] for p in pts]\n    x0,x1,y0,y1=min(xs),max(xs),min(ys),max(ys)\n    m=[[0]*(x1-x0+1) for _ in range(y1-y0+1)]\n    for x,y in pts: m[y-y0][x-x0]=1\n    actual[(r,f)]=(c,x0,x1,y0,y1,m)\n    print(r,f,c,(x1-x0+1,y1-y0+1))\nblackglyphs='\u265a\u265b\u265c\u265d\u265e\u265f'\nwhiteglyphs='\u2654\u2655\u2656\u2657\u2658\u2659'\nfonts=['/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf','/fonts/noto.ttf']\n# pre-render templates at size 96, bbox crop\ntemplates={}\nfor fp in fonts:\n    font=ImageFont.truetype(fp,96)\n    for g in blackglyphs+whiteglyphs:\n        img=Image.new('L',(160,160),0); d=ImageDraw.Draw(img); d.text((20,20),g,fill=255,font=font)\n        bb=img.getbbox(); img=img.crop(bb)\n        templates[(fp,g)]=img\ndef iou(a,b):\n    # a,b are PIL L images same size, threshold 128\n    pa=a.load(); pb=b.load(); w,h=a.size\n    inter=uni=0\n    for y in range(h):\n        for x in range(w):\n            aa=pa[x,y]>128; bb=pb[x,y]>128\n            if aa or bb:\n                uni+=1\n                if aa and bb: inter+=1\n    return inter/uni if uni else 0\nfor (r,f),data in actual.items():\n    c,x0,x1,y0,y1,m=data; w=x1-x0+1; h=y1-y0+1\n    am=Image.new('L',(w,h),0); ap=am.load()\n    for y in range(h):\n        for x in range(w):\n            if m[y][x]: ap[x,y]=255\n    scores=[]\n    gl=blackglyphs if c=='b' else whiteglyphs\n    for fp in fonts:\n        for g in gl:\n            t=templates[(fp,g)].resize((w,h),Image.LANCZOS)\n            scores.append((iou(am,t),fp.split('/')[-1],g))\n    scores.sort(reverse=True)\n    print(f\"r{r}c{f} {c} {8-r}{chr(97+f)}: \"+', '.join(f\"{s:.3f} {fn} {g}\" for s,fn,g in scores[:4]))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 40136,
+     "dur_ms": 363,
+     "exit": 0,
+     "cpu_ms": 371.4,
+     "phases_us": {
+      "acquire": 4,
+      "resume": 20152,
+      "mount": 17590,
+      "run": 321267,
+      "destroy": 21013
+     },
+     "cold": null,
+     "vm": "vm-293"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 40532,
+   "dur_ms": 11523,
+   "tokens_in": 1794,
+   "tokens_out": 271,
+   "cache_read": 16704,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 52055,
+   "dur_ms": 154,
+   "tool": "bash",
+   "is_error": false,
+   "command": "set -e\nwhich stockfish || true\napt-get update -qq 2>&1 | tail -2\napt-get install -y -qq stockfish 2>&1 | tail -5\nwhich stockfish\nstockfish --help 2>&1 | head -5 || true\npip install -q --target /workspace/pylibs python-chess 2>&1 | tail -3\nPYTHONPATH=/workspace/pylibs python3 - <<'PY'\nimport chess\nprint(chess.__version__)\nfen='r1bq1r2/1p3ppp/p1n1p3/3nPkbP/8/P1N5/1P2QPP1/R1B1K2R w - - 0 1'\nb=chess.Board(fen)\nprint(b)\nprint('legal',b.is_valid(), 'check', b.is_check())\nprint('moves',len(list(b.legal_moves)))\nPY",
+   "timeout": 600000,
+   "sandbox": [
+    {
+     "at_ms": 52108,
+     "dur_ms": 87,
+     "exit": 1,
+     "cpu_ms": 89.3,
+     "phases_us": {
+      "acquire": 5,
+      "resume": 20460,
+      "mount": 17681,
+      "run": 35772,
+      "destroy": 30985
+     },
+     "cold": null,
+     "vm": "vm-298"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 52230,
+   "dur_ms": 3571,
+   "tokens_in": 126,
+   "tokens_out": 222,
+   "cache_read": 20544,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 55801,
+   "dur_ms": 2065,
+   "tool": "bash",
+   "is_error": false,
+   "command": "id\nwhich sudo || true\npip --version\npip install -q --target /workspace/pylibs python-chess 2>&1 | tail -3\nPYTHONPATH=/workspace/pylibs python3 - <<'PY'\nimport chess\nprint('chess',chess.__version__)\nfen='r1bq1r2/1p3ppp/p1n1p3/3nPkbP/8/P1N5/1P2QPP1/R1B1K2R w - - 0 1'\nb=chess.Board(fen)\nprint(b)\nprint('valid',b.is_valid(),'check',b.is_check(),'moves',len(list(b.legal_moves)))\nPY",
+   "timeout": 300000,
+   "sandbox": [
+    {
+     "at_ms": 55853,
+     "dur_ms": 1971,
+     "exit": 0,
+     "cpu_ms": 1979.0,
+     "phases_us": {
+      "acquire": 59,
+      "resume": 19939,
+      "mount": 17847,
+      "run": 1914164,
+      "destroy": 36961
+     },
+     "cold": null,
+     "vm": "vm-302"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 57881,
+   "dur_ms": 6564,
+   "tokens_in": 244,
+   "tokens_out": 186,
+   "cache_read": 21120,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 64445,
+   "dur_ms": 7538,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -ld /var/lib /var/lib/apt /var/lib/apt/lists /var/lib/dpkg /var/cache/apt 2>&1\nmkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial\napt-get update -qq 2>&1 | tail -5\napt-get install -y -qq stockfish 2>&1 | tail -10\nwhich stockfish\ncp $(which stockfish) /workspace/stockfish 2>/dev/null && ls -l /workspace/stockfish",
+   "timeout": 600000,
+   "sandbox": [
+    {
+     "at_ms": 64499,
+     "dur_ms": 7442,
+     "exit": 1,
+     "cpu_ms": 4447.2,
+     "phases_us": {
+      "acquire": 55,
+      "resume": 20636,
+      "mount": 18220,
+      "run": 7378371,
+      "destroy": 42624
+     },
+     "cold": null,
+     "vm": "vm-303"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 72002,
+   "dur_ms": 2729,
+   "tokens_in": 201,
+   "tokens_out": 139,
+   "cache_read": 22400,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 74731,
+   "dur_ms": 192,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\napt-get update -qq 2>&1 | tail -3\napt-cache policy stockfish 2>&1 | head -10\napt-get download stockfish 2>&1 | tail -5\nls -l *.deb 2>/dev/null || true\nwhich dpkg-deb ar tar 2>/dev/null || true",
+   "timeout": 600000,
+   "sandbox": [
+    {
+     "at_ms": 74784,
+     "dur_ms": 106,
+     "exit": 0,
+     "cpu_ms": 97.3,
+     "phases_us": {
+      "acquire": 62,
+      "resume": 20281,
+      "mount": 17988,
+      "run": 55586,
+      "destroy": 30231
+     },
+     "cold": null,
+     "vm": "vm-305"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 74940,
+   "dur_ms": 1964,
+   "tokens_in": 70,
+   "tokens_out": 197,
+   "cache_read": 22976,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 76904,
+   "dur_ms": 10266,
+   "tool": "bash",
+   "is_error": false,
+   "command": "set -e\nmkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial /var/lib/dpkg\ntouch /var/lib/dpkg/status\ncd /workspace\napt-get update 2>&1 | tail -5\napt-cache policy stockfish 2>&1 | head -10\napt-get download stockfish 2>&1 | tail -5\nls -l *.deb\nfor d in *.deb; do dpkg-deb -x \"$d\" /workspace/sf; done\nfind /workspace/sf -type f | head -20",
+   "timeout": 600000,
+   "sandbox": [
+    {
+     "at_ms": 76956,
+     "dur_ms": 10202,
+     "exit": 0,
+     "cpu_ms": 6773.7,
+     "phases_us": {
+      "acquire": 57,
+      "resume": 20812,
+      "mount": 18481,
+      "run": 10141810,
+      "destroy": 39372
+     },
+     "cold": null,
+     "vm": "vm-307"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 87188,
+   "dur_ms": 8673,
+   "tokens_in": 488,
+   "tokens_out": 280,
+   "cache_read": 23296,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 95861,
+   "dur_ms": 120122,
+   "tool": "bash",
+   "is_error": false,
+   "command": "chmod +x /workspace/sf/usr/games/stockfish\nPYTHONPATH=/workspace/pylibs python3 - <<'PY'\nimport chess, chess.engine\nfen='r1bq1r2/1p3ppp/p1n1p3/3nPkbP/8/P1N5/1P2QPP1/R1B1K2R w - - 0 1'\nb=chess.Board(fen)\nprint(b)\neng=chess.engine.SimpleEngine.popen_uci('/workspace/sf/usr/games/stockfish')\neng.configure({'Threads':4,'Hash':256})\ninfo=eng.analyse(b, chess.engine.Limit(time=10.0), multipv=15)\nfor i,pv in enumerate(info,1):\n    print(i, pv['score'], pv.get('depth'), ' '.join(b.san(m) for m in pv['pv'][:8]))\neng.quit()\nPY",
+   "timeout": 120000,
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 216005,
+   "dur_ms": 1474,
+   "tokens_in": 76,
+   "tokens_out": 110,
+   "cache_read": 24896,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 217479,
+   "dur_ms": 688,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -l /workspace/sf/usr/games/stockfish\ntimeout 5 /workspace/sf/usr/games/stockfish bench 2>&1 | head -20; echo EXIT:$?",
+   "timeout": 30000,
+   "sandbox": [
+    {
+     "at_ms": 217532,
+     "dur_ms": 588,
+     "exit": 0,
+     "cpu_ms": 572.8,
+     "phases_us": {
+      "acquire": 24118,
+      "resume": 19849,
+      "mount": 18175,
+      "run": 503502,
+      "destroy": 40448
+     },
+     "cold": "parked",
+     "vm": "vm-346"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 218183,
+   "dur_ms": 2672,
+   "tokens_in": 1081,
+   "tokens_out": 285,
+   "cache_read": 25152,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 220855,
+   "dur_ms": 60173,
+   "tool": "bash",
+   "is_error": false,
+   "command": "PYTHONPATH=/workspace/pylibs timeout 60 python3 - <<'PY'\nimport chess, chess.engine\nfen='r1bq1r2/1p3ppp/p1n1p3/3nPkbP/8/P1N5/1P2QPP1/R1B1K2R w - - 0 1'\nb=chess.Board(fen)\nprint(b, flush=True)\neng=chess.engine.SimpleEngine.popen_uci('/workspace/sf/usr/games/stockfish')\nprint('engine up', flush=True)\neng.configure({'Threads':1,'Hash':64})\ninfo=eng.analyse(b, chess.engine.Limit(time=3.0), multipv=8)\nfor i,pv in enumerate(info,1):\n    print(i, pv['score'], pv.get('depth'), ' '.join(b.san(m) for m in pv['pv'][:10]), flush=True)\neng.quit()\nPY\necho EXIT:$?",
+   "timeout": 90000,
+   "sandbox": [
+    {
+     "at_ms": 220907,
+     "dur_ms": 60073,
+     "exit": 0,
+     "cpu_ms": 3682.7,
+     "phases_us": {
+      "acquire": 83,
+      "resume": 20380,
+      "mount": 18074,
+      "run": 60006615,
+      "destroy": 46110
+     },
+     "cold": null,
+     "vm": "vm-348"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 281048,
+   "dur_ms": 10442,
+   "tokens_in": 466,
+   "tokens_out": 229,
+   "cache_read": 26624,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 291490,
+   "dur_ms": 224,
+   "tool": "bash",
+   "is_error": false,
+   "command": "PYTHONPATH=/workspace/pylibs python3 - <<'PY'\nimport chess\nfen='r1bq1r2/1p3ppp/p1n1p3/3nPkbP/8/P1N5/1P2QPP1/R1B1K2R w - - 0 1'\nb=chess.Board(fen)\nmates=[]\nchecks=[]\nfor m in b.legal_moves:\n    san=b.san(m)\n    b.push(m)\n    if b.is_checkmate(): mates.append((san,m.uci()))\n    if b.is_check(): checks.append(san)\n    b.pop()\nprint('checkmates in 1:',mates)\nprint('all checks:',checks)\n# verify mate lines in 2 maybe\nPY",
+   "timeout": 30000,
+   "sandbox": [
+    {
+     "at_ms": 291543,
+     "dur_ms": 154,
+     "exit": 0,
+     "cpu_ms": 149.4,
+     "phases_us": {
+      "acquire": 83,
+      "resume": 21479,
+      "mount": 18727,
+      "run": 108308,
+      "destroy": 24143
+     },
+     "cold": null,
+     "vm": "vm-357"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 291733,
+   "dur_ms": 1954,
+   "tokens_in": 80,
+   "tokens_out": 84,
+   "cache_read": 29056,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 293687,
+   "dur_ms": 224,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put move.txt <<'EOF'\ne2e4\ng2g4\nEOF\nsbx run <<'EOF'\ncat /workspace/move.txt; ls -l /workspace/move.txt\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 293740,
+     "dur_ms": 50,
+     "exit": 0,
+     "cpu_ms": 42.1,
+     "phases_us": {
+      "acquire": 90,
+      "resume": 20499,
+      "mount": 18300,
+      "run": 7907,
+      "destroy": 21510
+     },
+     "cold": null,
+     "vm": "vm-366"
+    },
+    {
+     "at_ms": 293837,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 37.9,
+     "phases_us": {
+      "acquire": 16,
+      "resume": 20539,
+      "mount": 17255,
+      "run": 5298,
+      "destroy": 30545
+     },
+     "cold": null,
+     "vm": "vm-347"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 293928,
+   "dur_ms": 571,
+   "tokens_in": 100,
+   "tokens_out": 29,
+   "cache_read": 29376,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.703,
+ "calls": 18,
+ "cell": "TB1d",
+ "removed": []
+}

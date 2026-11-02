@@ -1,0 +1,2747 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-f",
+ "instance_id": "largest-eigenval",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 743982,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 2251,
+  "output": 100234,
+  "cacheRead": 4251520,
+  "cacheWrite": 34176,
+  "total": 4388181
+ },
+ "totals": {
+  "model_calls": 76,
+  "tool_calls": 63,
+  "model_ms": 573722,
+  "tool_ms": 146835,
+  "sandbox_ms": 141776
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1166,
+   "dur_ms": 706,
+   "tokens_in": 37,
+   "tokens_out": 90,
+   "cache_read": 1216,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1876,
+   "dur_ms": 119,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace && ls -la && echo \"=== eigen.py ===\" && cat eigen.py && echo \"=== eval.py ===\" && cat eval.py",
+   "sandbox": [
+    {
+     "at_ms": 1925,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 39.7,
+     "phases_us": {
+      "acquire": 73,
+      "resume": 20412,
+      "mount": 18310,
+      "run": 6616,
+      "destroy": 28213
+     },
+     "cold": null,
+     "vm": "vm-267"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1998,
+   "dur_ms": 12645,
+   "tokens_in": 5,
+   "tokens_out": 1726,
+   "cache_read": 1280,
+   "cache_write": 960,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 14644,
+   "dur_ms": 305,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace && python3 -c \"import numpy, sys; print(sys.version); print(numpy.__version__); numpy.show_config()\" | head -60\npython3 -c \"import scipy; print('scipy', scipy.__version__)\" 2>&1 | tail -1\nnproc",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 14694,
+     "dur_ms": 239,
+     "exit": 0,
+     "cpu_ms": 328.7,
+     "phases_us": {
+      "acquire": 84,
+      "resume": 20483,
+      "mount": 17560,
+      "run": 188674,
+      "destroy": 29698
+     },
+     "cold": null,
+     "vm": "vm-269"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 14949,
+   "dur_ms": 4455,
+   "tokens_in": 4,
+   "tokens_out": 594,
+   "cache_read": 3968,
+   "cache_write": 704,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 19404,
+   "dur_ms": 413,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace && python3 eval.py",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 19453,
+     "dur_ms": 335,
+     "exit": 0,
+     "cpu_ms": 428.4,
+     "phases_us": {
+      "acquire": 61,
+      "resume": 20406,
+      "mount": 18174,
+      "run": 283315,
+      "destroy": 30600
+     },
+     "cold": null,
+     "vm": "vm-275"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 19820,
+   "dur_ms": 17281,
+   "tokens_in": 1,
+   "tokens_out": 2603,
+   "cache_read": 5248,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 37102,
+   "dur_ms": 39982,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put bench.py <<'EOF'\nimport numpy as np, time\n\ndef ref(A):\n    w,v=np.linalg.eig(A); i=np.argmax(np.abs(w)); return w[i], v[:,i]\n\ndef power_complex(A, maxit=60, tol=1e-11):\n    n=A.shape[0]\n    x=np.empty(n,dtype=np.complex128)\n    x.real=np.arange(1,n+1)*0.6180339887498949+0.3\n    x.imag=np.arange(1,n+1)*0.4142135623730950+0.7\n    x/=np.linalg.norm(x)\n    anorm=np.linalg.norm(A,1)\n    for it in range(maxit):\n        y=A@x\n        lam=x.conj()@y\n        r=y-lam*x\n        if np.linalg.norm(r) <= tol*max(1.0,abs(lam)):\n            return lam, x\n        nx=np.linalg.norm(y)\n        x=y/nx\n    return lam, x\n\ndef power_real(A, maxit=60, tol=1e-11):\n    n=A.shape[0]\n    x=np.arange(1,n+1,dtype=float)*0.6180339887498949+0.3\n    x/=np.linalg.norm(x)\n    for it in range(maxit):\n        y=A@x\n        lam=x@y\n        r=y-lam*x\n        if np.linalg.norm(r)<=tol*max(1.0,abs(lam)):\n            return lam,x\n        nx=np.linalg.norm(y)\n        x=y/nx\n    return lam,x\n\ndef block2(A, maxit=30, tol=1e-12):\n    n=A.shape[0]\n    Q=np.empty((n,2))\n    Q[:,0]=np.arange(1,n+1)*0.6180339887498949+0.3\n    Q[:,1]=np.arange(1,n+1)*0.4142135623730950+0.7\n    Q,_=np.linalg.qr(Q)\n    for it in range(maxit):\n        Z=A@Q\n        Q,R=np.linalg.qr(Z)\n        # ritz\n        B=Q.T@(A@Q)\n        w,V=np.linalg.eig(B)\n        i=np.argmax(np.abs(w))\n        lam=w[i]; v=Q@V[:,i]\n        r=A@v-lam*v\n        if np.linalg.norm(r)<=tol*max(1.0,abs(lam)):\n            return lam,v\n    return lam,v\n\ndef arnoldi(A, k=6, tol=1e-11):\n    n=A.shape[0]\n    k=min(k,n)\n    Q=np.empty((n,k+1))\n    q=np.arange(1,n+1,dtype=float)*0.6180339887498949+0.3\n    q/=np.linalg.norm(q)\n    Q[:,0]=q\n    H=np.zeros((k+1,k))\n    for j in range(k):\n        z=A@Q[:,j]\n        for i in range(j+1):\n            H[i,j]=Q[:,i]@z\n            z-=H[i,j]*Q[:,i]\n        # reorth\n        for i in range(j+1):\n            c=Q[:,i]@z\n            H[i,j]+=c\n            z-=c*Q[:,i]\n        H[j+1,j]=np.linalg.norm(z)\n        if H[j+1,j] < 1e-14:\n            k=j+1\n            break\n        Q[:,j+1]=z/H[j+1,j]\n    w,V=np.linalg.eig(H[:k,:k])\n    i=np.argmax(np.abs(w))\n    lam=w[i]\n    v=Q[:,:k]@V[:,i]\n    v/=np.linalg.norm(v)\n    r=A@v-lam*v\n    if np.linalg.norm(r)<=tol*max(1.0,abs(lam)):\n        return lam,v\n    return None\n\ndef arnoldi_iter(A, k0=4, kmax=None, tol=1e-11):\n    n=A.shape[0]\n    if kmax is None: kmax=n\n    # incremental? just call increasing\n    out=None\n    for k in range(min(k0,n), kmax+1):\n        out=arnoldi(A,k,tol)\n        if out is not None: return out\n    return power_complex(A)\n\ndef bench(fn, sizes=range(2,11,2), N=2000):\n    for size in sizes:\n        dts=[]; errs=[]\n        for i in range(N):\n            A=np.random.normal(size=(size,size))\n            t0=time.perf_counter(); w,v=fn(A); t1=time.perf_counter()\n            dts.append(t1-t0)\n            if i<200:\n                errs.append(np.linalg.norm(A@v-w*v)/max(1,np.linalg.norm(v)))\n        print(fn.__name__, size, f\"{np.median(dts)*1e6:.2f}us\", \"err\", max(errs))\n    print()\n\nif __name__=='__main__':\n    import sys\n    names=sys.argv[1:] or ['ref','power_complex','power_real','block2','arnoldi_iter']\n    funcs={'ref':ref,'power_complex':power_complex,'power_real':power_real,'block2':block2,'arnoldi_iter':arnoldi_iter}\n    for nm in names: bench(funcs[nm])\nEOF\nsbx run <<'EOF'\ncd /workspace && python3 bench.py ref power_complex power_real block2 arnoldi_iter\nEOF",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 37150,
+     "dur_ms": 43,
+     "exit": 0,
+     "cpu_ms": 40.5,
+     "phases_us": {
+      "acquire": 58,
+      "resume": 20966,
+      "mount": 17805,
+      "run": 7158,
+      "destroy": 15107
+     },
+     "cold": null,
+     "vm": "vm-277"
+    },
+    {
+     "at_ms": 37239,
+     "dur_ms": 39819,
+     "exit": 0,
+     "cpu_ms": 39946.6,
+     "phases_us": {
+      "acquire": 5,
+      "resume": 20814,
+      "mount": 17599,
+      "run": 39766260,
+      "destroy": 32052
+     },
+     "cold": null,
+     "vm": "vm-264"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 77087,
+   "dur_ms": 51361,
+   "tokens_in": 17,
+   "tokens_out": 8861,
+   "cache_read": 8000,
+   "cache_write": 576,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "model",
+   "at_ms": 128699,
+   "dur_ms": 1587,
+   "tokens_in": 20,
+   "tokens_out": 171,
+   "cache_read": 10304,
+   "cache_write": 7168,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 130286,
+   "dur_ms": 185,
+   "tool": "bash",
+   "is_error": false,
+   "command": "which cc clang gcc g++ tcc zig rustc cargo || true\ncat /etc/os-release | head\nls /usr/bin | grep -E 'gcc|clang|cc$' | head\npython3 -c \"import ctypes.util; print(ctypes.util.find_library('openblas'))\"",
+   "timeout": 60,
+   "sandbox": [
+    {
+     "at_ms": 130337,
+     "dur_ms": 115,
+     "exit": 0,
+     "cpu_ms": 122.6,
+     "phases_us": {
+      "acquire": 24,
+      "resume": 19772,
+      "mount": 17693,
+      "run": 77731,
+      "destroy": 17544
+     },
+     "cold": null,
+     "vm": "vm-310"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 130474,
+   "dur_ms": 5260,
+   "tokens_in": 35,
+   "tokens_out": 792,
+   "cache_read": 17600,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 135734,
+   "dur_ms": 135,
+   "tool": "bash",
+   "is_error": false,
+   "command": "apt-get update -qq && apt-get install -y -qq gcc >/tmp/apt.log 2>&1; tail -5 /tmp/apt.log; which gcc; gcc --version | head -1",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 135783,
+     "dur_ms": 72,
+     "exit": 0,
+     "cpu_ms": 69.0,
+     "phases_us": {
+      "acquire": 56,
+      "resume": 20004,
+      "mount": 17841,
+      "run": 27396,
+      "destroy": 24905
+     },
+     "cold": null,
+     "vm": "vm-311"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 135873,
+   "dur_ms": 992,
+   "tokens_in": 12,
+   "tokens_out": 129,
+   "cache_read": 18496,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 136866,
+   "dur_ms": 1794,
+   "tool": "bash",
+   "is_error": false,
+   "command": "mkdir -p /var/lib/apt/lists/partial\napt-get update -qq && apt-get install -y -qq gcc >/tmp/apt.log 2>&1; tail -20 /tmp/apt.log; which gcc; gcc --version | head -1",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 136915,
+     "dur_ms": 1733,
+     "exit": 0,
+     "cpu_ms": 1828.0,
+     "phases_us": {
+      "acquire": 71,
+      "resume": 20390,
+      "mount": 17955,
+      "run": 1680349,
+      "destroy": 32221
+     },
+     "cold": null,
+     "vm": "vm-315"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 138660,
+   "dur_ms": 2660,
+   "tokens_in": 37,
+   "tokens_out": 166,
+   "cache_read": 18752,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 141320,
+   "dur_ms": 162,
+   "tool": "bash",
+   "is_error": false,
+   "command": "id; whoami; ls -ld /var/lib/dpkg /usr/bin; sudo -n true && echo sudo_ok || echo no_sudo\nls -la /usr/lib/gcc /usr/bin/x86_64-linux-gnu-gcc* 2>/dev/null || true\nfind / -maxdepth 3 -name 'gcc*' -o -name 'clang*' 2>/dev/null | head",
+   "timeout": 60,
+   "sandbox": [
+    {
+     "at_ms": 141370,
+     "dur_ms": 85,
+     "exit": 0,
+     "cpu_ms": 77.4,
+     "phases_us": {
+      "acquire": 89,
+      "resume": 20702,
+      "mount": 18478,
+      "run": 38129,
+      "destroy": 26274
+     },
+     "cold": null,
+     "vm": "vm-316"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 141482,
+   "dur_ms": 1615,
+   "tokens_in": 49,
+   "tokens_out": 183,
+   "cache_read": 19008,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 143097,
+   "dur_ms": 273,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /etc/apt /etc/apt/sources.list.d 2>/dev/null; cat /etc/apt/sources.list 2>/dev/null; cat /etc/apt/sources.list.d/* 2>/dev/null\nls -la /usr/bin | head -40\nfind / -name 'libopenblas*' 2>/dev/null | head",
+   "timeout": 60,
+   "sandbox": [
+    {
+     "at_ms": 143148,
+     "dur_ms": 198,
+     "exit": 0,
+     "cpu_ms": 207.1,
+     "phases_us": {
+      "acquire": 75,
+      "resume": 20228,
+      "mount": 18137,
+      "run": 158577,
+      "destroy": 19010
+     },
+     "cold": null,
+     "vm": "vm-319"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 143373,
+   "dur_ms": 3567,
+   "tokens_in": 42,
+   "tokens_out": 510,
+   "cache_read": 19264,
+   "cache_write": 1280,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 146941,
+   "dur_ms": 390,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport numpy, os, glob\nprint(numpy.__file__)\nfor p in glob.glob(os.path.dirname(numpy.__file__)+'/../numpy.libs/*'):\n    print(p)\nfor p in glob.glob(os.path.dirname(numpy.__file__)+'/**/*.so', recursive=True)[:30]:\n    print(p)\nPY\npython3 -c \"import numba; print('numba',numba.__version__)\" 2>&1 | tail -1\npython3 -c \"import Cython; print('cython',Cython.__version__)\" 2>&1 | tail -1\npython3 -c \"import cffi; print('cffi',cffi.__version__)\" 2>&1 | tail -1",
+   "timeout": 60,
+   "sandbox": [
+    {
+     "at_ms": 146989,
+     "dur_ms": 307,
+     "exit": 0,
+     "cpu_ms": 400.9,
+     "phases_us": {
+      "acquire": 68,
+      "resume": 20229,
+      "mount": 18042,
+      "run": 257747,
+      "destroy": 29163
+     },
+     "cold": null,
+     "vm": "vm-320"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 147334,
+   "dur_ms": 1945,
+   "tokens_in": 52,
+   "tokens_out": 259,
+   "cache_read": 21056,
+   "cache_write": 832,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 149279,
+   "dur_ms": 342,
+   "tool": "bash",
+   "is_error": false,
+   "command": "which nm objdump readelf strings || true\nlib=$(python3 -c \"import glob,numpy,os;print(glob.glob(os.path.dirname(numpy.__file__)+'/../numpy.libs/libscipy_openblas*')[0])\")\necho $lib\nnm -D \"$lib\" 2>/dev/null | grep -i ' dgeev' | head -20 || strings \"$lib\" | grep -i '^dgeev' | head -20\npython3 - <<'PY'\nimport numpy.linalg.lapack_lite as l\nprint(dir(l))\nPY",
+   "timeout": 60,
+   "sandbox": [
+    {
+     "at_ms": 149328,
+     "dur_ms": 292,
+     "exit": 0,
+     "cpu_ms": 463.2,
+     "phases_us": {
+      "acquire": 80,
+      "resume": 20070,
+      "mount": 17813,
+      "run": 242091,
+      "destroy": 29105
+     },
+     "cold": null,
+     "vm": "vm-321"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 149624,
+   "dur_ms": 3334,
+   "tokens_in": 41,
+   "tokens_out": 481,
+   "cache_read": 22144,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 152959,
+   "dur_ms": 257,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport ctypes,glob,numpy,os\nlibs=glob.glob(os.path.dirname(numpy.__file__)+'/../numpy.libs/libscipy_openblas*')\nlib=ctypes.CDLL(libs[0])\nfor name in ['dgeev','dgeev_','dgeev_64_','dgeev_64','dgeev64_','DGEV','dgeevx_','dgeevx_64_','sgeev_64_','dgeev_64_']:\n    try:\n        f=getattr(lib,name); print('found',name,f)\n    except Exception as e: pass\nfor mod in ['numpy.linalg._umath_linalg','numpy.linalg.lapack_lite']:\n    m=__import__(mod,fromlist=['x'])\n    print(mod,[x for x in dir(m) if 'eig' in x.lower() or 'geev' in x.lower()])\nPY",
+   "timeout": 60,
+   "sandbox": [
+    {
+     "at_ms": 153008,
+     "dur_ms": 197,
+     "exit": 0,
+     "cpu_ms": 308.4,
+     "phases_us": {
+      "acquire": 59,
+      "resume": 20130,
+      "mount": 17935,
+      "run": 154543,
+      "destroy": 22374
+     },
+     "cold": null,
+     "vm": "vm-322"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 153220,
+   "dur_ms": 2563,
+   "tokens_in": 14,
+   "tokens_out": 334,
+   "cache_read": 22784,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 155783,
+   "dur_ms": 1655,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace && python3 -m pip install --target vendor pyelftools -q && PYTHONPATH=/workspace/vendor python3 - <<'PY'\nimport glob,numpy,os\nfrom elftools.elf.elffile import ELFFile\nlib=glob.glob(os.path.dirname(numpy.__file__)+'/../numpy.libs/libscipy_openblas*')[0]\nwith open(lib,'rb') as f:\n    e=ELFFile(f)\n    syms=[s.name for s in e.get_section_by_name('.dynsym').iter_symbols()]\nprint(len(syms))\nprint([s for s in syms if 'geev' in s.lower()][:50])\nPY",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 155832,
+     "dur_ms": 1586,
+     "exit": 0,
+     "cpu_ms": 1585.6,
+     "phases_us": {
+      "acquire": 90,
+      "resume": 22585,
+      "mount": 20300,
+      "run": 1526060,
+      "destroy": 37413
+     },
+     "cold": null,
+     "vm": "vm-325"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 157438,
+   "dur_ms": 14417,
+   "tokens_in": 24,
+   "tokens_out": 2377,
+   "cache_read": 23168,
+   "cache_write": 448,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 171856,
+   "dur_ms": 2208,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put bench_lapack.py <<'EOF'\nimport ctypes, glob, os, numpy as np, time\n\ndef load():\n    base=os.path.dirname(np.__file__)\n    cands=glob.glob(os.path.join(base,'..','numpy.libs','libscipy_openblas*'))\n    for p in cands:\n        lib=ctypes.CDLL(p)\n        for nm in ['scipy_dgeev_64_','dgeev_64_','dgeev_']:\n            try:\n                f=getattr(lib,nm); return lib,f,nm\n            except AttributeError: pass\n    return None,None,None\n\nlib,dgeev,nm=load(); print('loaded',nm)\n\nI=ctypes.c_int64\nD=ctypes.c_double\nP_D=ctypes.POINTER(D)\nP_I=ctypes.POINTER(I)\ndgeev.argtypes=[ctypes.c_char_p,ctypes.c_char_p,P_I,P_D,P_I,P_D,P_D,P_D,P_I,P_D,P_I,P_D,P_I,P_I]\ndgeev.restype=None\njobvl=ctypes.c_char_p(b'N'); jobvr=ctypes.c_char_p(b'V')\nNMAX=16\na=np.empty((NMAX,NMAX),dtype=np.float64,order='F')\nwr=np.empty(NMAX); wi=np.empty(NMAX)\nvl=np.empty((NMAX,NMAX),dtype=np.float64,order='F')\nvr=np.empty((NMAX,NMAX),dtype=np.float64,order='F')\nwork=np.empty(2048)\nni=I(0); lda=I(NMAX); ldvl=I(NMAX); ldvr=I(NMAX); lwork=I(2048); info=I(0)\n\ndef fast(A, reuse=False):\n    n=A.shape[0]\n    a[:n,:n]=A\n    ni.value=n; info.value=0\n    dgeev(jobvl,jobvr,ctypes.byref(ni),a.ctypes.data_as(P_D),ctypes.byref(lda),\n          wr.ctypes.data_as(P_D),wi.ctypes.data_as(P_D),vl.ctypes.data_as(P_D),ctypes.byref(ldvl),\n          vr.ctypes.data_as(P_D),ctypes.byref(ldvr),work.ctypes.data_as(P_D),ctypes.byref(lwork),ctypes.byref(info))\n    if info.value!=0:\n        raise RuntimeError(info.value)\n    mag=wr[:n]*wr[:n]+wi[:n]*wi[:n]\n    idx=int(np.argmax(mag))\n    if wi[idx]==0.0:\n        return complex(wr[idx],0.0), vr[:n,idx].copy()\n    if wi[idx]>0:\n        base=idx; s=1.0\n    else:\n        base=idx-1; s=-1.0\n    v=vr[:n,base]+s*1j*vr[:n,base+1]\n    return complex(wr[idx],wi[idx]),v\n\ndef ref(A):\n    w,v=np.linalg.eig(A); i=np.argmax(np.abs(w)); return w[i],v[:,i]\n\nfor size in range(2,11,2):\n    dts=[]; errs=[]; refd=[]\n    for i in range(5000):\n        A=np.random.normal(size=(size,size)).astype(np.float64)\n        t0=time.perf_counter(); w,v=fast(A); t1=time.perf_counter()\n        dts.append(t1-t0)\n        if i<1000:\n            e=np.linalg.norm(A@v-w*v)/max(1,np.linalg.norm(v)); errs.append(e)\n        if i<1000:\n            t0=time.perf_counter(); w2,v2=ref(A); t1=time.perf_counter(); refd.append(t1-t0)\n    print(size, f\"fast {np.median(dts)*1e6:.2f}us ref {np.median(refd)*1e6:.2f}us\", \"err\", max(errs), \"p99\", np.percentile(dts,99)*1e6)\nEOF\nsbx run <<'EOF'\ncd /workspace && python3 bench_lapack.py\nEOF",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 171905,
+     "dur_ms": 55,
+     "exit": 0,
+     "cpu_ms": 42.7,
+     "phases_us": {
+      "acquire": 63,
+      "resume": 22428,
+      "mount": 19149,
+      "run": 7205,
+      "destroy": 25259
+     },
+     "cold": null,
+     "vm": "vm-327"
+    },
+    {
+     "at_ms": 172006,
+     "dur_ms": 2017,
+     "exit": 0,
+     "cpu_ms": 2145.7,
+     "phases_us": {
+      "acquire": 15,
+      "resume": 20361,
+      "mount": 17261,
+      "run": 1973398,
+      "destroy": 23375
+     },
+     "cold": null,
+     "vm": "vm-309"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 174068,
+   "dur_ms": 3874,
+   "tokens_in": 44,
+   "tokens_out": 591,
+   "cache_read": 25984,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 177943,
+   "dur_ms": 2676,
+   "tool": "bash",
+   "is_error": false,
+   "command": "which dpkg dpkg-deb ar tar curl wget python3\nls -l /var/lib | head\nmkdir -p /var/lib/dpkg/{info,updates,triggers,alternatives} /var/lib/apt/lists/partial\ntouch /var/lib/dpkg/status /var/lib/dpkg/available /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend\napt-get update -qq 2>&1 | tail -5\napt-cache policy gcc 2>&1 | head -10\napt-get download gcc 2>&1 | tail -10\nls -la *.deb 2>/dev/null | head",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 177995,
+     "dur_ms": 2619,
+     "exit": 0,
+     "cpu_ms": 2728.3,
+     "phases_us": {
+      "acquire": 75,
+      "resume": 23944,
+      "mount": 21114,
+      "run": 2557084,
+      "destroy": 37883
+     },
+     "cold": null,
+     "vm": "vm-329"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 180619,
+   "dur_ms": 3466,
+   "tokens_in": 1,
+   "tokens_out": 521,
+   "cache_read": 26752,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 184085,
+   "dur_ms": 2414,
+   "tool": "bash",
+   "is_error": false,
+   "command": "set -x\nmkdir -p /var/lib/dpkg/info /var/lib/dpkg/updates /var/lib/dpkg/triggers /var/lib/dpkg/alternatives /var/lib/apt/lists/partial\ntouch /var/lib/dpkg/status /var/lib/dpkg/available /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend\napt-get update -qq\napt-get install -y -qq gcc >/tmp/apt.log 2>&1 || true\ntail -20 /tmp/apt.log\nwhich gcc\ngcc --version 2>&1 | head -1",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 184138,
+     "dur_ms": 2352,
+     "exit": 0,
+     "cpu_ms": 2473.7,
+     "phases_us": {
+      "acquire": 116,
+      "resume": 23779,
+      "mount": 21052,
+      "run": 2295694,
+      "destroy": 32319
+     },
+     "cold": null,
+     "vm": "vm-331"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 186500,
+   "dur_ms": 1600,
+   "tokens_in": 17,
+   "tokens_out": 245,
+   "cache_read": 27584,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 188100,
+   "dur_ms": 4104,
+   "tool": "bash",
+   "is_error": false,
+   "command": "mkdir -p /var/lib/dpkg/info /var/lib/dpkg/updates /var/lib/dpkg/triggers /var/lib/dpkg/alternatives /var/lib/apt/lists/partial /var/cache/apt/archives/partial\ntouch /var/lib/dpkg/status /var/lib/dpkg/available /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend\napt-get update -qq\nDEBIAN_FRONTEND=noninteractive apt-get install -y -qq gcc >/tmp/apt.log 2>&1 || true\ntail -30 /tmp/apt.log\nwhich gcc\ngcc --version 2>&1 | head -1",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 188148,
+     "dur_ms": 4026,
+     "exit": 0,
+     "cpu_ms": 4256.1,
+     "phases_us": {
+      "acquire": 71,
+      "resume": 20369,
+      "mount": 17796,
+      "run": 3953574,
+      "destroy": 51261
+     },
+     "cold": null,
+     "vm": "vm-332"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 192207,
+   "dur_ms": 4204,
+   "tokens_in": 44,
+   "tokens_out": 540,
+   "cache_read": 28032,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 196411,
+   "dur_ms": 143,
+   "tool": "bash",
+   "is_error": false,
+   "command": "mkdir -p /workspace/tc /workspace/debs\ncd /workspace/debs\napt-get download tcc libtcc-dev libtcc1 2>&1 | tail -10\nls -la\nfor d in *.deb; do dpkg-deb -x \"$d\" /workspace/tc; done\nfind /workspace/tc -maxdepth 4 -type f | head -50",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 196461,
+     "dur_ms": 71,
+     "exit": 0,
+     "cpu_ms": 88.0,
+     "phases_us": {
+      "acquire": 62,
+      "resume": 20411,
+      "mount": 18138,
+      "run": 31926,
+      "destroy": 18806
+     },
+     "cold": null,
+     "vm": "vm-334"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 196554,
+   "dur_ms": 3368,
+   "tokens_in": 53,
+   "tokens_out": 387,
+   "cache_read": 28928,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 199922,
+   "dur_ms": 3003,
+   "tool": "bash",
+   "is_error": false,
+   "command": "mkdir -p /var/lib/dpkg/info /var/lib/dpkg/updates /var/lib/dpkg/triggers /var/lib/dpkg/alternatives /var/lib/apt/lists/partial /var/cache/apt/archives/partial /var/log/apt\ntouch /var/lib/dpkg/status /var/lib/dpkg/available /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend\napt-get update -qq\napt-cache search '^tcc$|tiny c|^clang-[0-9]+$|^gcc-[0-9]+$|^musl-tools$|^zig$' | head -30\napt-cache policy tcc gcc-12 gcc-11 clang-14 musl-tools 2>&1 | head -60",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 199971,
+     "dur_ms": 2946,
+     "exit": 0,
+     "cpu_ms": 3070.8,
+     "phases_us": {
+      "acquire": 83,
+      "resume": 20800,
+      "mount": 18326,
+      "run": 2890424,
+      "destroy": 34951
+     },
+     "cold": null,
+     "vm": "vm-335"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 202928,
+   "dur_ms": 2196,
+   "tokens_in": 45,
+   "tokens_out": 325,
+   "cache_read": 29376,
+   "cache_write": 640,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 205125,
+   "dur_ms": 2346,
+   "tool": "bash",
+   "is_error": false,
+   "command": "mkdir -p /var/lib/dpkg/info /var/lib/dpkg/updates /var/lib/dpkg/triggers /var/lib/dpkg/alternatives /var/lib/apt/lists/partial /var/cache/apt/archives/partial /var/log/apt\ntouch /var/lib/dpkg/status /var/lib/dpkg/available /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend\napt-get update -qq\ncd /workspace && rm -rf tc debs && mkdir -p tc debs && cd debs\napt-get download tcc 2>&1 | tail -5\nls -la\nfor d in *.deb; do dpkg-deb -I \"$d\" | grep -E 'Package|Depends|Version'; dpkg-deb -x \"$d\" /workspace/tc; done\nfind /workspace/tc -type f -o -type l | head -30",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 205175,
+     "dur_ms": 2275,
+     "exit": 0,
+     "cpu_ms": 2389.5,
+     "phases_us": {
+      "acquire": 98,
+      "resume": 20459,
+      "mount": 18168,
+      "run": 2222256,
+      "destroy": 31879
+     },
+     "cold": null,
+     "vm": "vm-336"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 207475,
+   "dur_ms": 2116,
+   "tokens_in": 9,
+   "tokens_out": 296,
+   "cache_read": 30336,
+   "cache_write": 896,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "model",
+   "at_ms": 209717,
+   "dur_ms": 2339,
+   "tokens_in": 4,
+   "tokens_out": 362,
+   "cache_read": 31488,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 212056,
+   "dur_ms": 2555,
+   "tool": "bash",
+   "is_error": false,
+   "command": "mkdir -p /var/lib/dpkg/info /var/lib/dpkg/updates /var/lib/dpkg/triggers /var/lib/dpkg/alternatives /var/lib/apt/lists/partial /var/cache/apt/archives/partial /var/log/apt\ntouch /var/lib/dpkg/status /var/lib/dpkg/available /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend\napt-get update -qq\ncd /workspace/debs\napt-get download libc6-dev linux-libc-dev 2>&1 | tail -5\nls -la\nmkdir -p /workspace/sysroot\nfor d in libc6-dev*.deb linux-libc-dev*.deb; do dpkg-deb -x \"$d\" /workspace/sysroot; done\nfind /workspace/sysroot -name 'crti.o' -o -name 'math.h' -o -name 'stdio.h' | head",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 212105,
+     "dur_ms": 2491,
+     "exit": 0,
+     "cpu_ms": 2745.7,
+     "phases_us": {
+      "acquire": 72,
+      "resume": 20531,
+      "mount": 18253,
+      "run": 2441261,
+      "destroy": 29200
+     },
+     "cold": null,
+     "vm": "vm-338"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 214615,
+   "dur_ms": 2866,
+   "tokens_in": 13,
+   "tokens_out": 554,
+   "cache_read": 31936,
+   "cache_write": 448,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "model",
+   "at_ms": 217775,
+   "dur_ms": 4282,
+   "tokens_in": 0,
+   "tokens_out": 791,
+   "cache_read": 32896,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "model",
+   "at_ms": 222336,
+   "dur_ms": 1939,
+   "tokens_in": 14,
+   "tokens_out": 259,
+   "cache_read": 33856,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 224275,
+   "dur_ms": 118,
+   "tool": "bash",
+   "is_error": false,
+   "command": "/workspace/tc/usr/bin/tcc -print-search-dirs 2>&1 | head -20\n/workspace/tc/usr/bin/tcc --help 2>&1 | grep -A2 -E '\\-B|\\-L|\\-I' | head -40\nstrace -e openat /workspace/tc/usr/bin/tcc -B/workspace/sysroot/usr/lib/x86_64-linux-gnu -shared -fPIC -o /workspace/test.so /workspace/eiglib.c 2>&1 | grep -E 'crti|libm|error' | head -20 || true",
+   "timeout": 60,
+   "sandbox": [
+    {
+     "at_ms": 224324,
+     "dur_ms": 59,
+     "exit": 0,
+     "cpu_ms": 46.7,
+     "phases_us": {
+      "acquire": 58,
+      "resume": 20842,
+      "mount": 18351,
+      "run": 9084,
+      "destroy": 29297
+     },
+     "cold": null,
+     "vm": "vm-343"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 224396,
+   "dur_ms": 2237,
+   "tokens_in": 11,
+   "tokens_out": 315,
+   "cache_read": 34304,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "model",
+   "at_ms": 226751,
+   "dur_ms": 3791,
+   "tokens_in": 47,
+   "tokens_out": 646,
+   "cache_read": 34944,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 230542,
+   "dur_ms": 325,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\nTCC=/workspace/tc/usr/bin/tcc\nINC=\"-I/workspace/tc/usr/lib/x86_64-linux-gnu/tcc/include -I/workspace/sysroot/usr/include -I/workspace/sysroot/usr/include/x86_64-linux-gnu\"\n$TCC $INC -shared -nostdlib -fPIC -o /workspace/test.so eiglib.c /workspace/sysroot/usr/lib/x86_64-linux-gnu/libm.so 2>&1 | head -30\nls -l /workspace/test.so 2>/dev/null\npython3 - <<'PY'\nimport ctypes, numpy as np\nlib=ctypes.CDLL('/workspace/test.so')\nlib.dominant_eig.argtypes=[ctypes.POINTER(ctypes.c_double),ctypes.c_int]+[ctypes.POINTER(ctypes.c_double)]*4\nlib.dominant_eig.restype=ctypes.c_int\nA=np.random.normal(size=(5,5)); n=5\nA=np.ascontiguousarray(A)\nlr=ctypes.c_double();li=ctypes.c_double();vr=np.empty(n);vi=np.empty(n)\nP=ctypes.POINTER(ctypes.c_double)\nrc=lib.dominant_eig(A.ctypes.data_as(P),n,ctypes.byref(lr),ctypes.byref(li),vr.ctypes.data_as(P),vi.ctypes.data_as(P))\nprint('rc',rc,complex(lr.value,li.value)); v=vr+1j*vi\nprint('err',np.linalg.norm(A@v-complex(lr.value,li.value)*v))\nPY",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 230591,
+     "dur_ms": 234,
+     "exit": 0,
+     "cpu_ms": 361.4,
+     "phases_us": {
+      "acquire": 3,
+      "resume": 19754,
+      "mount": 17646,
+      "run": 187861,
+      "destroy": 26545
+     },
+     "cold": null,
+     "vm": "vm-345"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 230870,
+   "dur_ms": 3920,
+   "tokens_in": 61,
+   "tokens_out": 692,
+   "cache_read": 35648,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 234791,
+   "dur_ms": 6190,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\ncp -f test.so libeig.so\npython3 - <<'PY'\nimport ctypes, numpy as np, time\nlib=ctypes.CDLL('/workspace/libeig.so')\nlib.dominant_eig.argtypes=[ctypes.POINTER(ctypes.c_double),ctypes.c_int]+[ctypes.POINTER(ctypes.c_double)]*4\nlib.dominant_eig.restype=ctypes.c_int\nP=ctypes.POINTER(ctypes.c_double)\nlr=ctypes.c_double();li=ctypes.c_double()\nvr=np.empty(16);vi=np.empty(16)\n\ndef f(A):\n    n=A.shape[0]\n    A=np.ascontiguousarray(A,dtype=np.float64)\n    lr.value=0;li.value=0\n    rc=lib.dominant_eig(A.ctypes.data_as(P),n,ctypes.byref(lr),ctypes.byref(li),vr.ctypes.data_as(P),vi.ctypes.data_as(P))\n    if rc:\n        w,v=np.linalg.eig(A); i=np.argmax(np.abs(w)); return w[i],v[:,i]\n    return complex(lr.value,li.value), vr[:n]+1j*vi[:n]\n\ndef ref(A):\n    w,v=np.linalg.eig(A); i=np.argmax(np.abs(w)); return w[i],v[:,i]\n\nfor size in range(2,11,2):\n    dts=[]; errs=[]; fails=0; refd=[]\n    for i in range(10000):\n        A=np.random.normal(size=(size,size)).astype(np.float64)\n        t0=time.perf_counter(); w,v=f(A); t1=time.perf_counter()\n        dts.append(t1-t0)\n        if i<1000:\n            e=np.linalg.norm(A@v-w*v)/max(1,np.linalg.norm(v)); errs.append(e)\n            # check np.allclose\n            if not np.allclose(A@v,w*v): fails+=1\n        if i<1000:\n            t0=time.perf_counter(); ref(A); t1=time.perf_counter(); refd.append(t1-t0)\n    print(size, f\"fast {np.median(dts)*1e6:.2f}us ref {np.median(refd)*1e6:.2f}us\", \"maxerr\", max(errs), \"allclose_fail\", fails, \"p99\", np.percentile(dts,99)*1e6)\nPY",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 234840,
+     "dur_ms": 6109,
+     "exit": 0,
+     "cpu_ms": 6206.9,
+     "phases_us": {
+      "acquire": 88,
+      "resume": 20819,
+      "mount": 18491,
+      "run": 6056375,
+      "destroy": 31721
+     },
+     "cold": null,
+     "vm": "vm-346"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 240985,
+   "dur_ms": 12487,
+   "tokens_in": 21,
+   "tokens_out": 1876,
+   "cache_read": 36416,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 253472,
+   "dur_ms": 2329,
+   "tool": "bash",
+   "is_error": false,
+   "command": "mkdir -p /var/lib/dpkg/info /var/lib/dpkg/updates /var/lib/dpkg/triggers /var/lib/dpkg/alternatives /var/lib/apt/lists/partial /var/cache/apt/archives/partial /var/log/apt\ntouch /var/lib/dpkg/status /var/lib/dpkg/available /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend\napt-get update -qq\napt-cache depends gcc-12 cpp-12 binutils libgcc-12-dev gcc-12-base libc6-dev libisl23 libmpc3 libmpfr6 libgmp10 zlib1g 2>/dev/null | grep -E '^[a-z]|Depends' | head -100",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 253520,
+     "dur_ms": 2277,
+     "exit": 0,
+     "cpu_ms": 2367.3,
+     "phases_us": {
+      "acquire": 65,
+      "resume": 20167,
+      "mount": 17634,
+      "run": 2218621,
+      "destroy": 37556
+     },
+     "cold": null,
+     "vm": "vm-348"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 255805,
+   "dur_ms": 2752,
+   "tokens_in": 47,
+   "tokens_out": 537,
+   "cache_read": 38528,
+   "cache_write": 512,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 258558,
+   "dur_ms": 5569,
+   "tool": "bash",
+   "is_error": false,
+   "command": "mkdir -p /var/lib/dpkg/info /var/lib/dpkg/updates /var/lib/dpkg/triggers /var/lib/dpkg/alternatives /var/lib/apt/lists/partial /var/cache/apt/archives/partial /var/log/apt\ntouch /var/lib/dpkg/status /var/lib/dpkg/available /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend\napt-get update -qq\ncd /workspace && rm -rf gccroot gccdebs && mkdir -p gccroot gccdebs && cd gccdebs\napt-get download gcc-12 cpp-12 gcc-12-base libcc1-0 binutils binutils-common libbinutils binutils-x86-64-linux-gnu libgcc-12-dev libgcc-s1 libgomp1 libitm1 libatomic1 libasan8 liblsan0 libtsan2 libubsan1 libquadmath0 libgmp10 libisl23 libmpc3 libmpfr6 libzstd1 zlib1g libc6-dev libc-dev-bin linux-libc-dev libcrypt-dev libnsl-dev rpcsvc-proto 2>&1 | tail -5\nls *.deb | wc -l\nfor d in *.deb; do dpkg-deb -x \"$d\" /workspace/gccroot; done\nfind /workspace/gccroot/usr/bin -maxdepth 1 -name '*gcc*' -o -name 'as' -o -name 'ld' | head",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 258606,
+     "dur_ms": 5518,
+     "exit": 0,
+     "cpu_ms": 7156.7,
+     "phases_us": {
+      "acquire": 93,
+      "resume": 20098,
+      "mount": 17993,
+      "run": 5448722,
+      "destroy": 49221
+     },
+     "cold": null,
+     "vm": "vm-350"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 264130,
+   "dur_ms": 2682,
+   "tokens_in": 12,
+   "tokens_out": 526,
+   "cache_read": 39616,
+   "cache_write": 384,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "model",
+   "at_ms": 267120,
+   "dur_ms": 2468,
+   "tokens_in": 16,
+   "tokens_out": 475,
+   "cache_read": 40512,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "model",
+   "at_ms": 270120,
+   "dur_ms": 2463,
+   "tokens_in": 55,
+   "tokens_out": 522,
+   "cache_read": 41152,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "model",
+   "at_ms": 273112,
+   "dur_ms": 1592,
+   "tokens_in": 35,
+   "tokens_out": 210,
+   "cache_read": 41856,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 274704,
+   "dur_ms": 132,
+   "tool": "bash",
+   "is_error": false,
+   "command": "export LD_LIBRARY_PATH=/workspace/gccroot/usr/lib/x86_64-linux-gnu:/workspace/gccroot/lib/x86_64-linux-gnu\nldd /workspace/gccroot/usr/bin/ld 2>&1 | grep 'not found' || true\nls /workspace/gccroot/usr/lib/x86_64-linux-gnu/ | grep -E 'libctf|libbfd|libsframe|libopcodes' || true",
+   "timeout": 60,
+   "sandbox": [
+    {
+     "at_ms": 274755,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 62.7,
+     "phases_us": {
+      "acquire": 117,
+      "resume": 24660,
+      "mount": 21669,
+      "run": 15396,
+      "destroy": 16055
+     },
+     "cold": null,
+     "vm": "vm-354"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 274841,
+   "dur_ms": 2938,
+   "tokens_in": 60,
+   "tokens_out": 671,
+   "cache_read": 42176,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "model",
+   "at_ms": 280427,
+   "dur_ms": 3219,
+   "tokens_in": 22,
+   "tokens_out": 755,
+   "cache_read": 42944,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "model",
+   "at_ms": 284209,
+   "dur_ms": 2515,
+   "tokens_in": 33,
+   "tokens_out": 526,
+   "cache_read": 44032,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 286725,
+   "dur_ms": 585,
+   "tool": "bash",
+   "is_error": false,
+   "command": "mkdir -p /workspace/gccroot/lib64\ncp -L /lib64/ld-linux-x86-64.so.2 /workspace/gccroot/lib64/\ncd /workspace\nexport LD_LIBRARY_PATH=/workspace/gccroot/usr/lib/x86_64-linux-gnu:/workspace/gccroot/lib/x86_64-linux-gnu\nGCC=/workspace/gccroot/usr/bin/gcc-12\n$GCC --sysroot=/workspace/gccroot -B/workspace/gccroot/usr/bin -B/workspace/gccroot/usr/lib/gcc/x86_64-linux-gnu/12 -O3 -march=x86-64 -shared -fPIC -o /workspace/libeig_gcc.so eiglib.c -lm 2>&1 | head -30\nls -l /workspace/libeig_gcc.so 2>/dev/null\npython3 - <<'PY'\nimport ctypes, numpy as np\nlib=ctypes.CDLL('/workspace/libeig_gcc.so')\nlib.dominant_eig.argtypes=[ctypes.POINTER(ctypes.c_double),ctypes.c_int]+[ctypes.POINTER(ctypes.c_double)]*4\nlib.dominant_eig.restype=ctypes.c_int\nA=np.random.normal(size=(5,5)); n=5\nA=np.ascontiguousarray(A)\nlr=ctypes.c_double();li=ctypes.c_double();vr=np.empty(n);vi=np.empty(n)\nP=ctypes.POINTER(ctypes.c_double)\nrc=lib.dominant_eig(A.ctypes.data_as(P),n,ctypes.byref(lr),ctypes.byref(li),vr.ctypes.data_as(P),vi.ctypes.data_as(P))\nprint('rc',rc,complex(lr.value,li.value)); v=vr+1j*vi\nprint('err',np.linalg.norm(A@v-complex(lr.value,li.value)*v))\nPY",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 286778,
+     "dur_ms": 499,
+     "exit": 0,
+     "cpu_ms": 673.2,
+     "phases_us": {
+      "acquire": 103,
+      "resume": 22707,
+      "mount": 20104,
+      "run": 439407,
+      "destroy": 36971
+     },
+     "cold": null,
+     "vm": "vm-357"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 287314,
+   "dur_ms": 5065,
+   "tokens_in": 53,
+   "tokens_out": 620,
+   "cache_read": 44736,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 292379,
+   "dur_ms": 3469,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\nimport ctypes, numpy as np, time\nlib=ctypes.CDLL('/workspace/libeig_gcc.so')\nlib.dominant_eig.argtypes=[ctypes.POINTER(ctypes.c_double),ctypes.c_int]+[ctypes.POINTER(ctypes.c_double)]*4\nlib.dominant_eig.restype=ctypes.c_int\nP=ctypes.POINTER(ctypes.c_double)\nlr=ctypes.c_double();li=ctypes.c_double()\nvr=np.empty(64);vi=np.empty(64)\n\ndef f(A):\n    n=A.shape[0]\n    A=np.ascontiguousarray(A,dtype=np.float64)\n    rc=lib.dominant_eig(A.ctypes.data_as(P),n,ctypes.byref(lr),ctypes.byref(li),vr.ctypes.data_as(P),vi.ctypes.data_as(P))\n    if rc:\n        w,v=np.linalg.eig(A); i=np.argmax(np.abs(w)); return w[i],v[:,i]\n    return complex(lr.value,li.value), vr[:n]+1j*vi[:n]\n\ndef ref(A):\n    w,v=np.linalg.eig(A); i=np.argmax(np.abs(w)); return w[i],v[:,i]\n\nfor size in range(2,11,2):\n    dts=[]; errs=[]; fails=0; refd=[]\n    for i in range(10000):\n        A=np.random.normal(size=(size,size)).astype(np.float64)\n        t0=time.perf_counter(); w,v=f(A); t1=time.perf_counter()\n        dts.append(t1-t0)\n        if i<1000:\n            e=np.linalg.norm(A@v-w*v)/max(1,np.linalg.norm(v)); errs.append(e)\n            if not np.allclose(A@v,w*v): fails+=1\n        if i<1000:\n            t0=time.perf_counter(); ref(A); t1=time.perf_counter(); refd.append(t1-t0)\n    print(size, f\"fast {np.median(dts)*1e6:.2f}us ref {np.median(refd)*1e6:.2f}us\", \"maxerr\", max(errs), \"allclose_fail\", fails, \"p99\", np.percentile(dts,99)*1e6)\nPY",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 292428,
+     "dur_ms": 3389,
+     "exit": 0,
+     "cpu_ms": 3484.4,
+     "phases_us": {
+      "acquire": 22,
+      "resume": 20278,
+      "mount": 17984,
+      "run": 3335672,
+      "destroy": 33193
+     },
+     "cold": null,
+     "vm": "vm-358"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 295852,
+   "dur_ms": 5725,
+   "tokens_in": 4,
+   "tokens_out": 1070,
+   "cache_read": 45440,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "model",
+   "at_ms": 302245,
+   "dur_ms": 2538,
+   "tokens_in": 10,
+   "tokens_out": 452,
+   "cache_read": 46720,
+   "cache_write": 384,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 304783,
+   "dur_ms": 1223,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\nimport ctypes, numpy as np\nlib=ctypes.CDLL('/workspace/libeig_dbg.so')\nlib.dominant_eig.argtypes=[ctypes.POINTER(ctypes.c_double),ctypes.c_int]+[ctypes.POINTER(ctypes.c_double)]*4\nlib.dominant_eig.restype=ctypes.c_int\nlib.last_iters=ctypes.c_int.in_dll(lib,'last_iters')\nlib.last_r=ctypes.c_double.in_dll(lib,'last_r')\nP=ctypes.POINTER(ctypes.c_double)\nlr=ctypes.c_double();li=ctypes.c_double(); vr=np.empty(64);vi=np.empty(64)\ndef f(A):\n    n=A.shape[0]; A=np.ascontiguousarray(A,dtype=np.float64)\n    rc=lib.dominant_eig(A.ctypes.data_as(P),n,ctypes.byref(lr),ctypes.byref(li),vr.ctypes.data_as(P),vi.ctypes.data_as(P))\n    return rc,lib.last_iters.value,lib.last_r.value\nfor size in range(2,11,2):\n    its=[]; rcs=[]; rs=[]\n    for i in range(5000):\n        A=np.random.normal(size=(size,size))\n        rc,it,r=f(A); its.append(it); rcs.append(rc); rs.append(r)\n    print(size,'iters median',np.median(its),'p90',np.percentile(its,90),'max',max(its),'rc1',sum(rcs),'rmed',np.median(rs))\nPY",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 304833,
+     "dur_ms": 1135,
+     "exit": 0,
+     "cpu_ms": 1241.0,
+     "phases_us": {
+      "acquire": 64,
+      "resume": 21612,
+      "mount": 19579,
+      "run": 1091176,
+      "destroy": 22073
+     },
+     "cold": null,
+     "vm": "vm-361"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 306010,
+   "dur_ms": 21336,
+   "tokens_in": 13,
+   "tokens_out": 3409,
+   "cache_read": 47552,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 327346,
+   "dur_ms": 8047,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put arnoldi_study.py <<'EOF'\nimport numpy as np\n\ndef arnoldi(A,k):\n    n=A.shape[0]; k=min(k,n)\n    Q=np.zeros((n,k+1)); H=np.zeros((k+1,k))\n    q=np.array([np.sin((i+1)*1.234+0.7) for i in range(n)]); q/=np.linalg.norm(q)\n    Q[:,0]=q\n    for j in range(k):\n        z=A@Q[:,j]\n        for i in range(j+1):\n            H[i,j]=Q[:,i]@z; z-=H[i,j]*Q[:,i]\n        for i in range(j+1):\n            c=Q[:,i]@z; H[i,j]+=c; z-=c*Q[:,i]\n        H[j+1,j]=np.linalg.norm(z)\n        if H[j+1,j]<1e-14: k=j+1; break\n        Q[:,j+1]=z/H[j+1,j]\n    Hk=H[:k,:k]\n    w,V=np.linalg.eig(Hk); i=np.argmax(np.abs(w)); lam=w[i]; v=Q[:,:k]@V[:,i]\n    v/=np.linalg.norm(v)\n    r=np.linalg.norm(A@v-lam*v)\n    return lam,v,r,k\n\nfor n in range(2,11,2):\n    counts=[]; errs=[]; fails=0; bad=[]\n    for trial in range(1000):\n        A=np.random.normal(size=(n,n)); an=np.linalg.norm(A)\n        found=None\n        for k in range(1,n+1):\n            lam,v,r,kk=arnoldi(A,k)\n            if r <= 1e-9*an:\n                found=k; break\n        if found is None:\n            found=n; fails+=1\n        counts.append(found)\n        lam,v,r,kk=arnoldi(A,found)\n        if not np.allclose(A@v,lam*v): bad.append((r,r/an,found))\n    print(n,'k median',np.median(counts),'p90',np.percentile(counts,90),'max',max(counts),'fail',fails,'bad',len(bad), bad[:2])\nEOF\nsbx run <<'EOF'\ncd /workspace && python3 arnoldi_study.py\nEOF",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 327395,
+     "dur_ms": 55,
+     "exit": 0,
+     "cpu_ms": 41.1,
+     "phases_us": {
+      "acquire": 73,
+      "resume": 20421,
+      "mount": 17422,
+      "run": 7280,
+      "destroy": 26709
+     },
+     "cold": null,
+     "vm": "vm-362"
+    },
+    {
+     "at_ms": 327495,
+     "dur_ms": 7861,
+     "exit": 0,
+     "cpu_ms": 7993.7,
+     "phases_us": {
+      "acquire": 15,
+      "resume": 21413,
+      "mount": 17495,
+      "run": 7816959,
+      "destroy": 22651
+     },
+     "cold": null,
+     "vm": "vm-328"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 335397,
+   "dur_ms": 6486,
+   "tokens_in": 28,
+   "tokens_out": 1229,
+   "cache_read": 51136,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 341884,
+   "dur_ms": 3732,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put rqi_study.py <<'EOF'\nimport numpy as np\n\ndef rqi(A, v, lam, maxit=20, tol=1e-10):\n    n=A.shape[0]; an=np.linalg.norm(A)\n    v=v.astype(complex); v/=np.linalg.norm(v)\n    I=np.eye(n)\n    for it in range(maxit):\n        y=A@v; lam=v.conj()@y\n        r=np.linalg.norm(y-lam*v)\n        if r <= tol*an: return lam,v,r,it\n        try:\n            w=np.linalg.solve(A-lam*I, v)\n        except np.linalg.LinAlgError:\n            return lam,v,r,it\n        nw=np.linalg.norm(w)\n        if nw==0: return lam,v,r,it\n        v=w/nw\n    y=A@v; lam=v.conj()@y; r=np.linalg.norm(y-lam*v)\n    return lam,v,r,maxit\n\ndef randv(n,seed=1):\n    rng=np.random.default_rng(seed)\n    return rng.normal(size=n)+1j*rng.normal(size=n)\n\ndef arnoldi_ritz(A,k):\n    n=A.shape[0]; k=min(k,n)\n    Q=np.zeros((n,k+1),complex); H=np.zeros((k+1,k))\n    q=np.array([np.sin((i+1)*1.234+0.7) for i in range(n)]); q/=np.linalg.norm(q)\n    Q[:,0]=q\n    for j in range(k):\n        z=A@Q[:,j]\n        for i in range(j+1):\n            H[i,j]=(Q[:,i].conj()@z).real; z-=H[i,j]*Q[:,i]\n        for i in range(j+1):\n            c=Q[:,i].conj()@z; H[i,j]+=c.real; z-=c*Q[:,i]\n        H[j+1,j]=np.linalg.norm(z)\n        if H[j+1,j]<1e-14: k=j+1; break\n        Q[:,j+1]=z/H[j+1,j]\n    w,V=np.linalg.eig(H[:k,:k]); i=np.argmax(np.abs(w)); lam=w[i]; v=Q[:,:k]@V[:,i]\n    return lam,v\n\nfor src in ['random','arnoldi4','arnoldi6','power2']:\n    print('SOURCE',src)\n    for n in range(2,11,2):\n        iters=[]; domin=0; success=0; fails=0; non=0\n        for trial in range(500):\n            A=np.random.normal(size=(n,n))\n            w=np.linalg.eigvals(A); dom=np.max(np.abs(w))\n            if src=='random':\n                v=randv(n,trial); lam=v.conj()@(A@v)/(v.conj()@v)\n            elif src=='arnoldi4':\n                lam,v=arnoldi_ritz(A,min(4,n))\n            elif src=='arnoldi6':\n                lam,v=arnoldi_ritz(A,min(6,n))\n            else:\n                v=randv(n,trial); v/=np.linalg.norm(v)\n                for _ in range(3): v=A@v; v/=np.linalg.norm(v)\n                lam=v.conj()@(A@v)\n            lam,v,r,it=rqi(A,v,lam)\n            iters.append(it)\n            if r <= 1e-9*np.linalg.norm(A) and abs(abs(lam)-dom) <= 1e-6*dom:\n                success+=1\n            else:\n                fails+=1\n                if abs(abs(lam)-dom) > 1e-6*dom: non+=1\n        print(n,'median it',np.median(iters),'p90',np.percentile(iters,90),'success',success,'fail',fails,'nondom',non)\nEOF\nsbx run <<'EOF'\ncd /workspace && python3 rqi_study.py\nEOF",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 341932,
+     "dur_ms": 48,
+     "exit": 0,
+     "cpu_ms": 41.8,
+     "phases_us": {
+      "acquire": 89,
+      "resume": 20879,
+      "mount": 17434,
+      "run": 7409,
+      "destroy": 19745
+     },
+     "cold": null,
+     "vm": "vm-364"
+    },
+    {
+     "at_ms": 342026,
+     "dur_ms": 3558,
+     "exit": 0,
+     "cpu_ms": 3689.4,
+     "phases_us": {
+      "acquire": 17,
+      "resume": 20271,
+      "mount": 17142,
+      "run": 3510693,
+      "destroy": 26504
+     },
+     "cold": null,
+     "vm": "vm-363"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 345620,
+   "dur_ms": 8132,
+   "tokens_in": 41,
+   "tokens_out": 1615,
+   "cache_read": 52480,
+   "cache_write": 512,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "model",
+   "at_ms": 354365,
+   "dur_ms": 4697,
+   "tokens_in": 2,
+   "tokens_out": 837,
+   "cache_read": 54336,
+   "cache_write": 576,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 359063,
+   "dur_ms": 7796,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put rqi_study2.py <<'EOF'\nimport numpy as np\nfrom rqi_study import rqi\n\ndef block_start(A,m):\n    n=A.shape[0]\n    Q=np.empty((n,2))\n    Q[:,0]=np.array([np.sin((i+1)*1.234+0.7) for i in range(n)])\n    Q[:,1]=np.array([np.cos((i+1)*0.987+0.2) for i in range(n)])\n    Q,_=np.linalg.qr(Q)\n    for _ in range(m):\n        Z=A@Q; Q,_=np.linalg.qr(Z)\n    B=Q.T@(A@Q); w,V=np.linalg.eig(B); i=np.argmax(np.abs(w))\n    return w[i], Q@V[:,i]\n\nfor m in [2,5,10,20,40]:\n    print('M',m)\n    for n in range(4,11,2):\n        succ=0; non=0; fail=0; its=[]\n        for trial in range(300):\n            A=np.random.normal(size=(n,n)); w=np.linalg.eigvals(A); dom=np.max(np.abs(w))\n            lam,v=block_start(A,m)\n            lam,v,r,it=rqi(A,v,lam)\n            its.append(it)\n            if r<=1e-9*np.linalg.norm(A) and abs(abs(lam)-dom)<=1e-6*dom: succ+=1\n            else:\n                fail+=1\n                if abs(abs(lam)-dom)>1e-6*dom: non+=1\n        print(n,'succ',succ,'non',non,'medit',np.median(its),'p90',np.percentile(its,90))\nEOF\nsbx run <<'EOF'\ncd /workspace && python3 rqi_study2.py\nEOF",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 359112,
+     "dur_ms": 62,
+     "exit": 0,
+     "cpu_ms": 44.3,
+     "phases_us": {
+      "acquire": 58,
+      "resume": 21000,
+      "mount": 18651,
+      "run": 7650,
+      "destroy": 33645
+     },
+     "cold": null,
+     "vm": "vm-368"
+    },
+    {
+     "at_ms": 359221,
+     "dur_ms": 7610,
+     "exit": 0,
+     "cpu_ms": 7741.0,
+     "phases_us": {
+      "acquire": 35,
+      "resume": 19887,
+      "mount": 17441,
+      "run": 7558601,
+      "destroy": 31437
+     },
+     "cold": null,
+     "vm": "vm-367"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 366865,
+   "dur_ms": 5813,
+   "tokens_in": 57,
+   "tokens_out": 969,
+   "cache_read": 55744,
+   "cache_write": 896,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 372678,
+   "dur_ms": 2750,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace && python3 - <<'PY'\nexec(open('bench_lapack2.py').read().split('def invit')[0])\ndef invit(A):\n    w=vals(A); i=np.argmax(w[0]**2+w[1]**2); lam=complex(w[0][i],w[1][i])\n    n=A.shape[0]; x=np.ones(n,complex)+1j*np.arange(1,n+1)\n    for it in range(2):\n        M=A-(lam+(1e-12 if it==0 else 0))*np.eye(n)\n        try: x=np.linalg.solve(M,x)\n        except np.linalg.LinAlgError: x=np.linalg.lstsq(M,x,rcond=None)[0]\n        x/=np.linalg.norm(x)\n    lam=(x.conj()@(A@x))/(x.conj()@x)\n    return lam,x\nfor size in range(2,11,2):\n    for fn in [vals,valsvec,ref,invit]:\n        dts=[]\n        for i in range(2000):\n            A=np.random.normal(size=(size,size))\n            t0=time.perf_counter(); fn(A); t1=time.perf_counter(); dts.append(t1-t0)\n        print(size,fn.__name__,f\"{np.median(dts)*1e6:.2f}us\",end='  ')\n    print()\nPY",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 372728,
+     "dur_ms": 2658,
+     "exit": 0,
+     "cpu_ms": 2759.4,
+     "phases_us": {
+      "acquire": 16,
+      "resume": 20523,
+      "mount": 17579,
+      "run": 2614756,
+      "destroy": 22536
+     },
+     "cold": null,
+     "vm": "vm-371"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 375434,
+   "dur_ms": 23480,
+   "tokens_in": 50,
+   "tokens_out": 4110,
+   "cache_read": 57664,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 398914,
+   "dur_ms": 3287,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put shift_study.py <<'EOF'\nimport numpy as np\n\ndef arnoldi_H(A,k):\n    n=A.shape[0]; k=min(k,n)\n    Q=np.zeros((n,k+1)); H=np.zeros((k+1,k))\n    q=np.array([np.sin((i+1)*1.234+0.7) for i in range(n)]); q/=np.linalg.norm(q)\n    Q[:,0]=q\n    for j in range(k):\n        z=A@Q[:,j]\n        for i in range(j+1):\n            H[i,j]=Q[:,i]@z; z-=H[i,j]*Q[:,i]\n        for i in range(j+1):\n            c=Q[:,i]@z; H[i,j]+=c; z-=c*Q[:,i]\n        H[j+1,j]=np.linalg.norm(z)\n        if H[j+1,j]<1e-14: k=j+1; break\n        Q[:,j+1]=z/H[j+1,j]\n    return H[:k,:k],Q[:,:k],k\n\ndef invit_fixed(A,shift,x,iters=3):\n    n=A.shape[0]; I=np.eye(n)\n    # perturb shift to avoid exact singularity\n    M=A-(shift+1e-12*np.linalg.norm(A))*I\n    for _ in range(iters):\n        try: y=np.linalg.solve(M,x)\n        except np.linalg.LinAlgError: y=np.linalg.lstsq(M,x,rcond=None)[0]\n        ny=np.linalg.norm(y)\n        if ny==0: return None\n        x=y/ny\n        # do not update shift (fixed shift)\n    lam=(x.conj()@(A@x))/(x.conj()@x)\n    return lam,x\n\ndef method(A,k):\n    n=A.shape[0]\n    H,Q,kk=arnoldi_H(A,k)\n    w=np.linalg.eigvals(H)\n    best=None; bestmag=-1\n    for sh in w:\n        lam,x=invit_fixed(A,sh,Q[:,0]+1j*Q[:,min(1,kk-1)])\n        if lam is None: continue\n        if abs(lam)>bestmag:\n            bestmag=abs(lam); best=(lam,x)\n    return best\n\nfor k in [2,3,4,5,6]:\n    print('K',k)\n    for n in range(4,11,2):\n        succ=0; non=0; fail=0; baderr=0\n        for trial in range(300):\n            A=np.random.normal(size=(n,n)); w=np.linalg.eigvals(A); dom=np.max(np.abs(w))\n            lam,x=method(A,k)\n            if lam is None: fail+=1; continue\n            r=np.linalg.norm(A@x-lam*x)\n            if abs(abs(lam)-dom)<=1e-6*dom:\n                if r<=1e-8*np.linalg.norm(A): succ+=1\n                else: baderr+=1\n            else:\n                non+=1\n        print(n,'succ',succ,'non',non,'baderr',baderr,'fail',fail)\nEOF\nsbx run <<'EOF'\ncd /workspace && python3 shift_study.py\nEOF",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 398963,
+     "dur_ms": 52,
+     "exit": 0,
+     "cpu_ms": 42.9,
+     "phases_us": {
+      "acquire": 97,
+      "resume": 20372,
+      "mount": 17696,
+      "run": 7586,
+      "destroy": 23234
+     },
+     "cold": null,
+     "vm": "vm-373"
+    },
+    {
+     "at_ms": 399061,
+     "dur_ms": 3104,
+     "exit": 0,
+     "cpu_ms": 3233.8,
+     "phases_us": {
+      "acquire": 15,
+      "resume": 20594,
+      "mount": 17523,
+      "run": 3060669,
+      "destroy": 22042
+     },
+     "cold": null,
+     "vm": "vm-370"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 402208,
+   "dur_ms": 9498,
+   "tokens_in": 10,
+   "tokens_out": 1722,
+   "cache_read": 61376,
+   "cache_write": 896,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 411706,
+   "dur_ms": 3369,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace && python3 - <<'PY'\nimport numpy as np\n# avoid importing rqi_study prints by copy functions\ndef rqi(A, v, maxit=12, tol=1e-10):\n    n=A.shape[0]; an=np.linalg.norm(A); I=np.eye(n)\n    v=v.astype(complex); v/=np.linalg.norm(v)\n    for it in range(maxit):\n        y=A@v; lam=v.conj()@y\n        r=np.linalg.norm(y-lam*v)\n        if r <= tol*an: return lam,v,r,it\n        try: w=np.linalg.solve(A-lam*I, v)\n        except np.linalg.LinAlgError: return lam,v,r,it\n        nw=np.linalg.norm(w)\n        if nw==0: return lam,v,r,it\n        v=w/nw\n    y=A@v; lam=v.conj()@y; r=np.linalg.norm(y-lam*v)\n    return lam,v,r,maxit\n\ndef power_start(A,m,trial):\n    n=A.shape[0]; rng=np.random.default_rng(1000+trial)\n    v=rng.normal(size=n)+1j*rng.normal(size=n); v/=np.linalg.norm(v)\n    for _ in range(m): v=A@v; v/=np.linalg.norm(v)\n    lam=v.conj()@(A@v)\n    return lam,v\n\nfor m in [2,5,10,20,40,80]:\n    print('M',m)\n    for n in [4,6,8,10]:\n        succ=0; non=0; bad=0; its=[]\n        for trial in range(300):\n            A=np.random.normal(size=(n,n)); w=np.linalg.eigvals(A); dom=np.max(np.abs(w))\n            lam,v=power_start(A,m,trial)\n            lam,v,r,it=rqi(A,v)\n            its.append(it)\n            if abs(abs(lam)-dom)<=1e-6*dom:\n                if r<=1e-8*np.linalg.norm(A): succ+=1\n                else: bad+=1\n            else: non+=1\n        print(n,'succ',succ,'non',non,'bad',bad,'medit',np.median(its),'p90',np.percentile(its,90))\nPY",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 411756,
+     "dur_ms": 3278,
+     "exit": 0,
+     "cpu_ms": 3387.0,
+     "phases_us": {
+      "acquire": 80,
+      "resume": 20492,
+      "mount": 17750,
+      "run": 3238497,
+      "destroy": 19088
+     },
+     "cold": null,
+     "vm": "vm-375"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 415081,
+   "dur_ms": 4381,
+   "tokens_in": 15,
+   "tokens_out": 772,
+   "cache_read": 64000,
+   "cache_write": 576,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 419462,
+   "dur_ms": 1401,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace && python3 - <<'PY'\nimport numpy as np\ndef rqi(A, v, maxit=12, tol=1e-10):\n    n=A.shape[0]; an=np.linalg.norm(A); I=np.eye(n)\n    v=v.astype(complex); v/=np.linalg.norm(v)\n    for it in range(maxit):\n        y=A@v; lam=v.conj()@y\n        r=np.linalg.norm(y-lam*v)\n        if r <= tol*an: return lam,v,r,it\n        try: w=np.linalg.solve(A-lam*I, v)\n        except np.linalg.LinAlgError: return lam,v,r,it\n        nw=np.linalg.norm(w)\n        if nw==0: return lam,v,r,it\n        v=w/nw\n    y=A@v; lam=v.conj()@y; r=np.linalg.norm(y-lam*v)\n    return lam,v,r,maxit\ndef power_start(A,m,trial):\n    n=A.shape[0]; rng=np.random.default_rng(1000+trial)\n    v=rng.normal(size=n)+1j*rng.normal(size=n); v/=np.linalg.norm(v)\n    for _ in range(m): v=A@v; v/=np.linalg.norm(v)\n    lam=v.conj()@(A@v)\n    return lam,v\nn=10; bad=[]\nfor trial in range(2000):\n    A=np.random.normal(size=(n,n)); w=np.linalg.eigvals(A); mags=np.sort(np.abs(w))[::-1]; dom=mags[0]\n    lam,v=power_start(A,40,trial); lam,v,r,it=rqi(A,v)\n    if abs(abs(lam)-dom)>1e-6*dom:\n        # nearest eigen\n        j=np.argmin(abs(w-lam))\n        bad.append((trial,abs(lam)/dom, lam, w[j], abs(w[j]-lam), mags[:3]))\nprint('nondom',len(bad))\nfor x in bad[:10]: print(x[0], 'ratio',x[1], 'mags',x[5], 'err nearest',x[4])\nPY",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 419511,
+     "dur_ms": 1312,
+     "exit": 0,
+     "cpu_ms": 1427.8,
+     "phases_us": {
+      "acquire": 71,
+      "resume": 20310,
+      "mount": 17998,
+      "run": 1267497,
+      "destroy": 23455
+     },
+     "cold": null,
+     "vm": "vm-376"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 420867,
+   "dur_ms": 28427,
+   "tokens_in": 51,
+   "tokens_out": 5454,
+   "cache_read": 65344,
+   "cache_write": 448,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 449295,
+   "dur_ms": 2078,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put eig_lapack.c <<'EOF'\n#include <math.h>\n#include <string.h>\n#include <dlfcn.h>\n#include <stdio.h>\n\n#define MAXN 64\ntypedef long long blasint;\ntypedef void (*dgeev_t)(char*,char*,blasint*,double*,blasint*,double*,double*,double*,blasint*,double*,blasint*,double*,blasint*,blasint*);\nstatic dgeev_t dgeev_fn = 0;\nint init_lapack(const char *path) {\n    void *h = dlopen(path, RTLD_NOW|RTLD_GLOBAL);\n    if (!h) return -1;\n    dgeev_fn = (dgeev_t)dlsym(h, \"scipy_dgeev_64_\");\n    if (!dgeev_fn) dgeev_fn = (dgeev_t)dlsym(h, \"dgeev_\");\n    return dgeev_fn ? 0 : -2;\n}\n\n/* complex LU with partial pivoting, in-place A (n*n row major) */\nstatic int clu(double *ar, double *ai, int n, int *piv) {\n    for (int k=0;k<n;k++) {\n        int p=k; double best=ar[k*n+k]*ar[k*n+k]+ai[k*n+k]*ai[k*n+k];\n        for (int i=k+1;i<n;i++){double m=ar[i*n+k]*ar[i*n+k]+ai[i*n+k]*ai[i*n+k]; if(m>best){best=m;p=i;}}\n        piv[k]=p;\n        if (p!=k) for(int j=0;j<n;j++){double t=ar[k*n+j];ar[k*n+j]=ar[p*n+j];ar[p*n+j]=t;t=ai[k*n+j];ai[k*n+j]=ai[p*n+j];ai[p*n+j]=t;}\n        double dr=ar[k*n+k], di=ai[k*n+k];\n        double den=dr*dr+di*di;\n        if (den < 1e-300) { ar[k*n+k]=1e-12; den=1e-24; dr=1e-12; di=0; }\n        for (int i=k+1;i<n;i++){\n            double nr=ar[i*n+k], ni=ai[i*n+k];\n            double qr=(nr*dr+ni*di)/den, qi=(ni*dr-nr*di)/den;\n            ar[i*n+k]=qr; ai[i*n+k]=qi;\n            for(int j=k+1;j<n;j++){\n                double xr=ar[i*n+j], xi=ai[i*n+j];\n                double yr=ar[k*n+j], yi=ai[k*n+j];\n                ar[i*n+j]=xr-qr*yr+qi*yi;\n                ai[i*n+j]=xi-qr*yi-qi*yr;\n            }\n        }\n    }\n    return 0;\n}\nstatic void csolve(double *ar,double *ai,int n,int *piv,double *br,double *bi,double *xr,double *xi){\n    for(int i=0;i<n;i++){int p=piv[i];double t=br[i];br[i]=br[p];br[p]=t;t=bi[i];bi[i]=bi[p];bi[p]=t;}\n    for(int i=0;i<n;i++){\n        double sr=br[i], si=bi[i];\n        for(int j=0;j<i;j++){sr-=ar[i*n+j]*br[j]-ai[i*n+j]*bi[j]; si-=ar[i*n+j]*bi[j]+ai[i*n+j]*br[j];}\n        br[i]=sr;bi[i]=si;\n    }\n    for(int i=n-1;i>=0;i--){\n        double sr=br[i],si=bi[i];\n        for(int j=i+1;j<n;j++){sr-=ar[i*n+j]*br[j]-ai[i*n+j]*bi[j]; si-=ar[i*n+j]*bi[j]+ai[i*n+j]*br[j];}\n        double dr=ar[i*n+i],di=ai[i*n+i],den=dr*dr+di*di;\n        xr[i]=(sr*dr+si*di)/den; xi[i]=(si*dr-sr*di)/den;\n    }\n}\n\nint dominant_lapack(const double *A, int n, double *lr, double *li, double *vr, double *vi) {\n    if (!dgeev_fn) return 1;\n    if (n>MAXN) return 1;\n    double a[MAXN*MAXN], wr[MAXN], wi[MAXN], vl[MAXN*MAXN], vrr[MAXN*MAXN], work[2048];\n    memcpy(a,A,n*n*sizeof(double));\n    blasint nn=n, lda=n, ldvl=1, ldvr=1, lwork=2048, info=0;\n    char jl='N', jr='N';\n    dgeev_fn(&jl,&jr,&nn,a,&lda,wr,wi,vl,&ldvl,vrr,&ldvr,work,&lwork,&info);\n    if (info!=0) return 2;\n    int idx=0; double best=-1;\n    for(int i=0;i<n;i++){double m=wr[i]*wr[i]+wi[i]*wi[i]; if(m>best){best=m;idx=i;}}\n    double lamr=wr[idx], lami=wi[idx];\n    /* inverse iteration on A - lam I, complex */\n    double ar[MAXN*MAXN], ai[MAXN*MAXN];\n    double anorm=0; for(int i=0;i<n*n;i++) anorm+=A[i]*A[i]; anorm=sqrt(anorm);\n    double eps=1e-14*anorm;\n    for(int i=0;i<n;i++)for(int j=0;j<n;j++){ar[i*n+j]=A[i*n+j]; ai[i*n+j]=0;}\n    for(int i=0;i<n;i++){ar[i*n+i]-=lamr; ai[i*n+i]-=lami+eps;}\n    int piv[MAXN]; clu(ar,ai,n,piv);\n    double xr[MAXN],xi[MAXN],br[MAXN],bi[MAXN];\n    for(int i=0;i<n;i++){xr[i]=sin((i+1)*1.234+0.7); xi[i]=cos((i+1)*0.987+0.2);}\n    for(int it=0;it<3;it++){\n        double xn=0; for(int i=0;i<n;i++) xn+=xr[i]*xr[i]+xi[i]*xi[i]; xn=sqrt(xn);\n        for(int i=0;i<n;i++){br[i]=xr[i]/xn;bi[i]=xi[i]/xn;}\n        csolve(ar,ai,n,piv,br,bi,xr,xi);\n    }\n    /* Rayleigh quotient and normalize */\n    double xnorm=0; for(int i=0;i<n;i++) xnorm+=xr[i]*xr[i]+xi[i]*xi[i]; xnorm=sqrt(xnorm);\n    for(int i=0;i<n;i++){xr[i]/=xnorm;xi[i]/=xnorm;}\n    double rr=0,ri=0;\n    for(int i=0;i<n;i++){\n        double yr=0,yi=0; for(int j=0;j<n;j++){yr+=A[i*n+j]*xr[j]; yi+=A[i*n+j]*xi[j];}\n        double xc_r=xr[i], xc_i=-xi[i];\n        rr+=xc_r*yr-xc_i*yi; ri+=xc_r*yi+xc_i*yr;\n    }\n    *lr=rr;*li=ri;\n    for(int i=0;i<n;i++){vr[i]=xr[i];vi[i]=xi[i];}\n    return 0;\n}\nEOF\nsbx run <<'EOF'\ncd /workspace\nexport LD_LIBRARY_PATH=/workspace/gccroot/usr/lib/x86_64-linux-gnu:/workspace/gccroot/lib/x86_64-linux-gnu\nGCC=/workspace/gccroot/usr/bin/gcc-12\n$GCC --sysroot=/workspace/gccroot -B/workspace/gccroot/usr/bin -B/workspace/gccroot/usr/lib/gcc/x86_64-linux-gnu/12 -O3 -march=x86-64 -shared -fPIC -o /workspace/libeig_lapack.so eig_lapack.c -lm -ldl\npython3 - <<'PY'\nimport ctypes,glob,numpy as np,os,time\nlibpath=glob.glob(os.path.join(os.path.dirname(np.__file__),'..','numpy.libs','libscipy_openblas*'))[0]\nlib=ctypes.CDLL('/workspace/libeig_lapack.so')\nlib.init_lapack.argtypes=[ctypes.c_char_p];lib.init_lapack.restype=ctypes.c_int\nprint('init',lib.init_lapack(libpath.encode()))\nP=ctypes.POINTER(ctypes.c_double)\nlib.dominant_lapack.argtypes=[P,ctypes.c_int,P,P,P,P];lib.dominant_lapack.restype=ctypes.c_int\nlr=ctypes.c_double();li=ctypes.c_double();vr=np.empty(64);vi=np.empty(64)\ndef f(A):\n    n=A.shape[0];A=np.ascontiguousarray(A)\n    rc=lib.dominant_lapack(A.ctypes.data_as(P),n,ctypes.byref(lr),ctypes.byref(li),vr.ctypes.data_as(P),vi.ctypes.data_as(P))\n    if rc: \n        w,v=np.linalg.eig(A);i=np.argmax(np.abs(w));return w[i],v[:,i]\n    return complex(lr.value,li.value), vr[:n]+1j*vi[:n]\ndef ref(A):\n    w,v=np.linalg.eig(A);i=np.argmax(np.abs(w));return w[i],v[:,i]\nfor size in range(2,11,2):\n    dts=[];errs=[];fails=0;refd=[]\n    for i in range(5000):\n        A=np.random.normal(size=(size,size)).astype(np.float64)\n        t0=time.perf_counter();w,v=f(A);t1=time.perf_counter();dts.append(t1-t0)\n        if i<1000:\n            e=np.linalg.norm(A@v-w*v)/max(1,np.linalg.norm(v));errs.append(e)\n            if not np.allclose(A@v,w*v):fails+=1\n        if i<1000:\n            t0=time.perf_counter();ref(A);t1=time.perf_counter();refd.append(t1-t0)\n    print(size,f\"fast {np.median(dts)*1e6:.2f}us ref {np.median(refd)*1e6:.2f}us\",\"maxerr\",max(errs),\"fails\",fails,\"p99\",np.percentile(dts,99)*1e6)\nPY\nEOF",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 449343,
+     "dur_ms": 49,
+     "exit": 0,
+     "cpu_ms": 39.7,
+     "phases_us": {
+      "acquire": 62,
+      "resume": 20791,
+      "mount": 17760,
+      "run": 7210,
+      "destroy": 21158
+     },
+     "cold": null,
+     "vm": "vm-377"
+    },
+    {
+     "at_ms": 449439,
+     "dur_ms": 1907,
+     "exit": 0,
+     "cpu_ms": 2107.5,
+     "phases_us": {
+      "acquire": 16,
+      "resume": 21273,
+      "mount": 18213,
+      "run": 1852888,
+      "destroy": 32392
+     },
+     "cold": null,
+     "vm": "vm-374"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 451380,
+   "dur_ms": 8108,
+   "tokens_in": 16,
+   "tokens_out": 1364,
+   "cache_read": 71296,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 459488,
+   "dur_ms": 288,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace && python3 - <<'PY'\nimport numpy as np\nnp.random.seed(1)\nfor trial in range(5):\n    A=np.random.normal(size=(5,5)); w,V=np.linalg.eig(A); idx=np.argmax(abs(w)); lam=w[idx]\n    an=np.linalg.norm(A); eps=1e-14*an\n    x=np.array([np.sin((i+1)*1.234+0.7)+1j*np.cos((i+1)*0.987+0.2) for i in range(5)])\n    M=A-(lam+1j*eps)*np.eye(5)\n    for it in range(3):\n        x=np.linalg.solve(M,x); x/=np.linalg.norm(x)\n    lam2=(x.conj()@(A@x))/(x.conj()@x)\n    print(trial,lam,lam2,np.linalg.norm(A@x-lam2*x), np.linalg.norm(A@x-lam*x))\nPY",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 459537,
+     "dur_ms": 231,
+     "exit": 0,
+     "cpu_ms": 344.5,
+     "phases_us": {
+      "acquire": 17,
+      "resume": 20985,
+      "mount": 18392,
+      "run": 189941,
+      "destroy": 20229
+     },
+     "cold": null,
+     "vm": "vm-381"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 459783,
+   "dur_ms": 5389,
+   "tokens_in": 60,
+   "tokens_out": 937,
+   "cache_read": 72832,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 465173,
+   "dur_ms": 318,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace && python3 - <<'PY'\nimport ctypes,glob,numpy as np,os\nlibpath=glob.glob(os.path.join(os.path.dirname(np.__file__),'..','numpy.libs','libscipy_openblas*'))[0]\nlib=ctypes.CDLL('/workspace/libeig_lapack.so')\nlib.init_lapack.argtypes=[ctypes.c_char_p];lib.init_lapack.restype=ctypes.c_int\nlib.init_lapack(libpath.encode())\nP=ctypes.POINTER(ctypes.c_double)\nlib.dominant_lapack.argtypes=[P,ctypes.c_int,P,P,P,P];lib.dominant_lapack.restype=ctypes.c_int\nlr=ctypes.c_double();li=ctypes.c_double();vr=np.empty(64);vi=np.empty(64)\nnp.random.seed(1)\nfor trial in range(3):\n    A=np.random.normal(size=(5,5)); n=5\n    rc=lib.dominant_lapack(A.ctypes.data_as(P),n,ctypes.byref(lr),ctypes.byref(li),vr.ctypes.data_as(P),vi.ctypes.data_as(P))\n    lam=complex(lr.value,li.value); v=vr[:n]+1j*vi[:n]\n    w,V=np.linalg.eig(A); idx=np.argmax(abs(w)); lam0=w[idx]; v0=V[:,idx]\n    print('trial',trial,'rc',rc,'lamC',lam,'lamP',lam0,'resC',np.linalg.norm(A@v-lam*v),'resP',np.linalg.norm(A@v-v*lam),'vC',v)\nPY",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 465221,
+     "dur_ms": 230,
+     "exit": 0,
+     "cpu_ms": 322.5,
+     "phases_us": {
+      "acquire": 71,
+      "resume": 20798,
+      "mount": 18316,
+      "run": 177043,
+      "destroy": 31741
+     },
+     "cold": null,
+     "vm": "vm-382"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 465498,
+   "dur_ms": 1858,
+   "tokens_in": 43,
+   "tokens_out": 215,
+   "cache_read": 74048,
+   "cache_write": 512,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 467357,
+   "dur_ms": 315,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace && python3 - <<'PY'\nimport numpy as np\nnp.random.seed(1); A=np.random.normal(size=(5,5)); print(np.linalg.eigvals(A))\nPY",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 467406,
+     "dur_ms": 223,
+     "exit": 0,
+     "cpu_ms": 350.5,
+     "phases_us": {
+      "acquire": 75,
+      "resume": 20655,
+      "mount": 18583,
+      "run": 175532,
+      "destroy": 26785
+     },
+     "cold": null,
+     "vm": "vm-384"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 467678,
+   "dur_ms": 8848,
+   "tokens_in": 44,
+   "tokens_out": 1729,
+   "cache_read": 74816,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 476526,
+   "dur_ms": 584,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\ns=open('eig_lapack.c').read()\ns=s.replace('int dominant_lapack', 'double dbg_wr[64], dbg_wi[64];\\nint dominant_lapack')\ns=s.replace('if (info!=0) return 2;', 'if (info!=0) return 2;\\n    for(int i=0;i<n;i++){dbg_wr[i]=wr[i];dbg_wi[i]=wi[i];}')\nopen('eig_lapack_dbg.c','w').write(s)\nPY\nexport LD_LIBRARY_PATH=/workspace/gccroot/usr/lib/x86_64-linux-gnu:/workspace/gccroot/lib/x86_64-linux-gnu\nGCC=/workspace/gccroot/usr/bin/gcc-12\n$GCC --sysroot=/workspace/gccroot -B/workspace/gccroot/usr/bin -B/workspace/gccroot/usr/lib/gcc/x86_64-linux-gnu/12 -O3 -march=x86-64 -shared -fPIC -o /workspace/libeig_lapack_dbg.so eig_lapack_dbg.c -lm -ldl\npython3 - <<'PY'\nimport ctypes,glob,numpy as np,os\nlibpath=glob.glob(os.path.join(os.path.dirname(np.__file__),'..','numpy.libs','libscipy_openblas*'))[0]\nlib=ctypes.CDLL('/workspace/libeig_lapack_dbg.so')\nlib.init_lapack.argtypes=[ctypes.c_char_p];lib.init_lapack.restype=ctypes.c_int;lib.init_lapack(libpath.encode())\nP=ctypes.POINTER(ctypes.c_double)\nlib.dominant_lapack.argtypes=[P,ctypes.c_int,P,P,P,P];lib.dominant_lapack.restype=ctypes.c_int\nlr=ctypes.c_double();li=ctypes.c_double();vr=np.empty(64);vi=np.empty(64)\nnp.random.seed(1); A=np.random.normal(size=(5,5)); n=5\nlib.dominant_lapack(A.ctypes.data_as(P),n,ctypes.byref(lr),ctypes.byref(li),vr.ctypes.data_as(P),vi.ctypes.data_as(P))\nwr=ctypes.c_double*64; wi=ctypes.c_double*64\nWr=np.ctypeslib.as_array(wr.in_dll(lib,'dbg_wr'))[:n]; Wi=np.ctypeslib.as_array(wi.in_dll(lib,'dbg_wi'))[:n]\nprint('C eig',Wr,Wi)\nprint('py eig',np.linalg.eigvals(A))\nPY",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 476575,
+     "dur_ms": 531,
+     "exit": 0,
+     "cpu_ms": 669.4,
+     "phases_us": {
+      "acquire": 82,
+      "resume": 20723,
+      "mount": 18090,
+      "run": 485892,
+      "destroy": 24385
+     },
+     "cold": null,
+     "vm": "vm-385"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 477116,
+   "dur_ms": 12060,
+   "tokens_in": 8,
+   "tokens_out": 2387,
+   "cache_read": 76544,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 489176,
+   "dur_ms": 614,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put ctest.c <<'EOF'\n#include <math.h>\nint clu(double *ar, double *ai, int n, int *piv) {\n    for (int k=0;k<n;k++) {\n        int p=k; double best=ar[k*n+k]*ar[k*n+k]+ai[k*n+k]*ai[k*n+k];\n        for (int i=k+1;i<n;i++){double m=ar[i*n+k]*ar[i*n+k]+ai[i*n+k]*ai[i*n+k]; if(m>best){best=m;p=i;}}\n        piv[k]=p;\n        if (p!=k) for(int j=0;j<n;j++){double t=ar[k*n+j];ar[k*n+j]=ar[p*n+j];ar[p*n+j]=t;t=ai[k*n+j];ai[k*n+j]=ai[p*n+j];ai[p*n+j]=t;}\n        double dr=ar[k*n+k], di=ai[k*n+k]; double den=dr*dr+di*di;\n        for (int i=k+1;i<n;i++){\n            double nr=ar[i*n+k], ni=ai[i*n+k];\n            double qr=(nr*dr+ni*di)/den, qi=(ni*dr-nr*di)/den;\n            ar[i*n+k]=qr; ai[i*n+k]=qi;\n            for(int j=k+1;j<n;j++){\n                double xr=ar[i*n+j], xi=ai[i*n+j];\n                double yr=ar[k*n+j], yi=ai[k*n+j];\n                ar[i*n+j]=xr-qr*yr+qi*yi;\n                ai[i*n+j]=xi-qr*yi-qi*yr;\n            }\n        }\n    }\n    return 0;\n}\nvoid csolve(double *ar,double *ai,int n,int *piv,double *br,double *bi,double *xr,double *xi){\n    for(int i=0;i<n;i++){int p=piv[i];double t=br[i];br[i]=br[p];br[p]=t;t=bi[i];bi[i]=bi[p];bi[p]=t;}\n    for(int i=0;i<n;i++){\n        double sr=br[i], si=bi[i];\n        for(int j=0;j<i;j++){sr-=ar[i*n+j]*br[j]-ai[i*n+j]*bi[j]; si-=ar[i*n+j]*bi[j]+ai[i*n+j]*br[j];}\n        br[i]=sr;bi[i]=si;\n    }\n    for(int i=n-1;i>=0;i--){\n        double sr=br[i],si=bi[i];\n        for(int j=i+1;j<n;j++){sr-=ar[i*n+j]*br[j]-ai[i*n+j]*bi[j]; si-=ar[i*n+j]*bi[j]+ai[i*n+j]*br[j];}\n        double dr=ar[i*n+i],di=ai[i*n+i],den=dr*dr+di*di;\n        xr[i]=(sr*dr+si*di)/den; xi[i]=(si*dr-sr*di)/den;\n    }\n}\nEOF\nsbx run <<'EOF'\ncd /workspace\nexport LD_LIBRARY_PATH=/workspace/gccroot/usr/lib/x86_64-linux-gnu:/workspace/gccroot/lib/x86_64-linux-gnu\nGCC=/workspace/gccroot/usr/bin/gcc-12\n$GCC --sysroot=/workspace/gccroot -B/workspace/gccroot/usr/bin -B/workspace/gccroot/usr/lib/gcc/x86_64-linux-gnu/12 -O3 -shared -fPIC -o /workspace/ctest.so ctest.c -lm\npython3 - <<'PY'\nimport ctypes,numpy as np\nlib=ctypes.CDLL('/workspace/ctest.so');P=ctypes.POINTER(ctypes.c_double)\nlib.clu.argtypes=[P,P,ctypes.c_int,ctypes.POINTER(ctypes.c_int)]\nlib.csolve.argtypes=[P,P,ctypes.c_int,ctypes.POINTER(ctypes.c_int),P,P,P,P]\nrng=np.random.default_rng(1)\nfor n in [3,5]:\n    A=rng.normal(size=(n,n))+1j*rng.normal(size=(n,n)); b=rng.normal(size=n)+1j*rng.normal(size=n)\n    ar=np.ascontiguousarray(A.real).copy();ai=np.ascontiguousarray(A.imag).copy();piv=np.empty(n,dtype=np.int32)\n    lib.clu(ar.ctypes.data_as(P),ai.ctypes.data_as(P),n,piv.ctypes.data_as(ctypes.POINTER(ctypes.c_int)))\n    br=np.ascontiguousarray(b.real).copy();bi=np.ascontiguousarray(b.imag).copy();xr=np.empty(n);xi=np.empty(n)\n    lib.csolve(ar.ctypes.data_as(P),ai.ctypes.data_as(P),n,piv.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),br.ctypes.data_as(P),bi.ctypes.data_as(P),xr.ctypes.data_as(P),xi.ctypes.data_as(P))\n    x=xr+1j*xi; xp=np.linalg.solve(A,b)\n    print(n,'err',np.linalg.norm(A@x-b),np.linalg.norm(x-xp))\nPY\nEOF",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 489225,
+     "dur_ms": 55,
+     "exit": 0,
+     "cpu_ms": 44.5,
+     "phases_us": {
+      "acquire": 93,
+      "resume": 21976,
+      "mount": 19238,
+      "run": 7782,
+      "destroy": 25314
+     },
+     "cold": null,
+     "vm": "vm-386"
+    },
+    {
+     "at_ms": 489326,
+     "dur_ms": 424,
+     "exit": 0,
+     "cpu_ms": 554.3,
+     "phases_us": {
+      "acquire": 15,
+      "resume": 20999,
+      "mount": 17904,
+      "run": 373677,
+      "destroy": 29131
+     },
+     "cold": null,
+     "vm": "vm-380"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 489796,
+   "dur_ms": 6079,
+   "tokens_in": 13,
+   "tokens_out": 1043,
+   "cache_read": 79040,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 495875,
+   "dur_ms": 289,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace && python3 - <<'PY'\nimport numpy as np\nrng=np.random.default_rng(1); n=3\nA=rng.normal(size=(n,n))+1j*rng.normal(size=(n,n)); b=rng.normal(size=n)+1j*rng.normal(size=n)\na=A.copy(); piv=[]\nfor k in range(n):\n    p=k+np.argmax(np.abs(a[k:,k])**2); piv.append(p)\n    if p!=k:\n        a[[k,p],:]=a[[p,k],:]\n    for i in range(k+1,n):\n        q=a[i,k]/a[k,k]; a[i,k]=q\n        for j in range(k+1,n): a[i,j]-=q*a[k,j]\nL=np.tril(a,-1)+np.eye(n);U=np.triu(a)\nprint('L',L);print('U',U);print('LU',L@U);print('PA',A[list(piv),:])\n# solve\nbb=b.copy(); y=np.empty(n,complex)\nfor i in range(n):\n    y[i]=bb[piv[i]] # wrong? apply piv sequentially\n# do swaps\nbb=b.copy()\nfor i in range(n):\n    p=piv[i]; bb[[i,p]]=bb[[p,i]]\nprint('swapped',bb)\ny=np.empty(n,complex)\nfor i in range(n):\n    y[i]=(bb[i]-L[i,:i]@y[:i])/L[i,i]\nx=np.empty(n,complex)\nfor i in range(n-1,-1,-1):\n    x[i]=(y[i]-U[i,i+1:]@x[i+1:])/U[i,i]\nprint('x',x,'true',np.linalg.solve(A,b),'res',np.linalg.norm(A@x-b))\nPY",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 495928,
+     "dur_ms": 226,
+     "exit": 0,
+     "cpu_ms": 360.1,
+     "phases_us": {
+      "acquire": 140,
+      "resume": 24414,
+      "mount": 21416,
+      "run": 182041,
+      "destroy": 19361
+     },
+     "cold": null,
+     "vm": "vm-389"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 496173,
+   "dur_ms": 4042,
+   "tokens_in": 48,
+   "tokens_out": 653,
+   "cache_read": 80128,
+   "cache_write": 576,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 500215,
+   "dur_ms": 276,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace && python3 - <<'PY'\nimport ctypes,numpy as np\nlib=ctypes.CDLL('/workspace/ctest.so');P=ctypes.POINTER(ctypes.c_double)\nlib.clu.argtypes=[P,P,ctypes.c_int,ctypes.POINTER(ctypes.c_int)]\nrng=np.random.default_rng(1); n=3\nA=rng.normal(size=(n,n))+1j*rng.normal(size=(n,n)); b=rng.normal(size=n)+1j*rng.normal(size=n)\nar=np.ascontiguousarray(A.real).copy();ai=np.ascontiguousarray(A.imag).copy();piv=np.empty(n,dtype=np.int32)\nlib.clu(ar.ctypes.data_as(P),ai.ctypes.data_as(P),n,piv.ctypes.data_as(ctypes.POINTER(ctypes.c_int)))\nprint('C factors\\n',ar+1j*ai)\nprint('piv',piv)\n# python same\na=A.copy(); pv=[]\nfor k in range(n):\n    p=k+np.argmax(np.abs(a[k:,k])**2); pv.append(p)\n    if p!=k: a[[k,p],:]=a[[p,k],:]\n    for i in range(k+1,n):\n        q=a[i,k]/a[k,k]; a[i,k]=q\n        for j in range(k+1,n): a[i,j]-=q*a[k,j]\nprint('Py factors\\n',a); print('pv',pv)\nPY",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 500264,
+     "dur_ms": 214,
+     "exit": 0,
+     "cpu_ms": 317.3,
+     "phases_us": {
+      "acquire": 66,
+      "resume": 19955,
+      "mount": 17676,
+      "run": 175003,
+      "destroy": 19051
+     },
+     "cold": null,
+     "vm": "vm-390"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 500497,
+   "dur_ms": 5607,
+   "tokens_in": 30,
+   "tokens_out": 1233,
+   "cache_read": 81344,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 506104,
+   "dur_ms": 2001,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\nfor fn in ['eig_lapack.c']:\n    s=open(fn).read()\n    s=s.replace('for(int j=i+1;j<n;j++){sr-=ar[i*n+j]*br[j]-ai[i*n+j]*bi[j]; si-=ar[i*n+j]*bi[j]+ai[i*n+j]*br[j];}',\n                'for(int j=i+1;j<n;j++){sr-=ar[i*n+j]*xr[j]-ai[i*n+j]*xi[j]; si-=ar[i*n+j]*xi[j]+ai[i*n+j]*xr[j];}')\n    open(fn,'w').write(s)\nPY\nexport LD_LIBRARY_PATH=/workspace/gccroot/usr/lib/x86_64-linux-gnu:/workspace/gccroot/lib/x86_64-linux-gnu\nGCC=/workspace/gccroot/usr/bin/gcc-12\n$GCC --sysroot=/workspace/gccroot -B/workspace/gccroot/usr/bin -B/workspace/gccroot/usr/lib/gcc/x86_64-linux-gnu/12 -O3 -march=x86-64 -shared -fPIC -o /workspace/libeig_lapack.so eig_lapack.c -lm -ldl\npython3 - <<'PY'\nimport ctypes,glob,numpy as np,os,time\nlibpath=glob.glob(os.path.join(os.path.dirname(np.__file__),'..','numpy.libs','libscipy_openblas*'))[0]\nlib=ctypes.CDLL('/workspace/libeig_lapack.so')\nlib.init_lapack.argtypes=[ctypes.c_char_p];lib.init_lapack.restype=ctypes.c_int;print('init',lib.init_lapack(libpath.encode()))\nP=ctypes.POINTER(ctypes.c_double)\nlib.dominant_lapack.argtypes=[P,ctypes.c_int,P,P,P,P];lib.dominant_lapack.restype=ctypes.c_int\nlr=ctypes.c_double();li=ctypes.c_double();vr=np.empty(64);vi=np.empty(64)\ndef f(A):\n    n=A.shape[0];A=np.ascontiguousarray(A)\n    rc=lib.dominant_lapack(A.ctypes.data_as(P),n,ctypes.byref(lr),ctypes.byref(li),vr.ctypes.data_as(P),vi.ctypes.data_as(P))\n    if rc: \n        w,v=np.linalg.eig(A);i=np.argmax(np.abs(w));return w[i],v[:,i]\n    return complex(lr.value,li.value), vr[:n]+1j*vi[:n]\ndef ref(A):\n    w,v=np.linalg.eig(A);i=np.argmax(np.abs(w));return w[i],v[:,i]\nfor size in range(2,11,2):\n    dts=[];errs=[];fails=0;refd=[];alt=0\n    for i in range(5000):\n        A=np.random.normal(size=(size,size)).astype(np.float64)\n        t0=time.perf_counter();w,v=f(A);t1=time.perf_counter();dts.append(t1-t0)\n        if i<1000:\n            e=np.linalg.norm(A@v-w*v)/max(1,np.linalg.norm(v));errs.append(e)\n            if not np.allclose(A@v,w*v):fails+=1\n        if i<1000:\n            t0=time.perf_counter();ref(A);t1=time.perf_counter();refd.append(t1-t0)\n    print(size,f\"fast {np.median(dts)*1e6:.2f}us ref {np.median(refd)*1e6:.2f}us\",\"maxerr\",max(errs),\"fails\",fails,\"p99\",np.percentile(dts,99)*1e6)\nPY",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 506153,
+     "dur_ms": 1924,
+     "exit": 0,
+     "cpu_ms": 2058.7,
+     "phases_us": {
+      "acquire": 22,
+      "resume": 20510,
+      "mount": 18297,
+      "run": 1872383,
+      "destroy": 30606
+     },
+     "cold": null,
+     "vm": "vm-392"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 508113,
+   "dur_ms": 19179,
+   "tokens_in": 10,
+   "tokens_out": 4522,
+   "cache_read": 82880,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 527292,
+   "dur_ms": 2544,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put eig_variants.c <<'EOF'\n#include <math.h>\n#include <string.h>\n#include <dlfcn.h>\n#define MAXN 64\ntypedef long long blasint;\ntypedef void (*dgeev_t)(char*,char*,blasint*,double*,blasint*,double*,double*,double*,blasint*,double*,blasint*,double*,blasint*,blasint*);\ntypedef void (*dgeevx_t)(char*,char*,char*,char*,blasint*,double*,blasint*,double*,double*,double*,blasint*,double*,blasint*,blasint*,blasint*,double*,double*,double*,double*,double*,blasint*,blasint*,blasint*);\ntypedef void (*dgehrd_t)(blasint*,blasint*,blasint*,double*,blasint*,double*,double*,blasint*,blasint*);\ntypedef void (*dhseqr_t)(char*,char*,blasint*,blasint*,blasint*,double*,blasint*,double*,double*,double*,blasint*,double*,blasint*,blasint*);\nstatic dgeev_t dgeev_fn; static dgeevx_t dgeevx_fn; static dgehrd_t dgehrd_fn; static dhseqr_t dhseqr_fn;\nint init_var(const char *path){void*h=dlopen(path,RTLD_NOW|RTLD_GLOBAL);if(!h)return-1;\n dgeev_fn=(dgeev_t)dlsym(h,\"scipy_dgeev_64_\"); dgeevx_fn=(dgeevx_t)dlsym(h,\"scipy_dgeevx_64_\");\n dgehrd_fn=(dgehrd_t)dlsym(h,\"scipy_dgehrd_64_\"); dhseqr_fn=(dhseqr_t)dlsym(h,\"scipy_dhseqr_64_\");\n return (dgeev_fn&&dgeevx_fn&&dgehrd_fn&&dhseqr_fn)?0:-2;}\nstatic int clu(double *ar,double *ai,int n,int *piv){for(int k=0;k<n;k++){int p=k;double best=ar[k*n+k]*ar[k*n+k]+ai[k*n+k]*ai[k*n+k];for(int i=k+1;i<n;i++){double m=ar[i*n+k]*ar[i*n+k]+ai[i*n+k]*ai[i*n+k];if(m>best){best=m;p=i;}}piv[k]=p;if(p!=k)for(int j=0;j<n;j++){double t=ar[k*n+j];ar[k*n+j]=ar[p*n+j];ar[p*n+j]=t;t=ai[k*n+j];ai[k*n+j]=ai[p*n+j];ai[p*n+j]=t;}double dr=ar[k*n+k],di=ai[k*n+k],den=dr*dr+di*di;if(den<1e-300){ar[k*n+k]=1e-12;ai[k*n+k]=0;dr=1e-12;di=0;den=1e-24;}for(int i=k+1;i<n;i++){double nr=ar[i*n+k],ni=ai[i*n+k];double qr=(nr*dr+ni*di)/den,qi=(ni*dr-nr*di)/den;ar[i*n+k]=qr;ai[i*n+k]=qi;for(int j=k+1;j<n;j++){double xr=ar[i*n+j],xi=ai[i*n+j],yr=ar[k*n+j],yi=ai[k*n+j];ar[i*n+j]=xr-qr*yr+qi*yi;ai[i*n+j]=xi-qr*yi-qi*yr;}}}return 0;}\nstatic void csolve(double*ar,double*ai,int n,int*piv,double*br,double*bi,double*xr,double*xi){for(int i=0;i<n;i++){int p=piv[i];double t=br[i];br[i]=br[p];br[p]=t;t=bi[i];bi[i]=bi[p];bi[p]=t;}for(int i=0;i<n;i++){double sr=br[i],si=bi[i];for(int j=0;j<i;j++){sr-=ar[i*n+j]*br[j]-ai[i*n+j]*bi[j];si-=ar[i*n+j]*bi[j]+ai[i*n+j]*br[j];}br[i]=sr;bi[i]=si;}for(int i=n-1;i>=0;i--){double sr=br[i],si=bi[i];for(int j=i+1;j<n;j++){sr-=ar[i*n+j]*xr[j]-ai[i*n+j]*xi[j];si-=ar[i*n+j]*xi[j]+ai[i*n+j]*xr[j];}double dr=ar[i*n+i],di=ai[i*n+i],den=dr*dr+di*di;xr[i]=(sr*dr+si*di)/den;xi[i]=(si*dr-sr*di)/den;}}\nstatic int finish(const double*A,int n,double wr[MAXN],double wi[MAXN],double*lr,double*li,double*vr,double*vi){\n int idx=0;double best=-1;for(int i=0;i<n;i++){double m=wr[i]*wr[i]+wi[i]*wi[i];if(m>best){best=m;idx=i;}}\n double lamr=wr[idx],lami=wi[idx],anorm=0;for(int i=0;i<n*n;i++)anorm+=A[i]*A[i];anorm=sqrt(anorm);\n double ar[MAXN*MAXN],ai[MAXN*MAXN];for(int i=0;i<n;i++)for(int j=0;j<n;j++){ar[i*n+j]=A[i*n+j];ai[i*n+j]=0;}\n for(int i=0;i<n;i++){ar[i*n+i]-=lamr;ai[i*n+i]-=lami+1e-14*anorm;}\n int piv[MAXN];clu(ar,ai,n,piv);double xr[MAXN],xi[MAXN],br[MAXN],bi[MAXN];\n for(int i=0;i<n;i++){xr[i]=sin((i+1)*1.234+0.7);xi[i]=cos((i+1)*0.987+0.2);}\n for(int it=0;it<3;it++){double xn=0;for(int i=0;i<n;i++)xn+=xr[i]*xr[i]+xi[i]*xi[i];xn=sqrt(xn);for(int i=0;i<n;i++){br[i]=xr[i]/xn;bi[i]=xi[i]/xn;}csolve(ar,ai,n,piv,br,bi,xr,xi);}\n double xn=0;for(int i=0;i<n;i++)xn+=xr[i]*xr[i]+xi[i]*xi[i];xn=sqrt(xn);for(int i=0;i<n;i++){xr[i]/=xn;xi[i]/=xn;}\n double rr=0,ri=0;for(int i=0;i<n;i++){double yr=0,yi=0;for(int j=0;j<n;j++){yr+=A[i*n+j]*xr[j];yi+=A[i*n+j]*xi[j];}double cr=xr[i],ci=-xi[i];rr+=cr*yr-ci*yi;ri+=cr*yi+ci*yr;}\n *lr=rr;*li=ri;for(int i=0;i<n;i++){vr[i]=xr[i];vi[i]=xi[i];}return 0;}\nint dom_dgeev(const double*A,int n,double*lr,double*li,double*vr,double*vi){if(!dgeev_fn||n>MAXN)return 1;double a[MAXN*MAXN],wr[MAXN],wi[MAXN],vl[1],vrr[1],work[4096];memcpy(a,A,n*n*sizeof(double));blasint nn=n,lda=n,ldvl=1,ldvr=1,lwork=4096,info=0;char jl='N',jr='N';dgeev_fn(&jl,&jr,&nn,a,&lda,wr,wi,vl,&ldvl,vrr,&ldvr,work,&lwork,&info);if(info)return 2;return finish(A,n,wr,wi,lr,li,vr,vi);}\nint dom_dgeevx(const double*A,int n,double*lr,double*li,double*vr,double*vi){if(!dgeevx_fn||n>MAXN)return 1;double a[MAXN*MAXN],wr[MAXN],wi[MAXN],vl[1],vrr[1],work[4096],scale[MAXN],rc[MAXN],rv[MAXN],abnrm;int iwork[4096];memcpy(a,A,n*n*sizeof(double));blasint nn=n,lda=n,ldvl=1,ldvr=1,lwork=4096,info=0,ilo=1,ihi=n;char bal='N',jl='N',jr='N',sense='N';dgeevx_fn(&bal,&jl,&jr,&sense,&nn,a,&lda,wr,wi,vl,&ldvl,vrr,&ldvr,&ilo,&ihi,scale,&abnrm,rc,rv,work,&lwork,iwork,&info);if(info)return 2;return finish(A,n,wr,wi,lr,li,vr,vi);}\nint dom_hessqr(const double*A,int n,double*lr,double*li,double*vr,double*vi){if(!dgehrd_fn||!dhseqr_fn||n>MAXN)return 1;double a[MAXN*MAXN],tau[MAXN],work[4096],wr[MAXN],wi[MAXN],z[1];memcpy(a,A,n*n*sizeof(double));blasint nn=n,lda=n,ilo=1,ihi=n,lwork=4096,info=0,ldz=1;dgehrd_fn(&nn,&ilo,&ihi,a,&lda,tau,work,&lwork,&info);if(info)return 2;char job='E',compz='N';dhseqr_fn(&job,&compz,&nn,&ilo,&ihi,a,&lda,wr,wi,z,&ldz,work,&lwork,&info);if(info)return 2;return finish(A,n,wr,wi,lr,li,vr,vi);}\nEOF\nsbx run <<'EOF'\ncd /workspace\nexport LD_LIBRARY_PATH=/workspace/gccroot/usr/lib/x86_64-linux-gnu:/workspace/gccroot/lib/x86_64-linux-gnu\nGCC=/workspace/gccroot/usr/bin/gcc-12\n$GCC --sysroot=/workspace/gccroot -B/workspace/gccroot/usr/bin -B/workspace/gccroot/usr/lib/gcc/x86_64-linux-gnu/12 -O3 -march=x86-64 -shared -fPIC -o /workspace/libeig_variants.so eig_variants.c -lm -ldl\npython3 - <<'PY'\nimport ctypes,glob,numpy as np,os,time\nlibpath=glob.glob(os.path.join(os.path.dirname(np.__file__),'..','numpy.libs','libscipy_openblas*'))[0]\nlib=ctypes.CDLL('/workspace/libeig_variants.so');lib.init_var.argtypes=[ctypes.c_char_p];lib.init_var.restype=ctypes.c_int;print('init',lib.init_var(libpath.encode()))\nP=ctypes.POINTER(ctypes.c_double)\nfns=[]\nfor name in ['dom_dgeev','dom_dgeevx','dom_hessqr']:\n    f=getattr(lib,name);f.argtypes=[P,ctypes.c_int,P,P,P,P];f.restype=ctypes.c_int;fns.append((name,f))\nlr=ctypes.c_double();li=ctypes.c_double();vr=np.empty(64);vi=np.empty(64)\ndef make(f):\n    def g(A):\n        n=A.shape[0];A=np.ascontiguousarray(A)\n        rc=f(A.ctypes.data_as(P),n,ctypes.byref(lr),ctypes.byref(li),vr.ctypes.data_as(P),vi.ctypes.data_as(P))\n        if rc:\n            w,v=np.linalg.eig(A);i=np.argmax(np.abs(w));return w[i],v[:,i]\n        return complex(lr.value,li.value),vr[:n]+1j*vi[:n]\n    return g\ndef ref(A):\n    w,v=np.linalg.eig(A);i=np.argmax(np.abs(w));return w[i],v[:,i]\nfor size in range(2,11,2):\n    print('size',size)\n    for name,f in fns:\n        g=make(f);dts=[];errs=[];fails=0\n        for i in range(3000):\n            A=np.random.normal(size=(size,size))\n            t0=time.perf_counter();w,v=g(A);t1=time.perf_counter();dts.append(t1-t0)\n            if i<300:\n                e=np.linalg.norm(A@v-w*v)/max(1,np.linalg.norm(v));errs.append(e)\n                if not np.allclose(A@v,w*v):fails+=1\n        print(' ',name,f\"{np.median(dts)*1e6:.2f}us\",'maxerr',max(errs),'fails',fails,'p99',np.percentile(dts,99)*1e6)\n    refd=[]\n    for i in range(1000):\n        A=np.random.normal(size=(size,size));t0=time.perf_counter();ref(A);t1=time.perf_counter();refd.append(t1-t0)\n    print('  ref',f\"{np.median(refd)*1e6:.2f}us\")\nPY\nEOF",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 527342,
+     "dur_ms": 41,
+     "exit": 0,
+     "cpu_ms": 39.9,
+     "phases_us": {
+      "acquire": 69,
+      "resume": 20730,
+      "mount": 17779,
+      "run": 7121,
+      "destroy": 13329
+     },
+     "cold": null,
+     "vm": "vm-394"
+    },
+    {
+     "at_ms": 527430,
+     "dur_ms": 2376,
+     "exit": 0,
+     "cpu_ms": 2567.2,
+     "phases_us": {
+      "acquire": 21,
+      "resume": 19752,
+      "mount": 17293,
+      "run": 2313917,
+      "destroy": 42051
+     },
+     "cold": null,
+     "vm": "vm-388"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 529836,
+   "dur_ms": 3328,
+   "tokens_in": 38,
+   "tokens_out": 427,
+   "cache_read": 87616,
+   "cache_write": 1024,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 533165,
+   "dur_ms": 162,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls /usr/local/include/python3.13/Python.h 2>/dev/null && echo yes || echo no\npython3 -c \"import sysconfig; print(sysconfig.get_paths()['include'])\"\nls /usr/local/include 2>/dev/null | head",
+   "timeout": 60,
+   "sandbox": [
+    {
+     "at_ms": 533217,
+     "dur_ms": 84,
+     "exit": 0,
+     "cpu_ms": 89.7,
+     "phases_us": {
+      "acquire": 107,
+      "resume": 23279,
+      "mount": 20449,
+      "run": 39123,
+      "destroy": 21388
+     },
+     "cold": null,
+     "vm": "vm-396"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 533334,
+   "dur_ms": 19808,
+   "tokens_in": 55,
+   "tokens_out": 3260,
+   "cache_read": 89088,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 553143,
+   "dur_ms": 6221,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put qr_study.py <<'EOF'\nimport numpy as np\n\ndef eig2_shift(a,b,c,d):\n    tr=a+d; det=a*d-b*c; disc=tr*tr-4*det\n    s=np.sqrt(disc+0j)\n    l1=(tr+s)/2; l2=(tr-s)/2\n    return l1 if abs(l1-d)<=abs(l2-d) else l2\n\ndef dense_qr(A,tol=1e-14,maxit=1000):\n    n=A.shape[0]; T=A.astype(complex).copy(); eigs=[]; k=n; it=0; per=0\n    while k>0:\n        if k==1:\n            eigs.append(T[0,0]); break\n        # last row norm\n        rn=np.linalg.norm(T[k-1,:k-1]); an=np.linalg.norm(T[:k,:k])\n        if rn <= tol*max(1,an):\n            eigs.append(T[k-1,k-1]); k-=1; per=0; continue\n        if per>maxit: return None,it\n        mu=eig2_shift(T[k-2,k-2],T[k-2,k-1],T[k-1,k-2],T[k-1,k-1])\n        B=T[:k,:k]-mu*np.eye(k)\n        Q,R=np.linalg.qr(B)\n        T[:k,:k]=R@Q+mu*np.eye(k)\n        it+=1; per+=1\n    return np.array(eigs),it\n\nfor n in range(2,11,2):\n    its=[]; fail=0; maxerr=0\n    for trial in range(1000):\n        A=np.random.normal(size=(n,n)); w=np.linalg.eigvals(A)\n        e,it=dense_qr(A)\n        its.append(it)\n        if e is None: fail+=1; continue\n        # match eigenvalues\n        for x in e:\n            err=np.min(np.abs(w-x)); maxerr=max(maxerr,err)\n    print(n,'median it',np.median(its),'p90',np.percentile(its,90),'max',max(its),'fail',fail,'max err',maxerr)\nEOF\nsbx run <<'EOF'\ncd /workspace && python3 qr_study.py\nEOF",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 553193,
+     "dur_ms": 50,
+     "exit": 0,
+     "cpu_ms": 45.5,
+     "phases_us": {
+      "acquire": 70,
+      "resume": 22697,
+      "mount": 19086,
+      "run": 8085,
+      "destroy": 19142
+     },
+     "cold": null,
+     "vm": "vm-397"
+    },
+    {
+     "at_ms": 553290,
+     "dur_ms": 6048,
+     "exit": 0,
+     "cpu_ms": 6173.8,
+     "phases_us": {
+      "acquire": 28,
+      "resume": 21544,
+      "mount": 18297,
+      "run": 5993224,
+      "destroy": 32544
+     },
+     "cold": null,
+     "vm": "vm-395"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 559372,
+   "dur_ms": 48140,
+   "tokens_in": 39,
+   "tokens_out": 10104,
+   "cache_read": 92352,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 607512,
+   "dur_ms": 3282,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put eig_custom.c <<'EOF'\n#include <math.h>\n#include <string.h>\n\n#define MAXN 16\n\nstatic double cabs2(double r, double i){ return r*r+i*i; }\n\n/* real Hessenberg reduction, in place row-major */\nstatic void hessenberg(double *A, int n) {\n    double v[MAXN], tmp[MAXN];\n    for (int k=0;k<n-2;k++) {\n        int m=n-k-1;\n        double nrm=0;\n        for(int i=k+1;i<n;i++) nrm += A[i*n+k]*A[i*n+k];\n        nrm=sqrt(nrm);\n        if (nrm==0.0) continue;\n        double alpha = (A[(k+1)*n+k] >= 0.0 ? -nrm : nrm);\n        for(int i=k+1;i<n;i++) v[i]=A[i*n+k];\n        v[k+1]-=alpha;\n        double vn=0;\n        for(int i=k+1;i<n;i++) vn+=v[i]*v[i];\n        if (vn==0.0) continue;\n        double f=2.0/vn;\n        /* left: rows k+1..n-1, cols k..n-1 */\n        for(int j=k;j<n;j++){\n            double dot=0;\n            for(int i=k+1;i<n;i++) dot += v[i]*A[i*n+j];\n            dot*=f;\n            for(int i=k+1;i<n;i++) A[i*n+j]-=dot*v[i];\n        }\n        /* right: rows 0..n-1, cols k+1..n-1 */\n        for(int i=0;i<n;i++){\n            double dot=0;\n            for(int j=k+1;j<n;j++) dot += A[i*n+j]*v[j];\n            dot*=f;\n            for(int j=k+1;j<n;j++) A[i*n+j]-=dot*v[j];\n        }\n        for(int i=k+2;i<n;i++) A[i*n+k]=0.0;\n        A[(k+1)*n+k]=alpha;\n    }\n}\n\nstatic void csqrtd(double x,double y,double *rr,double *ri){\n    if (x==0.0 && y==0.0){*rr=0;*ri=0;return;}\n    double mag=hypot(x,y);\n    if (x>=0.0){\n        double r=sqrt(0.5*(mag+x));\n        double i=y/(2.0*r);\n        *rr=r;*ri=i;\n    } else {\n        double i=sqrt(0.5*(mag-x));\n        if (y<0.0) i=-i;\n        double r=y/(2.0*i);\n        *rr=r;*ri=i;\n    }\n}\n\nstatic void qr_step(double *tr,double *ti,int n,int k,double mur,double mui){\n    double br[MAXN*MAXN], bi[MAXN*MAXN];\n    double cr[MAXN], sr[MAXN], si[MAXN];\n    for(int i=0;i<k;i++) for(int j=0;j<k;j++){\n        br[i*k+j]=tr[i*n+j]; bi[i*k+j]=ti[i*n+j];\n    }\n    for(int i=0;i<k;i++){ br[i*k+i]-=mur; bi[i*k+i]-=mui; }\n    for(int j=0;j<k-1;j++){\n        double xr=br[j*k+j], xi=bi[j*k+j];\n        double yr=br[(j+1)*k+j], yi=bi[(j+1)*k+j];\n        double c,sr_,si_;\n        if (cabs2(xr,xi) < 1e-300){\n            if (cabs2(yr,yi) < 1e-300){ c=1.0; sr_=0.0; si_=0.0; }\n            else { double ay=hypot(yr,yi); c=0.0; sr_=yr/ay; si_=-yi/ay; }\n        } else {\n            double den=xr*xr+xi*xi;\n            double tr_=(yr*xr+yi*xi)/den;\n            double ti_=(yi*xr-yr*xi)/den;\n            double mag2=tr_*tr_+ti_*ti_;\n            c=1.0/sqrt(1.0+mag2);\n            sr_=c*tr_; si_=-c*ti_;\n        }\n        cr[j]=c; sr[j]=sr_; si[j]=si_;\n        for(int col=j;col<k;col++){\n            double ur=br[j*k+col], ui=bi[j*k+col];\n            double vr=br[(j+1)*k+col], vi=bi[(j+1)*k+col];\n            br[j*k+col] = c*ur + sr_*vr - si_*vi;\n            bi[j*k+col] = c*ui + sr_*vi + si_*vr;\n            br[(j+1)*k+col] = -sr_*ur - si_*ui + c*vr;\n            bi[(j+1)*k+col] =  si_*ur - sr_*ui + c*vi;\n        }\n        br[(j+1)*k+j]=0.0; bi[(j+1)*k+j]=0.0;\n    }\n    for(int j=0;j<k-1;j++){\n        double c=cr[j], sr_=sr[j], si_=si[j];\n        for(int row=0;row<k;row++){\n            double ur=br[row*k+j], ui=bi[row*k+j];\n            double vr=br[row*k+j+1], vi=bi[row*k+j+1];\n            br[row*k+j] = c*ur + sr_*vr + si_*vi;\n            bi[row*k+j] = c*ui + sr_*vi - si_*vr;\n            br[row*k+j+1] = -sr_*ur + si_*ui + c*vr;\n            bi[row*k+j+1] = -si_*ur - sr_*ui + c*vi;\n        }\n    }\n    for(int i=0;i<k;i++){ br[i*k+i]+=mur; bi[i*k+i]+=mui; }\n    for(int i=0;i<k;i++) for(int j=0;j<k;j++){\n        if (i>j+1){ br[i*k+j]=0.0; bi[i*k+j]=0.0; }\n        tr[i*n+j]=br[i*k+j]; ti[i*n+j]=bi[i*k+j];\n    }\n}\n\nstatic int custom_eigs(const double *A, int n, double *wr, double *wi){\n    double H[MAXN*MAXN];\n    memcpy(H,A,n*n*sizeof(double));\n    hessenberg(H,n);\n    double tr[MAXN*MAXN], ti[MAXN*MAXN];\n    for(int i=0;i<n*n;i++){ tr[i]=H[i]; ti[i]=0.0; }\n    double anorm=0; for(int i=0;i<n*n;i++) anorm+=A[i]*A[i]; anorm=sqrt(anorm);\n    int k=n, total=0;\n    while(k>1){\n        double a_r=tr[(k-2)*n+k-2], a_i=ti[(k-2)*n+k-2];\n        double d_r=tr[(k-1)*n+k-1], d_i=ti[(k-1)*n+k-1];\n        double sub=hypot(tr[(k-1)*n+k-2], ti[(k-1)*n+k-2]);\n        double scale=fabs(a_r)+fabs(a_i)+fabs(d_r)+fabs(d_i)+anorm;\n        if (sub <= 1e-13*scale){\n            wr[k-1]=d_r; wi[k-1]=d_i; k--; continue;\n        }\n        if (total > 300) return 1;\n        double b_r=tr[(k-2)*n+k-1], b_i=ti[(k-2)*n+k-1];\n        double c_r=tr[(k-1)*n+k-2], c_i=ti[(k-1)*n+k-2];\n        /* eigenvalues of [[a,b],[c,d]] */\n        double trr=a_r+d_r, tri=a_i+d_i;\n        double detr=a_r*d_r-a_i*d_i - (b_r*c_r-b_i*c_i);\n        double deti=a_r*d_i+a_i*d_r - (b_r*c_i+b_i*c_r);\n        double dr=trr*trr-tri*tri-4.0*detr;\n        double di=2.0*trr*tri-4.0*deti;\n        double sqr,sqi; csqrtd(dr,di,&sqr,&sqi);\n        double l1r=0.5*(trr+sqr), l1i=0.5*(tri+sqi);\n        double l2r=0.5*(trr-sqr), l2i=0.5*(tri-sqi);\n        double e1=hypot(l1r-d_r,l1i-d_i), e2=hypot(l2r-d_r,l2i-d_i);\n        double mur,mui;\n        if(e1<=e2){mur=l1r;mui=l1i;} else {mur=l2r;mui=l2i;}\n        qr_step(tr,ti,n,k,mur,mui);\n        total++;\n    }\n    wr[0]=tr[0]; wi[0]=ti[0];\n    return 0;\n}\n\n/* inverse iteration on A - lambda I */\nstatic int inviter(const double *A,int n,double lamr,double lami,double *vr,double *vi){\n    double ar[MAXN*MAXN], ai[MAXN*MAXN];\n    double anorm=0; for(int i=0;i<n*n;i++) anorm+=A[i]*A[i]; anorm=sqrt(anorm);\n    for(int i=0;i<n;i++)for(int j=0;j<n;j++){ar[i*n+j]=A[i*n+j];ai[i*n+j]=0;}\n    for(int i=0;i<n;i++){ar[i*n+i]-=lamr; ai[i*n+i]-=lami+1e-14*anorm;}\n    int piv[MAXN];\n    for(int k=0;k<n;k++){\n        int p=k; double best=ar[k*n+k]*ar[k*n+k]+ai[k*n+k]*ai[k*n+k];\n        for(int i=k+1;i<n;i++){double m=ar[i*n+k]*ar[i*n+k]+ai[i*n+k]*ai[i*n+k];if(m>best){best=m;p=i;}}\n        piv[k]=p;\n        if(p!=k)for(int j=0;j<n;j++){double t=ar[k*n+j];ar[k*n+j]=ar[p*n+j];ar[p*n+j]=t;t=ai[k*n+j];ai[k*n+j]=ai[p*n+j];ai[p*n+j]=t;}\n        double dr=ar[k*n+k],di=ai[k*n+k],den=dr*dr+di*di;\n        if(den<1e-300){ar[k*n+k]=1e-12;ai[k*n+k]=0;dr=1e-12;di=0;den=1e-24;}\n        for(int i=k+1;i<n;i++){\n            double nr=ar[i*n+k],ni=ai[i*n+k];\n            double qr=(nr*dr+ni*di)/den, qi=(ni*dr-nr*di)/den;\n            ar[i*n+k]=qr;ai[i*n+k]=qi;\n            for(int j=k+1;j<n;j++){\n                double xr=ar[i*n+j],xi=ai[i*n+j],yr=ar[k*n+j],yi=ai[k*n+j];\n                ar[i*n+j]=xr-qr*yr+qi*yi; ai[i*n+j]=xi-qr*yi-qi*yr;\n            }\n        }\n    }\n    double xr[MAXN],xi[MAXN],br[MAXN],bi[MAXN];\n    for(int i=0;i<n;i++){xr[i]=sin((i+1)*1.234+0.7);xi[i]=cos((i+1)*0.987+0.2);}\n    for(int it=0;it<4;it++){\n        double xn=0;for(int i=0;i<n;i++)xn+=xr[i]*xr[i]+xi[i]*xi[i];xn=sqrt(xn);\n        for(int i=0;i<n;i++){br[i]=xr[i]/xn;bi[i]=xi[i]/xn;}\n        for(int i=0;i<n;i++){int p=piv[i];double t=br[i];br[i]=br[p];br[p]=t;t=bi[i];bi[i]=bi[p];bi[p]=t;}\n        for(int i=0;i<n;i++){double sr=br[i],si=bi[i];for(int j=0;j<i;j++){sr-=ar[i*n+j]*br[j]-ai[i*n+j]*bi[j];si-=ar[i*n+j]*bi[j]+ai[i*n+j]*br[j];}br[i]=sr;bi[i]=si;}\n        for(int i=n-1;i>=0;i--){double sr=br[i],si=bi[i];for(int j=i+1;j<n;j++){sr-=ar[i*n+j]*xr[j]-ai[i*n+j]*xi[j];si-=ar[i*n+j]*xi[j]+ai[i*n+j]*xr[j];}double dr=ar[i*n+i],di=ai[i*n+i],den=dr*dr+di*di;xr[i]=(sr*dr+si*di)/den;xi[i]=(si*dr-sr*di)/den;}\n    }\n    double xn=0;for(int i=0;i<n;i++)xn+=xr[i]*xr[i]+xi[i]*xi[i];xn=sqrt(xn);\n    for(int i=0;i<n;i++){xr[i]/=xn;xi[i]/=xn;}\n    for(int i=0;i<n;i++){vr[i]=xr[i];vi[i]=xi[i];}\n    return 0;\n}\n\nint dominant_custom(const double *A,int n,double *lr,double *li,double *vr,double *vi){\n    if(n>MAXN) return 1;\n    if(n==1){*lr=A[0];*li=0;vr[0]=1;vi[0]=0;return 0;}\n    double wr[MAXN],wi[MAXN];\n    if(custom_eigs(A,n,wr,wi)) return 2;\n    int idx=0;double best=-1;\n    for(int i=0;i<n;i++){double m=wr[i]*wr[i]+wi[i]*wi[i];if(m>best){best=m;idx=i;}}\n    double lamr=wr[idx],lami=wi[idx];\n    inviter(A,n,lamr,lami,vr,vi);\n    /* Rayleigh quotient */\n    double rr=0,ri=0;\n    for(int i=0;i<n;i++){\n        double yr=0,yi=0;for(int j=0;j<n;j++){yr+=A[i*n+j]*vr[j];yi+=A[i*n+j]*vi[j];}\n        double cr=vr[i],ci=-vi[i];\n        rr+=cr*yr-ci*yi; ri+=cr*yi+ci*yr;\n    }\n    *lr=rr;*li=ri;\n    /* residual check */\n    double rn=0,an=0,vn=0;\n    for(int i=0;i<n*n;i++) an+=A[i]*A[i]; an=sqrt(an);\n    for(int i=0;i<n;i++){\n        double ar=0,ai=0;\n        for(int j=0;j<n;j++){ar+=A[i*n+j]*vr[j]; ai+=A[i*n+j]*vi[j];}\n        double dr=ar-(*lr*vr[i]-*li*vi[i]), di=ai-(*lr*vi[i]+*li*vr[i]);\n        rn+=dr*dr+di*di; vn+=vr[i]*vr[i]+vi[i]*vi[i];\n    }\n    rn=sqrt(rn); vn=sqrt(vn);\n    if(rn > 1e-7*(an*vn+1e-300)) return 3;\n    return 0;\n}\nEOF\nsbx run <<'EOF'\ncd /workspace\nexport LD_LIBRARY_PATH=/workspace/gccroot/usr/lib/x86_64-linux-gnu:/workspace/gccroot/lib/x86_64-linux-gnu\nGCC=/workspace/gccroot/usr/bin/gcc-12\n$GCC --sysroot=/workspace/gccroot -B/workspace/gccroot/usr/bin -B/workspace/gccroot/usr/lib/gcc/x86_64-linux-gnu/12 -O3 -march=x86-64 -shared -fPIC -o /workspace/libeig_custom.so eig_custom.c -lm\npython3 - <<'PY'\nimport ctypes,numpy as np,time\nlib=ctypes.CDLL('/workspace/libeig_custom.so');P=ctypes.POINTER(ctypes.c_double)\nlib.dominant_custom.argtypes=[P,ctypes.c_int,P,P,P,P];lib.dominant_custom.restype=ctypes.c_int\nlr=ctypes.c_double();li=ctypes.c_double();vr=np.empty(64);vi=np.empty(64)\ndef f(A):\n    n=A.shape[0];A=np.ascontiguousarray(A)\n    rc=lib.dominant_custom(A.ctypes.data_as(P),n,ctypes.byref(lr),ctypes.byref(li),vr.ctypes.data_as(P),vi.ctypes.data_as(P))\n    if rc:\n        w,v=np.linalg.eig(A);i=np.argmax(np.abs(w));return w[i],v[:,i],rc\n    return complex(lr.value,li.value),vr[:n]+1j*vi[:n],rc\ndef ref(A):\n    w,v=np.linalg.eig(A);i=np.argmax(np.abs(w));return w[i],v[:,i]\nfor size in range(2,11,2):\n    dts=[];errs=[];fails=0;refd=[];rcs={};domfail=0\n    for i in range(10000):\n        A=np.random.normal(size=(size,size))\n        t0=time.perf_counter();w,v,rc=f(A);t1=time.perf_counter();dts.append(t1-t0);rcs[rc]=rcs.get(rc,0)+1\n        if i<1000:\n            e=np.linalg.norm(A@v-w*v)/max(1,np.linalg.norm(v));errs.append(e)\n            if not np.allclose(A@v,w*v):fails+=1\n            we=np.linalg.eigvals(A)\n            if abs(abs(w)-np.max(abs(we)))>1e-6*max(1,np.max(abs(we))): domfail+=1\n        if i<1000:\n            t0=time.perf_counter();ref(A);t1=time.perf_counter();refd.append(t1-t0)\n    print(size,f\"fast {np.median(dts)*1e6:.2f}us ref {np.median(refd)*1e6:.2f}us\",\"maxerr\",max(errs),\"fails\",fails,\"domfail\",domfail,\"rcs\",rcs,\"p99\",np.percentile(dts,99)*1e6)\nPY\nEOF",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 607525,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 45.6,
+     "phases_us": {
+      "acquire": 185,
+      "resume": 23499,
+      "mount": 19864,
+      "run": 8321,
+      "destroy": 23573
+     },
+     "cold": null,
+     "vm": "vm-402"
+    },
+    {
+     "at_ms": 607627,
+     "dur_ms": 3141,
+     "exit": 0,
+     "cpu_ms": 3271.2,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 20657,
+      "mount": 17972,
+      "run": 3081881,
+      "destroy": 38212
+     },
+     "cold": null,
+     "vm": "vm-401"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 610803,
+   "dur_ms": 23796,
+   "tokens_in": 54,
+   "tokens_out": 4226,
+   "cache_read": 100096,
+   "cache_write": 2816,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 634600,
+   "dur_ms": 6173,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\ns=open('eig_custom.c').read()\n# add packed function at end\ns += r'''\nint dominant_custom_packed(const double *A,int n,double *out){\n    double lr,li; double vr[MAXN],vi[MAXN];\n    int rc=dominant_custom(A,n,&lr,&li,vr,vi);\n    if(rc) return rc;\n    out[0]=lr; out[1]=li;\n    for(int i=0;i<n;i++){out[2+i]=vr[i]; out[2+n+i]=vi[i];}\n    return 0;\n}\n'''\nopen('eig_custom2.c','w').write(s)\n# variant with 2 inverse iterations\ns2=s.replace('for(int it=0;it<4;it++)','for(int it=0;it<2;it++)')\nopen('eig_custom_2it.c','w').write(s2)\nPY\nexport LD_LIBRARY_PATH=/workspace/gccroot/usr/lib/x86_64-linux-gnu:/workspace/gccroot/lib/x86_64-linux-gnu\nGCC=/workspace/gccroot/usr/bin/gcc-12\nfor f in eig_custom2 eig_custom_2it; do\n$GCC --sysroot=/workspace/gccroot -B/workspace/gccroot/usr/bin -B/workspace/gccroot/usr/lib/gcc/x86_64-linux-gnu/12 -O3 -march=x86-64 -shared -fPIC -o /workspace/lib$f.so $f.c -lm\ndone\npython3 - <<'PY'\nimport ctypes,numpy as np,time\nP=ctypes.c_void_p\ndef load(path,packed=True):\n    lib=ctypes.CDLL(path);lr=ctypes.c_double();li=ctypes.c_double();vr=np.empty(64);vi=np.empty(64);out=np.empty(2+128)\n    if packed:\n        f=lib.dominant_custom_packed;f.argtypes=[P,ctypes.c_int,P];f.restype=ctypes.c_int\n        def g(A):\n            n=A.shape[0]\n            rc=f(A.ctypes.data,n,out.ctypes.data)\n            if rc:\n                w,v=np.linalg.eig(A);i=np.argmax(np.abs(w));return w[i],v[:,i]\n            return complex(out[0],out[1]), out[2:2+n]+1j*out[2+n:2+2*n]\n    else:\n        f=lib.dominant_custom;f.argtypes=[P,ctypes.c_int,ctypes.POINTER(ctypes.c_double),ctypes.POINTER(ctypes.c_double),P,P];f.restype=ctypes.c_int\n        def g(A):\n            n=A.shape[0]\n            rc=f(A.ctypes.data,n,ctypes.byref(lr),ctypes.byref(li),vr.ctypes.data,vi.ctypes.data)\n            if rc:\n                w,v=np.linalg.eig(A);i=np.argmax(np.abs(w));return w[i],v[:,i]\n            return complex(lr.value,li.value), vr[:n]+1j*vi[:n]\n    return g\ndef ref(A):\n    w,v=np.linalg.eig(A);i=np.argmax(np.abs(w));return w[i],v[:,i]\nfuncs=[('packed4',load('/workspace/libeig_custom2.so',True)),('old4',load('/workspace/libeig_custom2.so',False)),('packed2',load('/workspace/libeig_custom_2it.so',True))]\nfor size in range(2,11,2):\n    print('size',size)\n    for name,g in funcs:\n        dts=[];errs=[];fails=0;dom=0\n        for i in range(10000):\n            A=np.random.normal(size=(size,size))\n            t0=time.perf_counter();w,v=g(A);t1=time.perf_counter();dts.append(t1-t0)\n            if i<1000:\n                e=np.linalg.norm(A@v-w*v);errs.append(e)\n                if not np.allclose(A@v,w*v):fails+=1\n                we=np.linalg.eigvals(A)\n                if abs(abs(w)-np.max(abs(we)))>1e-6*max(1,np.max(abs(we))):dom+=1\n        print(' ',name,f\"{np.median(dts)*1e6:.2f}us\",'maxerr',max(errs),'fails',fails,'dom',dom,'p99',np.percentile(dts,99)*1e6)\n    refd=[]\n    for i in range(1000):\n        A=np.random.normal(size=(size,size));t0=time.perf_counter();ref(A);t1=time.perf_counter();refd.append(t1-t0)\n    print('  ref',f\"{np.median(refd)*1e6:.2f}us\")\nPY",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 634653,
+     "dur_ms": 6089,
+     "exit": 0,
+     "cpu_ms": 6296.9,
+     "phases_us": {
+      "acquire": 126,
+      "resume": 24326,
+      "mount": 20608,
+      "run": 6033614,
+      "destroy": 30729
+     },
+     "cold": null,
+     "vm": "vm-404"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 640782,
+   "dur_ms": 17374,
+   "tokens_in": 3,
+   "tokens_out": 3332,
+   "cache_read": 107136,
+   "cache_write": 704,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 658156,
+   "dur_ms": 881,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\ns=open('eig_custom2.c').read()\ns=s.replace('for(int it=0;it<4;it++)','for(int it=0;it<2;it++)')\n# replace final residual check block\nold='''    /* residual check */\n    double rn=0,an=0,vn=0;\n    for(int i=0;i<n*n;i++) an+=A[i]*A[i]; an=sqrt(an);\n    for(int i=0;i<n;i++){\n        double ar=0,ai=0;\n        for(int j=0;j<n;j++){ar+=A[i*n+j]*vr[j]; ai+=A[i*n+j]*vi[j];}\n        double dr=ar-(*lr*vr[i]-*li*vi[i]), di=ai-(*lr*vi[i]+*li*vr[i]);\n        rn+=dr*dr+di*di; vn+=vr[i]*vr[i]+vi[i]*vi[i];\n    }\n    rn=sqrt(rn); vn=sqrt(vn);\n    if(rn > 1e-7*(an*vn+1e-300)) return 3;\n    return 0;'''\nnew='''    /* strict per-element allclose-style check */\n    for(int i=0;i<n;i++){\n        double ar=0,ai=0;\n        for(int j=0;j<n;j++){ar+=A[i*n+j]*vr[j]; ai+=A[i*n+j]*vi[j];}\n        double lvr=*lr*vr[i]-*li*vi[i], lvi=*lr*vi[i]+*li*vr[i];\n        double dr=ar-lvr, di=ai-lvi;\n        double lim=0.5*(1e-8 + 1e-5*hypot(lvr,lvi));\n        if(hypot(dr,di) > lim) return 4;\n    }\n    return 0;'''\nassert old in s\ns=s.replace(old,new)\nopen('eig_final.c','w').write(s)\nPY\nexport LD_LIBRARY_PATH=/workspace/gccroot/usr/lib/x86_64-linux-gnu:/workspace/gccroot/lib/x86_64-linux-gnu\nGCC=/workspace/gccroot/usr/bin/gcc-12\n$GCC --sysroot=/workspace/gccroot -B/workspace/gccroot/usr/bin -B/workspace/gccroot/usr/lib/gcc/x86_64-linux-gnu/12 -O3 -march=x86-64 -shared -fPIC -o /workspace/libeig_final.so eig_final.c -lm\nldd /workspace/libeig_final.so\nls -l /workspace/libeig_final.so",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 658209,
+     "dur_ms": 813,
+     "exit": 0,
+     "cpu_ms": 895.0,
+     "phases_us": {
+      "acquire": 107,
+      "resume": 23993,
+      "mount": 20268,
+      "run": 763650,
+      "destroy": 25005
+     },
+     "cold": null,
+     "vm": "vm-405"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 659045,
+   "dur_ms": 2656,
+   "tokens_in": 43,
+   "tokens_out": 279,
+   "cache_read": 111168,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 661701,
+   "dur_ms": 129,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ldd /workspace/libeig_final.so\npython3 - <<'PY'\nimport ctypes\nlib=ctypes.CDLL('/workspace/libeig_final.so')\nprint('loaded ok')\nPY",
+   "timeout": 60,
+   "sandbox": [
+    {
+     "at_ms": 661714,
+     "dur_ms": 94,
+     "exit": 0,
+     "cpu_ms": 92.9,
+     "phases_us": {
+      "acquire": 101,
+      "resume": 23458,
+      "mount": 20747,
+      "run": 47370,
+      "destroy": 22390
+     },
+     "cold": null,
+     "vm": "vm-410"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 661838,
+   "dur_ms": 7999,
+   "tokens_in": 5,
+   "tokens_out": 1486,
+   "cache_read": 111616,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 669837,
+   "dur_ms": 420,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put stress.py <<'EOF'\nimport ctypes,numpy as np\nP=ctypes.c_void_p\nlib=ctypes.CDLL('/workspace/libeig_final.so')\nf=lib.dominant_custom_packed;f.argtypes=[P,ctypes.c_int,P];f.restype=ctypes.c_int\nout=np.empty(2+128)\ndef fast(A):\n    A=np.asarray(A,dtype=np.float64)\n    if not A.flags.c_contiguous: A=np.ascontiguousarray(A)\n    n=A.shape[0]\n    rc=f(A.ctypes.data,n,out.ctypes.data)\n    if rc:\n        w,v=np.linalg.eig(A);i=np.argmax(np.abs(w));return w[i],v[:,i],rc\n    return complex(out[0],out[1]),out[2:2+n]+1j*out[2+n:2+2*n],rc\ndef ref(A):\n    w,v=np.linalg.eig(A);i=np.argmax(np.abs(w));return w[i],v[:,i]\nrng=np.random.default_rng(12345)\ndef cases(n):\n    yield 'normal',rng.normal(size=(n,n))\n    yield 'uniform',rng.uniform(-1,1,size=(n,n))\n    yield 'scaled+',rng.normal(size=(n,n))*10**rng.uniform(-6,6)\n    yield 'scaled-',rng.normal(size=(n,n))*10**rng.uniform(-150,150)\n    X=rng.normal(size=(n,n)); yield 'symmetric',X+X.T\n    yield 'skew',X-X.T\n    Q,_=np.linalg.qr(rng.normal(size=(n,n))); yield 'orthogonal',Q\n    yield 'triangular',np.triu(rng.normal(size=(n,n)))\n    yield 'triangular_low',np.tril(rng.normal(size=(n,n)))\n    d=rng.normal(size=n); D=np.diag(d); yield 'diagonal',D\n    d=np.array([2.0 if i%2==0 else -2.0 for i in range(n)]); yield 'diag_ties',np.diag(d)\n    J=np.eye(n,k=1); yield 'jordan_1',J\n    J=np.eye(n,k=1)*3; J[0,0]=3; yield 'jordan_lam',J\n    N=np.eye(n,k=1); Pm=rng.normal(size=(n,n))\n    try:\n        A=Pm@N@np.linalg.inv(Pm); yield 'nilpotent_sim',A\n    except np.linalg.LinAlgError: pass\n    yield 'nilpotent_tri',np.triu(np.eye(n,k=1))\n    A=rng.normal(size=(n,1))@rng.normal(size=(1,n)); yield 'rank1',A\n    yield 'identity',np.eye(n)\n    yield 'zero',np.zeros((n,n))\n    # complex pair rotation-like\n    if n>=2:\n        A=np.zeros((n,n));\n        for i in range(0,n-1,2):\n            th=0.3+i*0.2; A[i,i]=np.cos(th); A[i,i+1]=-np.sin(th); A[i+1,i]=np.sin(th); A[i+1,i+1]=np.cos(th)\n        if n%2: A[-1,-1]=0.3\n        yield 'rot_blocks',A\n    # companion\n    c=rng.normal(size=n); C=np.zeros((n,n)); C[0,:]=-c; C[1:,:-1]=np.eye(n-1); yield 'companion',C\n    # integer\n    yield 'integer',rng.integers(-5,6,size=(n,n)).astype(float)\n    # multiple identical rows\n    B=rng.normal(size=(n,n)); B[1:]=B[0]; yield 'identical_rows',B\n    # nearly defective\n    E=np.eye(n,k=1)+np.diag(rng.normal(size=n)); E+=1e-10*rng.normal(size=(n,n)); yield 'near_jordan',E\n\nbad=[]; total=0; rc_counts={}\nfor n in range(1,11):\n  for name,A in cases(n):\n    total+=1\n    w,v,rc=fast(A); rc_counts[rc]=rc_counts.get(rc,0)+1\n    # residual/allclose\n    ok_res=np.allclose(A@v,w*v)\n    try:\n        w0,v0=ref(A)\n        dom=np.max(np.abs(np.linalg.eigvals(A))) if n<=10 else abs(w0)\n        ok_dom=abs(abs(w)-dom) <= 1e-6*max(1.0,dom)\n    except Exception as e:\n        ok_dom=True\n    if not ok_res or not ok_dom:\n        bad.append((n,name,rc,ok_res,ok_dom,w,np.linalg.eigvals(A),np.linalg.norm(A@v-w*v)))\nprint('total',total,'rc_counts',rc_counts,'bad',len(bad))\nfor b in bad[:20]: print(b)\nEOF\nsbx run <<'EOF'\ncd /workspace && python3 stress.py\nEOF",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 669890,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 47.6,
+     "phases_us": {
+      "acquire": 96,
+      "resume": 23877,
+      "mount": 20946,
+      "run": 8580,
+      "destroy": 23335
+     },
+     "cold": null,
+     "vm": "vm-411"
+    },
+    {
+     "at_ms": 669992,
+     "dur_ms": 260,
+     "exit": 0,
+     "cpu_ms": 357.0,
+     "phases_us": {
+      "acquire": 28,
+      "resume": 22849,
+      "mount": 18653,
+      "run": 211834,
+      "destroy": 24736
+     },
+     "cold": null,
+     "vm": "vm-403"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 670265,
+   "dur_ms": 12779,
+   "tokens_in": 57,
+   "tokens_out": 2119,
+   "cache_read": 113216,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 683044,
+   "dur_ms": 1039,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\ns=open('eig_final.c').read()\nold='''    *lr=rr;*li=ri;\n    /* strict per-element allclose-style check */'''\nnew='''    *lr=rr;*li=ri;\n    double gotmag=hypot(rr,ri), selmag=sqrt(best);\n    if (gotmag < selmag*(1.0-1e-6) || gotmag > selmag*(1.0+1e-6)) return 5;\n    /* strict per-element allclose-style check */'''\nassert old in s\ns=s.replace(old,new)\nopen('eig_final.c','w').write(s)\nPY\nexport LD_LIBRARY_PATH=/workspace/gccroot/usr/lib/x86_64-linux-gnu:/workspace/gccroot/lib/x86_64-linux-gnu\nGCC=/workspace/gccroot/usr/bin/gcc-12\nSTRIP=/workspace/gccroot/usr/bin/strip\n$GCC --sysroot=/workspace/gccroot -B/workspace/gccroot/usr/bin -B/workspace/gccroot/usr/lib/gcc/x86_64-linux-gnu/12 -O3 -march=x86-64 -s -shared -fPIC -o /workspace/libeig_final.so eig_final.c -lm\nls -l /workspace/libeig_final.so\npython3 stress.py",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 683094,
+     "dur_ms": 983,
+     "exit": 0,
+     "cpu_ms": 1127.1,
+     "phases_us": {
+      "acquire": 17,
+      "resume": 20725,
+      "mount": 17599,
+      "run": 937345,
+      "destroy": 24572
+     },
+     "cold": null,
+     "vm": "vm-413"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 684090,
+   "dur_ms": 11030,
+   "tokens_in": 62,
+   "tokens_out": 2143,
+   "cache_read": 115584,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 695120,
+   "dur_ms": 364,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\nimport base64\ndata=open('libeig_final.so','rb').read()\nb64=base64.b64encode(data).decode()\ntemplate='''import base64\nimport ctypes\nimport hashlib\nimport os\nimport tempfile\n\nimport numpy as np\n\n# Fast small-matrix dominant-eigenpair kernel (C, x86-64).  The binary is kept\n# inline so this file is self-contained; it is decoded once at import time.\n_LIB_B64 = \"\"\"__LIB_B64__\"\"\"\n\n\ndef _load_kernel():\n    try:\n        blob = base64.b64decode(_LIB_B64)\n    except Exception:\n        return None\n    name = \"moca_dominant_\" + hashlib.sha1(blob).hexdigest()[:16] + \".so\"\n    path = os.path.join(tempfile.gettempdir(), name)\n    try:\n        return ctypes.CDLL(path)\n    except Exception:\n        pass\n    try:\n        tmp = path + \".\" + str(os.getpid()) + \".tmp\"\n        with open(tmp, \"wb\") as fh:\n            fh.write(blob)\n        os.replace(tmp, path)\n        return ctypes.CDLL(path)\n    except Exception:\n        return None\n\n\n_kernel = _load_kernel()\nif _kernel is not None:\n    try:\n        _dominant = _kernel.dominant_custom_packed\n        _dominant.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p]\n        _dominant.restype = ctypes.c_int\n    except Exception:\n        _dominant = None\nelse:\n    _dominant = None\n\n_MAX_N = 16\n_out = np.empty(2 + 2 * _MAX_N, dtype=np.float64)\n\n\ndef find_dominant_eigenvalue_and_eigenvector(A: np.ndarray):\n    \"\"\"\n    Find the dominant eigenvalue and eigenvector of a general real square matrix.\n\n    Args:\n        A: Real-valued square matrix (accepts numpy arrays) up to size 10x10,\n        dtype np.float64.\n\n    Returns:\n        eigenvalue: Dominant eigenvalue (numpy scalar, potentially complex)\n        eigenvector: Corresponding eigenvector (np.ndarray, potentially complex)\n    \"\"\"\n    A = np.asarray(A, dtype=np.float64)\n    n = A.shape[0]\n\n    if (\n        _dominant is not None\n        and A.ndim == 2\n        and A.shape[1] == n\n        and 1 <= n <= _MAX_N\n    ):\n        if not A.flags.c_contiguous:\n            A = np.ascontiguousarray(A)\n        rc = _dominant(A.ctypes.data, n, _out.ctypes.data)\n        if rc == 0:\n            return (\n                complex(_out[0], _out[1]),\n                _out[2:2 + n] + 1j * _out[2 + n:2 + 2 * n],\n            )\n\n    # Robust fallback for unusual/pathological inputs or unsupported platforms.\n    eigenvalues, eigenvectors = np.linalg.eig(A)\n    idx = int(np.argmax(np.abs(eigenvalues)))\n    return eigenvalues[idx], eigenvectors[:, idx]\n'''\nopen('eigen.py','w').write(template.replace('__LIB_B64__',b64))\nprint('wrote eigen.py size',os.path.getsize('eigen.py') if False else len(open('eigen.py').read()))\nPY\nls -l eigen.py\npython3 eval.py",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 695129,
+     "dur_ms": 320,
+     "exit": 0,
+     "cpu_ms": 412.7,
+     "phases_us": {
+      "acquire": 53,
+      "resume": 21150,
+      "mount": 17833,
+      "run": 267857,
+      "destroy": 30330
+     },
+     "cold": null,
+     "vm": "vm-416"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 695493,
+   "dur_ms": 3289,
+   "tokens_in": 40,
+   "tokens_out": 456,
+   "cache_read": 117824,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 698783,
+   "dur_ms": 969,
+   "tool": "bash",
+   "is_error": false,
+   "command": "mkdir -p /tmp/isolated && cp /workspace/eigen.py /workspace/eval.py /tmp/isolated/\nrm -f /tmp/moca_dominant_*.so\ncd /tmp/isolated && python3 eval.py\npython3 - <<'PY'\nimport sys, numpy as np\nsys.path.insert(0,'/tmp/isolated')\nfrom eigen import find_dominant_eigenvalue_and_eigenvector as f\nrng=np.random.default_rng(7)\nfor n in range(1,11):\n    for _ in range(500):\n        A=rng.normal(size=(n,n))\n        w,v=f(A)\n        assert np.allclose(A@v,w*v), (n,np.linalg.norm(A@v-w*v))\n        we=np.linalg.eigvals(A)\n        assert abs(abs(w)-np.max(abs(we))) <= 1e-6*max(1,np.max(abs(we))), (n,w,we)\nprint('isolated correctness ok')\nPY",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 698832,
+     "dur_ms": 884,
+     "exit": 0,
+     "cpu_ms": 1099.9,
+     "phases_us": {
+      "acquire": 81,
+      "resume": 20876,
+      "mount": 18608,
+      "run": 832354,
+      "destroy": 30897
+     },
+     "cold": null,
+     "vm": "vm-418"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 699760,
+   "dur_ms": 9059,
+   "tokens_in": 32,
+   "tokens_out": 1736,
+   "cache_read": 118464,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 708819,
+   "dur_ms": 366,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\nimport re\ns=open('eigen.py').read()\nb64=re.search(r'_LIB_B64 = \"\"\"(.*?)\"\"\"', s, re.S).group(1)\nnew='''import base64\nimport ctypes\nimport hashlib\nimport os\nimport tempfile\n\nimport numpy as np\n\n# Fast small-matrix dominant-eigenpair kernel (C, x86-64).  The binary is kept\n# inline so this file is self-contained; it is decoded once at import time.\n_LIB_B64 = \"\"\"__LIB_B64__\"\"\"\n\n\ndef _load_kernel():\n    try:\n        blob = base64.b64decode(_LIB_B64)\n    except Exception:\n        return None\n\n    name = \"moca_dominant_\" + hashlib.sha1(blob).hexdigest()[:16] + \".so\"\n    path = os.path.join(tempfile.gettempdir(), name)\n    try:\n        return ctypes.CDLL(path)\n    except Exception:\n        pass\n\n    # Normal case: write the shared object to a temporary file.\n    try:\n        tmp = path + \".\" + str(os.getpid()) + \".tmp\"\n        with open(tmp, \"wb\") as fh:\n            fh.write(blob)\n        os.replace(tmp, path)\n        return ctypes.CDLL(path)\n    except Exception:\n        pass\n\n    # Fallback for a noexec /tmp: load directly from an anonymous memory file.\n    try:\n        if hasattr(os, \"memfd_create\"):\n            fd = os.memfd_create(name)\n            try:\n                os.write(fd, blob)\n                return ctypes.CDLL(\"/proc/self/fd/\" + str(fd))\n            finally:\n                os.close(fd)\n    except Exception:\n        pass\n    return None\n\n\n_kernel = _load_kernel()\nif _kernel is not None:\n    try:\n        _dominant = _kernel.dominant_custom_packed\n        _dominant.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p]\n        _dominant.restype = ctypes.c_int\n    except Exception:\n        _dominant = None\nelse:\n    _dominant = None\n\n_MAX_N = 16\n_out = np.empty(2 + 2 * _MAX_N, dtype=np.float64)\n\n\ndef find_dominant_eigenvalue_and_eigenvector(A: np.ndarray):\n    \"\"\"\n    Find the dominant eigenvalue and eigenvector of a general real square matrix.\n\n    Args:\n        A: Real-valued square matrix (accepts numpy arrays) up to size 10x10,\n        dtype np.float64.\n\n    Returns:\n        eigenvalue: Dominant eigenvalue (numpy scalar, potentially complex)\n        eigenvector: Corresponding eigenvector (np.ndarray, potentially complex)\n    \"\"\"\n    A = np.asarray(A, dtype=np.float64)\n    n = A.shape[0]\n\n    if (\n        _dominant is not None\n        and A.ndim == 2\n        and A.shape[1] == n\n        and 1 <= n <= _MAX_N\n    ):\n        if not A.flags.c_contiguous:\n            A = np.ascontiguousarray(A)\n        rc = _dominant(A.ctypes.data, n, _out.ctypes.data)\n        if rc == 0:\n            return (\n                complex(_out[0], _out[1]),\n                _out[2:2 + n] + 1j * _out[2 + n:2 + 2 * n],\n            )\n\n    # Robust fallback for unusual/pathological inputs or unsupported platforms.\n    eigenvalues, eigenvectors = np.linalg.eig(A)\n    idx = int(np.argmax(np.abs(eigenvalues)))\n    return eigenvalues[idx], eigenvectors[:, idx]\n'''\nnew=new.replace('__LIB_B64__',b64)\nopen('eigen.py','w').write(new)\nprint(len(new))\nPY\nrm -f /tmp/moca_dominant_*.so\npython3 eval.py",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 708872,
+     "dur_ms": 310,
+     "exit": 0,
+     "cpu_ms": 441.2,
+     "phases_us": {
+      "acquire": 82,
+      "resume": 23602,
+      "mount": 20879,
+      "run": 261253,
+      "destroy": 24373
+     },
+     "cold": null,
+     "vm": "vm-419"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 709193,
+   "dur_ms": 2340,
+   "tokens_in": 22,
+   "tokens_out": 311,
+   "cache_read": 120384,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 711533,
+   "dur_ms": 211,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\nls -la\nrm -rf bench.py bench_lapack.py bench_lapack2.py arnoldi_study.py rqi_study.py rqi_study2.py shift_study.py qr_study.py stress.py eiglib.c eiglib_dbg.c libeig.so libeig_gcc.so libeig_dbg.so test.so ctest.c ctest.so eig_lapack.c eig_lapack_dbg.c libeig_lapack.so libeig_lapack_dbg.so eig_variants.c libeig_variants.so eig_custom.c eig_custom2.c eig_custom_2it.c eig_final.c libeig_custom.so libeig_custom2.so libeig_custom_2it.so libeig_final.so gccroot gccdebs debs tc sysroot vendor *.deb\nls -la",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 711586,
+     "dur_ms": 140,
+     "exit": 0,
+     "cpu_ms": 158.3,
+     "phases_us": {
+      "acquire": 106,
+      "resume": 24220,
+      "mount": 21095,
+      "run": 94799,
+      "destroy": 20941
+     },
+     "cold": null,
+     "vm": "vm-421"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 711752,
+   "dur_ms": 1969,
+   "tokens_in": 6,
+   "tokens_out": 191,
+   "cache_read": 120896,
+   "cache_write": 1280,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 713721,
+   "dur_ms": 429,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\nrm -rf __pycache__\nrm -f /tmp/moca_dominant_*.so\npython3 -m py_compile eigen.py && echo syntax_ok\npython3 eval.py\nls -la",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 713775,
+     "dur_ms": 336,
+     "exit": 0,
+     "cpu_ms": 468.2,
+     "phases_us": {
+      "acquire": 66,
+      "resume": 28547,
+      "mount": 25243,
+      "run": 280552,
+      "destroy": 26800
+     },
+     "cold": null,
+     "vm": "vm-422"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 714158,
+   "dur_ms": 6421,
+   "tokens_in": 61,
+   "tokens_out": 1064,
+   "cache_read": 122368,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 720579,
+   "dur_ms": 392,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\ncp eigen.py /tmp/eigen_global.py\npython3 - <<'PY'\ns=open('eigen.py').read()\ns=s.replace('_MAX_N = 16\\n_out = np.empty(2 + 2 * _MAX_N, dtype=np.float64)', '_MAX_N = 16')\ns=s.replace('        rc = _dominant(A.ctypes.data, n, _out.ctypes.data)\\n        if rc == 0:\\n            return (\\n                complex(_out[0], _out[1]),\\n                _out[2:2 + n] + 1j * _out[2 + n:2 + 2 * n],\\n            )',\n'''        out = np.empty(2 + 2 * n, dtype=np.float64)\n        rc = _dominant(A.ctypes.data, n, out.ctypes.data)\n        if rc == 0:\n            return (\n                complex(out[0], out[1]),\n                out[2:2 + n] + 1j * out[2 + n:2 + 2 * n],\n            )''')\nopen('eigen.py','w').write(s)\nPY\nrm -f /tmp/moca_dominant_*.so\npython3 eval.py",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 720629,
+     "dur_ms": 312,
+     "exit": 0,
+     "cpu_ms": 427.7,
+     "phases_us": {
+      "acquire": 82,
+      "resume": 22095,
+      "mount": 19610,
+      "run": 250996,
+      "destroy": 38953
+     },
+     "cold": null,
+     "vm": "vm-423"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 720979,
+   "dur_ms": 3405,
+   "tokens_in": 16,
+   "tokens_out": 471,
+   "cache_read": 123712,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 724384,
+   "dur_ms": 590,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\nrm -rf /tmp/isolated && mkdir -p /tmp/isolated && cp eigen.py eval.py /tmp/isolated/\nrm -f /tmp/moca_dominant_*.so\ncd /tmp/isolated\npython3 - <<'PY'\nimport numpy as np\nfrom eigen import find_dominant_eigenvalue_and_eigenvector as f\nrng=np.random.default_rng(123)\nfor n in range(1,11):\n    for _ in range(300):\n        A=rng.normal(size=(n,n))\n        w,v=f(A)\n        assert np.allclose(A@v,w*v)\n        we=np.linalg.eigvals(A)\n        assert abs(abs(w)-np.max(abs(we))) <= 1e-6*max(1,np.max(abs(we)))\nprint('final correctness ok')\nPY\ncd /workspace\nrm -rf __pycache__\nls -la",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 724435,
+     "dur_ms": 519,
+     "exit": 0,
+     "cpu_ms": 658.5,
+     "phases_us": {
+      "acquire": 83,
+      "resume": 20336,
+      "mount": 18155,
+      "run": 478421,
+      "destroy": 19900
+     },
+     "cold": null,
+     "vm": "vm-424"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 724983,
+   "dur_ms": 1869,
+   "tokens_in": 38,
+   "tokens_out": 145,
+   "cache_read": 124352,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 726852,
+   "dur_ms": 117,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\ngrep -n \"_out\\|_MAX_N\\|def find\\|out = np.empty\\|rc = _dominant\" eigen.py | tail -20",
+   "timeout": 60,
+   "sandbox": [
+    {
+     "at_ms": 726902,
+     "dur_ms": 47,
+     "exit": 0,
+     "cpu_ms": 38.8,
+     "phases_us": {
+      "acquire": 56,
+      "resume": 20029,
+      "mount": 18025,
+      "run": 4496,
+      "destroy": 22572
+     },
+     "cold": null,
+     "vm": "vm-425"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 726976,
+   "dur_ms": 2010,
+   "tokens_in": 20,
+   "tokens_out": 244,
+   "cache_read": 124608,
+   "cache_write": 128,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.233,
+ "calls": 75,
+ "cell": "TB1f",
+ "removed": [
+  {
+   "at_ms": 128448,
+   "dur_ms": 247,
+   "tool": "bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 209592,
+   "dur_ms": 121,
+   "tool": "bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 217482,
+   "dur_ms": 292,
+   "tool": "bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 222057,
+   "dur_ms": 279,
+   "tool": "bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 226634,
+   "dur_ms": 114,
+   "tool": "bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 266812,
+   "dur_ms": 308,
+   "tool": "bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 269589,
+   "dur_ms": 531,
+   "tool": "bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 272583,
+   "dur_ms": 529,
+   "tool": "bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 277779,
+   "dur_ms": 2648,
+   "tool": "bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 283647,
+   "dur_ms": 562,
+   "tool": "bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 301577,
+   "dur_ms": 664,
+   "tool": "bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 353752,
+   "dur_ms": 613,
+   "tool": "bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  }
+ ]
+}

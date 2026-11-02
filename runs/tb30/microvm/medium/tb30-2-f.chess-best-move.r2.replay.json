@@ -1,0 +1,970 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-f",
+ "instance_id": "chess-best-move",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 782925,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 841,
+  "output": 18358,
+  "cacheRead": 529088,
+  "cacheWrite": 20032,
+  "total": 568319
+ },
+ "totals": {
+  "model_calls": 28,
+  "tool_calls": 24,
+  "model_ms": 108439,
+  "tool_ms": 71135,
+  "sandbox_ms": 69512
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1104,
+   "dur_ms": 815,
+   "tokens_in": 7,
+   "tokens_out": 123,
+   "cache_read": 1152,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1922,
+   "dur_ms": 119,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /workspace\nfind /workspace -maxdepth 2 -iname '*chess*' -o -iname '*.png' | head -50",
+   "sandbox": [
+    {
+     "at_ms": 1972,
+     "dur_ms": 55,
+     "exit": 0,
+     "cpu_ms": 41.2,
+     "phases_us": {
+      "acquire": 79,
+      "resume": 20226,
+      "mount": 18064,
+      "run": 6636,
+      "destroy": 27831
+     },
+     "cold": null,
+     "vm": "vm-124"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 2044,
+   "dur_ms": 1718,
+   "tokens_in": 46,
+   "tokens_out": 226,
+   "cache_read": 1280,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3763,
+   "dur_ms": 247,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\nfrom PIL import Image\nim=Image.open('chess_board.png')\nprint(im.size, im.mode)\nprint(im.getbbox())\nPY\npython3 -c \"import cv2; print('cv2',cv2.__version__)\" 2>&1 | head\nwhich tesseract || true",
+   "sandbox": [
+    {
+     "at_ms": 3813,
+     "dur_ms": 187,
+     "exit": 0,
+     "cpu_ms": 202.8,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 22481,
+      "mount": 20123,
+      "run": 134404,
+      "destroy": 30128
+     },
+     "cold": null,
+     "vm": "vm-127"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 4013,
+   "dur_ms": 2013,
+   "tokens_in": 15,
+   "tokens_out": 292,
+   "cache_read": 1600,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6026,
+   "dur_ms": 288,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\nfrom PIL import Image\nfrom collections import Counter\nim=Image.open('chess_board.png').convert('RGB')\nw,h=im.size\nc=Counter(im.getdata())\nfor col,n in c.most_common(20):\n    print(col,n)\n# sample grid centers\nfor r in range(8):\n    row=[]\n    for f in range(8):\n        x=int((f+0.5)*w/8); y=int((r+0.5)*h/8)\n        row.append(im.getpixel((x,y)))\n    print(r,row)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 6075,
+     "dur_ms": 230,
+     "exit": 0,
+     "cpu_ms": 226.4,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 20048,
+      "mount": 18006,
+      "run": 185928,
+      "destroy": 24046
+     },
+     "cold": null,
+     "vm": "vm-129"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 6326,
+   "dur_ms": 3966,
+   "tokens_in": 57,
+   "tokens_out": 607,
+   "cache_read": 1920,
+   "cache_write": 832,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 10292,
+   "dur_ms": 572,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\nfrom PIL import Image\nim=Image.open('chess_board.png').convert('RGB')\n# classify per pixel\ndef cls(p):\n    r,g,b=p\n    if abs(r-240)<12 and abs(g-217)<12 and abs(b-181)<12: return '.'\n    if abs(r-181)<12 and abs(g-136)<12 and abs(b-99)<12: return '.'\n    # brightness\n    if r+g+b < 220: return '#'\n    if r+g+b > 600: return 'O'\n    return '+'\nfor r in range(8):\n    print('=== rank',8-r,'===')\n    for f in range(8):\n        x0=f*80; y0=r*80\n        # count types\n        from collections import Counter\n        c=Counter(cls(im.getpixel((x,y))) for y in range(y0,y0+80) for x in range(x0,x0+80))\n        print('file',chr(97+f),dict(c))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 10342,
+     "dur_ms": 514,
+     "exit": 0,
+     "cpu_ms": 510.5,
+     "phases_us": {
+      "acquire": 72,
+      "resume": 20356,
+      "mount": 18268,
+      "run": 469592,
+      "destroy": 24214
+     },
+     "cold": null,
+     "vm": "vm-131"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 10867,
+   "dur_ms": 4299,
+   "tokens_in": 52,
+   "tokens_out": 742,
+   "cache_read": 3392,
+   "cache_write": 960,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 15167,
+   "dur_ms": 603,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\nfrom PIL import Image\nim=Image.open('chess_board.png').convert('RGB')\ndef cls(p):\n    r,g,b=p\n    if abs(r-240)<18 and abs(g-217)<18 and abs(b-181)<18: return ' '\n    if abs(r-181)<18 and abs(g-136)<18 and abs(b-99)<18: return ' '\n    if r+g+b < 250: return '#'\n    if r+g+b > 600: return 'O'\n    return '+'\nsquares=[(r,f) for r in range(8) for f in range(8)]\n# only occupied\nfor r,f in squares:\n    x0=f*80; y0=r*80\n    # determine occupied by non-bg\n    arr=[[cls(im.getpixel((x0+x,y0+y))) for x in range(80)] for y in range(80)]\n    n=sum(ch!=' ' for row in arr for ch in row)\n    if n<20: continue\n    print(f\"--- {chr(97+f)}{8-r}  (r{r}f{f}) n={n} ---\")\n    # downsample 2x2 to 40x40, prefer ink\n    for y in range(0,80,2):\n        line=''\n        for x in range(0,80,2):\n            chs=[arr[y][x],arr[y][x+1],arr[y+1][x],arr[y+1][x+1]]\n            # prefer # then O then + then space\n            for want in '#O+':\n                if want in chs: line+=want; break\n            else: line+=' '\n        print(line.rstrip())\nPY",
+   "sandbox": [
+    {
+     "at_ms": 15218,
+     "dur_ms": 546,
+     "exit": 0,
+     "cpu_ms": 561.4,
+     "phases_us": {
+      "acquire": 114,
+      "resume": 21365,
+      "mount": 18854,
+      "run": 499196,
+      "destroy": 25390
+     },
+     "cold": null,
+     "vm": "vm-135"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 15773,
+   "dur_ms": 13540,
+   "tokens_in": 57,
+   "tokens_out": 1995,
+   "cache_read": 5120,
+   "cache_write": 3712,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 29314,
+   "dur_ms": 149,
+   "tool": "bash",
+   "is_error": false,
+   "command": "fc-list 2>/dev/null | head -50 || find /usr/share/fonts -type f | head -50\npython3 - <<'PY'\nimport PIL\nprint(PIL.__version__)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 29363,
+     "dur_ms": 79,
+     "exit": 0,
+     "cpu_ms": 73.3,
+     "phases_us": {
+      "acquire": 53,
+      "resume": 20998,
+      "mount": 18351,
+      "run": 33967,
+      "destroy": 23404
+     },
+     "cold": null,
+     "vm": "vm-137"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 29466,
+   "dur_ms": 805,
+   "tokens_in": 21,
+   "tokens_out": 98,
+   "cache_read": 10880,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 30272,
+   "dur_ms": 304,
+   "tool": "bash",
+   "is_error": false,
+   "command": "find / -type f \\( -iname '*.ttf' -o -iname '*.otf' -o -iname '*.ttc' \\) 2>/dev/null | head -100",
+   "sandbox": [
+    {
+     "at_ms": 30322,
+     "dur_ms": 244,
+     "exit": 0,
+     "cpu_ms": 319.3,
+     "phases_us": {
+      "acquire": 14,
+      "resume": 19988,
+      "mount": 17959,
+      "run": 192553,
+      "destroy": 30912
+     },
+     "cold": null,
+     "vm": "vm-141"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 30578,
+   "dur_ms": 3030,
+   "tokens_in": 7,
+   "tokens_out": 505,
+   "cache_read": 10944,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 33608,
+   "dur_ms": 303,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\nfrom PIL import Image,ImageDraw,ImageFont\nfontpath='/fonts/noto.ttf'\nfor idx,code in enumerate(range(0x2654,0x2660)):\n    ch=chr(code)\n    # render at size 64 onto 80x80 center\n    f=ImageFont.truetype(fontpath,64)\n    im=Image.new('L',(80,80),0)\n    d=ImageDraw.Draw(im)\n    bbox=d.textbbox((0,0),ch,font=f)\n    w=bbox[2]-bbox[0]; h=bbox[3]-bbox[1]\n    d.text(((80-w)/2-bbox[0],(80-h)/2-bbox[1]),ch,font=f,fill=255)\n    print('====',hex(code),ch,'bbox',bbox,'size',w,h)\n    for y in range(0,80,2):\n        line=''\n        for x in range(0,80,2):\n            v=max(im.getpixel((x,y)),im.getpixel((x+1,y)),im.getpixel((x,y+1)),im.getpixel((x+1,y+1)))\n            line += '#' if v>128 else ('+' if v>20 else ' ')\n        print(line.rstrip())\nPY",
+   "sandbox": [
+    {
+     "at_ms": 33658,
+     "dur_ms": 211,
+     "exit": 0,
+     "cpu_ms": 234.3,
+     "phases_us": {
+      "acquire": 88,
+      "resume": 20575,
+      "mount": 18113,
+      "run": 164550,
+      "destroy": 26016
+     },
+     "cold": null,
+     "vm": "vm-143"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 33915,
+   "dur_ms": 12404,
+   "tokens_in": 3,
+   "tokens_out": 2383,
+   "cache_read": 11648,
+   "cache_write": 2112,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 46320,
+   "dur_ms": 169,
+   "tool": "bash",
+   "is_error": false,
+   "command": "which stockfish || true\npython3 - <<'PY'\ntry:\n import chess; print('chess',chess.__version__)\nexcept Exception as e: print('no chess',e)\nPY\napt-cache policy stockfish 2>/dev/null | head -20",
+   "sandbox": [
+    {
+     "at_ms": 46369,
+     "dur_ms": 100,
+     "exit": 0,
+     "cpu_ms": 114.7,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 19899,
+      "mount": 17461,
+      "run": 57055,
+      "destroy": 23359
+     },
+     "cold": null,
+     "vm": "vm-145"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 46493,
+   "dur_ms": 1279,
+   "tokens_in": 37,
+   "tokens_out": 191,
+   "cache_read": 16128,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 47772,
+   "dur_ms": 612,
+   "tool": "bash",
+   "is_error": false,
+   "command": "pip install python-chess -q 2>&1 | tail -5\npython3 -c \"import chess; print(chess.__version__)\"\napt-get update -qq 2>&1 | tail -5\napt-get install -y -qq stockfish 2>&1 | tail -15\nwhich stockfish || ls -l /usr/games/stockfish 2>/dev/null || true",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 47821,
+     "dur_ms": 546,
+     "exit": 0,
+     "cpu_ms": 618.4,
+     "phases_us": {
+      "acquire": 83,
+      "resume": 20090,
+      "mount": 18034,
+      "run": 493053,
+      "destroy": 32897
+     },
+     "cold": null,
+     "vm": "vm-148"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 48384,
+   "dur_ms": 1475,
+   "tokens_in": 45,
+   "tokens_out": 184,
+   "cache_read": 16320,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 49859,
+   "dur_ms": 1809,
+   "tool": "bash",
+   "is_error": false,
+   "command": "id\nls -ld /var/lib/apt /var/lib/apt/lists /var/lib/dpkg\npython3 -m pip install --break-system-packages python-chess -q 2>&1 | tail -5\npython3 -c \"import chess; print(chess.__version__)\"",
+   "timeout": 180,
+   "sandbox": [
+    {
+     "at_ms": 49869,
+     "dur_ms": 1762,
+     "exit": 0,
+     "cpu_ms": 1741.6,
+     "phases_us": {
+      "acquire": 95,
+      "resume": 20009,
+      "mount": 17846,
+      "run": 1698639,
+      "destroy": 43327
+     },
+     "cold": null,
+     "vm": "vm-151"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 51668,
+   "dur_ms": 2290,
+   "tokens_in": 41,
+   "tokens_out": 295,
+   "cache_read": 16704,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 53959,
+   "dur_ms": 850,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat /etc/os-release\nfind / -iname '*stockfish*' 2>/dev/null | head\npython3 -m pip index versions stockfish 2>&1 | head -20",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 54008,
+     "dur_ms": 791,
+     "exit": 0,
+     "cpu_ms": 812.8,
+     "phases_us": {
+      "acquire": 8,
+      "resume": 19616,
+      "mount": 17597,
+      "run": 738791,
+      "destroy": 32413
+     },
+     "cold": null,
+     "vm": "vm-153"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 54812,
+   "dur_ms": 1243,
+   "tokens_in": 59,
+   "tokens_out": 190,
+   "cache_read": 17152,
+   "cache_write": 512,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 56055,
+   "dur_ms": 876,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp\npython3 -m pip download stockfish==5.2.0 --no-deps -q\nls -lh\npython3 - <<'PY'\nimport zipfile,glob,tarfile,os\nfor f in glob.glob('/tmp/stockfish*'):\n print(f, os.path.getsize(f))\n if f.endswith('.whl'):\n  z=zipfile.ZipFile(f)\n  for n in z.namelist(): print(n)\nPY",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 56104,
+     "dur_ms": 811,
+     "exit": 0,
+     "cpu_ms": 753.8,
+     "phases_us": {
+      "acquire": 45,
+      "resume": 19755,
+      "mount": 17767,
+      "run": 757371,
+      "destroy": 33225
+     },
+     "cold": null,
+     "vm": "vm-155"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 56934,
+   "dur_ms": 1204,
+   "tokens_in": 11,
+   "tokens_out": 180,
+   "cache_read": 17856,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 58138,
+   "dur_ms": 382,
+   "tool": "bash",
+   "is_error": false,
+   "command": "curl -sS --max-time 20 http://archive.ubuntu.com/ubuntu/pool/universe/s/stockfish/ | head -50 || true",
+   "timeout": 60,
+   "sandbox": [
+    {
+     "at_ms": 58187,
+     "dur_ms": 313,
+     "exit": 0,
+     "cpu_ms": 75.7,
+     "phases_us": {
+      "acquire": 47,
+      "resume": 20069,
+      "mount": 17851,
+      "run": 270487,
+      "destroy": 22493
+     },
+     "cold": null,
+     "vm": "vm-156"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 58523,
+   "dur_ms": 1633,
+   "tokens_in": 46,
+   "tokens_out": 240,
+   "cache_read": 18240,
+   "cache_write": 3648,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 60156,
+   "dur_ms": 1524,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp\ncurl -sS --max-time 180 -O http://archive.ubuntu.com/ubuntu/pool/universe/s/stockfish/stockfish_16-1build1_amd64.deb\nls -lh stockfish*.deb\nwhich dpkg-deb ar || true\nmkdir -p sf && cd sf\n(ar x ../stockfish_16-1build1_amd64.deb 2>/dev/null && ls) || true\ntar -tf data.tar.zst 2>/dev/null | head || tar -tf data.tar.xz 2>/dev/null | head",
+   "timeout": 240,
+   "sandbox": [
+    {
+     "at_ms": 60206,
+     "dur_ms": 1440,
+     "exit": 0,
+     "cpu_ms": 728.6,
+     "phases_us": {
+      "acquire": 50,
+      "resume": 20361,
+      "mount": 18188,
+      "run": 1385140,
+      "destroy": 34763
+     },
+     "cold": null,
+     "vm": "vm-158"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 61683,
+   "dur_ms": 1285,
+   "tokens_in": 40,
+   "tokens_out": 181,
+   "cache_read": 22144,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 62969,
+   "dur_ms": 117,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /tmp/sf\nwhich zstd unzstd || true\ntar --zstd -tf data.tar.zst 2>&1 | head -30\necho \"---\"\ndpkg-deb -x ../stockfish_16-1build1_amd64.deb extracted 2>&1 | head\nfind extracted -type f | head -20",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 63018,
+     "dur_ms": 60,
+     "exit": 0,
+     "cpu_ms": 45.3,
+     "phases_us": {
+      "acquire": 48,
+      "resume": 20174,
+      "mount": 17966,
+      "run": 11719,
+      "destroy": 28388
+     },
+     "cold": null,
+     "vm": "vm-161"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 63086,
+   "dur_ms": 1484,
+   "tokens_in": 36,
+   "tokens_out": 232,
+   "cache_read": 22400,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 64571,
+   "dur_ms": 598,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\ncurl -sS --max-time 180 -O http://archive.ubuntu.com/ubuntu/pool/universe/s/stockfish/stockfish_16-1build1_amd64.deb\nls -lh stockfish_16-1build1_amd64.deb\nrm -rf sf_extract\ndpkg-deb -x stockfish_16-1build1_amd64.deb sf_extract\nfind sf_extract -type f | head -20",
+   "timeout": 240,
+   "sandbox": [
+    {
+     "at_ms": 64620,
+     "dur_ms": 538,
+     "exit": 0,
+     "cpu_ms": 633.4,
+     "phases_us": {
+      "acquire": 60,
+      "resume": 20063,
+      "mount": 18007,
+      "run": 486212,
+      "destroy": 31759
+     },
+     "cold": null,
+     "vm": "vm-162"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 65173,
+   "dur_ms": 3726,
+   "tokens_in": 18,
+   "tokens_out": 544,
+   "cache_read": 22784,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "model",
+   "at_ms": 70656,
+   "dur_ms": 3322,
+   "tokens_in": 40,
+   "tokens_out": 528,
+   "cache_read": 23424,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "model",
+   "at_ms": 674088,
+   "dur_ms": 2448,
+   "tokens_in": 10,
+   "tokens_out": 428,
+   "cache_read": 24128,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 676536,
+   "dur_ms": 591,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\nFEN='r1bq1r2/1p3pp1/p1q1p3/3qPkbP/8/P1N5/1P2QPP1/R1B1K2R w - - 0 1'\ntimeout 90 bash -c \"printf 'uci\\nsetoption name Threads value 2\\nsetoption name Hash value 128\\nsetoption name MultiPV value 10\\nucinewgame\\nposition fen $FEN\\ngo movetime 15000\\nquit\\n' | /workspace/sf_extract/usr/games/stockfish\" > sfout.txt 2>&1\necho exit:$?\nwc -l sfout.txt\ntail -30 sfout.txt",
+   "timeout": 150,
+   "sandbox": [
+    {
+     "at_ms": 676590,
+     "dur_ms": 496,
+     "exit": 0,
+     "cpu_ms": 546.3,
+     "phases_us": {
+      "acquire": 23354,
+      "resume": 23143,
+      "mount": 21045,
+      "run": 407472,
+      "destroy": 42166
+     },
+     "cold": "parked",
+     "vm": "vm-240"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 677131,
+   "dur_ms": 3171,
+   "tokens_in": 2,
+   "tokens_out": 514,
+   "cache_read": 24576,
+   "cache_write": 448,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 680303,
+   "dur_ms": 25176,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\nFEN='r1bq1r2/1p3pp1/p1q1p3/3qPkbP/8/P1N5/1P2QPP1/R1B1K2R w - - 0 1'\n( printf 'uci\\nsetoption name Threads value 2\\nsetoption name Hash value 128\\nsetoption name MultiPV value 10\\nucinewgame\\nposition fen '\"$FEN\"'\\ngo movetime 15000\\n'; sleep 25 ) | timeout 60 /workspace/sf_extract/usr/games/stockfish > sfout.txt 2>&1\necho exit:$?\nwc -l sfout.txt\ntail -40 sfout.txt",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 680355,
+     "dur_ms": 25090,
+     "exit": 0,
+     "cpu_ms": 30555.9,
+     "phases_us": {
+      "acquire": 94,
+      "resume": 23431,
+      "mount": 20689,
+      "run": 25017176,
+      "destroy": 49353
+     },
+     "cold": null,
+     "vm": "vm-242"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 705483,
+   "dur_ms": 16168,
+   "tokens_in": 8,
+   "tokens_out": 2981,
+   "cache_read": 25536,
+   "cache_write": 3136,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "model",
+   "at_ms": 721866,
+   "dur_ms": 4494,
+   "tokens_in": 32,
+   "tokens_out": 1093,
+   "cache_read": 31616,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 726360,
+   "dur_ms": 3378,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 -m pip install --break-system-packages -q numpy\npython3 - <<'PY'\nfrom PIL import Image, ImageFont, ImageDraw\nimport numpy as np\nim=Image.open('chess_board.png').convert('RGB')\na=np.array(im).astype(int)\ndef bgcolor(f,r):\n    return np.array([240,217,181]) if (f+r)%2==0 else np.array([181,136,99])\nnames={0x2654:'WK',0x2655:'WQ',0x2656:'WR',0x2657:'WB',0x2658:'WN',0x2659:'WP',\n       0x265a:'BK',0x265b:'BQ',0x265c:'BR',0x265d:'BB',0x265e:'BN',0x265f:'BP'}\nfontpath='/fonts/noto.ttf'\ndef render(code):\n    f=ImageFont.truetype(fontpath,100)\n    ch=chr(code)\n    im2=Image.new('L',(160,160),0)\n    d=ImageDraw.Draw(im2)\n    bbox=d.textbbox((0,0),ch,font=f)\n    w=bbox[2]-bbox[0]; h=bbox[3]-bbox[1]\n    d.text(((160-w)/2-bbox[0],(160-h)/2-bbox[1]),ch,font=f,fill=255)\n    arr=np.array(im2)>128\n    ys,xs=np.where(arr)\n    crop=arr[ys.min():ys.max()+1,xs.min():xs.max()+1]\n    return np.array(Image.fromarray((crop*255).astype(np.uint8)).resize((64,64),Image.Resampling.LANCZOS))>128\ntemplates={code:render(code) for code in names}\ndef largest(mask):\n    h,w=mask.shape; seen=np.zeros_like(mask,bool); best=[]\n    for y in range(h):\n        for x in range(w):\n            if mask[y,x] and not seen[y,x]:\n                q=[(y,x)]; seen[y,x]=1; comp=[]\n                while q:\n                    cy,cx=q.pop(); comp.append((cy,cx))\n                    for dy in (-1,0,1):\n                        for dx in (-1,0,1):\n                            if dy==dx==0: continue\n                            ny,nx=cy+dy,cx+dx\n                            if 0<=ny<h and 0<=nx<w and mask[ny,nx] and not seen[ny,nx]:\n                                seen[ny,nx]=1; q.append((ny,nx))\n                if len(comp)>len(best): best=comp\n    out=np.zeros_like(mask,bool)\n    for y,x in best: out[y,x]=1\n    return out\nfor r in range(8):\n    for f in range(8):\n        sq=a[r*80:(r+1)*80, f*80:(f+1)*80]\n        bg=bgcolor(f,r)\n        dist=np.abs(sq-bg).max(axis=2)\n        ink=dist>40\n        bright=sq.sum(axis=2)\n        black=ink & (bright<350)\n        white=ink & (bright>600)\n        cb=largest(black) if black.any() else np.zeros((80,80),bool)\n        cw=largest(white) if white.any() else np.zeros((80,80),bool)\n        if max(cb.sum(),cw.sum())<100: continue\n        color='B' if cb.sum()>=cw.sum() else 'W'\n        mask=cb if color=='B' else cw\n        ys,xs=np.where(mask)\n        crop=mask[ys.min():ys.max()+1, xs.min():xs.max()+1]\n        crop=np.array(Image.fromarray((crop*255).astype(np.uint8)).resize((64,64),Image.Resampling.LANCZOS))>128\n        scores=[]\n        for code,nm in names.items():\n            if not nm.startswith(color): continue\n            t=templates[code]\n            iou=(crop&t).sum()/(crop|t).sum()\n            scores.append((iou,nm))\n        scores.sort(reverse=True)\n        print(f\"{chr(97+f)}{8-r}: {color} size={mask.sum():4d} best={scores[0][1]} iou={scores[0][0]:.3f} 2nd={scores[1][1]} {scores[1][0]:.3f}\")\nPY",
+   "timeout": 300,
+   "sandbox": [
+    {
+     "at_ms": 726413,
+     "dur_ms": 3297,
+     "exit": 0,
+     "cpu_ms": 3336.8,
+     "phases_us": {
+      "acquire": 99,
+      "resume": 24142,
+      "mount": 21199,
+      "run": 3231178,
+      "destroy": 41031
+     },
+     "cold": null,
+     "vm": "vm-244"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 729738,
+   "dur_ms": 7037,
+   "tokens_in": 60,
+   "tokens_out": 1375,
+   "cache_read": 32768,
+   "cache_write": 768,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 736776,
+   "dur_ms": 30211,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\nFEN='r1bq1r2/1p3pp1/p1n1p3/3nPkbP/8/P1N5/1P2QPP1/R1B1K2R w - - 0 1'\n( printf 'uci\\nsetoption name Threads value 2\\nsetoption name Hash value 128\\nsetoption name MultiPV value 10\\nucinewgame\\nposition fen '\"$FEN\"'\\ngo movetime 20000\\n'; sleep 30 ) | timeout 70 /workspace/sf_extract/usr/games/stockfish > sfout2.txt 2>&1\necho exit:$?\ngrep '^bestmove' sfout2.txt\n# print last occurrence of each multipv at max depth\npython3 - <<'PY'\nimport re\nlines=open('/workspace/sfout2.txt').read().splitlines()\ninfos=[l for l in lines if l.startswith('info') and ' multipv ' in l and ' pv ' in l]\nif not infos: print('no infos'); raise SystemExit\nmaxd=max(int(re.search(r'depth (\\d+)',l).group(1)) for l in infos)\nprint('maxdepth',maxd)\nfor l in infos:\n    m=re.search(r'depth (\\d+)',l)\n    if int(m.group(1))==maxd:\n        print(l)\nPY",
+   "timeout": 120,
+   "sandbox": [
+    {
+     "at_ms": 736828,
+     "dur_ms": 30140,
+     "exit": 0,
+     "cpu_ms": 40614.0,
+     "phases_us": {
+      "acquire": 91,
+      "resume": 23040,
+      "mount": 20189,
+      "run": 30057332,
+      "destroy": 59447
+     },
+     "cold": null,
+     "vm": "vm-245"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 766991,
+   "dur_ms": 4488,
+   "tokens_in": 4,
+   "tokens_out": 746,
+   "cache_read": 34944,
+   "cache_write": 1344,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 771480,
+   "dur_ms": 1904,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 -m pip install --break-system-packages -q python-chess\npython3 - <<'PY'\nimport chess\nfen='r1bq1r2/1p3pp1/p1n1p3/3nPkbP/8/P1N5/1P2QPP1/R1B1K2R w - - 0 1'\nb=chess.Board(fen)\nprint(b)\nmates=[]\nchecks=[]\nfor m in b.legal_moves:\n    if b.gives_check(m):\n        b.push(m)\n        checks.append((m.uci(), b.is_checkmate(), b.is_game_over()))\n        b.pop()\nprint('checking moves:')\nfor c in checks: print(c)\nprint('mates:')\nfor m in b.legal_moves:\n    b.push(m)\n    if b.is_checkmate():\n        mates.append(m.uci())\n    b.pop()\nprint(mates)\nPY",
+   "timeout": 180,
+   "sandbox": [
+    {
+     "at_ms": 771533,
+     "dur_ms": 1844,
+     "exit": 0,
+     "cpu_ms": 1669.9,
+     "phases_us": {
+      "acquire": 170,
+      "resume": 23720,
+      "mount": 20704,
+      "run": 1787043,
+      "destroy": 32915
+     },
+     "cold": null,
+     "vm": "vm-246"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 773384,
+   "dur_ms": 5167,
+   "tokens_in": 57,
+   "tokens_out": 925,
+   "cache_read": 36992,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 778551,
+   "dur_ms": 227,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\nfrom PIL import Image\nim=Image.open('chess_board.png').convert('RGB')\n# print first 12 columns every 2 pixels all rows perhaps 80 rows sampling 4\nfor y in range(0,640,4):\n    line=''\n    for x in range(0,16,1):\n        r,g,b=im.getpixel((x,y))\n        # mark non-bg\n        if abs(r-240)<18 and abs(g-217)<18 and abs(b-181)<18: line+='.'\n        elif abs(r-181)<18 and abs(g-136)<18 and abs(b-99)<18: line+='.'\n        elif r+g+b<250: line+='#'\n        elif r+g+b>600: line+='O'\n        else: line+='+'\n    print(f'{y:3d} {line}')\nPY",
+   "sandbox": [
+    {
+     "at_ms": 778602,
+     "dur_ms": 168,
+     "exit": 0,
+     "cpu_ms": 186.4,
+     "phases_us": {
+      "acquire": 97,
+      "resume": 24084,
+      "mount": 21024,
+      "run": 117409,
+      "destroy": 26100
+     },
+     "cold": null,
+     "vm": "vm-247"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 778781,
+   "dur_ms": 2937,
+   "tokens_in": 4,
+   "tokens_out": 487,
+   "cache_read": 38144,
+   "cache_write": 704,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 781718,
+   "dur_ms": 126,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /workspace/move.txt <<'MOVE'\ng2g4\ne2e4\nMOVE\ncat /workspace/move.txt\nls -l /workspace/move.txt",
+   "sandbox": [
+    {
+     "at_ms": 781770,
+     "dur_ms": 50,
+     "exit": 0,
+     "cpu_ms": 44.9,
+     "phases_us": {
+      "acquire": 73,
+      "resume": 24955,
+      "mount": 22074,
+      "run": 7678,
+      "destroy": 17303
+     },
+     "cold": null,
+     "vm": "vm-248"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 781848,
+   "dur_ms": 998,
+   "tokens_in": 26,
+   "tokens_out": 73,
+   "cache_read": 39296,
+   "cache_write": 64,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.703,
+ "calls": 27,
+ "cell": "TB1f",
+ "removed": [
+  {
+   "at_ms": 68899,
+   "dur_ms": 1757,
+   "tool": "bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 73978,
+   "dur_ms": 600106,
+   "tool": "bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 721651,
+   "dur_ms": 211,
+   "tool": "bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  }
+ ]
+}

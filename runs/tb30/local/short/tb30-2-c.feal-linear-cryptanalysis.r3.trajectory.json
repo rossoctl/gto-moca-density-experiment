@@ -1,0 +1,188 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "feal-linear-cryptanalysis",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 49239,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 4702,
+  "output": 5615,
+  "cacheRead": 109632,
+  "cacheWrite": 0,
+  "total": 119949
+ },
+ "totals": {
+  "model_calls": 8,
+  "tool_calls": 9,
+  "model_ms": 43760,
+  "tool_ms": 4631,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 107,
+   "dur_ms": 3454,
+   "tokens_in": 12,
+   "tokens_out": 126,
+   "cache_read": 7168,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3561,
+   "dur_ms": 221,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app && cat /app/feal.c && echo \"=====DECRYPT=====\" && cat /app/decrypt.c"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3864,
+   "dur_ms": 22,
+   "tool": "bash",
+   "is_error": false,
+   "command": "head -c 2000 /app/pairs.txt; echo; echo \"====\"; head -c 2000 /app/ciphertexts.txt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3927,
+   "dur_ms": 20819,
+   "tokens_in": 3999,
+   "tokens_out": 116,
+   "cache_read": 7296,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 24746,
+   "dur_ms": 68,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 -c \"import z3; print(z3.get_version_string())\" 2>&1; which z3; python3 --version"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 25016,
+   "dur_ms": 19,
+   "tool": "bash",
+   "is_error": false,
+   "command": "wc -l /app/pairs.txt /app/ciphertexts.txt; cat /app/opencode.json"
+  },
+  {
+   "kind": "model",
+   "at_ms": 25197,
+   "dur_ms": 1066,
+   "tokens_in": 162,
+   "tokens_out": 69,
+   "cache_read": 14400,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 26263,
+   "dur_ms": 3090,
+   "tool": "bash",
+   "is_error": false,
+   "command": "pip install z3-solver 2>&1 | tail -5",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 29368,
+   "dur_ms": 10283,
+   "tokens_in": 198,
+   "tokens_out": 603,
+   "cache_read": 14592,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 39651,
+   "dur_ms": 473,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/solve.py << 'PY'\nimport z3, time, sys\n\ndef bv32(x): return z3.BitVecVal(x,32)\ndef bv8(x): return z3.BitVecVal(x,8)\n\ndef expand(s):\n    return s ^ (s << 16) ^ (s * z3.BitVecVal(12345,32))\n\ndef G(a,b,c):\n    return z3.RotateLeft(a+b+c, 2)\n\ndef F(x):\n    x0=z3.Extract(7,0,x); x1=z3.Extract(15,8,x); x2=z3.Extract(23,16,x); x3=z3.Extract(31,24,x)\n    y2=G(x3^x2, x1^x0, bv8(1))\n    y3=G(x3, y2, bv8(0))\n    y1=G(x1^x0, y2, bv8(0))\n    y0=G(x0, y1, bv8(1))\n    return z3.Concat(y3,y2,y1,y0)\n\ndef encrypt(p, keys):\n    left=z3.Extract(63,32,p); right=z3.Extract(31,0,p)\n    right = right ^ left\n    for r in range(4):\n        mixed=F(right ^ keys[r])\n        temp=right\n        right=left ^ mixed\n        left=temp\n    left = left ^ right\n    return z3.Concat(right,left)\n\npairs=[]\nfor line in open('/app/pairs.txt'):\n    a,b=line.split()\n    pairs.append((int(a),int(b)))\n\nN=int(sys.argv[1]) if len(sys.argv)>1 else 3\nseeds=[z3.BitVec(f'k{i}',20) for i in range(4)]\nkeys=[expand(z3.ZeroExt(12,s)) for s in seeds]\ns=z3.Solver()\nfor i in range(N):\n    p,c=pairs[i]\n    s.add(encrypt(z3.BitVecVal(p,64),keys)==z3.BitVecVal(c,64))\nprint(\"solving\",N,flush=True)\nt=time.time()\nprint(s.check(), time.time()-t, flush=True)\nif s.check()==z3.sat:\n    m=s.model()\n    vals=[m.eval(sd) for sd in seeds]\n    print(vals)\nPY\ntimeout 300 python3 /tmp/solve.py 2",
+   "timeout": 320000
+  },
+  {
+   "kind": "model",
+   "at_ms": 40143,
+   "dur_ms": 3687,
+   "tokens_in": 61,
+   "tokens_out": 495,
+   "cache_read": 15936,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 43830,
+   "dur_ms": 695,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat >> /tmp/solve.py << 'PY'\nif s.check()==z3.sat:\n    m=s.model(); vals=[m.eval(sd).as_long() for sd in seeds]\n    ss=z3.Solver(); ss.add([sd==z3.BitVecVal(v,20) for sd,v in zip(seeds,vals)])\n    # verify all pairs via concrete python\n    def exp(k):\n        k&=0xFFFFF\n        return (k ^ (k<<16) ^ (k*12345))&0xFFFFFFFF\n    def gg(a,b,x): \n        t=(a+b+x)&0xFF; return ((t<<2)|(t>>6))&0xFF\n    def ff(v):\n        x=[(v>>(8*i))&0xFF for i in range(4)]\n        y=[0]*4\n        y[2]=gg(x[3]^x[2],x[1]^x[0],1)\n        y[3]=gg(x[3],y[2],0)\n        y[1]=gg(x[1]^x[0],y[2],0)\n        y[0]=gg(x[0],y[1],1)\n        o=0\n        for i in range(4): o|=y[i]<<(8*i)\n        return o&0xFFFFFFFF\n    def enc(p,K):\n        l=(p>>32)&0xFFFFFFFF; r=p&0xFFFFFFFF\n        r^=l\n        for rr in range(4):\n            mx=ff((r^K[rr])&0xFFFFFFFF); tmp=r; r=(l^mx)&0xFFFFFFFF; l=tmp\n        l^=r\n        return ((r&0xFFFFFFFF)<<32)|(l&0xFFFFFFFF)\n    K=[exp(v) for v in vals]\n    ok=all(enc(p,K)==c for p,c in pairs)\n    print(\"vals\",vals,\"verify\",ok)\nPY\npython3 /tmp/solve.py 2",
+   "timeout": 120000
+  },
+  {
+   "kind": "model",
+   "at_ms": 44542,
+   "dur_ms": 1797,
+   "tokens_in": 106,
+   "tokens_out": 64,
+   "cache_read": 16512,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 46339,
+   "dur_ms": 25,
+   "tool": "bash",
+   "is_error": false,
+   "command": "python3 -c \"print([hex(x) for x in [429667,402801,128540,750757]])\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 46410,
+   "dur_ms": 871,
+   "tokens_in": 100,
+   "tokens_out": 96,
+   "cache_read": 16768,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 47281,
+   "dur_ms": 18,
+   "tool": "bash",
+   "is_error": false,
+   "command": "/app/decrypt /app/ciphertexts.txt 68e63 62571 1f61c b74a5 > /app/plaintexts.txt && wc -l /app/plaintexts.txt && head -5 /app/plaintexts.txt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 47338,
+   "dur_ms": 1783,
+   "tokens_in": 64,
+   "tokens_out": 103,
+   "cache_read": 16960,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.851,
+ "calls": 9,
+ "cell": "TB1c"
+}

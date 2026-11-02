@@ -1,0 +1,504 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "large-scale-text-editing",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 689846,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 457,
+  "output": 29889,
+  "cacheRead": 416512,
+  "cacheWrite": 4352,
+  "total": 451210
+ },
+ "totals": {
+  "model_calls": 16,
+  "tool_calls": 15,
+  "model_ms": 226272,
+  "tool_ms": 462888,
+  "sandbox_ms": 460416
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 533,
+   "dur_ms": 1909
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2442,
+   "dur_ms": 264,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\nls -la\nwc -l input.csv expected.csv\nhead -5 input.csv\necho '---'\nhead -5 expected.csv",
+   "sandbox": [
+    {
+     "at_ms": 2524,
+     "dur_ms": 165,
+     "exit": 0,
+     "cpu_ms": 174.0,
+     "phases_us": {
+      "acquire": 65,
+      "resume": 21721,
+      "mount": 19448,
+      "run": 107622,
+      "destroy": 35728
+     },
+     "cold": null,
+     "vm": "vm-7"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 2706,
+   "dur_ms": 9170
+  },
+  {
+   "kind": "tool",
+   "at_ms": 11876,
+   "dur_ms": 5382,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\nimport csv, collections\nwith open('input.csv','rb') as f:\n    data=f.read()\nprint(\"bytes\",len(data))\nprint(\"has CR\", b'\\r' in data, \"has tab\", b'\\t' in data, \"has quote\", b'\"' in data)\nlines=data.split(b'\\n')\nprint(\"last line empty?\", lines[-1]==b'')\nprint(\"num lines\", len(lines)-1)\n# counts of commas per line\ncc=collections.Counter(l.count(b',') for l in lines if l)\nprint(\"comma counts\", cc.most_common(10))\n# charset\nchars=collections.Counter(data)\nprint(\"non-ascii\", [(bytes([c]),n) for c,n in chars.items() if c>127][:10])\n# leading/trailing whitespace stats\nws=collections.Counter()\nfor l in lines:\n    if not l: continue\n    s=l\n    ws[('lead', s[:1] in b' \\t')]+=1\n    ws[('trail', s[-1:] in b' \\t')]+=1\nprint(ws)\n# sample random lines\nimport random\nrandom.seed(1)\nfor l in random.sample([x for x in lines if x],8):\n    print(repr(l))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 11932,
+     "dur_ms": 5309,
+     "exit": 0,
+     "cpu_ms": 5336.4,
+     "phases_us": {
+      "acquire": 15,
+      "resume": 21594,
+      "mount": 19061,
+      "run": 5252373,
+      "destroy": 35145
+     },
+     "cold": null,
+     "vm": "vm-12"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 17258,
+   "dur_ms": 3124
+  },
+  {
+   "kind": "tool",
+   "at_ms": 20382,
+   "dur_ms": 881,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\nimport collections,re\nbad=0\npat=re.compile(rb'^ *([A-Za-z]+[0-9]+) *$')\nfirsts=collections.Counter()\nwith open('input.csv','rb') as fi, open('expected.csv','rb') as fe:\n    for i,(a,b) in enumerate(zip(fi,fe)):\n        a=a.rstrip(b'\\n'); b=b.rstrip(b'\\n')\n        parts=[p.strip() for p in a.split(b',')]\n        pred=b';'.join(p.upper() for p in parts[::-1])+b';OK'\n        if pred!=b:\n            bad+=1\n            if bad<5: print(i,repr(a),repr(b),repr(pred))\n        for p in parts:\n            if not pat.match(p):\n                firsts[p[:30]]+=1\n        if i>200000: break\nprint(\"bad\",bad)\nprint(\"odd fields sample\",list(firsts.items())[:10], \"count\",sum(firsts.values()))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 20440,
+     "dur_ms": 799,
+     "exit": 0,
+     "cpu_ms": 808.9,
+     "phases_us": {
+      "acquire": 80,
+      "resume": 21464,
+      "mount": 18793,
+      "run": 743918,
+      "destroy": 32870
+     },
+     "cold": null,
+     "vm": "vm-17"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 21263,
+   "dur_ms": 15905
+  },
+  {
+   "kind": "tool",
+   "at_ms": 37168,
+   "dur_ms": 330,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\nvim --version | head -3\ncp input.csv /tmp/in.bak 2>/dev/null || true\n# keep a backup in workspace since /tmp may not persist? it does within call only\ncp input.csv input.orig.csv\nls -la input.orig.csv",
+   "sandbox": [
+    {
+     "at_ms": 37223,
+     "dur_ms": 248,
+     "exit": 0,
+     "cpu_ms": 268.2,
+     "phases_us": {
+      "acquire": 19,
+      "resume": 21119,
+      "mount": 18551,
+      "run": 184051,
+      "destroy": 43040
+     },
+     "cold": null,
+     "vm": "vm-18"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 37498,
+   "dur_ms": 5647
+  },
+  {
+   "kind": "tool",
+   "at_ms": 43145,
+   "dur_ms": 260,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\ncat > /tmp/bench.vim <<'VIM'\ncall setreg('a', \":s/\\\\v^\\\\s*(\\\\S+)\\\\s*,\\\\s*(\\\\S+)\\\\s*,\\\\s*(\\\\S+)\\\\s*$/\\\\3;\\\\2;\\\\1/\\r\")\n%normal! @a\nwq\nVIM\ncp input.orig.csv bench.csv\n/usr/bin/time -f \"elapsed %e s\" vim -Nu NONE -n -Es bench.csv -S /tmp/bench.vim\nhead -3 bench.csv",
+   "sandbox": [
+    {
+     "at_ms": 43199,
+     "dur_ms": 174,
+     "exit": 0,
+     "cpu_ms": 190.9,
+     "phases_us": {
+      "acquire": 72,
+      "resume": 21464,
+      "mount": 18832,
+      "run": 117491,
+      "destroy": 35134
+     },
+     "cold": null,
+     "vm": "vm-20"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 43405,
+   "dur_ms": 2362
+  },
+  {
+   "kind": "tool",
+   "at_ms": 45767,
+   "dur_ms": 22573,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\ncat > /tmp/bench.vim <<'VIM'\ncall setreg('a', \":s/\\\\v^\\\\s*(\\\\S+)\\\\s*,\\\\s*(\\\\S+)\\\\s*,\\\\s*(\\\\S+)\\\\s*$/\\\\3;\\\\2;\\\\1/\\r\")\n%normal! @a\nwq\nVIM\ncp input.orig.csv bench.csv\ns=$(date +%s%N)\nvim -Nu NONE -n -Es bench.csv -S /tmp/bench.vim\nrc=$?\ne=$(date +%s%N)\necho \"rc=$rc elapsed=$(( (e-s)/1000000 )) ms\"\nhead -3 bench.csv",
+   "sandbox": [
+    {
+     "at_ms": 45821,
+     "dur_ms": 22482,
+     "exit": 0,
+     "cpu_ms": 22544.2,
+     "phases_us": {
+      "acquire": 51,
+      "resume": 20934,
+      "mount": 18604,
+      "run": 22410245,
+      "destroy": 50139
+     },
+     "cold": null,
+     "vm": "vm-21"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 68340,
+   "dur_ms": 8472
+  },
+  {
+   "kind": "tool",
+   "at_ms": 76812,
+   "dur_ms": 21410,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\nrunbench() {\n  name=\"$1\"; script=\"$2\"\n  cp input.orig.csv bench.csv\n  printf '%s\\n' \"$script\" > /tmp/b.vim\n  s=$(date +%s%N)\n  vim -Nu NONE -n -Es bench.csv -S /tmp/b.vim\n  rc=$?\n  e=$(date +%s%N)\n  echo \"$name rc=$rc elapsed=$(( (e-s)/1000000 )) ms  first=$(head -1 bench.csv)\"\n}\nrunbench gUU \"call setreg('b', \\\"gUU\\\")\n%normal! @b\nwq\"\nrunbench AOK-esc \"call setreg('c', \\\"A;OK\\\\<Esc>\\\")\n%normal! @c\nwq\"\nrunbench s-dollar \"call setreg('c', \\\":s/\\$/;OK/\\\\r\\\")\n%normal! @c\nwq\"\nrunbench noop-x \"call setreg('c', \\\"x\\\")\n%normal! @c\nwq\"",
+   "sandbox": [
+    {
+     "at_ms": 77628,
+     "dur_ms": 20556,
+     "exit": 0,
+     "cpu_ms": 20633.1,
+     "phases_us": {
+      "acquire": 85,
+      "resume": 25307,
+      "mount": 22262,
+      "run": 20479790,
+      "destroy": 50978
+     },
+     "cold": null,
+     "vm": "vm-23"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 98222,
+   "dur_ms": 12454
+  },
+  {
+   "kind": "tool",
+   "at_ms": 110676,
+   "dur_ms": 69810,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\nrunbench() {\n  name=\"$1\"; pat=\"$2\"\n  cp input.orig.csv bench.csv\n  cat > /tmp/b.vim <<VIM\ncall setreg('a', \":s/$pat/\\\\\\\\3;\\\\\\\\2;\\\\\\\\1/\\\\r\")\n%normal! @a\nwq\nVIM\n  s=$(date +%s%N)\n  vim -Nu NONE -n -Es bench.csv -S /tmp/b.vim\n  rc=$?\n  e=$(date +%s%N)\n  echo \"$name rc=$rc elapsed=$(( (e-s)/1000000 )) ms first=$(head -1 bench.csv)\"\n}\nrunbench verymagic '\\\\v^\\\\s*(\\\\S+)\\\\s*,\\\\s*(\\\\S+)\\\\s*,\\\\s*(\\\\S+)\\\\s*$'\nrunbench basic '^\\\\s*\\\\(\\\\S\\\\+\\\\)\\\\s*,\\\\s*\\\\(\\\\S\\\\+\\\\)\\\\s*,\\\\s*\\\\(\\\\S\\\\+\\\\)\\\\s*$'\nrunbench nospace '^ *\\\\([^ ]\\\\+\\\\) *, *\\\\([^ ]\\\\+\\\\) *, *\\\\([^ ]\\\\+\\\\) *$'",
+   "sandbox": [
+    {
+     "at_ms": 111251,
+     "dur_ms": 69202,
+     "exit": 0,
+     "cpu_ms": 69363.9,
+     "phases_us": {
+      "acquire": 16,
+      "resume": 21896,
+      "mount": 19479,
+      "run": 69122886,
+      "destroy": 57428
+     },
+     "cold": null,
+     "vm": "vm-27"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 180486,
+   "dur_ms": 47492
+  },
+  {
+   "kind": "tool",
+   "at_ms": 227978,
+   "dur_ms": 29281,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\ncat > apply_macros.vim <<'VIM'\ncall setreg('a', \":s/\\\\v^\\\\s*(\\\\S+)\\\\s*,\\\\s*(\\\\S+)\\\\s*,\\\\s*(\\\\S+)\\\\s*$/\\\\3;\\\\2;\\\\1/\\r\")\ncall setreg('b', \"gUU\")\ncall setreg('c', \"A;OK\\<Esc>\")\n:%normal! @a\n:%normal! @b\n:%normal! @c\n:wq\nVIM\ncat -A apply_macros.vim\ncp input.orig.csv test.csv\ns=$(date +%s%N)\nvim -Nu NONE -n -Es test.csv -S apply_macros.vim\nrc=$?\ne=$(date +%s%N)\necho \"rc=$rc elapsed=$(( (e-s)/1000000 )) ms\"\ncmp test.csv expected.csv && echo \"MATCH\" || echo \"DIFF\"",
+   "sandbox": [
+    {
+     "at_ms": 228032,
+     "dur_ms": 29216,
+     "exit": 0,
+     "cpu_ms": 29304.5,
+     "phases_us": {
+      "acquire": 25051,
+      "resume": 21467,
+      "mount": 19302,
+      "run": 29093161,
+      "destroy": 76324
+     },
+     "cold": "parked",
+     "vm": "vm-46"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 257259,
+   "dur_ms": 37483
+  },
+  {
+   "kind": "tool",
+   "at_ms": 294742,
+   "dur_ms": 145,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\n# small correctness test of idempotent append variants\nprintf 'GAMMA1;BETA1;ALPHA1\\nGAMMA1;BETA1;ALPHA1;OK\\n' > small.csv\ncat > /tmp/s.vim <<'VIM'\ncall setreg('c', \":s/\\\\v(;OK)@<!$/;OK/\\r\")\n%normal! @c\nwq\nVIM\nvim -Nu NONE -n -Es small.csv -S /tmp/s.vim; echo rc=$?; cat -A small.csv\nprintf 'GAMMA1;BETA1;ALPHA1\\nGAMMA1;BETA1;ALPHA1;OK\\n' > small2.csv\ncat > /tmp/s2.vim <<'VIM'\ncall setreg('c', \":s/\\\\v^(.*;OK)@!.*$/&;OK/\\r\")\n%normal! @c\nwq\nVIM\nvim -Nu NONE -n -Es small2.csv -S /tmp/s2.vim; echo rc=$?; cat -A small2.csv",
+   "sandbox": [
+    {
+     "at_ms": 294800,
+     "dur_ms": 64,
+     "exit": 0,
+     "cpu_ms": 60.0,
+     "phases_us": {
+      "acquire": 23,
+      "resume": 22645,
+      "mount": 19860,
+      "run": 20488,
+      "destroy": 20719
+     },
+     "cold": null,
+     "vm": "vm-48"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 294887,
+   "dur_ms": 8012
+  },
+  {
+   "kind": "tool",
+   "at_ms": 302899,
+   "dur_ms": 84473,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\ncat > apply_macros.vim <<'VIM'\ncall setreg('a', \":s/\\\\v^\\\\s*(\\\\S+)\\\\s*,\\\\s*(\\\\S+)\\\\s*,\\\\s*(\\\\S+)\\\\s*$/\\\\3;\\\\2;\\\\1/e\\r\")\ncall setreg('b', \"gUU\")\ncall setreg('c', \":s/\\\\v(;OK)@<!$/;OK/e\\r\")\n:%normal! @a\n:%normal! @b\n:%normal! @c\n:wq\nVIM\ncp input.orig.csv test.csv\ns=$(date +%s%N)\nvim -Nu NONE -n -Es test.csv -S apply_macros.vim\nrc=$?\ne=$(date +%s%N)\necho \"first run rc=$rc elapsed=$(( (e-s)/1000000 )) ms\"\ncmp test.csv expected.csv && echo MATCH1 || echo DIFF1\ns=$(date +%s%N)\nvim -Nu NONE -n -Es test.csv -S apply_macros.vim\nrc=$?\ne=$(date +%s%N)\necho \"second run rc=$rc elapsed=$(( (e-s)/1000000 )) ms\"\ncmp test.csv expected.csv && echo MATCH2 || echo DIFF2",
+   "sandbox": [
+    {
+     "at_ms": 302953,
+     "dur_ms": 84410,
+     "exit": 0,
+     "cpu_ms": 84524.9,
+     "phases_us": {
+      "acquire": 17,
+      "resume": 21546,
+      "mount": 18901,
+      "run": 84300737,
+      "destroy": 87090
+     },
+     "cold": null,
+     "vm": "vm-50"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 387372,
+   "dur_ms": 13754
+  },
+  {
+   "kind": "tool",
+   "at_ms": 401126,
+   "dur_ms": 92249,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\ncat > apply_macros.vim <<'VIM'\ncall setreg('a', \":s/\\\\v^\\\\s*([^,;\\\\s]+)\\\\s*[,;]\\\\s*([^,;\\\\s]+)\\\\s*[,;]\\\\s*([^,;\\\\s]+)\\\\s*(;OK)?$/\\\\3;\\\\2;\\\\1/\\r\")\ncall setreg('b', \"gUU\")\ncall setreg('c', \"A;OK\\<Esc>\")\n:%normal! @a\n:%normal! @b\n:%normal! @c\n:wq\nVIM\ncp input.orig.csv test.csv\ns=$(date +%s%N)\nvim -Nu NONE -n -Es test.csv -S apply_macros.vim\nrc=$?\ne=$(date +%s%N)\necho \"first rc=$rc elapsed=$(( (e-s)/1000000 )) ms\"\ncmp test.csv expected.csv && echo MATCH1 || echo DIFF1\ns=$(date +%s%N)\nvim -Nu NONE -n -Es test.csv -S apply_macros.vim\nrc=$?\ne=$(date +%s%N)\necho \"second rc=$rc elapsed=$(( (e-s)/1000000 )) ms\"\ncmp test.csv expected.csv && echo MATCH2 || echo DIFF2\nhead -2 test.csv",
+   "sandbox": [
+    {
+     "at_ms": 401180,
+     "dur_ms": 92187,
+     "exit": 0,
+     "cpu_ms": 91861.4,
+     "phases_us": {
+      "acquire": 24068,
+      "resume": 21073,
+      "mount": 18797,
+      "run": 92062554,
+      "destroy": 78741
+     },
+     "cold": "parked",
+     "vm": "vm-68"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 493375,
+   "dur_ms": 19095
+  },
+  {
+   "kind": "tool",
+   "at_ms": 512470,
+   "dur_ms": 11937,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\nprintf 'ABC;DEF;GHI\\nABC;DEF;GHI;OK\\n' > small.csv\ncat > /tmp/s.vim <<'VIM'\ncall setreg('c', \":s/\\\\v(;OK)?$/;OK/\\r\")\n%normal! @c\nwq\nVIM\nvim -Nu NONE -n -Es small.csv -S /tmp/s.vim; echo rc=$?; cat -A small.csv\n# speed: c alone on 1M original lines (no ;OK): appends\ncp input.orig.csv bench.csv\ncat > /tmp/c.vim <<'VIM'\ncall setreg('c', \":s/\\\\v(;OK)?$/;OK/\\r\")\n%normal! @c\nwq\nVIM\ns=$(date +%s%N); vim -Nu NONE -n -Es bench.csv -S /tmp/c.vim; rc=$?; e=$(date +%s%N)\necho \"c-only rc=$rc elapsed=$(( (e-s)/1000000 )) ms first=$(head -1 bench.csv)\"",
+   "sandbox": [
+    {
+     "at_ms": 512529,
+     "dur_ms": 11848,
+     "exit": 0,
+     "cpu_ms": 11867.6,
+     "phases_us": {
+      "acquire": 23878,
+      "resume": 23337,
+      "mount": 20813,
+      "run": 11740720,
+      "destroy": 59836
+     },
+     "cold": "parked",
+     "vm": "vm-71"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 524407,
+   "dur_ms": 21884
+  },
+  {
+   "kind": "tool",
+   "at_ms": 546291,
+   "dur_ms": 61964,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\ncat > apply_macros.vim <<'VIM'\ncall setreg('a', \":s/\\\\v^\\\\s*(\\\\S+)\\\\s*,\\\\s*(\\\\S+)\\\\s*,\\\\s*(\\\\S+)\\\\s*$/\\\\3;\\\\2;\\\\1/e\\r\")\ncall setreg('b', \"gUU\")\ncall setreg('c', \":s/\\\\v(;OK)?$/;OK/\\r\")\n:%normal! @a\n:%normal! @b\n:%normal! @c\n:wq\nVIM\ncp input.orig.csv test.csv\nfor run in 1 2; do\n  s=$(date +%s%N)\n  vim -Nu NONE -n -Es test.csv -S apply_macros.vim\n  rc=$?\n  e=$(date +%s%N)\n  echo \"run$run rc=$rc elapsed=$(( (e-s)/1000000 )) ms\"\n  cmp test.csv expected.csv && echo \"MATCH$run\" || echo \"DIFF$run\"\ndone\nhead -2 test.csv",
+   "sandbox": [
+    {
+     "at_ms": 546351,
+     "dur_ms": 61894,
+     "exit": 0,
+     "cpu_ms": 61994.4,
+     "phases_us": {
+      "acquire": 99,
+      "resume": 24537,
+      "mount": 21412,
+      "run": 61788074,
+      "destroy": 81110
+     },
+     "cold": null,
+     "vm": "vm-73"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 608255,
+   "dur_ms": 12227
+  },
+  {
+   "kind": "tool",
+   "at_ms": 620482,
+   "dur_ms": 61929,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\necho \"== script ==\"\ncat apply_macros.vim\necho \"== run on actual input.csv ==\"\ns=$(date +%s%N)\nvim -Nu NONE -n -Es input.csv -S apply_macros.vim\nrc=$?\ne=$(date +%s%N)\necho \"rc=$rc elapsed=$(( (e-s)/1000000 )) ms\"\ncmp input.csv expected.csv && echo \"INPUT MATCHES EXPECTED\" || echo \"MISMATCH\"\necho \"== idempotence re-run on actual input.csv ==\"\nvim -Nu NONE -n -Es input.csv -S apply_macros.vim; echo \"rerun rc=$?\"\ncmp input.csv expected.csv && echo \"RERUN STILL MATCHES\" || echo \"RERUN MISMATCH\"\necho \"== register lengths via vim ==\"\nhead -3 apply_macros.vim > /tmp/regs.vim\ncat >> /tmp/regs.vim <<'VIM'\ncall writefile([len(getreg('a')).' '.len(getreg('b')).' '.len(getreg('c')).' total='.(len(getreg('a'))+len(getreg('b'))+len(getreg('c')))], '/tmp/lens.txt')\nqa!\nVIM\nvim -Nu NONE -n -Es -S /tmp/regs.vim\ncat /tmp/lens.txt\n# distinctness\ncat > /tmp/dist.vim <<'VIM'\ncall writefile(['a=b?'.(getreg('a')==getreg('b')),'b=c?'.(getreg('b')==getreg('c')),'a=c?'.(getreg('a')==getreg('c'))], '/tmp/dist.txt')\nqa!\nVIM\nvim -Nu NONE -n -Es -S /tmp/regs.vim -S /tmp/dist.vim 2>/dev/null || true\ncat /tmp/dist.txt\necho \"== cleanup ==\"\nrm -f test.csv bench.csv small.csv small2.csv input.orig.csv\nls -la",
+   "sandbox": [
+    {
+     "at_ms": 620539,
+     "dur_ms": 61862,
+     "exit": 0,
+     "cpu_ms": 61952.2,
+     "phases_us": {
+      "acquire": 100,
+      "resume": 24952,
+      "mount": 21656,
+      "run": 61749416,
+      "destroy": 87669
+     },
+     "cold": null,
+     "vm": "vm-74"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 682411,
+   "dur_ms": 7282
+  }
+ ],
+ "class": "long",
+ "weight_s_per_command": 17.611,
+ "calls": 15,
+ "cell": "TB1b",
+ "removed": []
+}

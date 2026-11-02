@@ -1,0 +1,233 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-f",
+ "instance_id": "openssl-selfsigned-cert",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 21267,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 177,
+  "output": 3168,
+  "cacheRead": 17984,
+  "cacheWrite": 1152,
+  "total": 22481
+ },
+ "totals": {
+  "model_calls": 6,
+  "tool_calls": 5,
+  "model_ms": 18350,
+  "tool_ms": 1718,
+  "sandbox_ms": 1331
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1115,
+   "dur_ms": 1039,
+   "tokens_in": 2,
+   "tokens_out": 86,
+   "cache_read": 1408,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2157,
+   "dur_ms": 131,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nset -e\nmkdir -p /app/ssl\nchmod 700 /app/ssl\nopenssl version\npython3 --version\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 2207,
+     "dur_ms": 66,
+     "exit": 0,
+     "cpu_ms": 72.0,
+     "phases_us": {
+      "acquire": 90,
+      "resume": 21046,
+      "mount": 18736,
+      "run": 23018,
+      "destroy": 21947
+     },
+     "cold": null,
+     "vm": "vm-82"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 2291,
+   "dur_ms": 3325,
+   "tokens_in": 11,
+   "tokens_out": 589,
+   "cache_read": 1408,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5617,
+   "dur_ms": 327,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nset -e\nls -ld /app /workspace 2>&1 || true\n\nmkdir -p /app/ssl\nchmod 700 /app/ssl\n\n# 1. 2048-bit RSA private key\nopenssl genrsa -out /app/ssl/server.key 2048\nchmod 600 /app/ssl/server.key\n\n# 2. Self-signed certificate, 365 days\nopenssl req -new -x509 -key /app/ssl/server.key -out /app/ssl/server.crt -days 365 \\\n  -subj \"/O=DevOps Team/CN=dev-internal.company.local\" \\\n  -sha256\n\nchmod 644 /app/ssl/server.crt\n\n# 3. Combined PEM (key + cert)\ncat /app/ssl/server.key /app/ssl/server.crt > /app/ssl/server.pem\nchmod 600 /app/ssl/server.pem\n\n# 4. Verification details\n{\n  echo \"Subject: $(openssl x509 -in /app/ssl/server.crt -noout -subject | sed 's/^subject=//')\"\n  echo \"Not Before: $(openssl x509 -in /app/ssl/server.crt -noout -startdate | sed 's/^notBefore=//')\"\n  echo \"Not After: $(openssl x509 -in /app/ssl/server.crt -noout -enddate | sed 's/^notAfter=//')\"\n  echo \"SHA-256 Fingerprint: $(openssl x509 -in /app/ssl/server.crt -noout -fingerprint -sha256 | sed 's/^[^=]*=//')\"\n} > /app/ssl/verification.txt\nchmod 644 /app/ssl/verification.txt\n\necho \"--- verification.txt ---\"\ncat /app/ssl/verification.txt\necho \"--- files ---\"\nls -l /app/ssl\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 5666,
+     "dur_ms": 264,
+     "exit": 0,
+     "cpu_ms": 274.0,
+     "phases_us": {
+      "acquire": 71,
+      "resume": 20722,
+      "mount": 18573,
+      "run": 217042,
+      "destroy": 26308
+     },
+     "cold": null,
+     "vm": "vm-84"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 5946,
+   "dur_ms": 7530,
+   "tokens_in": 52,
+   "tokens_out": 1292,
+   "cache_read": 2112,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 13476,
+   "dur_ms": 561,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put /app/check_cert.py <<'PYEOF'\n#!/usr/bin/env python3\n\"\"\"Verify the self-signed development TLS certificate in /app/ssl.\"\"\"\n\nimport subprocess\nimport sys\nfrom datetime import datetime, timezone\nfrom pathlib import Path\n\nCERT_PATH = Path(\"/app/ssl/server.crt\")\nKEY_PATH = Path(\"/app/ssl/server.key\")\nPEM_PATH = Path(\"/app/ssl/server.pem\")\n\n\ndef openssl(*args: str) -> str:\n    \"\"\"Run an OpenSSL command and return its stdout.\"\"\"\n    result = subprocess.run(\n        [\"openssl\", *args],\n        capture_output=True,\n        text=True,\n        check=True,\n    )\n    return result.stdout.strip()\n\n\ndef fail(message: str) -> None:\n    print(f\"Certificate verification failed: {message}\", file=sys.stderr)\n    sys.exit(1)\n\n\ndef main() -> None:\n    # 1. The certificate must exist and be loadable.\n    if not CERT_PATH.is_file():\n        fail(f\"{CERT_PATH} does not exist\")\n\n    try:\n        cert_text = openssl(\"x509\", \"-in\", str(CERT_PATH), \"-noout\", \"-text\")\n    except (subprocess.CalledProcessError, OSError) as exc:\n        fail(f\"unable to load certificate: {exc}\")\n\n    if \"BEGIN CERTIFICATE\" not in CERT_PATH.read_text():\n        fail(\"certificate file is not in PEM format\")\n\n    # 2. Extract the Common Name.\n    try:\n        subject = openssl(\n            \"x509\", \"-in\", str(CERT_PATH), \"-noout\", \"-subject\", \"-nameopt\", \"RFC2253\"\n        )\n    except subprocess.CalledProcessError as exc:\n        fail(f\"unable to read subject: {exc}\")\n\n    common_name = None\n    for part in subject.replace(\"subject=\", \"\").split(\",\"):\n        if part.startswith(\"CN=\"):\n            common_name = part[3:]\n            break\n    if not common_name:\n        fail(\"certificate has no Common Name\")\n\n    # 3. Extract and validate the expiration date.\n    try:\n        not_after_raw = openssl(\"x509\", \"-in\", str(CERT_PATH), \"-noout\", \"-enddate\")\n    except subprocess.CalledProcessError as exc:\n        fail(f\"unable to read expiration date: {exc}\")\n\n    expires_at = datetime.strptime(\n        not_after_raw.replace(\"notAfter=\", \"\").strip(), \"%b %d %H:%M:%S %Y %Z\"\n    ).replace(tzinfo=timezone.utc)\n    expiration_date = expires_at.strftime(\"%Y-%m-%d\")\n\n    if expires_at <= datetime.now(timezone.utc):\n        fail(f\"certificate expired on {expiration_date}\")\n\n    # 4. Sanity checks on the key pairing and combined PEM file.\n    if not KEY_PATH.is_file():\n        fail(f\"{KEY_PATH} does not exist\")\n\n    cert_pubkey = openssl(\"x509\", \"-in\", str(CERT_PATH), \"-noout\", \"-pubkey\")\n    key_pubkey = openssl(\"rsa\", \"-in\", str(KEY_PATH), \"-pubout\")\n    if cert_pubkey != key_pubkey:\n        fail(\"private key does not match the certificate\")\n\n    if not PEM_PATH.is_file():\n        fail(f\"{PEM_PATH} does not exist\")\n    pem_text = PEM_PATH.read_text()\n    if \"BEGIN PRIVATE KEY\" not in pem_text and \"BEGIN RSA PRIVATE KEY\" not in pem_text:\n        fail(\"combined PEM file is missing the private key\")\n    if \"BEGIN CERTIFICATE\" not in pem_text:\n        fail(\"combined PEM file is missing the certificate\")\n\n    # 5. Report details.\n    print(f\"Certificate file: {CERT_PATH}\")\n    print(f\"Common Name (CN): {common_name}\")\n    print(f\"Expiration date: {expiration_date}\")\n    print(\"Certificate verification successful\")\n\n\nif __name__ == \"__main__\":\n    main()\nPYEOF\nsbx run <<'EOF'\nchmod +x /app/check_cert.py\ncd /app && python3 check_cert.py\necho \"exit=$?\"\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 13526,
+     "dur_ms": 58,
+     "exit": 0,
+     "cpu_ms": 42.5,
+     "phases_us": {
+      "acquire": 70,
+      "resume": 20337,
+      "mount": 17843,
+      "run": 7908,
+      "destroy": 29559
+     },
+     "cold": null,
+     "vm": "vm-87"
+    },
+    {
+     "at_ms": 13631,
+     "dur_ms": 368,
+     "exit": 0,
+     "cpu_ms": 365.6,
+     "phases_us": {
+      "acquire": 24,
+      "resume": 20823,
+      "mount": 18227,
+      "run": 310091,
+      "destroy": 37100
+     },
+     "cold": null,
+     "vm": "vm-79"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 14041,
+   "dur_ms": 2770,
+   "tokens_in": 53,
+   "tokens_out": 540,
+   "cache_read": 3648,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 16812,
+   "dur_ms": 540,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nset -e\necho \"== Permissions ==\"\nls -ld /app/ssl; ls -l /app/ssl /app/check_cert.py\n\necho; echo \"== Certificate ==\"\nopenssl x509 -in /app/ssl/server.crt -noout -subject -issuer -dates -fingerprint -sha256\n\necho; echo \"== Key strength / match ==\"\nopenssl rsa -in /app/ssl/server.key -noout -text | head -1\ndiff <(openssl x509 -in /app/ssl/server.crt -noout -pubkey) \\\n     <(openssl rsa -in /app/ssl/server.key -pubout) && echo \"key matches certificate\"\n\necho; echo \"== Self-signed chain verify ==\"\nopenssl verify -CAfile /app/ssl/server.crt /app/ssl/server.crt\n\necho; echo \"== Combined PEM ==\"\ngrep -c \"BEGIN\" /app/ssl/server.pem\nopenssl x509 -in /app/ssl/server.pem -noout -subject\nopenssl rsa -in /app/ssl/server.pem -check -noout && echo \"PEM key valid\"\n\necho; echo \"== verification.txt ==\"\ncat /app/ssl/verification.txt\n\necho; echo \"== Python check ==\"\ncd /app && python3 check_cert.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 16860,
+     "dur_ms": 479,
+     "exit": 0,
+     "cpu_ms": 534.3,
+     "phases_us": {
+      "acquire": 65,
+      "resume": 20682,
+      "mount": 18359,
+      "run": 434150,
+      "destroy": 24348
+     },
+     "cold": null,
+     "vm": "vm-93"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 17352,
+   "dur_ms": 1919,
+   "tokens_in": 15,
+   "tokens_out": 252,
+   "cache_read": 4288,
+   "cache_write": 576,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 19272,
+   "dur_ms": 159,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\na=$(openssl x509 -in /app/ssl/server.crt -noout -pubkey | openssl sha256)\nb=$(openssl rsa -in /app/ssl/server.key -pubout 2>/dev/null | openssl sha256)\necho \"cert pubkey: $a\"\necho \"key  pubkey: $b\"\n[ \"$a\" = \"$b\" ] && echo \"OK: key matches certificate\"\nstat -c '%a %n' /app/ssl/server.key /app/ssl/server.crt /app/ssl/server.pem /app/ssl/verification.txt /app/check_cert.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 19320,
+     "dur_ms": 96,
+     "exit": 0,
+     "cpu_ms": 103.9,
+     "phases_us": {
+      "acquire": 97,
+      "resume": 20368,
+      "mount": 18070,
+      "run": 50244,
+      "destroy": 24598
+     },
+     "cold": null,
+     "vm": "vm-96"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 19434,
+   "dur_ms": 1767,
+   "tokens_in": 44,
+   "tokens_out": 409,
+   "cache_read": 5120,
+   "cache_write": 128,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.232,
+ "calls": 5,
+ "cell": "TB1f"
+}

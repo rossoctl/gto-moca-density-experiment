@@ -1,0 +1,313 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-f",
+ "instance_id": "db-wal-recovery",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 30478,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 300,
+  "output": 4417,
+  "cacheRead": 31296,
+  "cacheWrite": 4160,
+  "total": 40173
+ },
+ "totals": {
+  "model_calls": 9,
+  "tool_calls": 7,
+  "model_ms": 27909,
+  "tool_ms": 1191,
+  "sandbox_ms": 735
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1101,
+   "dur_ms": 872,
+   "tokens_in": 59,
+   "tokens_out": 104,
+   "cache_read": 1216,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1976,
+   "dur_ms": 119,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /workspace/\nfile /workspace/* 2>/dev/null\necho \"---\"\nfind /workspace -maxdepth 2 -type f -printf '%p %s bytes\\n'",
+   "sandbox": [
+    {
+     "at_ms": 2026,
+     "dur_ms": 61,
+     "exit": 0,
+     "cpu_ms": 60.2,
+     "phases_us": {
+      "acquire": 87,
+      "resume": 20958,
+      "mount": 18556,
+      "run": 16678,
+      "destroy": 23511
+     },
+     "cold": null,
+     "vm": "vm-83"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 2097,
+   "dur_ms": 2384,
+   "tokens_in": 12,
+   "tokens_out": 348,
+   "cache_read": 1280,
+   "cache_write": 320,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "model",
+   "at_ms": 4677,
+   "dur_ms": 1662,
+   "tokens_in": 24,
+   "tokens_out": 211,
+   "cache_read": 1920,
+   "cache_write": 192,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6340,
+   "dur_ms": 116,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\nls -la",
+   "sandbox": [
+    {
+     "at_ms": 6389,
+     "dur_ms": 52,
+     "exit": 0,
+     "cpu_ms": 37.4,
+     "phases_us": {
+      "acquire": 88,
+      "resume": 21066,
+      "mount": 18244,
+      "run": 4460,
+      "destroy": 26438
+     },
+     "cold": null,
+     "vm": "vm-88"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 6459,
+   "dur_ms": 3024,
+   "tokens_in": 15,
+   "tokens_out": 418,
+   "cache_read": 2304,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 9483,
+   "dur_ms": 280,
+   "tool": "bash",
+   "is_error": false,
+   "command": "find / -xdev -name '*main.db*' -o -name '*.db-wal' 2>/dev/null | head -50\necho \"---lost+found---\"\nls -la /workspace/lost+found\necho \"---mounts---\"\nmount | grep -E 'workspace|app'\necho \"---all small dbs---\"\nfind / -xdev \\( -name '*.db' -o -name '*.sqlite*' -o -name '*.wal' \\) 2>/dev/null | head -100",
+   "sandbox": [
+    {
+     "at_ms": 9532,
+     "dur_ms": 196,
+     "exit": 0,
+     "cpu_ms": 205.0,
+     "phases_us": {
+      "acquire": 70,
+      "resume": 20182,
+      "mount": 17612,
+      "run": 150347,
+      "destroy": 25542
+     },
+     "cold": null,
+     "vm": "vm-90"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 9766,
+   "dur_ms": 2524,
+   "tokens_in": 35,
+   "tokens_out": 439,
+   "cache_read": 2816,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 12290,
+   "dur_ms": 159,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\nls -la /opt/testbed-src/\nmd5sum /opt/testbed-src/main.db /workspace/main.db\ncp /opt/testbed-src/main.db-wal /workspace/main.db-wal\nls -la\nxxd main.db-wal | head -20\npython3 - <<'PY'\nimport struct\nd=open('/workspace/main.db-wal','rb').read()\nh=struct.unpack('>IIIIIIII', d[:32])\nprint('magic %08x version %d pagesize %d ckpt %d salt %08x %08x cksum %08x %08x'%h)\nps=h[2]\nprint('size',len(d),'frames',(len(d)-32)/(ps+24))\nfor i in range((len(d)-32)//(ps+24)):\n    off=32+i*(ps+24)\n    pg,commit,s1,s2,c1,c2=struct.unpack('>IIIIII',d[off:off+24])\n    print(i+1,'page',pg,'commit',commit,'salt',hex(s1),hex(s2),'cks',hex(c1),hex(c2))\nPY",
+   "sandbox": [
+    {
+     "at_ms": 12339,
+     "dur_ms": 96,
+     "exit": 0,
+     "cpu_ms": 103.1,
+     "phases_us": {
+      "acquire": 53,
+      "resume": 20658,
+      "mount": 18133,
+      "run": 43400,
+      "destroy": 31724
+     },
+     "cold": null,
+     "vm": "vm-93"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 12452,
+   "dur_ms": 3577,
+   "tokens_in": 54,
+   "tokens_out": 579,
+   "cache_read": 3392,
+   "cache_write": 1088,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 16030,
+   "dur_ms": 183,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\npython3 - <<'PY'\nimport struct\nraw=open('/opt/testbed-src/main.db-wal','rb').read()\nd=bytes(b^0x42 for b in raw)\nopen('/workspace/main.db-wal','wb').write(d)\nh=struct.unpack('>IIIIIIII', d[:32])\nprint('magic %08x version %d pagesize %d ckpt %d salt %08x %08x cksum %08x %08x'%h)\nps=h[2]\nn=(len(d)-32)//(ps+24)\nprint('size',len(d),'pagesize',ps,'frames',n)\nfor i in range(n):\n    off=32+i*(ps+24)\n    pg,commit,s1,s2,c1,c2=struct.unpack('>IIIIII',d[off:off+24])\n    print(i+1,'page',pg,'commit',commit,'salt',hex(s1),hex(s2),'cks',hex(c1),hex(c2))\nPY\necho \"=== read db ===\"\npython3 -c \"\nimport sqlite3\nc=sqlite3.connect('main.db')\nprint(c.execute('select * from items').fetchall())\n\"",
+   "sandbox": [
+    {
+     "at_ms": 16078,
+     "dur_ms": 109,
+     "exit": 0,
+     "cpu_ms": 103.9,
+     "phases_us": {
+      "acquire": 46,
+      "resume": 20751,
+      "mount": 18365,
+      "run": 60052,
+      "destroy": 28382
+     },
+     "cold": null,
+     "vm": "vm-96"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 16216,
+   "dur_ms": 4245,
+   "tokens_in": 19,
+   "tokens_out": 660,
+   "cache_read": 4736,
+   "cache_write": 704,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 20461,
+   "dur_ms": 161,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\nls -la\npython3 - <<'PY'\nimport sqlite3, json\nc=sqlite3.connect('/workspace/main.db')\nrows=[{\"id\":r[0],\"name\":r[1],\"value\":r[2]} for r in c.execute('SELECT id,name,value FROM items ORDER BY id')]\nwith open('/workspace/recovered.json','w') as f:\n    json.dump(rows,f)\nprint(json.dumps(rows,indent=2))\nprint('count',len(rows))\nc.close()\nPY\necho \"=== final ls ===\"\nls -la /workspace/\ncat /workspace/recovered.json\necho",
+   "sandbox": [
+    {
+     "at_ms": 20510,
+     "dur_ms": 106,
+     "exit": 0,
+     "cpu_ms": 115.3,
+     "phases_us": {
+      "acquire": 14,
+      "resume": 19950,
+      "mount": 17703,
+      "run": 56495,
+      "destroy": 29900
+     },
+     "cold": null,
+     "vm": "vm-99"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 20624,
+   "dur_ms": 7461,
+   "tokens_in": 58,
+   "tokens_out": 1229,
+   "cache_read": 5888,
+   "cache_write": 896,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 28085,
+   "dur_ms": 173,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /workspace\n# restore decrypted WAL (XOR 0x42)\npython3 - <<'PY'\nraw=open('/opt/testbed-src/main.db-wal','rb').read()\nopen('/workspace/main.db-wal','wb').write(bytes(b^0x42 for b in raw))\nPY\n# Verify with a scratch copy so the final files aren't checkpointed/deleted\nrm -rf /tmp/verify && mkdir /tmp/verify\ncp main.db main.db-wal /tmp/verify/\npython3 - <<'PY'\nimport sqlite3, json\nc=sqlite3.connect('/tmp/verify/main.db')\nrows=[{\"id\":r[0],\"name\":r[1],\"value\":r[2]} for r in c.execute('SELECT id,name,value FROM items ORDER BY id')]\nc.close()\nprint('rows read with WAL present:', len(rows))\nprint(rows)\nexpected=json.load(open('/workspace/recovered.json'))\nprint('JSON matches DB:', rows==expected)\nPY\necho \"=== final files ===\"\nls -la /workspace\nxxd -l 8 /workspace/main.db-wal",
+   "sandbox": [
+    {
+     "at_ms": 28133,
+     "dur_ms": 115,
+     "exit": 0,
+     "cpu_ms": 126.4,
+     "phases_us": {
+      "acquire": 89,
+      "resume": 20619,
+      "mount": 18170,
+      "run": 68991,
+      "destroy": 25313
+     },
+     "cold": null,
+     "vm": "vm-103"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 28261,
+   "dur_ms": 2160,
+   "tokens_in": 24,
+   "tokens_out": 429,
+   "cache_read": 7744,
+   "cache_write": 704,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.096,
+ "calls": 8,
+ "cell": "TB1f",
+ "removed": [
+  {
+   "at_ms": 4482,
+   "dur_ms": 195,
+   "tool": "bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  }
+ ]
+}

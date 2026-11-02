@@ -1,0 +1,532 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "financial-document-processor",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 191786,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 699,
+  "output": 14721,
+  "cacheRead": 472448,
+  "cacheWrite": 20416,
+  "total": 508284
+ },
+ "totals": {
+  "model_calls": 18,
+  "tool_calls": 14,
+  "model_ms": 84009,
+  "tool_ms": 94479,
+  "sandbox_ms": 92574
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 538,
+   "dur_ms": 1695
+  },
+  {
+   "kind": "model",
+   "at_ms": 2477,
+   "dur_ms": 1722
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4199,
+   "dur_ms": 218,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app/documents\nfor f in *.pdf; do\n  echo \"===== $f =====\"\n  head -c 400 \"$f\" | strings | head -20\n  echo\ndone\necho \"=== pip ===\"\npython3 -m pip --version 2>&1 | head -2\necho \"=== installed ===\"\npython3 -m pip list 2>/dev/null | head -50",
+   "sandbox": [
+    {
+     "at_ms": 4259,
+     "dur_ms": 110,
+     "exit": 0,
+     "cpu_ms": 122.0,
+     "phases_us": {
+      "acquire": 112,
+      "resume": 20720,
+      "mount": 18405,
+      "run": 66188,
+      "destroy": 23028
+     },
+     "cold": null,
+     "vm": "vm-210"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 4417,
+   "dur_ms": 2233
+  },
+  {
+   "kind": "tool",
+   "at_ms": 6650,
+   "dur_ms": 209,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app/documents\npython3 - <<'PY'\nimport glob, re, zlib\nfor f in sorted(glob.glob('*.pdf')):\n    data=open(f,'rb').read()\n    print(\"=\"*20, f, len(data))\n    print(repr(data[:300]))\n    # decompress streams\n    for m in re.finditer(rb'stream\\r?\\n(.*?)endstream', data, re.S):\n        s=m.group(1)\n        try:\n            d=zlib.decompress(s)\n            print(\"  STREAM:\", repr(d[:800]))\n        except Exception as e:\n            print(\"  raw stream\", len(s), repr(s[:200]))\nPY\necho \"=== python ===\"\npython3 --version\npython3 -c \"import ensurepip; print('ensurepip ok')\" 2>&1\necho \"=== apt ===\"\nwhich apt-get apt dpkg 2>&1\ncat /etc/os-release 2>/dev/null | head -3",
+   "sandbox": [
+    {
+     "at_ms": 6707,
+     "dur_ms": 103,
+     "exit": 0,
+     "cpu_ms": 115.6,
+     "phases_us": {
+      "acquire": 21,
+      "resume": 19711,
+      "mount": 17669,
+      "run": 60559,
+      "destroy": 22909
+     },
+     "cold": null,
+     "vm": "vm-213"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 6859,
+   "dur_ms": 2588
+  },
+  {
+   "kind": "tool",
+   "at_ms": 9447,
+   "dur_ms": 153,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "export DEBIAN_FRONTEND=noninteractive\napt-get update -qq 2>&1 | tail -3\napt-get install -y -qq tesseract-ocr poppler-utils 2>&1 | tail -5\necho \"=== check ===\"\nwhich tesseract pdftotext pdftoppm\ntesseract --version 2>&1 | head -2",
+   "timeout": 300000,
+   "sandbox": [
+    {
+     "at_ms": 9502,
+     "dur_ms": 79,
+     "exit": 0,
+     "cpu_ms": 89.6,
+     "phases_us": {
+      "acquire": 57,
+      "resume": 20143,
+      "mount": 18335,
+      "run": 36293,
+      "destroy": 22731
+     },
+     "cold": null,
+     "vm": "vm-217"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 9600,
+   "dur_ms": 1513
+  },
+  {
+   "kind": "tool",
+   "at_ms": 11113,
+   "dur_ms": 452,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "id\nsudo -n true 2>&1 && echo \"sudo ok\" || echo \"no sudo\"\nls -ld /var/lib/apt/lists /var/lib/dpkg 2>&1\ntouch /tmp/x && echo tmp-writable\npython3 -c \"import urllib.request; print(urllib.request.urlopen('https://pypi.org/simple/', timeout=10).status)\" 2>&1 | tail -2",
+   "sandbox": [
+    {
+     "at_ms": 11170,
+     "dur_ms": 372,
+     "exit": 0,
+     "cpu_ms": 207.0,
+     "phases_us": {
+      "acquire": 42,
+      "resume": 20122,
+      "mount": 18113,
+      "run": 326319,
+      "destroy": 25525
+     },
+     "cold": null,
+     "vm": "vm-219"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 11565,
+   "dur_ms": 4802
+  },
+  {
+   "kind": "tool",
+   "at_ms": 16367,
+   "dur_ms": 552,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /tmp\npython3 - <<'PY'\nimport urllib.request, json\nfor host in [\"https://pypi.org/pypi/pip/json\",\"https://bootstrap.pypa.io/get-pip.py\"]:\n    try:\n        r=urllib.request.urlopen(host, timeout=15)\n        print(host, r.status, len(r.read(100)))\n    except Exception as e:\n        print(host, \"ERR\", e)\nPY\necho \"--- try get-pip ---\"\npython3 - <<'PY'\nimport urllib.request\ntry:\n    d=urllib.request.urlopen(\"https://bootstrap.pypa.io/get-pip.py\", timeout=20).read()\n    open(\"/tmp/get-pip.py\",\"wb\").write(d)\n    print(\"downloaded\", len(d))\nexcept Exception as e:\n    print(\"ERR\", e)\nPY",
+   "timeout": 120000,
+   "sandbox": [
+    {
+     "at_ms": 16425,
+     "dur_ms": 474,
+     "exit": 0,
+     "cpu_ms": 285.9,
+     "phases_us": {
+      "acquire": 63,
+      "resume": 20520,
+      "mount": 17738,
+      "run": 420908,
+      "destroy": 32399
+     },
+     "cold": null,
+     "vm": "vm-222"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 16919,
+   "dur_ms": 2587
+  },
+  {
+   "kind": "tool",
+   "at_ms": 19506,
+   "dur_ms": 1150,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /tmp\npython3 - <<'PY'\nimport urllib.request, json\nmeta=json.load(urllib.request.urlopen(\"https://pypi.org/pypi/pip/json\", timeout=20))\nwhl=[u for u in meta[\"urls\"] if u[\"packagetype\"]==\"bdist_wheel\" and u[\"filename\"].endswith(\"py3-none-any.whl\")][0]\nprint(\"pip wheel:\", whl[\"filename\"])\nd=urllib.request.urlopen(whl[\"url\"], timeout=60).read()\nopen(\"/tmp/pip.whl\",\"wb\").write(d)\nprint(\"downloaded\", len(d))\nPY\necho \"--- pip test ---\"\nPYTHONPATH=/tmp/pip.whl python3 -m pip --version 2>&1 | tail -3",
+   "timeout": 180000,
+   "sandbox": [
+    {
+     "at_ms": 19561,
+     "dur_ms": 1077,
+     "exit": 0,
+     "cpu_ms": 841.9,
+     "phases_us": {
+      "acquire": 5,
+      "resume": 20194,
+      "mount": 18188,
+      "run": 1026856,
+      "destroy": 29892
+     },
+     "cold": null,
+     "vm": "vm-226"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 20656,
+   "dur_ms": 3408
+  },
+  {
+   "kind": "model",
+   "at_ms": 24223,
+   "dur_ms": 3314
+  },
+  {
+   "kind": "model",
+   "at_ms": 39777,
+   "dur_ms": 2471
+  },
+  {
+   "kind": "tool",
+   "at_ms": 42248,
+   "dur_ms": 7449,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "export PYTHONPATH=/app/.tools/pip.whl\npython3 -m pip install --target /app/pylibs --no-cache-dir --root-user-action=ignore --upgrade \\\n  opencv-python-headless 2>&1 | tail -6\nexport PYTHONPATH=/app/pylibs\npython3 - <<'PY'\nimport cv2\nprint(\"cv2\", cv2.__version__)\nfrom rapidocr_onnxruntime import RapidOCR\nprint(\"RapidOCR ok\")\nPY",
+   "timeout": 300000,
+   "sandbox": [
+    {
+     "at_ms": 42302,
+     "dur_ms": 7385,
+     "exit": 0,
+     "cpu_ms": 6455.0,
+     "phases_us": {
+      "acquire": 5,
+      "resume": 31849,
+      "mount": 29341,
+      "run": 7282539,
+      "destroy": 70508
+     },
+     "cold": null,
+     "vm": "vm-233"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 49697,
+   "dur_ms": 2593
+  },
+  {
+   "kind": "tool",
+   "at_ms": 52290,
+   "dur_ms": 418,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "export PYTHONPATH=/app/pylibs\nmkdir -p /app/work/text\npython3 - <<'PY'\nimport glob, os\nfrom pdfminer.high_level import extract_text\nfor f in sorted(glob.glob('/app/documents/*.pdf')):\n    t=extract_text(f) or ''\n    base=os.path.basename(f)\n    open('/app/work/text/'+base+'.txt','w').write(t)\n    print(\"=\"*30, base, len(t))\n    print(t)\nPY",
+   "timeout": 180000,
+   "sandbox": [
+    {
+     "at_ms": 52344,
+     "dur_ms": 328,
+     "exit": 0,
+     "cpu_ms": 359.9,
+     "phases_us": {
+      "acquire": 69,
+      "resume": 25714,
+      "mount": 23549,
+      "run": 268859,
+      "destroy": 32593
+     },
+     "cold": null,
+     "vm": "vm-235"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 52708,
+   "dur_ms": 4828
+  },
+  {
+   "kind": "tool",
+   "at_ms": 57536,
+   "dur_ms": 34909,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "export PYTHONPATH=/app/pylibs\npython3 - <<'PY'\nimport glob, os, json\nfrom rapidocr_onnxruntime import RapidOCR\nengine=RapidOCR()\nos.makedirs('/app/work/ocr',exist_ok=True)\nfor f in sorted(glob.glob('/app/documents/*.jpg')):\n    base=os.path.basename(f)\n    try:\n        res, elapse = engine(f)\n    except Exception as e:\n        print(\"ERR\", base, e); continue\n    lines=[]\n    if res:\n        for box, text, score in res:\n            ys=[p[1] for p in box]; xs=[p[0] for p in box]\n            lines.append((min(ys),min(xs),text,float(score)))\n    lines.sort(key=lambda t:(round(t[0]/8), t[1]))\n    out=\"\\n\".join(t[2] for t in lines)\n    open('/app/work/ocr/'+base+'.txt','w').write(out)\n    print(\"=\"*30, base, \"items:\", len(lines))\n    print(out)\n    print()\nPY",
+   "timeout": 600000,
+   "sandbox": [
+    {
+     "at_ms": 57590,
+     "dur_ms": 34845,
+     "exit": 0,
+     "cpu_ms": 66718.5,
+     "phases_us": {
+      "acquire": 59,
+      "resume": 23721,
+      "mount": 20800,
+      "run": 34735627,
+      "destroy": 85334
+     },
+     "cold": null,
+     "vm": "vm-237"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 92445,
+   "dur_ms": 12977
+  },
+  {
+   "kind": "tool",
+   "at_ms": 105422,
+   "dur_ms": 40374,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "export PYTHONPATH=/app/pylibs\npython3 - <<'PY'\nimport glob, os\nfrom PIL import Image, ImageOps, ImageFilter\nfrom rapidocr_onnxruntime import RapidOCR\nengine=RapidOCR()\nfiles=sorted(glob.glob('/app/documents/*.jpg'))\nfor f in files:\n    base=os.path.basename(f)\n    im=Image.open(f).convert('RGB')\n    w,h=im.size\n    scale=2 if max(w,h)<2500 else 1.3\n    im2=im.resize((int(w*scale),int(h*scale)), Image.LANCZOS)\n    im2=ImageOps.grayscale(im2); im2=im2.filter(ImageFilter.SHARPEN)\n    res,_=engine(im2)\n    lines=[]\n    if res:\n        for box,text,score in res:\n            ys=[p[1] for p in box]; xs=[p[0] for p in box]\n            lines.append((min(ys),min(xs),text,float(score)))\n    lines.sort(key=lambda t:(round(t[0]/12),t[1]))\n    # print only money/keyword lines\n    picked=[t[2] for t in lines if any(k in t[2].lower() for k in ['total','amount','vat','tax','sub','gross','net','$','due','invoice'])]\n    print(\"=\"*20, base, f\"{w}x{h}\", \"scale\",scale)\n    for p in picked: print(\"   \", p)\nPY",
+   "timeout": 600000,
+   "sandbox": [
+    {
+     "at_ms": 105478,
+     "dur_ms": 40308,
+     "exit": 0,
+     "cpu_ms": 71587.7,
+     "phases_us": {
+      "acquire": 79,
+      "resume": 21285,
+      "mount": 18656,
+      "run": 40180614,
+      "destroy": 106301
+     },
+     "cold": null,
+     "vm": "vm-240"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 145796,
+   "dur_ms": 4570
+  },
+  {
+   "kind": "tool",
+   "at_ms": 150366,
+   "dur_ms": 7170,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "export PYTHONPATH=/app/pylibs\npython3 - <<'PY'\nfrom PIL import Image, ImageOps, ImageFilter\nfrom rapidocr_onnxruntime import RapidOCR\nimport numpy as np\nf='/app/documents/F0oZMhSUm2dO.jpg'\nim=Image.open(f); print(\"mode,size\",im.mode,im.size)\na=np.asarray(im.convert('L'))\nprint(\"min/max/mean/std\", a.min(),a.max(),a.mean(),a.std())\nprint(\"hist deciles\", [int(np.percentile(a,p)) for p in range(0,101,10)])\nengine=RapidOCR()\nfor ang in [0,90,180,270]:\n    im2=im.convert('RGB').rotate(ang, expand=True)\n    im2=ImageOps.grayscale(im2)\n    im2=ImageOps.autocontrast(im2)\n    im2=im2.point(lambda p: 0 if p<140 else 255)\n    res,_=engine(im2.convert('RGB'))\n    txt=[]\n    if res:\n        for box,text,score in res:\n            txt.append((round(min(p[1] for p in box)),round(min(p[0] for p in box)),text,round(float(score),2)))\n    txt.sort()\n    print(\"=== rotate\",ang,\"found\",len(txt))\n    for t in txt[:60]: print(\"  \",t)\nPY",
+   "timeout": 300000,
+   "sandbox": [
+    {
+     "at_ms": 150422,
+     "dur_ms": 7104,
+     "exit": 0,
+     "cpu_ms": 12451.7,
+     "phases_us": {
+      "acquire": 4,
+      "resume": 26481,
+      "mount": 23455,
+      "run": 6991099,
+      "destroy": 86469
+     },
+     "cold": null,
+     "vm": "vm-250"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 157536,
+   "dur_ms": 23804
+  },
+  {
+   "kind": "tool",
+   "at_ms": 181340,
+   "dur_ms": 1039,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put /app/process_documents.py <<'EOF'\n#!/usr/bin/env python3\n\"\"\"Classify documents, move them, and summarize invoices.\n\nValues were extracted from the PDF text layers (pdfminer) and from OCR of the\nJPGs (RapidOCR), then cross-checked with a second OCR pass.\n\"\"\"\nimport csv, os, shutil\nfrom decimal import Decimal\n\nDOCS = \"/app/documents\"\nINV = \"/app/invoices\"\nOTH = \"/app/other\"\n\n# filename -> (total_amount including tax, vat_amount)\nINVOICES = {\n    \"2lgKzDuI4E4g.jpg\": (\"6558.00\",  \"0.00\"),   # Total $6558 (not Amount due $4382)\n    \"JOiylq2_7S18.jpg\": (\"6860.45\",  \"623.68\"),\n    \"KrJiw0OZx7jf.jpg\": (\"9963.00\",  \"0.00\"),   # Total $9963 (not Amount due $7139)\n    \"ivE2mt3HwvEO.jpg\": (\"819.06\",   \"74.46\"),\n    \"lxtL9XrYRsVG.jpg\": (\"797.91\",   \"72.54\"),\n    \"vvK89XK847m3.jpg\": (\"6204.19\",  \"564.02\"),\n    \"w0i40MJP2Dzm.jpg\": (\"44745.59\", \"4067.78\"),\n    \"T0r6Ou8zvqTA.pdf\": (\"4031.00\",  \"0.00\"),\n    \"UsN9tVTKskms.pdf\": (\"896.00\",   \"0.00\"),\n    \"wIQEB5nR79b2.pdf\": (\"440.00\",   \"0.00\"),\n}\nOTHERS = {\n    \"6NVuAIhTV4KB.jpg\",   # curriculum vitae\n    \"F0oZMhSUm2dO.jpg\",   # sparse scan, no invoice content\n    \"QOoA_j33PD_E.jpg\",   # interoffice memorandum\n    \"WqWMArQQlSMv.jpg\",   # inter-office correspondence\n    \"GFAlpKoFg81H.pdf\",   # stock report\n    \"dvkRkFVFhHga.pdf\",   # purchase orders\n    \"dx0AWchV01ZJ.pdf\",   # order-details page (no invoice title/amount due)\n}\n\ndef main():\n    files = sorted(f for f in os.listdir(DOCS) if os.path.isfile(os.path.join(DOCS, f)))\n    assert set(files) == set(INVOICES) | OTHERS, (set(files) ^ (set(INVOICES) | OTHERS))\n\n    os.makedirs(INV, exist_ok=True)\n    os.makedirs(OTH, exist_ok=True)\n\n    for f in files:\n        dest = INV if f in INVOICES else OTH\n        shutil.move(os.path.join(DOCS, f), os.path.join(dest, f))\n\n    rows = []\n    tot = Decimal(\"0.00\")\n    vat = Decimal(\"0.00\")\n    for f in sorted(INVOICES):\n        t, v = INVOICES[f]\n        rows.append([f, t, v])\n        tot += Decimal(t)\n        vat += Decimal(v)\n    rows.append([\"total\", f\"{tot:.2f}\", f\"{vat:.2f}\"])\n\n    with open(os.path.join(INV, \"summary.csv\"), \"w\", newline=\"\") as fh:\n        w = csv.writer(fh)\n        w.writerow([\"filename\", \"total_amount\", \"vat_amount\"])\n        w.writerows(rows)\n\n    print(f\"moved {len(INVOICES)} invoices, {len(OTHERS)} other\")\n    print(f\"totals: total_amount={tot:.2f} vat_amount={vat:.2f}\")\n\nif __name__ == \"__main__\":\n    main()\nEOF\nsbx run <<'EOF'\npython3 /app/process_documents.py\necho \"=== /app/documents ===\"\nls -A /app/documents | wc -l\necho \"=== /app/invoices ===\"\nls -1 /app/invoices\necho \"=== /app/other ===\"\nls -1 /app/other\necho \"=== summary.csv ===\"\ncat /app/invoices/summary.csv\nEOF",
+   "timeout": 120000,
+   "sandbox": [
+    {
+     "at_ms": 182156,
+     "dur_ms": 59,
+     "exit": 0,
+     "cpu_ms": 47.4,
+     "phases_us": {
+      "acquire": 177,
+      "resume": 22007,
+      "mount": 19316,
+      "run": 8111,
+      "destroy": 28789
+     },
+     "cold": null,
+     "vm": "vm-251"
+    },
+    {
+     "at_ms": 182261,
+     "dur_ms": 95,
+     "exit": 0,
+     "cpu_ms": 109.1,
+     "phases_us": {
+      "acquire": 3,
+      "resume": 21508,
+      "mount": 18350,
+      "run": 54280,
+      "destroy": 19454
+     },
+     "cold": null,
+     "vm": "vm-207"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 182379,
+   "dur_ms": 4009
+  },
+  {
+   "kind": "tool",
+   "at_ms": 186388,
+   "dur_ms": 255,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'PY'\nimport csv, os\nfrom decimal import Decimal\np='/app/invoices/summary.csv'\nrows=list(csv.reader(open(p)))\nassert rows[0]==['filename','total_amount','vat_amount'], rows[0]\nbody=rows[1:-1]; last=rows[-1]\nassert last[0]=='total'\nst=sum(Decimal(r[1]) for r in body); sv=sum(Decimal(r[2]) for r in body)\nprint(\"rows(excl header):\", len(rows)-1, \"| invoices:\", len(body))\nprint(\"computed sums:\", st, sv, \"| csv total row:\", last[1], last[2])\nassert Decimal(last[1])==st and Decimal(last[2])==sv\nfor r in body:\n    assert os.path.exists('/app/invoices/'+r[0]), r[0]\nprint(\"all invoice filenames present: OK\")\nprint(\"documents empty:\", os.listdir('/app/documents')==[])\nprint(\"invoices count (excl csv):\", len([f for f in os.listdir('/app/invoices') if f!='summary.csv']))\nprint(\"other count:\", len(os.listdir('/app/other')))\nPY\n# tidy helper artifacts\nrm -rf /app/work /app/pylibs /app/.tools /app/process_documents.py\necho \"=== final /app ===\"\nls -la /app",
+   "timeout": 120000,
+   "sandbox": [
+    {
+     "at_ms": 186444,
+     "dur_ms": 178,
+     "exit": 0,
+     "cpu_ms": 215.7,
+     "phases_us": {
+      "acquire": 60,
+      "resume": 21405,
+      "mount": 19056,
+      "run": 133176,
+      "destroy": 23252
+     },
+     "cold": null,
+     "vm": "vm-258"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 186643,
+   "dur_ms": 1628
+  },
+  {
+   "kind": "tool",
+   "at_ms": 188271,
+   "dur_ms": 131,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /app/\necho \"--- documents (should be empty) ---\"; ls -A /app/documents\necho \"--- invoices ---\"; ls -1 /app/invoices\necho \"--- other ---\"; ls -1 /app/other\necho \"--- csv ---\"; cat /app/invoices/summary.csv",
+   "sandbox": [
+    {
+     "at_ms": 188325,
+     "dur_ms": 57,
+     "exit": 0,
+     "cpu_ms": 46.8,
+     "phases_us": {
+      "acquire": 48,
+      "resume": 24746,
+      "mount": 22261,
+      "run": 9072,
+      "destroy": 23345
+     },
+     "cold": null,
+     "vm": "vm-260"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 188402,
+   "dur_ms": 3267
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 5.832,
+ "calls": 17,
+ "cell": "TB1b",
+ "removed": [
+  {
+   "at_ms": 2233,
+   "dur_ms": 244,
+   "tool": "Bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 24064,
+   "dur_ms": 159,
+   "tool": "Bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  },
+  {
+   "at_ms": 27537,
+   "dur_ms": 12240,
+   "tool": "Bash",
+   "reason": "the agent's own command failed (it reads or runs code, and changes no files)"
+  }
+ ]
+}

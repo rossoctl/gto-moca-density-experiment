@@ -1,0 +1,232 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "large-scale-text-editing",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 256075,
+ "resolved": false,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 1699,
+  "output": 7512,
+  "cacheRead": 130560,
+  "cacheWrite": 0,
+  "total": 139771
+ },
+ "totals": {
+  "model_calls": 11,
+  "tool_calls": 10,
+  "model_ms": 51155,
+  "tool_ms": 204286,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 115,
+   "dur_ms": 3316,
+   "tokens_in": 1,
+   "tokens_out": 74,
+   "cache_read": 7360,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3431,
+   "dur_ms": 181,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && ls -la && wc -l input.csv expected.csv && head -5 input.csv && echo \"---EXPECTED---\" && head -5 expected.csv"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3717,
+   "dur_ms": 1740,
+   "tokens_in": 324,
+   "tokens_out": 101,
+   "cache_read": 7424,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5457,
+   "dur_ms": 147,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && sed -n '6,20p' input.csv && echo \"---EXP---\" && sed -n '6,20p' expected.csv && echo \"---TAIL---\" && tail -5 input.csv && echo \"---EXPTAIL---\" && tail -5 expected.csv"
+  },
+  {
+   "kind": "model",
+   "at_ms": 5638,
+   "dur_ms": 14812,
+   "tokens_in": 687,
+   "tokens_out": 282,
+   "cache_read": 7872,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 20450,
+   "dur_ms": 70,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && cp input.csv /tmp/input_test.csv && head -100 input.csv > /tmp/sm.csv && cp /tmp/sm.csv /tmp/sm2.csv && cat > /tmp/test.vim <<'EOF'\ncall setreg('a', \":s/\\\\s*,\\\\s*/,/g\\r:s/^\\\\s*//\\r:s/\\\\s*$//\\r\")\ncall setreg('b', \":s/\\\\([^,]*\\\\),\\\\([^,]*\\\\),\\\\([^,]*\\\\)/\\\\3;\\\\2;\\\\1;OK/\\r\")\ncall setreg('c', \":s/.*/\\\\U&/\\r\")\n:%normal! @a\n:%normal! @b\n:%normal! @c\nwq\nEOF\nvim -Nu NONE -n -Es /tmp/sm2.csv -S /tmp/test.vim; echo \"exit=$?\"; head -5 /tmp/sm2.csv; echo ---; head -5 expected.csv; diff <(cat /tmp/sm2.csv) <(head -100 expected.csv) && echo MATCH100"
+  },
+  {
+   "kind": "model",
+   "at_ms": 20623,
+   "dur_ms": 1190,
+   "tokens_in": 214,
+   "tokens_out": 104,
+   "cache_read": 10560,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 21813,
+   "dur_ms": 47326,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && time vim -Nu NONE -n -Es /tmp/input_test.csv -S /tmp/test.vim; echo \"exit=$?\"; cmp /tmp/input_test.csv expected.csv && echo FULLMATCH",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 69161,
+   "dur_ms": 8319,
+   "tokens_in": 73,
+   "tokens_out": 219,
+   "cache_read": 10880,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 77480,
+   "dur_ms": 32742,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && cp input.csv /tmp/i2.csv && cat > /tmp/t2.vim <<'EOF'\ncall setreg('a', \":s/ //g\\r\")\ncall setreg('b', \":s/\\\\([^,]*\\\\),\\\\([^,]*\\\\),\\\\([^,]*\\\\)/\\\\U\\\\3;\\\\2;\\\\1/\\r\")\ncall setreg('c', \":s/$/;OK/\\r\")\n:%normal! @a\n:%normal! @b\n:%normal! @c\nwq\nEOF\ntime vim -Nu NONE -n -Es /tmp/i2.csv -S /tmp/t2.vim; echo \"exit=$?\"; cmp /tmp/i2.csv expected.csv && echo FULLMATCH",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 110240,
+   "dur_ms": 4486,
+   "tokens_in": 49,
+   "tokens_out": 215,
+   "cache_read": 12160,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 114726,
+   "dur_ms": 26736,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && cp input.csv /tmp/i3.csv && cat > /tmp/t3.vim <<'EOF'\ncall setreg('a', \":s/ //g\\r:s/\\\\([^,]*\\\\),\\\\([^,]*\\\\),\\\\([^,]*\\\\)/\\\\U\\\\3;\\\\2;\\\\1;OK/\\r\")\ncall setreg('b', \"0\")\ncall setreg('c', \"$\")\n:%normal! @a\n:%normal! @b\n:%normal! @c\nwq\nEOF\ntime vim -Nu NONE -n -Es /tmp/i3.csv -S /tmp/t3.vim; echo \"exit=$?\"; cmp /tmp/i3.csv expected.csv && echo FULLMATCH",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 141480,
+   "dur_ms": 6492,
+   "tokens_in": 48,
+   "tokens_out": 229,
+   "cache_read": 12864,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 147972,
+   "dur_ms": 31299,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && cp input.csv /tmp/i4.csv && cat > /tmp/t4.vim <<'EOF'\ncall setreg('a', \":s/\\\\s*\\\\([^, ]*\\\\)\\\\s*,\\\\s*\\\\([^, ]*\\\\)\\\\s*,\\\\s*\\\\([^, ]*\\\\)\\\\s*/\\\\U\\\\3;\\\\2;\\\\1;OK/\\r\")\ncall setreg('b', \"0\")\ncall setreg('c', \"$\")\n:%normal! @a\n:%normal! @b\n:%normal! @c\nwq\nEOF\ntime vim -Nu NONE -n -Es /tmp/i4.csv -S /tmp/t4.vim; echo \"exit=$?\"; cmp /tmp/i4.csv expected.csv && echo FULLMATCH",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 179290,
+   "dur_ms": 7072,
+   "tokens_in": 99,
+   "tokens_out": 221,
+   "cache_read": 13952,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 186362,
+   "dur_ms": 34875,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && cp input.csv /tmp/i5.csv && cat > /tmp/t5.vim <<'EOF'\ncall setreg('a', \":s/ //g\\r\")\ncall setreg('b', \":s/\\\\([^,]*\\\\),\\\\([^,]*\\\\),\\\\([^,]*\\\\)/\\\\3;\\\\2;\\\\1;OK/\\r\")\ncall setreg('c', \":s/.*/\\\\U&/\\r\")\n:%normal! @a\n:%normal! @b\n:%normal! @c\nwq\nEOF\ntime vim -Nu NONE -n -Es /tmp/i5.csv -S /tmp/t5.vim; echo \"exit=$?\"; cmp /tmp/i5.csv expected.csv && echo FULLMATCH",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 221254,
+   "dur_ms": 1918,
+   "tokens_in": 107,
+   "tokens_out": 155,
+   "cache_read": 15424,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 223172,
+   "dur_ms": 18,
+   "tool": "write",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/apply_macros.vim",
+    "content": "call setreg('a', \":s/ //g\\r\")\ncall setreg('b', \":s/\\\\([^,]*\\\\),\\\\([^,]*\\\\),\\\\([^,]*\\\\)/\\\\U\\\\3;\\\\2;\\\\1/\\r\")\ncall setreg('c', \":s/$/;OK/\\r\")\n:%normal! @a\n:%normal! @b\n:%normal! @c\nwq\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 223226,
+   "dur_ms": 1046,
+   "tokens_in": 41,
+   "tokens_out": 112,
+   "cache_read": 15936,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 224272,
+   "dur_ms": 30892,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && time vim -Nu NONE -n -Es input.csv -S apply_macros.vim; ec=$?; echo \"exit=$ec\"; cmp input.csv expected.csv && echo FULLMATCH; wc -l apply_macros.vim",
+   "timeout": 300000
+  },
+  {
+   "kind": "model",
+   "at_ms": 255178,
+   "dur_ms": 764,
+   "tokens_in": 56,
+   "tokens_out": 95,
+   "cache_read": 16128,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "long",
+ "weight_s_per_command": 17.611,
+ "calls": 10,
+ "cell": "TB1c"
+}

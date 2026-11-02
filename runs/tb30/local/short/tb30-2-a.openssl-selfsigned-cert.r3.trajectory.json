@@ -1,0 +1,135 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "openssl-selfsigned-cert",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 22212,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 273,
+  "output": 3132,
+  "cacheRead": 148928,
+  "cacheWrite": 3264,
+  "total": 155597
+ },
+ "totals": {
+  "model_calls": 8,
+  "tool_calls": 7,
+  "model_ms": 20468,
+  "tool_ms": 1026,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 539,
+   "dur_ms": 1978
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2517,
+   "dur_ms": 73,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "mkdir -p /app/ssl && openssl version"
+  },
+  {
+   "kind": "model",
+   "at_ms": 2590,
+   "dur_ms": 1748
+  },
+  {
+   "kind": "tool",
+   "at_ms": 4338,
+   "dur_ms": 21,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/ssl/openssl.cnf",
+    "content": "[req]\ndefault_bits       = 2048\nprompt             = no\ndefault_md         = sha256\ndistinguished_name = dn\nx509_extensions    = v3_req\n\n[dn]\nO  = DevOps Team\nCN = dev-internal.company.local\n\n[v3_req]\nbasicConstraints = CA:FALSE\nkeyUsage         = digitalSignature, keyEncipherment\nextendedKeyUsage = serverAuth\nsubjectAltName   = DNS:dev-internal.company.local\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 4359,
+   "dur_ms": 1104
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5463,
+   "dur_ms": 368,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app/ssl && \\\nopenssl genrsa -out server.key 2048 && \\\nchmod 600 server.key && \\\nopenssl req -new -x509 -key server.key -out server.crt -days 365 -sha256 -config openssl.cnf && \\\ncat server.key server.crt > server.pem && \\\nchmod 600 server.pem && \\\nls -l /app/ssl"
+  },
+  {
+   "kind": "model",
+   "at_ms": 5831,
+   "dur_ms": 2571
+  },
+  {
+   "kind": "tool",
+   "at_ms": 8402,
+   "dur_ms": 233,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "\\\nSUBJECT=$(openssl x509 -in server.crt -noout -subject) && \\\nDATES=$(openssl x509 -in server.crt -noout -dates) && \\\nFPR=$(openssl x509 -in server.crt -noout -fingerprint -sha256) && \\\n{\n  echo \"Certificate: server.crt\";\n  echo \"Subject: $SUBJECT\";\n  echo \"$DATES\";\n  echo \"SHA-256 Fingerprint: $FPR\";\n  echo \"\";\n  echo \"--- Parsed ---\";\n  echo \"Subject: $(openssl x509 -in server.crt -noout -subject -nameopt RFC2253)\";\n  echo \"Not Before (YYYY-MM-DD): $(openssl x509 -in server.crt -noout -startdate | cut -d= -f2 | xargs -I{} date -u -d {} +%Y-%m-%d)\";\n  echo \"Not After (YYYY-MM-DD): $(openssl x509 -in server.crt -noout -enddate | cut -d= -f2 | xargs -I{} date -u -d {} +%Y-%m-%d)\";\n  echo \"SHA-256 Fingerprint: $(openssl x509 -in server.crt -noout -fingerprint -sha256 | cut -d= -f2)\";\n} > verification.txt && cat verification.txt"
+  },
+  {
+   "kind": "model",
+   "at_ms": 8635,
+   "dur_ms": 6872
+  },
+  {
+   "kind": "tool",
+   "at_ms": 15507,
+   "dur_ms": 17,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/check_cert.py",
+    "content": "#!/usr/bin/env python3\n\"\"\"Verify the self-signed development certificate in /app/ssl.\"\"\"\n\nimport os\nimport ssl\nimport sys\nfrom datetime import datetime, timezone\n\nCERT_FILE = \"/app/ssl/server.crt\"\nKEY_FILE = \"/app/ssl/server.key\"\n\n\ndef fail(message):\n    print(f\"ERROR: {message}\")\n    sys.exit(1)\n\n\ndef main():\n    if not os.path.isfile(CERT_FILE):\n        fail(f\"certificate file not found: {CERT_FILE}\")\n\n    # Load the certificate (and its matching key) through OpenSSL.\n    try:\n        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)\n        context.load_cert_chain(certfile=CERT_FILE, keyfile=KEY_FILE)\n    except (ssl.SSLError, OSError) as exc:\n        fail(f\"could not load certificate: {exc}\")\n\n    try:\n        decoded = ssl._ssl._test_decode_cert(CERT_FILE)\n    except Exception as exc:\n        fail(f\"could not decode certificate: {exc}\")\n\n    subject = dict(item[0] for item in decoded.get(\"subject\", ()))\n    issuer = dict(item[0] for item in decoded.get(\"issuer\", ()))\n    common_name = subject.get(\"commonName\")\n    if not common_name:\n        fail(\"certificate has no Common Name (CN)\")\n\n    not_after = decoded.get(\"notAfter\")\n    if not not_after:\n        fail(\"certificate has no expiration date\")\n\n    expires_at = datetime.fromtimestamp(\n        ssl.cert_time_to_seconds(not_after), tz=timezone.utc\n    )\n    if expires_at <= datetime.now(timezone.utc):\n        fail(f\"certificate expired on {expires_at:%Y-%m-%d}\")\n\n    print(f\"Certificate:       {CERT_FILE}\")\n    print(f\"Subject:           {subject}\")\n    print(f\"Issuer:            {issuer}\")\n    print(f\"Common Name (CN):  {common_name}\")\n    print(f\"Expiration Date:   {expires_at:%Y-%m-%d}\")\n    print(\"Certificate verification successful\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 15524,
+   "dur_ms": 1448
+  },
+  {
+   "kind": "tool",
+   "at_ms": 16972,
+   "dur_ms": 208,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "chmod +x /app/check_cert.py && python3 /app/check_cert.py; echo \"exit=$?\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 17180,
+   "dur_ms": 1905
+  },
+  {
+   "kind": "tool",
+   "at_ms": 19085,
+   "dur_ms": 106,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "\\\necho \"== files ==\" && ls -l && \\\necho \"== key/cert match ==\" && \\\n[ \"$(openssl x509 -noout -modulus -in server.crt)\" = \"$(openssl rsa -noout -modulus -in server.key 2>/dev/null)\" ] && echo \"MATCH\" && \\\necho \"== pem contents ==\" && grep -c \"BEGIN\" server.pem && grep \"BEGIN\" server.pem && \\\necho \"== verify ==\" && openssl verify -CAfile server.crt server.crt && \\\nopenssl x509 -in server.crt -noout -subject -issuer -dates -fingerprint -sha256"
+  },
+  {
+   "kind": "model",
+   "at_ms": 19191,
+   "dur_ms": 2842
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.232,
+ "calls": 7,
+ "cell": "TB1a"
+}

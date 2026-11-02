@@ -1,0 +1,254 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "model-extraction-relu-logits",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 253441,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 529,
+  "output": 35725,
+  "cacheRead": 650496,
+  "cacheWrite": 11648,
+  "total": 698398
+ },
+ "totals": {
+  "model_calls": 17,
+  "tool_calls": 16,
+  "model_ms": 209207,
+  "tool_ms": 43590,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 538,
+   "dur_ms": 1001
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1539,
+   "dur_ms": 58,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /app && echo \"---\" && cat /app/forward.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1597,
+   "dur_ms": 33826
+  },
+  {
+   "kind": "tool",
+   "at_ms": 35423,
+   "dur_ms": 467,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python -c \"\nimport numpy as np, time\nfrom forward import forward\nx=np.random.randn(10)\nt=time.time()\nfor _ in range(10000): forward(x)\nprint('10k calls sec', time.time()-t)\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 35890,
+   "dur_ms": 2279
+  },
+  {
+   "kind": "tool",
+   "at_ms": 38169,
+   "dur_ms": 300,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python -c \"\nimport numpy as np\nfrom forward import forward\nrng=np.random.default_rng(0)\nv=rng.standard_normal(10); v/=np.linalg.norm(v)\nT=20.0; N=8000\nts=np.linspace(-T,T,N+1); dt=ts[1]-ts[0]\nF=np.array([forward(t*v) for t in ts])\ns=np.diff(F)/dt\nds=np.diff(s)\nprint('slope range',s.min(),s.max(),'ds abs max',np.abs(ds).max())\nbig=np.abs(ds)>1e-6\nprint('num big',big.sum())\nidx=np.where(big)[0]\nprint('ds at big',np.sort(np.abs(ds[big]))[:5], np.sort(np.abs(ds[big]))[-5:])\nprint('count',len(idx))\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 38469,
+   "dur_ms": 59206
+  },
+  {
+   "kind": "tool",
+   "at_ms": 97675,
+   "dur_ms": 302,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "cat > /tmp/proto.py << 'EOF'\nimport numpy as np\nfrom forward import forward\n\nDIM=10\nrng=np.random.default_rng(12345)\n\ndef grad(x,h=1e-6):\n    g=np.empty(DIM)\n    for j in range(DIM):\n        e=np.zeros(DIM); e[j]=h\n        g[j]=(forward(x+e)-forward(x-e))/(2*h)\n    return g\n\ndef kinks_on_line(v,T=20.0,N=20000,tol=1e-8):\n    ts=np.linspace(-T,T,N+1); dt=ts[1]-ts[0]\n    F=np.array([forward(t*v) for t in ts])\n    s=np.diff(F)/dt\n    ds=np.diff(s)\n    ch=np.where(np.abs(ds)>tol)[0]\n    if len(ch)==0: return []\n    groups=[]; start=prev=ch[0]\n    for c in ch[1:]:\n        if c==prev+1: prev=c\n        else:\n            groups.append((start,prev)); start=prev=c\n    groups.append((start,prev))\n    out=[]\n    for f,l in groups:\n        if l-f>1:      # likely two kinks merged -> skip\n            continue\n        a=s[f]\n        b=s[l+1] if l+1<len(s) else s[l]\n        pl=f+1\n        pr=l+1\n        if pr>N: pr=N\n        if pl<0 or pl>N or pr<0 or pr>N or pr<pl: continue\n        if abs(a-b)<tol: continue\n        cl=F[pl]-a*ts[pl]\n        cr=F[pr]-b*ts[pr]\n        tstar=(cr-cl)/(a-b)\n        if not (ts[f]-1e-9 <= tstar <= ts[l+1]+1e-9):\n            continue\n        out.append(tstar)\n    return np.array(sorted(out))\n\ndef canonical(n):\n    nm=np.linalg.norm(n)\n    if nm==0: return None\n    n=n/nm\n    if n[np.argmax(np.abs(n))]<0: n=-n\n    return n\n\nall_normals=[]\nlines=8\nfor li in range(lines):\n    v=rng.standard_normal(DIM); v/=np.linalg.norm(v)\n    ks=kinks_on_line(v)\n    print(f\"line {li}: {len(ks)} kinks\")\n    if len(ks)==0: continue\n    # adaptive eps from gaps\n    eps=np.full(len(ks),1e-3)\n    if len(ks)>1:\n        gaps=np.diff(ks)\n        # gap for each kink = min adjacent\n        g=np.full(len(ks),np.inf)\n        g[:-1]=np.minimum(g[:-1],gaps)\n        g[1:]=np.minimum(g[1:],gaps)\n        eps=np.clip(0.2*g,1e-5,1e-3)\n    for t,ep in zip(ks,eps):\n        x=t*v\n        n=grad(x+ep*v)-grad(x-ep*v)\n        cn=canonical(n)\n        if cn is not None: all_normals.append(cn)\n\nprint(\"total normals\",len(all_normals))\n# cluster\nclusters=[]\nfor cn in all_normals:\n    best=-1; bd=0.995\n    for i,c in enumerate(clusters):\n        d=abs(np.dot(cn,c[0]))\n        if d>bd: bd=d; best=i\n    if best>=0:\n        al=cn if np.dot(cn,clusters[best][0])>=0 else -cn\n        clusters[best][1].append(al)\n        m=np.mean(clusters[best][1],axis=0); clusters[best][0]=canonical(m)\n    else:\n        clusters.append([cn.copy(),[cn.copy()]])\n\nfor i,c in enumerate(sorted(clusters,key=lambda c:-len(c[1]))):\n    print(i,\"support\",len(c[1]))\n\n# compare with truth\nnp.random.seed(0)\nA1t=np.random.randn(20,10)*0.1\nstrong=[c for c in clusters if len(c[1])>=3]\nprint(\"strong clusters\",len(strong))\nM=np.array([c[0] for c in strong])\nif len(M):\n    cos=np.abs(M@A1t.T)\n    print(\"best per recovered\",cos.max(axis=1).round(4))\n    print(\"worst matched\",cos.max(axis=1).min(), \"unique\",len(set(cos.argmax(axis=1))))\nEOF\ncd /app && python /tmp/proto.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 97977,
+   "dur_ms": 1577
+  },
+  {
+   "kind": "tool",
+   "at_ms": 99554,
+   "dur_ms": 1361,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "PYTHONPATH=/app python /tmp/proto.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 100915,
+   "dur_ms": 6642
+  },
+  {
+   "kind": "tool",
+   "at_ms": 107557,
+   "dur_ms": 339,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/debug.py << 'EOF'\nimport numpy as np\nimport forward as Fw\nnp.random.seed(0)\nA1t=np.random.randn(20,10)*0.1\nprint(\"A1 matches module:\", np.allclose(A1t,Fw.A1))\nprint(\"A2:\",Fw.A2[0,:5])\ndef grad(x,h=1e-6):\n    g=np.empty(10)\n    for j in range(10):\n        e=np.zeros(10); e[j]=h\n        g[j]=(Fw.forward(x+e)-Fw.forward(x-e))/(2*h)\n    return g\nrng=np.random.default_rng(1)\nv=rng.standard_normal(10); v/=np.linalg.norm(v)\n# true breakpoints\nt_true=-Fw.b1/(Fw.A1@v)\nprint(\"true t sorted:\",np.sort(t_true).round(5))\n# pick a neuron, t*\nk=0; t=t_true[k]\nx=t*v\neps=1e-3\ngp=grad(x+eps*v); gm=grad(x-eps*v)\njump=gp-gm\nprint(\"jump\",jump.round(6))\nprint(\"A2*w\",(Fw.A2[0,k]*Fw.A1[k]).round(6))\nprint(\"cos\", abs(np.dot(jump,Fw.A2[0,k]*Fw.A1[k]))/(np.linalg.norm(jump)*np.linalg.norm(Fw.A2[0,k]*Fw.A1[k])))\n# compare gradient to true\ndef true_grad(x):\n    z=Fw.A1@x+Fw.b1\n    act=(z>0).astype(float)\n    return (Fw.A2[0]*act)@Fw.A1\nprint(\"grad err plus\",np.abs(gp-true_grad(x+eps*v)).max())\nprint(\"grad err minus\",np.abs(gm-true_grad(x-eps*v)).max())\nEOF\nPYTHONPATH=/app python /tmp/debug.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 107896,
+   "dur_ms": 2233
+  },
+  {
+   "kind": "tool",
+   "at_ms": 110129,
+   "dur_ms": 413,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/debug2.py << 'EOF'\nimport numpy as np, sys\nsys.path.insert(0,'/tmp')\nimport forward as Fw\nexec(open('/tmp/proto.py').read().split('def canonical')[0])\nrng=np.random.default_rng(12345)\nv=rng.standard_normal(10); v/=np.linalg.norm(v)\nks=kinks_on_line(v)\nt_true=np.sort(-Fw.b1/(Fw.A1@v))\nprint(\"detected\",len(ks), np.round(ks,5))\nprint(\"true    \",len(t_true), np.round(t_true,5))\n# match\nfor t in t_true:\n    if len(ks): \n        d=np.min(np.abs(ks-t))\n        print(f\"true {t:9.5f} nearest det err {d:.2e}\")\nEOF\nPYTHONPATH=/app python /tmp/debug2.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 110542,
+   "dur_ms": 4260
+  },
+  {
+   "kind": "tool",
+   "at_ms": 114802,
+   "dur_ms": 446,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/debug3.py << 'EOF'\nimport numpy as np, sys\nimport forward as Fw\nexec(open('/tmp/proto.py').read().split('def canonical')[0])\nrng=np.random.default_rng(12345)\nv=rng.standard_normal(10); v/=np.linalg.norm(v)\nks=kinks_on_line(v)\nprint(\"kinks\",len(ks))\neps=np.full(len(ks),1e-3)\ngaps=np.diff(ks)\ng=np.full(len(ks),np.inf); g[:-1]=np.minimum(g[:-1],gaps); g[1:]=np.minimum(g[1:],gaps)\neps=np.clip(0.2*g,1e-5,1e-3)\nfor i,(t,ep) in enumerate(zip(ks,eps)):\n    x=t*v\n    n=grad(x+ep*v)-grad(x-ep*v)\n    j=(Fw.A2[0]*1)  # dummy\n    cosmax=0; bi=-1\n    for k in range(20):\n        a=Fw.A2[0,k]*Fw.A1[k]\n        c=abs(np.dot(n,a))/(np.linalg.norm(n)*np.linalg.norm(a)+1e-30)\n        if c>cosmax: cosmax=c; bi=k\n    print(f\"kink {t:8.4f} eps {ep:.1e} |n| {np.linalg.norm(n):.2e} bestcos {cosmax:.4f} neu {bi}\")\nEOF\nPYTHONPATH=/app python /tmp/debug3.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 115248,
+   "dur_ms": 26535
+  },
+  {
+   "kind": "tool",
+   "at_ms": 141783,
+   "dur_ms": 17,
+   "tool": "Write",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/steal.py",
+    "content": "#!/usr/bin/env python3\n\"\"\"\nBlack-box extraction of the first-layer weight matrix of a one-hidden-layer\nReLU network  f(x) = A2 . relu(A1 x + b1) + b2  using only queries to\nforward(x).\n\nIdea\n----\nf is piecewise linear.  Its gradient is\n\n    grad f(x) = sum_{i : A1_i.x + b1_i > 0} A2_i * A1_i ,\n\nso crossing hyperplane i (where A1_i.x + b1_i = 0) changes the gradient by\nexactly  A2_i * A1_i.  That jump is a row of A1 up to a scalar factor.\n\nWe sample f along random lines.  Along a line, f is a piecewise-linear\nfunction of t with one kink per neuron, at t_i = -b1_i / (A1_i . v).  We locate\nthe kinks from changes in the slope, then compare the full gradient on either\nside of each kink to recover the normal direction.  Directions are clustered\nacross many lines to remove duplicates and occasional corrupt estimates.\n\nOnly `forward` is imported; the network's parameters are never read.\n\"\"\"\n\nimport os\nimport sys\n\nimport numpy as np\n\nsys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))\nfrom forward import forward  # noqa: E402\n\nDIM = 10                 # known input dimension\nN_LINES = 12             # random probing lines\nT_HALF = 30.0            # kinks are near the origin; probe t in [-T, T]\nN_SAMPLES = 30000        # samples per line (dt = 2*T/N = 0.002)\nSLOPE_TOL = 1e-8         # threshold for a genuine slope change\nGRAD_H = 1e-7            # finite-difference step for the gradient\nCLUSTER_COS = 0.999      # cosine threshold for \"same neuron\"\nRNG_SEED = 20240517\n\n\ndef grad(x):\n    \"\"\"Central-difference gradient of f at x (exact: f is piecewise linear).\"\"\"\n    g = np.empty(DIM)\n    for j in range(DIM):\n        e = np.zeros(DIM)\n        e[j] = GRAD_H\n        g[j] = (forward(x + e) - forward(x - e)) / (2.0 * GRAD_H)\n    return g\n\n\ndef kinks_on_line(v):\n    \"\"\"Return breakpoint locations t of f(t*v) along the line x = t*v.\"\"\"\n    ts = np.linspace(-T_HALF, T_HALF, N_SAMPLES + 1)\n    dt = ts[1] - ts[0]\n    F = np.array([forward(t * v) for t in ts])\n    slopes = np.diff(F) / dt                 # slope on each interval\n    dslopes = np.diff(slopes)                # length N_SAMPLES - 1\n\n    changed = np.where(np.abs(dslopes) > SLOPE_TOL)[0]\n    if changed.size == 0:\n        return np.empty(0)\n\n    # Group consecutive change indices.  One kink inside interval k makes\n    # slopes[k-1] and slopes[k] differ, hence two adjacent entries in\n    # dslopes: k-1 and k.  Groups longer than 2 contain merged kinks; skip.\n    groups = []\n    start = prev = changed[0]\n    for c in changed[1:]:\n        if c == prev + 1:\n            prev = c\n        else:\n            groups.append((start, prev))\n            start = prev = c\n    groups.append((start, prev))\n\n    out = []\n    n_slopes = slopes.size\n    n_ts = ts.size\n    for f, l in groups:\n        if l - f > 1:\n            continue\n        a = slopes[f]                        # slope before the kink\n        b = slopes[l + 1] if l + 1 < n_slopes else slopes[l]  # after\n        if abs(a - b) < SLOPE_TOL:\n            continue\n        # A point on the pre-kink line and one on the post-kink line.\n        pl = f + 1\n        pr = l + 1\n        if not (0 <= pl < n_ts and 0 <= pr < n_ts) or pr < pl:\n            continue\n        c_left = F[pl] - a * ts[pl]\n        c_right = F[pr] - b * ts[pr]\n        t_star = (c_right - c_left) / (a - b)\n        if ts[f] - 1e-9 <= t_star <= ts[l + 1] + 1e-9:\n            out.append(t_star)\n    return np.sort(np.array(out))\n\n\ndef canonical(n):\n    \"\"\"Unit vector with a deterministic sign.\"\"\"\n    norm = np.linalg.norm(n)\n    if norm < 1e-12:\n        return None\n    n = n / norm\n    if n[np.argmax(np.abs(n))] < 0:\n        n = -n\n    return n\n\n\ndef main():\n    rng = np.random.default_rng(RNG_SEED)\n    estimates = []\n    counts = []\n\n    for _ in range(N_LINES):\n        v = rng.standard_normal(DIM)\n        v /= np.linalg.norm(v)\n        ts = kinks_on_line(v)\n        counts.append(len(ts))\n        if ts.size == 0:\n            continue\n\n        # Offset each side of a kink by a small distance, kept well away\n        # from neighbouring kinks so the gradient is measured on a single\n        # linear piece.\n        eps = np.full(ts.size, 1e-3)\n        if ts.size > 1:\n            gaps = np.diff(ts)\n            g = np.full(ts.size, np.inf)\n            g[:-1] = np.minimum(g[:-1], gaps)\n            g[1:] = np.minimum(g[1:], gaps)\n            eps = np.clip(0.2 * g, 3e-5, 1e-3)\n\n        for t, e in zip(ts, eps):\n            x = t * v\n            normal = grad(x + e * v) - grad(x - e * v)\n            c = canonical(normal)\n            if c is not None:\n                estimates.append(c)\n\n    # Cluster unit normals (same neuron => parallel or anti-parallel).\n    clusters = []  # each: [representative, [members]]\n    for c in estimates:\n        best, best_dot = -1, CLUSTER_COS\n        for i, cl in enumerate(clusters):\n            d = abs(float(np.dot(c, cl[0])))\n            if d > best_dot:\n                best, best_dot = i, d\n        if best >= 0:\n            aligned = c if np.dot(c, clusters[best][0]) >= 0 else -c\n            clusters[best][1].append(aligned)\n            clusters[best][0] = canonical(np.mean(clusters[best][1], axis=0))\n        else:\n            clusters.append([c.copy(), [c.copy()]])\n\n    # Keep well-supported directions; spurious estimates (from merged or\n    # corrupted kinks) occur on only one or two lines.\n    min_support = max(3, int(0.4 * N_LINES))\n    strong = [cl for cl in clusters if len(cl[1]) >= min_support]\n    strong.sort(key=lambda cl: -len(cl[1]))\n\n    # Hidden width is the typical number of kinks crossed per generic line.\n    width_est = int(np.median([c for c in counts if c > 0])) if counts else 0\n    width_est = max(width_est, int(np.max(counts)) if counts else 0)\n    if 0 < width_est < len(strong):\n        strong = strong[:width_est]\n\n    A1_hat = np.array([cl[0] for cl in strong])\n\n    np.save(\"/app/stolen_A1.npy\", A1_hat)\n    print(f\"recovered {A1_hat.shape[0]} neurons \"\n          f\"(per-line kink counts: {counts})\")\n    print(A1_hat)\n    return A1_hat\n\n\nif __name__ == \"__main__\":\n    main()\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 141800,
+   "dur_ms": 1220
+  },
+  {
+   "kind": "tool",
+   "at_ms": 143020,
+   "dur_ms": 2569,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "time python steal.py 2>&1 | tail -30"
+  },
+  {
+   "kind": "model",
+   "at_ms": 145589,
+   "dur_ms": 2653
+  },
+  {
+   "kind": "tool",
+   "at_ms": 148242,
+   "dur_ms": 272,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/verify.py << 'EOF'\nimport numpy as np\nimport forward as Fw\nM=np.load('/app/stolen_A1.npy')\nA=Fw.A1\nprint(\"stolen shape\",M.shape,\"true shape\",A.shape)\nMn=M/np.linalg.norm(M,axis=1,keepdims=True)\nAn=A/np.linalg.norm(A,axis=1,keepdims=True)\nC=np.abs(Mn@An.T)\n# greedy + optimal-ish assignment check\nfrom itertools import permutations\nrows=C.argmax(axis=1)\nprint(\"max cos per stolen row:\\n\",C.max(axis=1).round(6))\nprint(\"distinct argmax:\",len(set(rows)),\"of\",M.shape[0])\n# check each true row is hit at least once\nprint(\"each true row covered:\",sorted(set(rows))==list(range(A.shape[0])))\nprint(\"min matched cosine:\",C.max(axis=1).min())\n# also check with scipy assignment if available\ntry:\n    from scipy.optimize import linear_sum_assignment\n    r,c=linear_sum_assignment(-C)\n    print(\"assignment min cos\",C[r,c].min(),\"mean\",C[r,c].mean())\nexcept Exception as e:\n    print(\"no scipy\",e)\nEOF\nPYTHONPATH=/app python /tmp/verify.py"
+  },
+  {
+   "kind": "model",
+   "at_ms": 148514,
+   "dur_ms": 11422
+  },
+  {
+   "kind": "tool",
+   "at_ms": 159936,
+   "dur_ms": 20765,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat > /tmp/stress.py << 'EOF'\nimport numpy as np, importlib, sys\nsys.path.insert(0,'/app')\nimport forward as Fw\nimport steal\nAn=Fw.A1/np.linalg.norm(Fw.A1,axis=1,keepdims=True)\nfor seed in [1,2,3,7,42,99,123,2024,31337]:\n    steal.RNG_SEED=seed\n    M=steal.main()\n    Mn=M/np.linalg.norm(M,axis=1,keepdims=True)\n    C=np.abs(Mn@An.T)\n    cover=sorted(set(C.argmax(axis=1)))\n    print(f\"SEED {seed}: shape={M.shape} min_best_cos={C.max(axis=1).min():.6f} cover={len(cover)}/20\\n\")\nEOF\nPYTHONPATH=/app python /tmp/stress.py 2>&1 | grep -E \"SEED|Traceback|Error\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 180701,
+   "dur_ms": 7744
+  },
+  {
+   "kind": "tool",
+   "at_ms": 188445,
+   "dur_ms": 11772,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "set -e\n# 1) clean default run from a different cwd, confirm saved file\ncd /tmp && python /app/steal.py >/tmp/run.log 2>&1\necho \"default run exit=$? saved:\"; ls -l /app/stolen_A1.npy\nPYTHONPATH=/app python /tmp/verify.py | head -4\n\n# 2) generalization test on synthetic networks of different widths\nfor W in 5 50 100; do\n  d=/tmp/net_$W; mkdir -p $d\n  cat > $d/forward.py << EOF\nimport numpy as np\nnp.random.seed($W)\nW=$W\nA1=np.random.randn(W,10)*0.1; b1=np.random.randn(W)*0.1\nA2=np.random.randn(1,W)*0.1; b2=np.random.randn(1)*0.1\ndef forward(x):\n    x=np.array(x).reshape(-1)\n    return float((A2@np.maximum(0,A1@x+b1)+b2)[0])\nEOF\n  sed 's#/app/stolen_A1.npy#/tmp/stolen.npy#' /app/steal.py > $d/steal.py\n  python $d/steal.py > /tmp/w$W.log 2>&1 || { echo \"W=$W FAILED\"; tail -3 /tmp/w$W.log; continue; }\n  python - \"$W\" << 'EOF'\nimport sys,numpy as np\nW=int(sys.argv[1]); sys.path.insert(0,f'/tmp/net_{W}')\nimport forward as Fw\nM=np.load('/tmp/stolen.npy'); A=Fw.A1\nMn=M/np.linalg.norm(M,axis=1,keepdims=True); An=A/np.linalg.norm(A,axis=1,keepdims=True)\nC=np.abs(Mn@An.T); cover=len(set(C.argmax(axis=1)))\nprint(f\"W={W}: recovered {M.shape[0]}/{A.shape[0]} rows, min_best_cos={C.max(axis=1).min():.5f}, covered={cover}\")\nEOF\ndone"
+  },
+  {
+   "kind": "model",
+   "at_ms": 200217,
+   "dur_ms": 12688
+  },
+  {
+   "kind": "tool",
+   "at_ms": 212905,
+   "dur_ms": 56,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "for W in 5 50 100; do echo \"=== W=$W ===\"; head -2 /tmp/w$W.log; grep -c \"recovered\" /tmp/w$W.log; done\necho \"--- per-line counts line ---\"; for W in 5 50 100; do echo \"W=$W:\"; grep -o \"per-line kink counts: \\[[^]]*\\]\" /tmp/w$W.log; done"
+  },
+  {
+   "kind": "model",
+   "at_ms": 212961,
+   "dur_ms": 30088
+  },
+  {
+   "kind": "tool",
+   "at_ms": 243049,
+   "dur_ms": 17,
+   "tool": "Edit",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/steal.py",
+    "old_string": "N_LINES = 12             # random probing lines\nT_HALF = 30.0            # kinks are near the origin; probe t in [-T, T]\nN_SAMPLES = 30000        # samples per line (dt = 2*T/N = 0.002)",
+    "new_string": "N_LINES = 16             # random probing lines\nT_HALF = 30.0            # kinks are near the origin; probe t in [-T, T]\nN_SAMPLES = 40000        # samples per line (dt = 2*T/N = 0.0015)",
+    "replace_all": false
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 243066,
+   "dur_ms": 3013
+  },
+  {
+   "kind": "tool",
+   "at_ms": 246079,
+   "dur_ms": 4436,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /tmp && time python /app/steal.py > /tmp/final.log 2>&1; echo \"exit=$?\"\nhead -1 /tmp/final.log\nPYTHONPATH=/app python /tmp/verify.py\necho \"--- files ---\"; ls -l /app"
+  },
+  {
+   "kind": "model",
+   "at_ms": 250515,
+   "dur_ms": 2820
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.615,
+ "calls": 16,
+ "cell": "TB1a"
+}

@@ -1,0 +1,240 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-b",
+ "instance_id": "log-summary-date-ranges",
+ "rep": 1,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "microvm",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 17300,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 240,
+  "output": 2346,
+  "cacheRead": 104192,
+  "cacheWrite": 3712,
+  "total": 110490
+ },
+ "totals": {
+  "model_calls": 7,
+  "tool_calls": 6,
+  "model_ms": 14087,
+  "tool_ms": 2501,
+  "sandbox_ms": 1109
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 589,
+   "dur_ms": 941
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1530,
+   "dur_ms": 166,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /workspace\nls /workspace/logs | head -50\nls /workspace/logs | wc -l",
+   "sandbox": [
+    {
+     "at_ms": 1614,
+     "dur_ms": 51,
+     "exit": 0,
+     "cpu_ms": 43.3,
+     "phases_us": {
+      "acquire": 101,
+      "resume": 21507,
+      "mount": 19449,
+      "run": 7335,
+      "destroy": 22092
+     },
+     "cold": null,
+     "vm": "vm-10"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1696,
+   "dur_ms": 1174
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2870,
+   "dur_ms": 134,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls /workspace/logs | tail -20\necho \"---\"\nhead -5 /workspace/logs/2025-07-03_api.log\necho \"---\"\nhead -5 /workspace/logs/2025-08-12_db.log 2>/dev/null || echo no such file\necho \"---\"\nls /workspace/logs | sed 's/_.*//' | sort -u | tail -20",
+   "sandbox": [
+    {
+     "at_ms": 2929,
+     "dur_ms": 49,
+     "exit": 0,
+     "cpu_ms": 46.0,
+     "phases_us": {
+      "acquire": 81,
+      "resume": 20532,
+      "mount": 18380,
+      "run": 10156,
+      "destroy": 18226
+     },
+     "cold": null,
+     "vm": "vm-11"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3004,
+   "dur_ms": 2517
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5521,
+   "dur_ms": 337,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\npython3 - <<'PY'\nimport os,re\nd='/workspace/logs'\nfiles=sorted(os.listdir(d))\nmismatch=0\nfor f in files:\n    fd=f[:10]\n    for line in open(os.path.join(d,f)):\n        m=re.match(r'(\\d{4}-\\d{2}-\\d{2}) ',line)\n        if not m or m.group(1)!=fd:\n            mismatch+=1\n            if mismatch<5: print('MISMATCH',f,repr(line[:80]))\nprint('files',len(files),'mismatch',mismatch)\nPY",
+   "sandbox": [
+    {
+     "at_ms": 5576,
+     "dur_ms": 253,
+     "exit": 0,
+     "cpu_ms": 290.6,
+     "phases_us": {
+      "acquire": 67,
+      "resume": 20838,
+      "mount": 18654,
+      "run": 211407,
+      "destroy": 20063
+     },
+     "cold": null,
+     "vm": "vm-13"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 5858,
+   "dur_ms": 3032
+  },
+  {
+   "kind": "tool",
+   "at_ms": 8890,
+   "dur_ms": 587,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "sbx put /workspace/gen.py <<'EOF'\nimport os, re, csv, datetime\n\nLOG_DIR = '/workspace/logs'\nTODAY = datetime.date(2025, 8, 12)\nSEVS = ['ERROR', 'WARNING', 'INFO']\n\ndef date_filter(start=None):\n    if start is None:\n        return lambda d: True\n    return lambda d: start <= d <= TODAY\n\nranges = [\n    ('today', TODAY),\n    ('last_7_days', TODAY - datetime.timedelta(days=6)),\n    ('last_30_days', TODAY - datetime.timedelta(days=29)),\n    ('month_to_date', TODAY.replace(day=1)),\n    ('total', None),\n]\n\ncounts = {name: {s: 0 for s in SEVS} for name, _ in ranges}\n\npat = re.compile(r'\\[(ERROR|WARNING|INFO)\\]')\nfor fn in os.listdir(LOG_DIR):\n    m = re.match(r'(\\d{4})-(\\d{2})-(\\d{2})_.*\\.log$', fn)\n    if not m:\n        continue\n    fdate = datetime.date(int(m.group(1)), int(m.group(2)), int(m.group(3)))\n    with open(os.path.join(LOG_DIR, fn), errors='replace') as fh:\n        for line in fh:\n            sm = pat.search(line)\n            if not sm:\n                continue\n            sev = sm.group(1)\n            for name, start in ranges:\n                if date_filter(start)(fdate):\n                    counts[name][sev] += 1\n\nwith open('/workspace/summary.csv', 'w', newline='') as fh:\n    w = csv.writer(fh)\n    w.writerow(['period', 'severity', 'count'])\n    for name, _ in ranges:\n        for s in SEVS:\n            w.writerow([name, s, counts[name][s]])\nprint(open('/workspace/summary.csv').read())\nEOF\nsbx run <<'EOF'\ncd /workspace && python3 gen.py\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 8911,
+     "dur_ms": 56,
+     "exit": 0,
+     "cpu_ms": 43.1,
+     "phases_us": {
+      "acquire": 57,
+      "resume": 20906,
+      "mount": 18927,
+      "run": 7925,
+      "destroy": 26963
+     },
+     "cold": null,
+     "vm": "vm-16"
+    },
+    {
+     "at_ms": 9012,
+     "dur_ms": 448,
+     "exit": 0,
+     "cpu_ms": 454.9,
+     "phases_us": {
+      "acquire": 16,
+      "resume": 20695,
+      "mount": 18489,
+      "run": 399010,
+      "destroy": 28288
+     },
+     "cold": null,
+     "vm": "vm-7"
+    }
+   ],
+   "command_form": "agent"
+  },
+  {
+   "kind": "model",
+   "at_ms": 9477,
+   "dur_ms": 2321
+  },
+  {
+   "kind": "tool",
+   "at_ms": 11798,
+   "dur_ms": 196,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace\n# lines containing each severity token anywhere, for sanity\nfor s in ERROR WARNING INFO; do echo -n \"$s total lines: \"; grep -rh \"\\[$s\\]\" logs | wc -l; done\necho \"--- lines with >1 severity token:\"\ngrep -rhE '\\[(ERROR|WARNING|INFO)\\]' logs | awk '{n=0; while(match($0,/\\[(ERROR|WARNING|INFO)\\]/,a)){n++; $0=substr($0,RSTART+RLENGTH)} if(n>1) c++} END{print c+0}'\necho \"--- bracket-less severity mentions:\"\ngrep -rhE '\\b(ERROR|WARNING|INFO)\\b' logs | grep -vE '\\[(ERROR|WARNING|INFO)\\]' | head -3\necho \"--- DEBUG today:\"\ngrep -c '\\[DEBUG\\]' logs/2025-08-12_*.log",
+   "sandbox": [
+    {
+     "at_ms": 11853,
+     "dur_ms": 113,
+     "exit": 0,
+     "cpu_ms": 157.7,
+     "phases_us": {
+      "acquire": 50,
+      "resume": 21008,
+      "mount": 18892,
+      "run": 61796,
+      "destroy": 30364
+     },
+     "cold": null,
+     "vm": "vm-21"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 11994,
+   "dur_ms": 1833
+  },
+  {
+   "kind": "tool",
+   "at_ms": 13827,
+   "dur_ms": 1081,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /workspace/logs\ncalc(){ for s in ERROR WARNING INFO; do printf \"%s \" \"$(cat $1 2>/dev/null | grep -c \"\\[$s\\]\")\"; done; echo; }\necho -n \"today: \"; calc \"$(ls 2025-08-12_*.log)\"\necho -n \"7d: \"; calc \"$(ls 2025-08-{06,07,08,09,10,11,12}_*.log)\"\necho -n \"30d: \"; calc \"$(ls 2025-07-{14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31}_*.log 2025-08-*.log)\"\necho -n \"mtd: \"; calc \"$(ls 2025-08-*.log)\"\necho -n \"total: \"; calc \"$(ls *.log)\"",
+   "sandbox": [
+    {
+     "at_ms": 14732,
+     "dur_ms": 139,
+     "exit": 0,
+     "cpu_ms": 208.0,
+     "phases_us": {
+      "acquire": 21,
+      "resume": 22046,
+      "mount": 19940,
+      "run": 94059,
+      "destroy": 22622
+     },
+     "cold": null,
+     "vm": "vm-25"
+    }
+   ],
+   "command_form": "microvm"
+  },
+  {
+   "kind": "model",
+   "at_ms": 14908,
+   "dur_ms": 2269
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.192,
+ "calls": 6,
+ "cell": "TB1b",
+ "removed": []
+}

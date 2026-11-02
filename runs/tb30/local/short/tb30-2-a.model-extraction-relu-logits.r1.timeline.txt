@@ -1,0 +1,30 @@
+tb30-2-a model-extraction-relu-logits rep 1: Claude Code, local hands; turn 267.1 s; 15 model calls (180.0 s), 14 tool calls (86.5 s; sandbox 0.0 s); resolved True; tokens: 570938 total, 25717 output
+     0.5s     1.15s  MODEL  stop None
+     1.7s     0.07s  TOOL   Bash: ls -la /app && echo "---" && cat /app/forward.py 2>/dev/null | head -100
+     1.7s    43.74s  MODEL  stop None
+    45.5s     0.42s  TOOL   Bash: python3 -c " ⏎ import numpy as np, forward ⏎ np.set_printoptions(precision=4, suppress=True) ⏎ print('A1', for
+    45.9s    42.56s  MODEL  stop None
+    88.5s     0.39s  TOOL   Bash: cat > /tmp/proto.py <<'EOF' ⏎ import numpy as np, time ⏎ import forward ⏎  ⏎ rng = np.random.default_rng(12345
+    88.9s     1.68s  MODEL  stop None
+    90.5s     0.24s  TOOL   Bash: PYTHONPATH=/app python3 /tmp/proto.py
+    90.8s     1.94s  MODEL  stop None
+    92.7s     0.83s  TOOL   Bash: sed -i 's/^import forward$/import forward\nf = forward.forward/' /tmp/proto.py && sed -i 's/forward(x)/f(x)/; 
+    93.5s    27.33s  MODEL  stop None
+   120.9s    21.71s  TOOL   Bash: cat > /tmp/test_generic.py <<'EOF' ⏎ import numpy as np, time ⏎  ⏎ def make_f(seed, width, scale=0.1, dim=10):
+   142.6s     3.65s  MODEL  stop None
+   146.2s    42.95s  TOOL   Bash: cat >> /tmp/test_generic.py <<'EOF' ⏎  ⏎ print("--- stress ---") ⏎ for scale in [1.0, 0.01, 0.001]: ⏎     for 
+   189.2s    17.46s  MODEL  stop None
+   206.6s     6.24s  TOOL   Bash: cat > /tmp/test_lean.py <<'EOF' ⏎ import numpy as np, time ⏎ exec(open('/tmp/test_generic.py').read().split("f
+   212.9s     5.96s  MODEL  stop None
+   218.8s     0.64s  TOOL   Bash: cat > /tmp/test_actual.py <<'EOF' ⏎ import numpy as np, sys, time ⏎ sys.path.insert(0,'/app') ⏎ import forward
+   219.5s     4.83s  MODEL  stop None
+   224.3s    10.94s  TOOL   Bash: cat > /tmp/test_lean2.py <<'EOF' ⏎ import numpy as np, time ⏎ exec(open('/tmp/test_generic.py').read().split("
+   235.3s    13.44s  MODEL  stop None
+   248.7s     0.02s  TOOL   Write: /app/steal.py
+   248.7s     1.99s  MODEL  stop None
+   250.7s     0.75s  TOOL   Bash: python3 steal.py
+   251.4s     4.37s  MODEL  stop None
+   255.8s     0.28s  TOOL   Bash: python3 - <<'EOF' ⏎ import numpy as np, forward ⏎ S = np.load('/app/stolen_A1.npy') ⏎ A1 = forward.A1 ⏎ print(
+   256.1s     6.15s  MODEL  stop None
+   262.2s     1.02s  TOOL   Bash: cd /tmp && python3 /app/steal.py > /tmp/out.txt 2>&1; echo "exit=$?"; head -2 /tmp/out.txt; python3 - <<'EOF' 
+   263.3s     3.77s  MODEL  stop None

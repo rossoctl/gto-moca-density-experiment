@@ -1,0 +1,215 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-d",
+ "instance_id": "model-extraction-relu-logits",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "sbx",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 68034,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 1186,
+  "output": 12240,
+  "cacheRead": 62080,
+  "cacheWrite": 0,
+  "total": 75506
+ },
+ "totals": {
+  "model_calls": 5,
+  "tool_calls": 4,
+  "model_ms": 65905,
+  "tool_ms": 1740,
+  "sandbox_ms": 1193
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 98,
+   "dur_ms": 3459,
+   "tokens_in": 40,
+   "tokens_out": 94,
+   "cache_read": 5696,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3557,
+   "dur_ms": 243,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -la /workspace\necho \"---\"\nfind /workspace -maxdepth 2 -type f | head -50\necho \"---forward---\"\ncat /workspace/forward.py 2>/dev/null || true\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 3670,
+     "dur_ms": 49,
+     "exit": 0,
+     "cpu_ms": 46.4,
+     "phases_us": {
+      "acquire": 66,
+      "resume": 20987,
+      "mount": 18485,
+      "run": 8664,
+      "destroy": 19547
+     },
+     "cold": null,
+     "vm": "vm-62"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 3841,
+   "dur_ms": 44480,
+   "tokens_in": 427,
+   "tokens_out": 1080,
+   "cache_read": 5824,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 48321,
+   "dur_ms": 530,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put /workspace/proto.py <<'EOF'\nimport sys, time\nimport numpy as np\nsys.path.insert(0, '/workspace')\nimport forward\n\nDIM = 10\nQ = 0\n\ndef query(x):\n    global Q\n    Q += 1\n    return forward.forward(x)\n\ndef grad(x, h=1e-7):\n    x = np.asarray(x, dtype=float)\n    g = np.zeros(DIM)\n    for i in range(DIM):\n        xp = x.copy(); xp[i] += h\n        xm = x.copy(); xm[i] -= h\n        g[i] = (query(xp) - query(xm)) / (2.0*h)\n    return g\n\ndef find_kinks(x0, d, T=8.0, tol=1e-12, min_width=2e-7, max_depth=40):\n    kinks = []\n    a0, b0 = -T, T\n    fa = query(x0 + a0*d)\n    fb = query(x0 + b0*d)\n    def rec(a, b, fa, fb, depth):\n        m = 0.5*(a+b)\n        fm = query(x0 + m*d)\n        dev = abs(fm - 0.5*(fa+fb))\n        width = b-a\n        if width <= min_width or depth >= max_depth:\n            if dev > tol:\n                kinks.append(m)\n            return\n        if dev <= tol:\n            return\n        rec(a, m, fa, fm, depth+1)\n        rec(m, b, fm, fb, depth+1)\n    rec(a0, b0, fa, fb, 0)\n    return kinks\n\ndef canonical(v):\n    # normalize and fix sign by largest-magnitude coordinate positive\n    n = np.linalg.norm(v)\n    if n == 0: return None\n    v = v / n\n    idx = int(np.argmax(np.abs(v)))\n    if v[idx] < 0:\n        v = -v\n    return v\n\ndef steal():\n    rng = np.random.default_rng(12345)\n    reps = []\n    max_lines = 80\n    no_new = 0\n    for line in range(max_lines):\n        # directions random; x0 at origin keeps all breakpoints bounded\n        d = rng.normal(size=DIM)\n        d /= np.linalg.norm(d)\n        x0 = np.zeros(DIM)\n        ks = find_kinks(x0, d)\n        new_here = 0\n        for t in ks:\n            delta = 1e-5\n            xl = x0 + (t-delta)*d\n            xr = x0 + (t+delta)*d\n            v = grad(xr) - grad(xl)\n            n = np.linalg.norm(v)\n            if n < 1e-5:\n                continue\n            v = canonical(v)\n            if v is None:\n                continue\n            sims = [abs(float(np.dot(v, r))) for r in reps]\n            if not sims or max(sims) < 0.99:\n                reps.append(v)\n                new_here += 1\n        print('line', line, 'kinks', len(ks), 'new', new_here, 'total', len(reps), 'queries', Q, file=sys.stderr)\n        if new_here:\n            no_new = 0\n        else:\n            no_new += 1\n        if len(reps) >= 20 and no_new >= 8:\n            break\n        if no_new >= 30:\n            break\n    A = np.array(reps)\n    np.save('/workspace/stolen_A1.npy', A)\n    return A\n\nif __name__ == '__main__':\n    t0 = time.time()\n    A = steal()\n    print('shape', A.shape, 'time', time.time()-t0, 'queries', Q)\n    # evaluation against true A1 (test only)\n    true = forward.A1\n    # match rows by absolute cosine\n    used=set(); sims=[]\n    for row in true:\n        row = row/np.linalg.norm(row)\n        best=(-1,None)\n        for j,r in enumerate(A):\n            s=abs(float(np.dot(row,r)))\n            if s>best[0]: best=(s,j)\n        sims.append((best[0],best[1]))\n    print('worst', min(s for s,j in sims), 'matches', sims)\n    print('A shape', A.shape, 'true', true.shape)\nEOF\nsbx run <<'EOF'\ncd /workspace && python3 proto.py\nEOF",
+   "timeout": 120000,
+   "sandbox": [
+    {
+     "at_ms": 48374,
+     "dur_ms": 59,
+     "exit": 0,
+     "cpu_ms": 46.9,
+     "phases_us": {
+      "acquire": 96,
+      "resume": 21703,
+      "mount": 18161,
+      "run": 7298,
+      "destroy": 30029
+     },
+     "cold": null,
+     "vm": "vm-65"
+    },
+    {
+     "at_ms": 48479,
+     "dur_ms": 339,
+     "exit": 0,
+     "cpu_ms": 450.9,
+     "phases_us": {
+      "acquire": 18,
+      "resume": 20747,
+      "mount": 17957,
+      "run": 290845,
+      "destroy": 26891
+     },
+     "cold": null,
+     "vm": "vm-59"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 48871,
+   "dur_ms": 9995,
+   "tokens_in": 512,
+   "tokens_out": 60,
+   "cache_read": 14656,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 58866,
+   "dur_ms": 126,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx run <<'EOF'\nls -ld /app /workspace 2>&1 || true\nEOF",
+   "sandbox": [
+    {
+     "at_ms": 58919,
+     "dur_ms": 51,
+     "exit": 0,
+     "cpu_ms": 37.2,
+     "phases_us": {
+      "acquire": 70,
+      "resume": 20970,
+      "mount": 18233,
+      "run": 4253,
+      "destroy": 25903
+     },
+     "cold": null,
+     "vm": "vm-72"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 59058,
+   "dur_ms": 6711,
+   "tokens_in": 69,
+   "tokens_out": 1061,
+   "cache_read": 17152,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 65769,
+   "dur_ms": 841,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sbx put /workspace/steal.py <<'EOF'\nimport os\nimport sys\n\nimport numpy as np\n\n_HERE = os.path.dirname(os.path.abspath(__file__))\nif _HERE not in sys.path:\n    sys.path.insert(0, _HERE)\n\nimport forward\n\n\nDIM = 10\n\n\ndef query(x):\n    return forward.forward(np.asarray(x, dtype=float))\n\n\ndef gradient(x, h=1e-7):\n    x = np.asarray(x, dtype=float)\n    g = np.empty(DIM, dtype=float)\n    for i in range(DIM):\n        xp = x.copy()\n        xm = x.copy()\n        xp[i] += h\n        xm[i] -= h\n        g[i] = (query(xp) - query(xm)) / (2.0 * h)\n    return g\n\n\ndef find_kinks(x0, direction, span=8.0, tol=1e-12,\n               min_width=2e-7, max_depth=40):\n    kinks = []\n    a = -span\n    b = span\n    fa = query(x0 + a * direction)\n    fb = query(x0 + b * direction)\n\n    def recurse(left, right, fleft, fright, depth):\n        mid = 0.5 * (left + right)\n        fmid = query(x0 + mid * direction)\n        deviation = abs(fmid - 0.5 * (fleft + fright))\n        if right - left <= min_width or depth >= max_depth:\n            if deviation > tol:\n                kinks.append(mid)\n            return\n        if deviation <= tol:\n            return\n        recurse(left, mid, fleft, fmid, depth + 1)\n        recurse(mid, right, fmid, fright, depth + 1)\n\n    recurse(a, b, fa, fb, 0)\n    return kinks\n\n\ndef canonical(v):\n    norm = np.linalg.norm(v)\n    if norm == 0.0:\n        return None\n    v = v / norm\n    index = int(np.argmax(np.abs(v)))\n    if v[index] < 0.0:\n        v = -v\n    return v\n\n\ndef steal():\n    rng = np.random.default_rng(12345)\n    representatives = []\n    no_new_lines = 0\n\n    for line_index in range(100):\n        direction = rng.normal(size=DIM)\n        direction /= np.linalg.norm(direction)\n        origin = np.zeros(DIM)\n\n        new_on_this_line = 0\n        for t in find_kinks(origin, direction):\n            delta = 1e-5\n            left = origin + (t - delta) * direction\n            right = origin + (t + delta) * direction\n            jump = gradient(right) - gradient(left)\n            if np.linalg.norm(jump) < 1e-5:\n                continue\n\n            candidate = canonical(jump)\n            if candidate is None:\n                continue\n\n            similarities = [abs(float(np.dot(candidate, r)))\n                            for r in representatives]\n            if not similarities or max(similarities) < 0.99:\n                representatives.append(candidate)\n                new_on_this_line += 1\n\n        if new_on_this_line:\n            no_new_lines = 0\n        else:\n            no_new_lines += 1\n        if no_new_lines >= 25:\n            break\n\n    return np.asarray(representatives, dtype=float)\n\n\ndef main():\n    A1 = steal()\n    output_path = os.path.join(_HERE, \"stolen_A1.npy\")\n    np.save(output_path, A1)\n    np.set_printoptions(precision=8, suppress=True, linewidth=200)\n    print(A1)\n\n\nif __name__ == \"__main__\":\n    main()\nEOF\nsbx run <<'EOF'\ncd /workspace && rm -f stolen_A1.npy && python3 steal.py > /tmp/steal_out.txt && python3 - <<'PY'\nimport numpy as np, sys\nsys.path.insert(0,'/workspace')\nimport forward\nA=np.load('/workspace/stolen_A1.npy')\nprint('saved shape', A.shape)\ntrue=forward.A1\nused=set(); worst=1.0\nfor row in true:\n    row=row/np.linalg.norm(row)\n    best=max((abs(float(np.dot(row,r))),j) for j,r in enumerate(A))\n    worst=min(worst,best[0])\nprint('worst cosine', worst)\nprint(open('/tmp/steal_out.txt').read()[:200])\nPY\nEOF",
+   "timeout": 120000,
+   "sandbox": [
+    {
+     "at_ms": 65824,
+     "dur_ms": 61,
+     "exit": 0,
+     "cpu_ms": 41.9,
+     "phases_us": {
+      "acquire": 84,
+      "resume": 20511,
+      "mount": 18135,
+      "run": 7846,
+      "destroy": 31985
+     },
+     "cold": null,
+     "vm": "vm-73"
+    },
+    {
+     "at_ms": 65930,
+     "dur_ms": 634,
+     "exit": 0,
+     "cpu_ms": 821.6,
+     "phases_us": {
+      "acquire": 32,
+      "resume": 21460,
+      "mount": 18565,
+      "run": 582818,
+      "destroy": 29870
+     },
+     "cold": null,
+     "vm": "vm-71"
+    }
+   ]
+  },
+  {
+   "kind": "model",
+   "at_ms": 66626,
+   "dur_ms": 1260,
+   "tokens_in": 138,
+   "tokens_out": 85,
+   "cache_read": 18752,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.615,
+ "calls": 4,
+ "cell": "TB1d"
+}

@@ -1,0 +1,171 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "log-summary-date-ranges",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 23449,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 283,
+  "output": 3638,
+  "cacheRead": 216320,
+  "cacheWrite": 4672,
+  "total": 224913
+ },
+ "totals": {
+  "model_calls": 10,
+  "tool_calls": 11,
+  "model_ms": 20898,
+  "tool_ms": 2046,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 493,
+   "dur_ms": 1117
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1301,
+   "dur_ms": 68,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /app/logs | head -50; echo \"---COUNT---\"; ls /app/logs | wc -l"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1610,
+   "dur_ms": 24,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls /app/logs | sort"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1634,
+   "dur_ms": 1358
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2589,
+   "dur_ms": 26,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "head -5 /app/logs/2025-08-12_api.log; echo \"=== db ===\"; head -3 /app/logs/2025-08-12_db.log; echo \"=== app ===\"; head -3 /app/logs/2025-08-12_app.log"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2992,
+   "dur_ms": 50,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app/logs && grep -hoE '\\b(ERROR|WARNING|INFO)\\b' *.log | sort | uniq -c"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3042,
+   "dur_ms": 2145
+  },
+  {
+   "kind": "tool",
+   "at_ms": 5187,
+   "dur_ms": 76,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "grep -hoE '\\[[A-Z]+\\]' *.log | sort | uniq -c; echo \"=== nonconforming lines ===\"; grep -hvE '^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} \\[[A-Z]+\\] ' *.log | head -20; echo \"=== count nonconforming ===\"; grep -hvcE '^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} \\[[A-Z]+\\] ' *.log | paste -sd+ | bc"
+  },
+  {
+   "kind": "model",
+   "at_ms": 5263,
+   "dur_ms": 4098
+  },
+  {
+   "kind": "tool",
+   "at_ms": 9361,
+   "dur_ms": 449,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'EOF'\nimport os,re,glob,csv\nfrom datetime import date, timedelta\nfrom collections import Counter, defaultdict\n\nTODAY = date(2025,8,12)\nranges = {\n 'today': (TODAY, TODAY),\n 'last_7_days': (TODAY - timedelta(days=6), TODAY),\n 'last_30_days': (TODAY - timedelta(days=29), TODAY),\n 'month_to_date': (date(2025,8,1), TODAY),\n}\nsev = ['ERROR','WARNING','INFO']\npat = re.compile(r'^(\\d{4}-\\d{2}-\\d{2}) \\d{2}:\\d{2}:\\d{2} \\[([A-Z]+)\\] ')\nmismatch=[]\ncounts = defaultdict(Counter)\ntotal = Counter()\nper_file_dates = defaultdict(set)\n\nfor path in sorted(glob.glob('/app/logs/*.log')):\n    fname = os.path.basename(path)\n    fdate = fname[:10]\n    with open(path, encoding='utf-8', errors='replace') as f:\n        for ln, line in enumerate(f, 1):\n            if not line.strip(): continue\n            m = pat.match(line)\n            if not m:\n                print(\"UNPARSED\", fname, ln, repr(line[:120])); continue\n            d = date.fromisoformat(m.group(1))\n            level = m.group(2)\n            per_file_dates[fname].add(m.group(1))\n            if m.group(1) != fdate:\n                mismatch.append((fname, ln, m.group(1)))\n            if level not in sev: continue\n            total[level] += 1\n            for name,(a,b) in ranges.items():\n                if a <= d <= b:\n                    counts[name][level] += 1\n\nprint(\"mismatches:\", len(mismatch), mismatch[:10])\nprint(\"blank/other issues none\" )\nwith open('/app/summary.csv','w',newline='') as f:\n    w = csv.writer(f)\n    w.writerow(['period','severity','count'])\n    for name in ['today','last_7_days','last_30_days','month_to_date']:\n        for s in sev:\n            w.writerow([name, s, counts[name][s]])\n    for s in sev:\n        w.writerow(['total', s, total[s]])\nprint(open('/app/summary.csv').read())\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 9810,
+   "dur_ms": 1810
+  },
+  {
+   "kind": "tool",
+   "at_ms": 11620,
+   "dur_ms": 79,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app/logs && for d in 2025-08-12 2025-08-06 2025-07-14 2025-08-01; do echo -n \"$d: \"; grep -h \"^$d \" *.log | grep -oE '^[^[]*\\[(ERROR|WARNING|INFO)\\]' | grep -oE '(ERROR|WARNING|INFO)' | sort | uniq -c | tr '\\n' ' '; echo; done; echo \"total lines:\"; cat *.log | wc -l"
+  },
+  {
+   "kind": "model",
+   "at_ms": 11699,
+   "dur_ms": 1948
+  },
+  {
+   "kind": "tool",
+   "at_ms": 13647,
+   "dur_ms": 46,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "check(){ echo -n \"$1: \"; cat $2 2>/dev/null | grep -oE '^[0-9-]{10} [0-9:]{8} \\[(ERROR|WARNING|INFO)\\]' | grep -oE '(ERROR|WARNING|INFO)$' | sort | uniq -c | tr '\\n' ' '; echo; }\ncheck last7 $(ls | grep -E '^2025-08-(0[6-9]|1[0-2])' ) \ncheck last30 $(ls | awk -F_ '$1>=\"2025-07-14\" && $1<=\"2025-08-12\"')\ncheck mtd $(ls | awk -F_ '$1>=\"2025-08-01\" && $1<=\"2025-08-12\"')"
+  },
+  {
+   "kind": "model",
+   "at_ms": 13693,
+   "dur_ms": 1767
+  },
+  {
+   "kind": "tool",
+   "at_ms": 15460,
+   "dur_ms": 109,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app/logs\ncheck(){ label=$1; shift; echo -n \"$label: \"; cat \"$@\" | grep -oE '^[0-9-]{10} [0-9:]{8} \\[(ERROR|WARNING|INFO)\\]' | grep -oE '(ERROR|WARNING|INFO)$' | sort | uniq -c | tr '\\n' ' '; echo; }\ncheck last7 $(ls | grep -E '^2025-08-(0[6-9]|1[0-2])')\ncheck last30 $(ls | awk -F_ '$1>=\"2025-07-14\" && $1<=\"2025-08-12\"')\ncheck mtd $(ls | awk -F_ '$1>=\"2025-08-01\" && $1<=\"2025-08-12\"')\ncheck total *.log"
+  },
+  {
+   "kind": "model",
+   "at_ms": 15569,
+   "dur_ms": 2751
+  },
+  {
+   "kind": "tool",
+   "at_ms": 18320,
+   "dur_ms": 36,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app/logs\ncheck(){ label=$1; shift; echo -n \"$label: \"; cat \"$@\" | awk 'match($0,/^[0-9-]{10} [0-9:]{8} \\[(ERROR|WARNING|INFO)\\]/,m){print m[1]}' | sort | uniq -c | tr '\\n' ' '; echo; }\ncheck last7 $(ls | grep -E '^2025-08-(0[6-9]|1[0-2])')\ncheck last30 $(ls | awk -F_ '$1>=\"2025-07-14\" && $1<=\"2025-08-12\"')\ncheck mtd $(ls | awk -F_ '$1>=\"2025-08-01\" && $1<=\"2025-08-12\"')\ncheck total *.log"
+  },
+  {
+   "kind": "model",
+   "at_ms": 18356,
+   "dur_ms": 1595
+  },
+  {
+   "kind": "tool",
+   "at_ms": 19951,
+   "dur_ms": 1083,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cd /app/logs\ncheck(){ label=$1; shift; echo -n \"$label: \"; cat \"$@\" | sed -nE 's/^[0-9-]{10} [0-9:]{8} \\[(ERROR|WARNING|INFO)\\].*/\\1/p' | sort | uniq -c | tr '\\n' ' '; echo; }\ncheck last7 $(ls | grep -E '^2025-08-(0[6-9]|1[0-2])')\ncheck last30 $(ls | awk -F_ '$1>=\"2025-07-14\" && $1<=\"2025-08-12\"')\ncheck mtd $(ls | awk -F_ '$1>=\"2025-08-01\" && $1<=\"2025-08-12\"')\ncheck total *.log"
+  },
+  {
+   "kind": "model",
+   "at_ms": 21034,
+   "dur_ms": 2309
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.192,
+ "calls": 11,
+ "cell": "TB1a"
+}

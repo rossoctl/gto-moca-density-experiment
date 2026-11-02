@@ -1,0 +1,594 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-a",
+ "instance_id": "raman-fitting",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "Claude Code",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 537066,
+ "resolved": false,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 1585,
+  "output": 71662,
+  "cacheRead": 2378240,
+  "cacheWrite": 24192,
+  "total": 2475679
+ },
+ "totals": {
+  "model_calls": 43,
+  "tool_calls": 42,
+  "model_ms": 497109,
+  "tool_ms": 39171,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 572,
+   "dur_ms": 1242
+  },
+  {
+   "kind": "tool",
+   "at_ms": 1814,
+   "dur_ms": 57,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la /app"
+  },
+  {
+   "kind": "model",
+   "at_ms": 1871,
+   "dur_ms": 2061
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3932,
+   "dur_ms": 31,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "head -40 /app/graphene.dat; echo \"---\"; wc -l /app/graphene.dat; echo \"---\"; tail -10 /app/graphene.dat"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3963,
+   "dur_ms": 3882
+  },
+  {
+   "kind": "tool",
+   "at_ms": 7845,
+   "dur_ms": 163,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "python3 -c \"\nimport numpy as np\nd=np.loadtxt('graphene.dat',delimiter='\\t')\nx=np.array([float(s.replace(',','.')) for s in open('graphene.dat').read().split()[0::2]])\ny=np.array([float(s.replace(',','.')) for s in open('graphene.dat').read().split()[1::2]])\nprint(len(x),len(y),x.min(),x.max(),y.min(),y.max())\nprint('x first,last',x[:5],x[-5:])\n# sort\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\n# find local maxima roughly\nfrom scipy.signal import find_peaks\np,_=find_peaks(ys,distance=20,prominence=500)\nprint('peaks at',xs[p])\nprint('heights',ys[p])\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 8008,
+   "dur_ms": 1731
+  },
+  {
+   "kind": "tool",
+   "at_ms": 9739,
+   "dur_ms": 9706,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"import scipy\" 2>&1; pip install numpy scipy 2>&1 | tail -3"
+  },
+  {
+   "kind": "model",
+   "at_ms": 19445,
+   "dur_ms": 1142
+  },
+  {
+   "kind": "tool",
+   "at_ms": 20587,
+   "dur_ms": 398,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"import numpy,scipy; print(numpy.__version__, scipy.__version__)\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 20985,
+   "dur_ms": 1547
+  },
+  {
+   "kind": "tool",
+   "at_ms": 22532,
+   "dur_ms": 1360,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport numpy as np\nfrom scipy.signal import find_peaks\nraw=open('graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nprint('n',len(x))\nprint('x range',x.min(),x.max(),'y range',y.min(),y.max())\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\nfor dist in [10,30,50,100]:\n    p,props=find_peaks(ys,distance=dist,prominence=200)\n    print('dist',dist,[(round(xs[i],1),round(ys[i],1),round(props['prominences'][j],1)) for j,i in enumerate(p)][:20])\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 23892,
+   "dur_ms": 4445
+  },
+  {
+   "kind": "tool",
+   "at_ms": 28337,
+   "dur_ms": 1168,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport numpy as np\nfrom scipy.signal import find_peaks\nraw=open('graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\nim=np.argmax(ys); print('global max at x=',xs[im],'y=',ys[im])\n# print coarse profile every 100 points\nfor i in range(0,len(xs),150):\n    print(round(xs[i],1), round(ys[i],1))\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 29505,
+   "dur_ms": 7907
+  },
+  {
+   "kind": "tool",
+   "at_ms": 37412,
+   "dur_ms": 282,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport numpy as np\nraw=open('graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\n# print values in ranges\nfor lo,hi in [(14000,22000),(22000,30000),(30000,40000),(40000,48000)]:\n    m=(xs>=lo)&(xs<hi)\n    print('---',lo,hi,'n',m.sum())\n    xx=xs[m]; yy=ys[m]\n    for i in range(0,len(xx),max(1,len(xx)//25)):\n        print(round(xx[i],1), round(yy[i],1))\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 37694,
+   "dur_ms": 6646
+  },
+  {
+   "kind": "tool",
+   "at_ms": 44340,
+   "dur_ms": 43,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "head -5 /app/graphene.dat | cat -A | head -5; echo ---; awk -F'\\t' '{print NF}' /app/graphene.dat | sort | uniq -c"
+  },
+  {
+   "kind": "model",
+   "at_ms": 44383,
+   "dur_ms": 6765
+  },
+  {
+   "kind": "tool",
+   "at_ms": 51148,
+   "dur_ms": 242,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport numpy as np\nraw=open('graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\n# file order x descending; compute dx\ndx=-np.diff(x); xm=(x[:-1]+x[1:])/2\nfor i in [0,100,500,1000,1500,2000,2500,3000,3500,3563]:\n    print(i, round(xm[i],1), round(dx[i],4))\n# fit log dx vs log x\nm=(dx>0)&(xm>0)\np=np.polyfit(np.log(xm[m]),np.log(dx[m]),1)\nprint('power exponent',p)\n# check if 1/x spacing uniform: compute q=1/x\nq=1/x\nprint('dq stats',np.std(np.diff(q))/np.mean(np.diff(q)))\nprint('dx stats',np.std(dx)/np.mean(dx))\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 51390,
+   "dur_ms": 15060
+  },
+  {
+   "kind": "tool",
+   "at_ms": 66450,
+   "dur_ms": 303,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "python3 -c \"\nimport numpy as np\nimport matplotlib\nmatplotlib.use('Agg')\nimport matplotlib.pyplot as plt\nraw=open('graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\nfig,ax=plt.subplots(2,1,figsize=(14,10))\nax[0].plot(xs,ys,'.-',ms=2)\nax[0].set_title('full spectrum'); ax[0].set_xlabel('x'); ax[0].set_ylabel('intensity')\n# zoom 25000-40000\nm=(xs>25000)&(xs<40000)\nax[1].plot(xs[m],ys[m],'.-',ms=3)\nax[1].set_title('zoom 25000-40000')\nplt.tight_layout(); plt.savefig('spectrum.png',dpi=100)\nprint('saved')\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 66753,
+   "dur_ms": 2030
+  },
+  {
+   "kind": "tool",
+   "at_ms": 68783,
+   "dur_ms": 7084,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "pip install matplotlib 2>&1 | tail -2 && python3 -c \"\nimport numpy as np\nimport matplotlib; matplotlib.use('Agg')\nimport matplotlib.pyplot as plt\nraw=open('/app/graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\nfig,ax=plt.subplots(3,1,figsize=(15,13))\nax[0].plot(xs,ys,'.-',ms=2); ax[0].set_title('full spectrum')\nm=(xs>25000)&(xs<40000); ax[1].plot(xs[m],ys[m],'.-',ms=3); ax[1].set_title('zoom 25000-40000')\nm=(xs>15000)&(xs<23000); ax[2].plot(xs[m],ys[m],'.-',ms=3); ax[2].set_title('zoom 15000-23000')\nfor a in ax: a.set_xlabel('x'); a.set_ylabel('intensity')\nplt.tight_layout(); plt.savefig('/app/spectrum.png',dpi=90)\nprint('saved')\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 75867,
+   "dur_ms": 844
+  },
+  {
+   "kind": "tool",
+   "at_ms": 76711,
+   "dur_ms": 35,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/spectrum.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 76746,
+   "dur_ms": 14922
+  },
+  {
+   "kind": "tool",
+   "at_ms": 91668,
+   "dur_ms": 300,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 -c \"\nimport numpy as np\nraw=open('/app/graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\nm=(xs>17000)&(xs<21500)\nfor a,b in zip(xs[m],ys[m]): print(f'{a:12.3f} {b:12.2f}')\n\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 91968,
+   "dur_ms": 53114
+  },
+  {
+   "kind": "tool",
+   "at_ms": 145082,
+   "dur_ms": 1198,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "python3 - <<'EOF'\nimport numpy as np\nfrom scipy.signal import find_peaks, medfilt\nraw=open('/app/graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\n\n# rolling baseline via large window median\nw=101\nbase=medfilt(ys,w)\nsig=ys-base\n# detect peaks with prominence relative to noise\np,props=find_peaks(sig,distance=3,prominence=150)\nprint(\"Detected features (x, y, prominence over local median):\")\nfor j,i in enumerate(p):\n    print(f\"x={xs[i]:10.2f} y={ys[i]:10.1f} prom={props['prominences'][j]:9.2f} width={props['widths'][j]:8.1f}\")\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 146280,
+   "dur_ms": 2731
+  },
+  {
+   "kind": "tool",
+   "at_ms": 149011,
+   "dur_ms": 1256,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport numpy as np\nfrom scipy.signal import find_peaks, medfilt\nraw=open('/app/graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\nbase=medfilt(ys,101)\nsig=ys-base\np,props=find_peaks(sig,distance=3,prominence=120)\nprint(\"n=\",len(p))\nfor j,i in enumerate(p):\n    print(f\"x={xs[i]:10.2f} y={ys[i]:9.1f} sig={sig[i]:9.1f} prom={props['prominences'][j]:8.1f}\")\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 150267,
+   "dur_ms": 3282
+  },
+  {
+   "kind": "tool",
+   "at_ms": 153549,
+   "dur_ms": 1122,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport numpy as np\nfrom scipy.signal import find_peaks\nfrom scipy.ndimage import uniform_filter1d\nraw=open('/app/graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\n# smooth over ~21 points\nsm=uniform_filter1d(ys,31)\np,props=find_peaks(sm,distance=5,prominence=800)\nprint(\"Detected smoothed features:\")\nfor j,i in enumerate(p):\n    print(f\"x={xs[i]:10.2f} ysm={sm[i]:9.1f} prom={props['prominences'][j]:8.1f}\")\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 154671,
+   "dur_ms": 15204
+  },
+  {
+   "kind": "tool",
+   "at_ms": 169875,
+   "dur_ms": 1290,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport numpy as np, matplotlib\nmatplotlib.use('Agg')\nimport matplotlib.pyplot as plt\nraw=open('/app/graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\nfig,ax=plt.subplots(4,1,figsize=(15,16))\nfor a,(lo,hi) in zip(ax,[(9000,12500),(14500,17500),(30000,37000),(25000,40000)]):\n    m=(xs>lo)&(xs<hi)\n    a.plot(xs[m],ys[m],'o-',ms=3,lw=1); a.set_title(f'{lo}-{hi}'); a.grid(True,alpha=.3)\n    a.set_xlabel('x'); a.set_ylabel('intensity')\nplt.tight_layout(); plt.savefig('/app/zooms.png',dpi=90)\nprint('ok')\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 171165,
+   "dur_ms": 969
+  },
+  {
+   "kind": "tool",
+   "at_ms": 172134,
+   "dur_ms": 25,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/zooms.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 172159,
+   "dur_ms": 13204
+  },
+  {
+   "kind": "tool",
+   "at_ms": 185363,
+   "dur_ms": 205,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport numpy as np\nraw=open('/app/graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\nm=(xs>9900)&(xs<11000)\nfor a,b in zip(xs[m],ys[m]): print(f'{a:10.3f} {b:10.3f}')\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 185568,
+   "dur_ms": 32822
+  },
+  {
+   "kind": "tool",
+   "at_ms": 218390,
+   "dur_ms": 840,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport numpy as np\nfrom scipy.optimize import curve_fit\nraw=open('/app/graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\n\ndef lor(x,x0,g,A,off): return off + A*g*g/((x-x0)**2+g*g)\n\ndef fit(lo,hi,p0,bounds=None):\n    m=(xs>=lo)&(xs<=hi)\n    xx=xs[m]; yy=ys[m]\n    popt,pcov=curve_fit(lor,xx,yy,p0=p0,maxfev=200000,bounds=bounds)\n    perr=np.sqrt(np.diag(pcov))\n    return popt,perr,len(xx)\n\nprint(\"G region fits (Lorentzian, gamma=HWHM, A=height):\")\nfor lo,hi in [(17000,22000),(17500,21000),(17800,20500),(18000,20300),(18200,20000),(18300,19900)]:\n    try:\n        p,e,n=fit(lo,hi,[19200,500,70000,14000])\n        print(f\"  win {lo}-{hi} n={n}: x0={p[0]:.2f}+-{e[0]:.2f} gamma={p[1]:.2f}+-{e[1]:.2f} A={p[2]:.0f}+-{e[2]:.0f} off={p[3]:.1f}+-{e[3]:.1f}\")\n    except Exception as ex: print(lo,hi,ex)\n\nprint(\"2D region fits:\")\nfor lo,hi in [(28000,38000),(29000,37000),(30000,36000),(29500,36500),(28500,37500)]:\n    try:\n        p,e,n=fit(lo,hi,[32800,1500,3000,18500])\n        print(f\"  win {lo}-{hi} n={n}: x0={p[0]:.2f}+-{e[0]:.2f} gamma={p[1]:.2f}+-{e[1]:.2f} A={p[2]:.0f}+-{e[2]:.0f} off={p[3]:.1f}+-{e[3]:.1f}\")\n    except Exception as ex: print(lo,hi,ex)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 219230,
+   "dur_ms": 3419
+  },
+  {
+   "kind": "tool",
+   "at_ms": 222649,
+   "dur_ms": 772,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport numpy as np, traceback\nfrom scipy.optimize import curve_fit\nraw=open('/app/graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\ndef lor(x,x0,g,A,off): return off + A*g*g/((x-x0)**2+g*g)\nm=(xs>=17000)&(xs<=22000); xx=xs[m]; yy=ys[m]\nprint(len(xx), xx.min(), xx.max())\ntry:\n    popt,pcov=curve_fit(lor,xx,yy,p0=[19200,500,70000,14000],maxfev=200000)\n    print(popt)\nexcept Exception:\n    traceback.print_exc()\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 223421,
+   "dur_ms": 5162
+  },
+  {
+   "kind": "tool",
+   "at_ms": 228583,
+   "dur_ms": 857,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport numpy as np\nfrom scipy.optimize import curve_fit\nraw=open('/app/graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\ndef lor(x,x0,g,A,off): return off + A*g*g/((x-x0)**2+g*g)\ndef fit(lo,hi,p0):\n    m=(xs>=lo)&(xs<=hi); xx=xs[m]; yy=ys[m]\n    popt,pcov=curve_fit(lor,xx,yy,p0=p0,maxfev=200000)\n    e=np.sqrt(np.abs(np.diag(pcov)))\n    return popt,e,len(xx)\nprint(\"G region:\")\nfor lo,hi in [(17000,22000),(17500,21000),(17800,20500),(18000,20300),(18200,20000),(18300,19900),(18500,19800)]:\n    p,e,n=fit(lo,hi,[19200,500,70000,14000])\n    print(f\"  {lo}-{hi} n={n}: x0={p[0]:.2f}+-{e[0]:.2f} gamma={p[1]:.1f}+-{e[1]:.1f} A={p[2]:.0f}+-{e[2]:.0f} off={p[3]:.0f}+-{e[3]:.0f}\")\nprint(\"2D region:\")\nfor lo,hi in [(28000,38000),(29000,37000),(30000,36000),(29500,36500),(28500,37500),(27000,39000)]:\n    p,e,n=fit(lo,hi,[32800,1500,3000,18500])\n    print(f\"  {lo}-{hi} n={n}: x0={p[0]:.2f}+-{e[0]:.2f} gamma={p[1]:.1f}+-{e[1]:.1f} A={p[2]:.0f}+-{e[2]:.0f} off={p[3]:.0f}+-{e[3]:.0f}\")\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 229440,
+   "dur_ms": 19197
+  },
+  {
+   "kind": "tool",
+   "at_ms": 248637,
+   "dur_ms": 714,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport numpy as np\nfrom scipy.optimize import curve_fit\nraw=open('/app/graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\n\ndef lor(x,x0,g,A,off): return off + A*g*g/((x-x0)**2+g*g)\ndef lorlin(x,x0,g,A,c,m): return c+m*(x-x0) + A*g*g/((x-x0)**2+g*g)\ndef gau(x,x0,s,A,off): return off + A*np.exp(-0.5*((x-x0)/s)**2)\n\ndef fit(f,lo,hi,p0,ymax=None):\n    m=(xs>=lo)&(xs<=hi)\n    if ymax is not None: m &= (ys<ymax)\n    xx=xs[m]; yy=ys[m]\n    popt,pcov=curve_fit(f,xx,yy,p0=p0,maxfev=400000)\n    resid=yy-f(xx,*popt); r2=1-np.sum(resid**2)/np.sum((yy-yy.mean())**2)\n    return popt,np.sqrt(np.abs(np.diag(pcov))),len(xx),r2\n\nprint(\"G wing fits, constant offset, exclude saturated:\")\nfor lo,hi in [(17000,21500),(16500,22000),(17500,21500),(17000,22500)]:\n  for ymax in [70000,60000,50000,40000,None]:\n    try:\n        p,e,n,r2=fit(lor,lo,hi,[19200,900,70000,14000],ymax)\n        print(f\"  {lo}-{hi} ymax={ymax} n={n} R2={r2:.4f}: x0={p[0]:.1f} g={p[1]:.0f} A={p[2]:.0f} off={p[3]:.0f} | errs {e[0]:.1f},{e[1]:.0f},{e[2]:.0f},{e[3]:.0f}\")\n    except Exception as ex: print(\"fail\",lo,hi,ymax,ex)\n  print()\nprint(\"G wing fits, LINEAR baseline:\")\nfor lo,hi in [(16500,22000),(17000,21500),(16000,22500)]:\n  for ymax in [70000,50000,None]:\n    try:\n        p,e,n,r2=fit(lorlin,lo,hi,[19200,900,70000,14000,0],ymax)\n        print(f\"  {lo}-{hi} ymax={ymax} n={n} R2={r2:.4f}: x0={p[0]:.1f} g={p[1]:.0f} A={p[2]:.0f} c={p[3]:.0f} m={p[4]:.3f}\")\n    except Exception as ex: print(\"fail\",ex)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 249351,
+   "dur_ms": 6856
+  },
+  {
+   "kind": "tool",
+   "at_ms": 256207,
+   "dur_ms": 877,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport numpy as np\nfrom scipy.optimize import curve_fit\nraw=open('/app/graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\n\ndef lor(x,x0,g,A,off): return off + A*g*g/((x-x0)**2+g*g)\ndef gau(x,x0,s,A,off): return off + A*np.exp(-0.5*((x-x0)/s)**2)\ndef lorlin(x,x0,g,A,c,m): return c+m*(x-x0) + A*g*g/((x-x0)**2+g*g)\ndef gaulin(x,x0,s,A,c,m): return c+m*(x-x0) + A*np.exp(-0.5*((x-x0)/s)**2)\n\ndef fit(f,lo,hi,p0):\n    m=(xs>=lo)&(xs<=hi); xx=xs[m]; yy=ys[m]\n    popt,pcov=curve_fit(f,xx,yy,p0=p0,maxfev=400000)\n    resid=yy-f(xx,*popt); r2=1-np.sum(resid**2)/np.sum((yy-yy.mean())**2)\n    return popt,np.sqrt(np.abs(np.diag(pcov))),len(xx),r2\n\nprint(\"2D constant offset:\")\nfor lo,hi in [(28000,38000),(29000,37000),(30000,36000),(29500,36500),(28500,37500),(30000,37000),(29000,38000)]:\n    p,e,n,r2=fit(lor,lo,hi,[32800,1500,3000,18500])\n    pg,eg,_,r2g=fit(gau,lo,hi,[32800,1500,3000,18500])\n    print(f\"  L {lo}-{hi} n={n} R2={r2:.3f}: x0={p[0]:.0f} g={p[1]:.0f} A={p[2]:.0f} off={p[3]:.0f} | G: x0={pg[0]:.0f} s={pg[1]:.0f} A={pg[2]:.0f} off={pg[3]:.0f} R2={r2g:.3f}\")\nprint(\"2D linear baseline:\")\nfor lo,hi in [(28000,38000),(29000,37000),(30000,36000),(29500,36500),(28500,37500),(27000,39000)]:\n    p,e,n,r2=fit(lorlin,lo,hi,[32800,1500,3000,18500,0])\n    pg,eg,_,r2g=fit(gaulin,lo,hi,[32800,1500,3000,18500,0])\n    print(f\"  L {lo}-{hi} n={n} R2={r2:.3f}: x0={p[0]:.0f} g={p[1]:.0f} A={p[2]:.0f} c={p[3]:.0f} m={p[4]:.2f} | G: x0={pg[0]:.0f} s={pg[1]:.0f} A={pg[2]:.0f} c={pg[3]:.0f} m={pg[4]:.2f} R2={r2g:.3f}\")\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 257084,
+   "dur_ms": 28559
+  },
+  {
+   "kind": "tool",
+   "at_ms": 285643,
+   "dur_ms": 1055,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport numpy as np, matplotlib\nmatplotlib.use('Agg')\nimport matplotlib.pyplot as plt\nraw=open('/app/graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\nfig,ax=plt.subplots(3,1,figsize=(15,12))\nfor a,(lo,hi) in zip(ax,[(12500,15000),(26500,29000),(15500,17000)]):\n    m=(xs>lo)&(xs<hi)\n    a.plot(xs[m],ys[m],'o-',ms=4,lw=1); a.set_title(f'{lo}-{hi}'); a.grid(alpha=.3)\nplt.tight_layout(); plt.savefig('/app/zooms2.png',dpi=90)\n# print 27000-28500\nm=(xs>27000)&(xs<28500)\nprint(\"27000-28500:\")\nfor a,b in zip(xs[m],ys[m]): print(f\"{a:.1f} {b:.1f}\")\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 286698,
+   "dur_ms": 2182
+  },
+  {
+   "kind": "tool",
+   "at_ms": 288880,
+   "dur_ms": 17,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/zooms2.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 288897,
+   "dur_ms": 20888
+  },
+  {
+   "kind": "tool",
+   "at_ms": 309785,
+   "dur_ms": 37,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "ls -la / /root /tmp 2>/dev/null; find / -maxdepth 3 -iname '*graphene*' -o -maxdepth 3 -iname '*raman*' 2>/dev/null | head -50"
+  },
+  {
+   "kind": "model",
+   "at_ms": 309822,
+   "dur_ms": 40059
+  },
+  {
+   "kind": "tool",
+   "at_ms": 349881,
+   "dur_ms": 753,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport numpy as np\nfrom scipy.optimize import curve_fit\nraw=open('/app/graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\n\ndef lor(x,x0,g,A,c,m): return c+m*(x-x0) + A*g*g/((x-x0)**2+g*g)\ndef gau(x,x0,s,A,c,m): return c+m*(x-x0) + A*np.exp(-0.5*((x-x0)/s)**2)\n\ndef fit(f,lo,hi,p0):\n    m=(xs>=lo)&(xs<=hi); xx=xs[m]; yy=ys[m]\n    popt,pcov=curve_fit(f,xx,yy,p0=p0,maxfev=500000)\n    resid=yy-f(xx,*popt); r2=1-np.sum(resid**2)/np.sum((yy-yy.mean())**2)\n    return popt,np.sqrt(np.abs(np.diag(pcov))),len(xx),r2\n\nprint(\"=== G: Lorentzian + linear bg ===\")\nfor lo,hi in [(16000,22500),(16500,22000),(17000,21500),(16800,21800),(17200,21200)]:\n    p,e,n,r2=fit(lor,lo,hi,[19200,400,75000,12000,-1.8])\n    print(f\"{lo}-{hi} n={n} R2={r2:.4f} x0={p[0]:.1f}+-{e[0]:.1f} gamma={p[1]:.1f}+-{e[1]:.1f} A={p[2]:.0f}+-{e[2]:.0f} off={p[3]:.0f}+-{e[3]:.0f} slope={p[4]:.3f}\")\nprint(\"=== G: Gaussian + linear bg ===\")\nfor lo,hi in [(16500,22000),(17000,21500)]:\n    p,e,n,r2=fit(gau,lo,hi,[19200,400,75000,12000,-1.8])\n    print(f\"{lo}-{hi} n={n} R2={r2:.4f} x0={p[0]:.1f} sig={p[1]:.1f} A={p[2]:.0f} off={p[3]:.0f} slope={p[4]:.3f}\")\n\nprint(\"=== 2D: Lorentzian + linear bg ===\")\nfor lo,hi in [(28000,38000),(28500,37500),(29000,37000),(29500,36500),(30000,36000),(27500,38500)]:\n    p,e,n,r2=fit(lor,lo,hi,[33100,1500,3000,18100,0.28])\n    print(f\"{lo}-{hi} n={n} R2={r2:.4f} x0={p[0]:.1f}+-{e[0]:.1f} gamma={p[1]:.0f}+-{e[1]:.0f} A={p[2]:.0f}+-{e[2]:.0f} off={p[3]:.0f}+-{e[3]:.0f} slope={p[4]:.3f}\")\nprint(\"=== 2D: Gaussian + linear bg ===\")\nfor lo,hi in [(28000,38000),(29000,37000)]:\n    p,e,n,r2=fit(gau,lo,hi,[33100,1200,2400,18200,0.28])\n    print(f\"{lo}-{hi} n={n} R2={r2:.4f} x0={p[0]:.1f} sig={p[1]:.0f} A={p[2]:.0f} off={p[3]:.0f} slope={p[4]:.3f}\")\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 350634,
+   "dur_ms": 12408
+  },
+  {
+   "kind": "tool",
+   "at_ms": 363042,
+   "dur_ms": 699,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport numpy as np\nfrom scipy.optimize import curve_fit\nraw=open('/app/graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\ndef lor(x,x0,g,A,off): return off + A*g*g/((x-x0)**2+g*g)\ndef fit(lo,hi,p0):\n    m=(xs>=lo)&(xs<=hi); xx=xs[m]; yy=ys[m]\n    popt,pcov=curve_fit(lor,xx,yy,p0=p0,maxfev=500000)\n    resid=yy-lor(xx,*popt); r2=1-np.sum(resid**2)/np.sum((yy-yy.mean())**2)\n    return popt,np.sqrt(np.abs(np.diag(pcov))),len(xx),r2\nprint(\"2D constant-offset scan (centered ~33100):\")\nfor hw in [1000,1500,2000,2500,3000,3500,4000,4500,5000]:\n    lo,hi=33100-hw,33100+hw\n    p,e,n,r2=fit(lo,hi,[33100,1500,3000,18100])\n    print(f\"+-{hw} ({lo}-{hi}) n={n} R2={r2:.4f} x0={p[0]:.0f} g={p[1]:.0f} A={p[2]:.0f} off={p[3]:.0f}\")\nprint(\"2D constant-offset, asymmetric windows:\")\nfor lo,hi in [(31000,35000),(31500,34500),(32000,34200),(30000,34500),(31500,35500),(30500,35500),(31000,35500)]:\n    p,e,n,r2=fit(lo,hi,[33100,1500,3000,18100])\n    print(f\"{lo}-{hi} n={n} R2={r2:.4f} x0={p[0]:.0f} g={p[1]:.0f} A={p[2]:.0f} off={p[3]:.0f}\")\nprint(\"G constant-offset scan:\")\nfor lo,hi in [(18000,20500),(17500,21000),(17000,21500),(16500,22000),(16000,22500)]:\n    p,e,n,r2=fit(lo,hi,[19200,450,75000,8000])\n    print(f\"{lo}-{hi} n={n} R2={r2:.4f} x0={p[0]:.0f} g={p[1]:.0f} A={p[2]:.0f} off={p[3]:.0f}\")\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 363741,
+   "dur_ms": 24699
+  },
+  {
+   "kind": "tool",
+   "at_ms": 388440,
+   "dur_ms": 767,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport numpy as np\nfrom scipy.optimize import curve_fit\nraw=open('/app/graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\ndef lor(x,x0,g,A,c,m): return c+m*(x-x0) + A*g*g/((x-x0)**2+g*g)\ndef fit(lo,hi,p0):\n    m=(xs>=lo)&(xs<=hi); xx=xs[m]; yy=ys[m]\n    popt,pcov=curve_fit(lor,xx,yy,p0=p0,maxfev=500000)\n    resid=yy-lor(xx,*popt); r2=1-np.sum(resid**2)/np.sum((yy-yy.mean())**2)\n    return popt,np.sqrt(np.abs(np.diag(pcov))),len(xx),r2\nprint(\"D-peak candidate fits:\")\nfor lo,hi in [(15600,17000),(15700,16800),(15800,16700),(15500,17100)]:\n    p,e,n,r2=fit(lo,hi,[16230,300,1800,16100,0.1])\n    print(f\"{lo}-{hi} n={n} R2={r2:.4f} x0={p[0]:.1f}+-{e[0]:.1f} gamma={p[1]:.0f} A={p[2]:.0f} off={p[3]:.0f} slope={p[4]:.3f}\")\n# consistency of linear map x = k*shift + b using D=1350 (maybe 1345),G=1580,2D=2680\nprint()\npts=[(16230,1350),(19210,1580),(33075,2680)]\nA=np.array([[s,1] for s,x0 in pts]); bvec=np.array([x0 for s,x0 in pts])\nk,b=np.linalg.lstsq(A,bvec,rcond=None)[0]\nprint(\"best k,b:\",k,b)\nfor s,x0 in pts: print(f\" shift {s}: predicted x {k*s+b:.0f} actual {x0} diff {x0-(k*s+b):.0f}\")\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 389207,
+   "dur_ms": 16589
+  },
+  {
+   "kind": "tool",
+   "at_ms": 405796,
+   "dur_ms": 922,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport numpy as np\nfrom scipy.optimize import curve_fit\nraw=open('/app/graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\nxr=27000.0\ndef model(x,*p):\n    x0g,gg,Ag,x02,g2,A2,c0,c1,c2=p\n    t=x-xr\n    return c0+c1*t+c2*t*t + Ag*gg*gg/((x-x0g)**2+gg*gg) + A2*g2*g2/((x-x02)**2+g2*g2)\nfor lo,hi in [(15000,40000),(14000,41000),(16000,39000),(15000,38000)]:\n    m=(xs>=lo)&(xs<=hi); xx=xs[m]; yy=ys[m]\n    p0=[19210,410,74500,33075,1500,2950,16000,0.3,0]\n    popt,pcov=curve_fit(model,xx,yy,p0=p0,maxfev=1000000)\n    resid=yy-model(xx,*popt); r2=1-np.sum(resid**2)/np.sum((yy-yy.mean())**2)\n    print(f\"{lo}-{hi} n={len(xx)} R2={r2:.4f}\")\n    print(f\"   G: x0={popt[0]:.1f} gamma={popt[1]:.1f} A={popt[2]:.0f}\")\n    print(f\"   2D: x0={popt[3]:.1f} gamma={popt[4]:.1f} A={popt[5]:.0f}\")\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 406718,
+   "dur_ms": 3050
+  },
+  {
+   "kind": "tool",
+   "at_ms": 409768,
+   "dur_ms": 106,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "timeout 10 python3 -c \"\nimport urllib.request\ntry:\n    print(urllib.request.urlopen('https://www.google.com',timeout=5).status)\nexcept Exception as e: print('ERR',e)\n\" 2>&1"
+  },
+  {
+   "kind": "model",
+   "at_ms": 409874,
+   "dur_ms": 2999
+  },
+  {
+   "kind": "tool",
+   "at_ms": 412873,
+   "dur_ms": 24,
+   "tool": "Bash",
+   "is_error": true,
+   "command": "xxd /app/graphene.dat | head -5; echo ...; xxd /app/graphene.dat | tail -3; echo; file /app/graphene.dat"
+  },
+  {
+   "kind": "model",
+   "at_ms": 412897,
+   "dur_ms": 2053
+  },
+  {
+   "kind": "tool",
+   "at_ms": 414950,
+   "dur_ms": 39,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "od -c /app/graphene.dat | head -3; echo ---; od -c /app/graphene.dat | tail -3"
+  },
+  {
+   "kind": "model",
+   "at_ms": 414989,
+   "dur_ms": 10764
+  },
+  {
+   "kind": "tool",
+   "at_ms": 425753,
+   "dur_ms": 1257,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport numpy as np, matplotlib\nmatplotlib.use('Agg')\nimport matplotlib.pyplot as plt\nfrom scipy.optimize import curve_fit\nraw=open('/app/graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\ndef lor(x,x0,g,A,c,m,q): \n    t=x-x0; return c+m*t+q*t*t + A*g*g/(t*t+g*g)\ndef fit(lo,hi,p0):\n    m=(xs>=lo)&(xs<=hi); xx=xs[m]; yy=ys[m]\n    popt,pcov=curve_fit(lor,xx,yy,p0=p0,maxfev=1000000)\n    resid=yy-lor(xx,*popt); r2=1-np.sum(resid**2)/np.sum((yy-yy.mean())**2)\n    return popt,np.sqrt(np.abs(np.diag(pcov))),len(xx),r2,(xx,yy)\nprint(\"G Lor+quadratic bg:\")\nfor lo,hi in [(16000,22500),(16500,22000),(17000,21500),(16000,23000)]:\n    p,e,n,r2,dat=fit(lo,hi,[19200,450,75000,14000,-2,0])\n    print(f\"{lo}-{hi} n={n} R2={r2:.4f} x0={p[0]:.1f}+-{e[0]:.1f} gamma={p[1]:.0f}+-{e[1]:.0f} A={p[2]:.0f}+-{e[2]:.0f} off={p[3]:.0f} m={p[4]:.3f} q={p[5]:.2e}\")\n# plot best\nlo,hi=16500,22000\np,e,n,r2,dat=fit(lo,hi,[19200,450,75000,14000,-2,0])\nxx,yy=dat\nxsr=np.linspace(lo,hi,2000)\nplt.figure(figsize=(12,6)); plt.plot(xx,yy,'o',ms=4,label='data'); plt.plot(xsr,lor(xsr,*p),'r-',lw=2,label='Lor+quad')\nplt.legend(); plt.title(f'G fit R2={r2:.4f}'); plt.grid(alpha=.3); plt.savefig('/app/gfit.png',dpi=90)\nprint('saved')\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 427010,
+   "dur_ms": 2147
+  },
+  {
+   "kind": "tool",
+   "at_ms": 429157,
+   "dur_ms": 15,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/gfit.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 429172,
+   "dur_ms": 19505
+  },
+  {
+   "kind": "tool",
+   "at_ms": 448677,
+   "dur_ms": 1414,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport numpy as np, matplotlib\nmatplotlib.use('Agg')\nimport matplotlib.pyplot as plt\nfrom scipy.optimize import curve_fit\nraw=open('/app/graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\ndef lor(x,x0,g,A,c,m):\n    t=x-x0; return c+m*t + A*g*g/(t*t+g*g)\ndef fit(lo,hi,p0):\n    m=(xs>=lo)&(xs<=hi); xx=xs[m]; yy=ys[m]\n    popt,pcov=curve_fit(lor,xx,yy,p0=p0,maxfev=1000000)\n    resid=yy-lor(xx,*popt); r2=1-np.sum(resid**2)/np.sum((yy-yy.mean())**2)\n    return popt,np.sqrt(np.abs(np.diag(pcov))),r2,(xx,yy)\np,e,r2,dat=fit(28000,38000,[33100,1500,2900,18100,0.28])\nxx,yy=dat\nxsr=np.linspace(28000,38000,3000)\nplt.figure(figsize=(12,6)); plt.plot(xx,yy,'o',ms=5,label='data'); plt.plot(xsr,lor(xsr,*p),'r-',lw=2,label='Lor+lin')\nplt.legend(); plt.grid(alpha=.3); plt.title(f'2D fit R2={r2:.4f} x0={p[0]:.1f} gamma={p[1]:.1f} A={p[2]:.1f} off={p[3]:.1f}'); plt.savefig('/app/fit2d.png',dpi=90)\nprint(p,e)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 450091,
+   "dur_ms": 2545
+  },
+  {
+   "kind": "tool",
+   "at_ms": 452636,
+   "dur_ms": 22,
+   "tool": "Read",
+   "is_error": false,
+   "input": {
+    "file_path": "/app/fit2d.png"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 452658,
+   "dur_ms": 31158
+  },
+  {
+   "kind": "tool",
+   "at_ms": 483816,
+   "dur_ms": 828,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport numpy as np\nfrom scipy.optimize import curve_fit\nraw=open('/app/graphene.dat').read()\nvals=np.array([float(s.replace(',','.')) for s in raw.split()])\nx=vals[0::2]; y=vals[1::2]\nidx=np.argsort(x); xs=x[idx]; ys=y[idx]\ndef lor(x,x0,g,A,c,m):\n    t=x-x0; return c+m*t + A*g*g/(t*t+g*g)\ndef fit(lo,hi,p0):\n    m=(xs>=lo)&(xs<=hi); xx=xs[m]; yy=ys[m]\n    popt,pcov=curve_fit(lor,xx,yy,p0=p0,maxfev=1000000)\n    return popt,np.sqrt(np.abs(np.diag(pcov)))\n# 2D\np,e=fit(28000,38000,[33100,1500,2900,18100,0.28])\nprint(\"2D params\",p)\nxx=xs[(xs>=28000)&(xs<=38000)]; yy=ys[(xs>=28000)&(xs<=38000)]\nbg=p[3]+p[4]*(xx-p[0]); sub=yy-bg\nprint(\"bg-sub max at x=\",xx[np.argmax(sub)],\"max=\",sub.max())\n# interpolate half max crossings\nhm=sub.max()/2\n# find crossings\nfor i in range(len(sub)-1):\n    if (sub[i]-hm)*(sub[i+1]-hm)<0:\n        xc=xx[i]+(hm-sub[i])*(xx[i+1]-xx[i])/(sub[i+1]-sub[i])\n        print(\"  half crossing\",xc)\n# G\np2,e2=fit(16500,22000,[19200,410,74500,12000,-1.8])\nprint(\"G params\",p2)\nxx=xs[(xs>=16500)&(xs<=22000)]; yy=ys[(xs>=16500)&(xs<=22000)]\nbg=p2[3]+p2[4]*(xx-p2[0]); sub=yy-bg\nprint(\"bg-sub max at x=\",xx[np.argmax(sub)],\"max=\",sub.max())\nhm=sub.max()/2\nfor i in range(len(sub)-1):\n    if (sub[i]-hm)*(sub[i+1]-hm)<0:\n        xc=xx[i]+(hm-sub[i])*(xx[i+1]-xx[i])/(sub[i+1]-sub[i])\n        print(\"  half crossing\",xc)\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 484644,
+   "dur_ms": 28404
+  },
+  {
+   "kind": "tool",
+   "at_ms": 513048,
+   "dur_ms": 845,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "python3 - <<'EOF'\nimport json\nimport numpy as np\nfrom scipy.optimize import curve_fit\n\n# --- load data (comma decimal separator, tab-separated) ---\nraw = open('/app/graphene.dat').read()\nvals = np.array([float(s.replace(',', '.')) for s in raw.split()])\nx, y = vals[0::2], vals[1::2]\nidx = np.argsort(x); xs, ys = x[idx], y[idx]\n\n# Lorentzian + local linear background (background handled explicitly;\n# reported \"offset\" is the background level at the peak centre)\ndef model(x, x0, gamma, amplitude, offset, slope):\n    t = x - x0\n    return offset + slope*t + amplitude*gamma**2/(t*t + gamma**2)\n\ndef fit(lo, hi, p0):\n    m = (xs >= lo) & (xs <= hi)\n    popt, pcov = curve_fit(model, xs[m], ys[m], p0=p0, maxfev=500000)\n    perr = np.sqrt(np.abs(np.diag(pcov)))\n    resid = ys[m] - model(xs[m], *popt)\n    r2 = 1 - np.sum(resid**2)/np.sum((ys[m]-ys[m].mean())**2)\n    return popt, perr, r2\n\n# G peak ~19.2k, 2D peak ~33.1k (file x-units)\npG, eG, r2G = fit(16500, 22000, [19200, 410, 74500, 12000, -1.8])\np2, e2, r22 = fit(28000, 38000, [33100, 1500, 2900, 18100, 0.28])\n\nprint(\"G : x0=%.2f gamma=%.2f amplitude=%.1f offset=%.1f  (R2=%.4f)\" %\n      (pG[0], pG[1], pG[2], pG[3], r2G))\nprint(\"2D: x0=%.2f gamma=%.2f amplitude=%.1f offset=%.1f  (R2=%.4f)\" %\n      (p2[0], p2[1], p2[2], p2[3], r22))\n\nresults = {\n    \"G\":  {\"x0\": round(float(pG[0]), 4), \"gamma\": round(float(pG[1]), 4),\n           \"amplitude\": round(float(pG[2]), 4), \"offset\": round(float(pG[3]), 4)},\n    \"2D\": {\"x0\": round(float(p2[0]), 4), \"gamma\": round(float(p2[1]), 4),\n           \"amplitude\": round(float(p2[2]), 4), \"offset\": round(float(p2[3]), 4)},\n}\nwith open('/app/results.json', 'w') as f:\n    json.dump(results, f, indent=2)\nprint(json.dumps(results, indent=2))\nEOF"
+  },
+  {
+   "kind": "model",
+   "at_ms": 513893,
+   "dur_ms": 4351
+  },
+  {
+   "kind": "tool",
+   "at_ms": 518244,
+   "dur_ms": 43,
+   "tool": "Bash",
+   "is_error": false,
+   "command": "cat /app/results.json && python3 -c \"import json;d=json.load(open('/app/results.json'));print('valid JSON, keys:',list(d.keys()))\""
+  },
+  {
+   "kind": "model",
+   "at_ms": 518287,
+   "dur_ms": 18565
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 2.189,
+ "calls": 42,
+ "cell": "TB1a"
+}

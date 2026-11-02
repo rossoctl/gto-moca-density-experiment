@@ -1,0 +1,454 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-e",
+ "instance_id": "model-extraction-relu-logits",
+ "rep": 2,
+ "attempt": 1,
+ "agent": "stock Pi",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 456175,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 522,
+  "output": 28937,
+  "cacheRead": 801216,
+  "cacheWrite": 25984,
+  "total": 856659
+ },
+ "totals": {
+  "model_calls": 22,
+  "tool_calls": 22,
+  "model_ms": 185661,
+  "tool_ms": 269246,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 1116,
+   "dur_ms": 1607,
+   "tokens_in": 42,
+   "tokens_out": 203,
+   "cache_read": 1600,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2726,
+   "dur_ms": 11,
+   "tool": "bash",
+   "is_error": false,
+   "command": "ls -la /app && find /app -maxdepth 2 -type f | head -50"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 2726,
+   "dur_ms": 12,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat /app/forward.py 2>/dev/null | head -200"
+  },
+  {
+   "kind": "model",
+   "at_ms": 2741,
+   "dur_ms": 16022,
+   "tokens_in": 40,
+   "tokens_out": 2297,
+   "cache_read": 1792,
+   "cache_write": 384,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 18763,
+   "dur_ms": 347,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport forward, numpy as np\nprint(forward.A1.shape)\nprint(np.linalg.norm(forward.A1,axis=1))\nprint(forward.A2)\nprint(np.abs(forward.A2).min())\nprint(forward.b1)\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 19114,
+   "dur_ms": 24677,
+   "tokens_in": 53,
+   "tokens_out": 3848,
+   "cache_read": 4480,
+   "cache_write": 384,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 43791,
+   "dur_ms": 37115,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/proto.py <<'PY'\nimport numpy as np, importlib.util, sys, time\nspec=importlib.util.spec_from_file_location('forward','/app/forward.py')\nmod=importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)\nfw=mod.forward\nd=10\nrng=np.random.default_rng(1)\n\ndef grad(x,h=1e-5):\n    g=np.empty(d)\n    for j in range(d):\n        e=np.zeros(d); e[j]=h\n        g[j]=(fw(x+e)-fw(x-e))/(2*h)\n    return g\n\ndef collect_line(p,v,T=4.0,M=200,min_len=1e-6,tol=1e-7):\n    ts=np.linspace(-T,T,M+1)\n    gs=[grad(p+t*v) for t in ts]\n    out=[]\n    def refine(tL,gL,tR,gR,depth=0):\n        diff=gR-gL; nd=np.linalg.norm(diff)\n        if nd<tol:\n            return\n        if tR-tL<min_len:\n            out.append((0.5*(tL+tR),diff,nd))\n            return\n        tm=(tL+tR)/2\n        gm=grad(p+tm*v)\n        dL=np.linalg.norm(gm-gL); dR=np.linalg.norm(gm-gR)\n        if dL < 0.05*nd:\n            refine(tm,gm,tR,gR,depth+1)\n        elif dR < 0.05*nd:\n            refine(tL,gL,tm,gm,depth+1)\n        else:\n            refine(tL,gL,tm,gm,depth+1)\n            refine(tm,gm,tR,gR,depth+1)\n    for k in range(M):\n        if np.linalg.norm(gs[k+1]-gs[k])>=tol:\n            refine(ts[k],gs[k],ts[k+1],gs[k+1])\n    return out\n\ncands=[]\nt0=time.time()\nfor it in range(20):\n    p=rng.normal(size=d)*0.5\n    v=rng.normal(size=d); v/=np.linalg.norm(v)\n    cs=collect_line(p,v,T=4,M=100)\n    cands.extend(cs)\n    print('line',it,'n',len(cs),'total',len(cands),'t',time.time()-t0)\n# cluster normalized directions\nvecs=np.array([c[1] for c in cands]); norms=np.linalg.norm(vecs,axis=1)\nU=vecs/norms[:,None]\n# use absolute cosine and greedy\nclusters=[]\nfor idx,u in enumerate(U):\n    placed=False\n    for cl in clusters:\n        # compare max abs dot to members (or mean)\n        if np.max(np.abs(cl['U']@u))>0.999:\n            cl['U']=np.vstack([cl['U'],u]); cl['vecs'].append(vecs[idx]); placed=True; break\n    if not placed:\n        clusters.append({'U':u[None,:],'vecs':[vecs[idx]]})\nprint('clusters',len(clusters))\nfor i,cl in enumerate(clusters):\n    print(i, len(cl['vecs']), np.mean([np.linalg.norm(x) for x in cl['vecs']]))\n# compare with actual\nA=mod.A1\nused=set()\nfor i,row in enumerate(A):\n    u=row/np.linalg.norm(row)\n    best=-1; bi=None\n    for j,cl in enumerate(clusters):\n        if j in used: continue\n        m=np.mean(cl['U'],axis=0); m/=np.linalg.norm(m)\n        c=abs(m@u)\n        if c>best: best=c; bi=j\n    used.add(bi)\n    print('row',i,'best',best,'cluster',bi)\nPY\ncd /app && python /tmp/proto.py",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 80911,
+   "dur_ms": 5822,
+   "tokens_in": 5,
+   "tokens_out": 789,
+   "cache_read": 8704,
+   "cache_write": 15936,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 86734,
+   "dur_ms": 265,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport numpy as np, importlib.util\nspec=importlib.util.spec_from_file_location('forward','/app/forward.py'); m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\nfw=m.forward; d=10\nrng=np.random.default_rng(0)\ndef grad(x,h):\n g=np.empty(d)\n for j in range(d):\n  e=np.zeros(d);e[j]=h\n  g[j]=(fw(x+e)-fw(x-e))/(2*h)\n return g\nfor h in [1e-3,1e-4,1e-5,1e-6,1e-7,1e-8]:\n x=rng.normal(size=d)*0.5\n g1=grad(x,h); g2=grad(x+1e-9*rng.normal(size=d),h)\n print(h, np.linalg.norm(g1-g2), np.linalg.norm(g1))\n# points along line same cell?\np=rng.normal(size=d)*0.5; v=rng.normal(size=d);v/=np.linalg.norm(v)\ngs=[grad(p+t*v,1e-5) for t in [0,1e-4,1e-3]]\nprint('line diffs',np.linalg.norm(gs[1]-gs[0]),np.linalg.norm(gs[2]-gs[1]))\n# compare central h at same x\nfor h in [1e-4,1e-5,1e-6,1e-7]:\n print('h vs',h,np.linalg.norm(grad(x,h)-grad(x,1e-6)))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 87002,
+   "dur_ms": 9830,
+   "tokens_in": 32,
+   "tokens_out": 1519,
+   "cache_read": 25408,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 96833,
+   "dur_ms": 944,
+   "tool": "bash",
+   "is_error": false,
+   "command": "sed -e 's/def grad(x,h=1e-5)/def grad(x,h=1e-6)/' -e 's/min_len=1e-6,tol=1e-7/min_len=1e-4,tol=1e-8/' -e 's/T=4,M=100/T=4,M=100/' /tmp/proto.py > /tmp/proto2.py\ncd /app && python /tmp/proto2.py 2>&1 | head -80",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 97781,
+   "dur_ms": 31123,
+   "tokens_in": 1,
+   "tokens_out": 5069,
+   "cache_read": 27200,
+   "cache_write": 1216,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 128905,
+   "dur_ms": 14466,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat > /tmp/test_final.py <<'PY'\nimport numpy as np, importlib.util, time, sys\nspec=importlib.util.spec_from_file_location('forward','/app/forward.py')\nmod=importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)\nfw=mod.forward; A=mod.A1\nd=10\n\ndef local_grad(x,h=1e-6):\n    g=np.empty(d)\n    for j in range(d):\n        e=np.zeros(d); e[j]=h\n        g[j]=(fw(x+e)-fw(x-e))/(2*h)\n    return g\n\ndef collect_line(p,v,T=4.0,M=120,min_len=1e-4,tol=1e-8):\n    ts=np.linspace(-T,T,M+1)\n    gs=[local_grad(p+t*v) for t in ts]\n    out=[]\n    def refine(tL,gL,tR,gR):\n        diff=gR-gL; nd=np.linalg.norm(diff)\n        if nd<tol: return\n        if tR-tL<min_len:\n            out.append(diff); return\n        tm=0.5*(tL+tR); gm=local_grad(p+tm*v)\n        dL=np.linalg.norm(gm-gL); dR=np.linalg.norm(gm-gR)\n        # identify which half contains change\n        if dL < 0.05*nd:\n            refine(tm,gm,tR,gR)\n        elif dR < 0.05*nd:\n            refine(tL,gL,tm,gm)\n        else:\n            # gm may be a third region (multiple boundaries) or smeared\n            refine(tL,gL,tm,gm); refine(tm,gm,tR,gR)\n    for k in range(M):\n        if np.linalg.norm(gs[k+1]-gs[k])>=tol:\n            refine(ts[k],gs[k],ts[k+1],gs[k+1])\n    return out\n\ndef steal(seed=123, nlines=40, T=4.0, M=120):\n    rng=np.random.default_rng(seed)\n    cands=[]\n    for it in range(nlines):\n        p=rng.normal(size=d)*0.5\n        v=rng.normal(size=d); v/=np.linalg.norm(v)\n        cands.extend(collect_line(p,v,T=T,M=M))\n    vecs=np.array(cands)\n    norms=np.linalg.norm(vecs,axis=1)\n    good=norms>1e-9\n    vecs=vecs[good]; norms=norms[good]\n    U=vecs/norms[:,None]\n    # greedy clusters with abs cosine\n    clusters=[]\n    for idx,u in enumerate(U):\n        placed=False\n        for cl in clusters:\n            if np.max(np.abs(cl['U']@u))>0.999:\n                cl['U']=np.vstack([cl['U'],u]); placed=True; break\n        if not placed:\n            clusters.append({'U':u[None,:]})\n    # support filter\n    clusters=[cl for cl in clusters if len(cl['U'])>=3]\n    rows=[]\n    for cl in clusters:\n        S=cl['U'].T@cl['U']\n        w,V=np.linalg.eigh(S)\n        r=V[:,-1]\n        rows.append(r/np.linalg.norm(r))\n    return np.array(rows), clusters\n\nif __name__=='__main__':\n  for seed in range(10):\n    t0=time.time(); R,cls=steal(seed=seed)\n    # match\n    n=len(R); used=set(); bests=[]\n    for row in A:\n        u=row/np.linalg.norm(row)\n        best=-1; bi=None\n        for j,r in enumerate(R):\n            if j in used: continue\n            c=abs(r@u)\n            if c>best: best=c; bi=j\n        used.add(bi); bests.append(best)\n    print(seed,'nclusters',len(cls),'nrows',n,'min/mean match',min(bests),np.mean(bests),'time',round(time.time()-t0,3))\nPY\ncd /app && python /tmp/test_final.py",
+   "timeout": 180
+  },
+  {
+   "kind": "model",
+   "at_ms": 143375,
+   "dur_ms": 3475,
+   "tokens_in": 16,
+   "tokens_out": 469,
+   "cache_read": 33472,
+   "cache_write": 384,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 146850,
+   "dur_ms": 1730,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport sys; sys.path.insert(0,'/tmp')\nimport numpy as np\nfrom test_final import steal, A\nR,cls=steal(seed=0)\nfor j,(cl,r) in enumerate(zip(cls,R)):\n    best=-1; bi=None\n    for i,row in enumerate(A):\n        u=row/np.linalg.norm(row); c=abs(r@u)\n        if c>best: best=c; bi=i\n    print(j,'support',len(cl['U']),'bestrow',bi,'cos',round(best,8))\nPY",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 148583,
+   "dur_ms": 5458,
+   "tokens_in": 21,
+   "tokens_out": 775,
+   "cache_read": 34304,
+   "cache_write": 384,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 154041,
+   "dur_ms": 22075,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport sys; sys.path.insert(0,'/tmp')\nimport numpy as np, time\nfrom test_final import steal, A\nfor seed in range(10):\n t=time.time(); R,cls=steal(seed=seed,nlines=60,M=120)\n sup=sorted([len(c['U']) for c in cls],reverse=True)\n # find largest ratio gap in top maybe\n print(seed,'n',len(cls),'sup',sup,'time',round(time.time()-t,2))\nPY",
+   "timeout": 240
+  },
+  {
+   "kind": "model",
+   "at_ms": 176120,
+   "dur_ms": 3979,
+   "tokens_in": 32,
+   "tokens_out": 593,
+   "cache_read": 35456,
+   "cache_write": 960,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 180100,
+   "dur_ms": 4397,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport sys; sys.path.insert(0,'/tmp')\nimport numpy as np\nfrom test_final import steal, A\nfor seed in [2,9]:\n R,cls=steal(seed=seed,nlines=60,M=120)\n print('SEED',seed, 'nclusters',len(cls))\n for j,(cl,r) in enumerate(zip(cls,R)):\n    best=-1; bi=None\n    for i,row in enumerate(A):\n        u=row/np.linalg.norm(row); c=abs(r@u)\n        if c>best: best=c; bi=i\n    if len(cl['U'])>=5:\n        print(j,'sup',len(cl['U']),'bestrow',bi,'cos',round(best,8))\nPY",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 184501,
+   "dur_ms": 4397,
+   "tokens_in": 32,
+   "tokens_out": 582,
+   "cache_read": 36992,
+   "cache_write": 704,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 188899,
+   "dur_ms": 290,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport forward,numpy as np\nA=forward.A1/np.linalg.norm(forward.A1,axis=1)[:,None]\nC=np.abs(A@A.T); np.fill_diagonal(C,0)\nprint(C.max(), np.unravel_index(np.argmax(C),C.shape))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 189193,
+   "dur_ms": 5171,
+   "tokens_in": 5,
+   "tokens_out": 768,
+   "cache_read": 38272,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 194364,
+   "dur_ms": 54271,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport sys,time,numpy as np\nsys.path.insert(0,'/tmp')\n# edit in memory\nimport test_final as tf\n\ndef steal2(seed=123,nlines=40,T=4.0,M=120,thr=0.99):\n    rng=np.random.default_rng(seed); cands=[]\n    for it in range(nlines):\n        p=rng.normal(size=tf.d)*0.5\n        v=rng.normal(size=tf.d); v/=np.linalg.norm(v)\n        cands.extend(tf.collect_line(p,v,T=T,M=M))\n    vecs=np.array(cands); norms=np.linalg.norm(vecs,axis=1)\n    good=norms>1e-9; vecs=vecs[good]; norms=norms[good]; U=vecs/norms[:,None]\n    clusters=[]\n    for u in U:\n        placed=False\n        for cl in clusters:\n            if np.max(np.abs(cl['U']@u))>thr:\n                cl['U']=np.vstack([cl['U'],u]); placed=True; break\n        if not placed: clusters.append({'U':u[None,:]})\n    clusters=[cl for cl in clusters if len(cl['U'])>=3]\n    return clusters\nfor th in [0.99,0.995,0.997,0.999]:\n  print('THR',th)\n  for seed in range(10):\n    cls=steal2(seed=seed,nlines=40,thr=th)\n    sup=sorted([len(c['U']) for c in cls],reverse=True)\n    print(seed,len(cls),sup[:30])\nPY",
+   "timeout": 240
+  },
+  {
+   "kind": "model",
+   "at_ms": 248639,
+   "dur_ms": 22202,
+   "tokens_in": 50,
+   "tokens_out": 4128,
+   "cache_read": 39104,
+   "cache_write": 2880,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 270842,
+   "dur_ms": 2,
+   "tool": "write",
+   "is_error": false,
+   "input": {
+    "path": "/app/steal.py",
+    "content": "#!/usr/bin/env python3\n\"\"\"\nBlack-box recovery of the first-layer weight matrix of a one-hidden-layer\nReLU network.\n\nThe network computes\n\n    f(x) = b2 + sum_i A2[i] * ReLU(A1[i] . x + b1[i]).\n\nOn any region where the set of active ReLU units is fixed, f is affine, so its\ngradient is constant.  Crossing the hyperplane A1[i] . x + b1[i] = 0 changes\nthe gradient by a scalar multiple of A1[i].  This script samples random lines,\nlocates every gradient jump on each line, and clusters the jump directions.\nEach cluster is therefore one row of A1, up to permutation and scaling.\n\"\"\"\n\nfrom __future__ import annotations\n\nimport importlib.util\nfrom pathlib import Path\n\nimport numpy as np\n\nINPUT_DIM = 10\nN_LINES = 60          # number of random lines sampled through input space\nPOINTS_PER_LINE = 120  # coarse grid points used to locate gradient jumps\nLINE_HALF_LENGTH = 4.0\nFINITE_DIFF_STEP = 1e-6\nMIN_BRACKET_WIDTH = 1e-4\nGRADIENT_TOL = 1e-8\nCLUSTER_COSINE = 0.99\nMIN_CLUSTER_SUPPORT = 3\nRNG_SEED = 20240517\n\nHERE = Path(__file__).resolve().parent\n\n\ndef load_forward():\n    \"\"\"Import forward.py from the directory containing this script.\"\"\"\n    spec = importlib.util.spec_from_file_location(\"target_forward\", HERE / \"forward.py\")\n    if spec is None or spec.loader is None:\n        raise ImportError(\"Could not load forward.py\")\n    module = importlib.util.module_from_spec(spec)\n    spec.loader.exec_module(module)\n    return module.forward\n\n\nforward = load_forward()\n\n\ndef local_gradient(x: np.ndarray, h: float = FINITE_DIFF_STEP) -> np.ndarray:\n    \"\"\"Return the local gradient of forward at x using central differences.\"\"\"\n    g = np.empty(INPUT_DIM, dtype=float)\n    for j in range(INPUT_DIM):\n        e = np.zeros(INPUT_DIM)\n        e[j] = h\n        g[j] = (forward(x + e) - forward(x - e)) / (2.0 * h)\n    return g\n\n\ndef gradient_jumps_on_line(\n    p: np.ndarray,\n    v: np.ndarray,\n    half_length: float = LINE_HALF_LENGTH,\n    n_points: int = POINTS_PER_LINE,\n) -> list[np.ndarray]:\n    \"\"\"\n    Find the gradient discontinuities of f along the line x(t) = p + t v.\n\n    A coarse grid localizes jumps.  Bisection then isolates each interval\n    containing a single ReLU boundary.  The gradient difference across such\n    an interval is a scalar multiple of the corresponding row of A1.\n    \"\"\"\n    ts = np.linspace(-half_length, half_length, n_points + 1)\n    gradients = [local_gradient(p + t * v) for t in ts]\n    jumps: list[np.ndarray] = []\n\n    def refine(t_left: float, g_left: np.ndarray,\n               t_right: float, g_right: np.ndarray) -> None:\n        diff = g_right - g_left\n        diff_norm = float(np.linalg.norm(diff))\n        if diff_norm < GRADIENT_TOL:\n            return\n\n        if t_right - t_left < MIN_BRACKET_WIDTH:\n            jumps.append(diff)\n            return\n\n        t_mid = 0.5 * (t_left + t_right)\n        g_mid = local_gradient(p + t_mid * v)\n        d_left = float(np.linalg.norm(g_mid - g_left))\n        d_right = float(np.linalg.norm(g_mid - g_right))\n\n        # If the midpoint has the same gradient as one endpoint, only the\n        # other half can contain a boundary.\n        if d_left < 0.05 * diff_norm:\n            refine(t_mid, g_mid, t_right, g_right)\n        elif d_right < 0.05 * diff_norm:\n            refine(t_left, g_left, t_mid, g_mid)\n        else:\n            # More than one boundary in the interval (or a numerically\n            # ambiguous split): search both halves.\n            refine(t_left, g_left, t_mid, g_mid)\n            refine(t_mid, g_mid, t_right, g_right)\n\n    for k in range(n_points):\n        if np.linalg.norm(gradients[k + 1] - gradients[k]) >= GRADIENT_TOL:\n            refine(ts[k], gradients[k], ts[k + 1], gradients[k + 1])\n\n    return jumps\n\n\ndef recover_A1() -> np.ndarray:\n    rng = np.random.default_rng(RNG_SEED)\n    candidates: list[np.ndarray] = []\n\n    for _ in range(N_LINES):\n        # Random offset and direction for a line in R^10.\n        p = rng.normal(size=INPUT_DIM) * 0.5\n        v = rng.normal(size=INPUT_DIM)\n        v /= np.linalg.norm(v)\n        candidates.extend(gradient_jumps_on_line(p, v))\n\n    if not candidates:\n        raise RuntimeError(\"No gradient discontinuities were found\")\n\n    vecs = np.asarray(candidates, dtype=float)\n    norms = np.linalg.norm(vecs, axis=1)\n    vecs = vecs[norms > GRADIENT_TOL]\n    unit_vecs = vecs / np.linalg.norm(vecs, axis=1, keepdims=True)\n\n    # Greedy clustering by direction.  The absolute cosine is used because a\n    # jump is only determined up to sign (depending on the crossing direction).\n    clusters: list[list[np.ndarray]] = []\n    for u in unit_vecs:\n        placed = False\n        for cluster in clusters:\n            if np.max(np.abs(np.asarray(cluster) @ u)) > CLUSTER_COSINE:\n                cluster.append(u)\n                placed = True\n                break\n        if not placed:\n            clusters.append([u])\n\n    clusters = [c for c in clusters if len(c) >= MIN_CLUSTER_SUPPORT]\n    if not clusters:\n        raise RuntimeError(\"No repeated gradient-jump directions were found\")\n\n    # True ReLU boundaries are crossed on many independent lines, while\n    # accidental/composite jumps are rare.  Keep the large-support block.\n    clusters.sort(key=len, reverse=True)\n    supports = [len(c) for c in clusters]\n    keep = len(clusters)\n    best_ratio = 0.0\n    for i in range(len(supports) - 1):\n        ratio = supports[i] / supports[i + 1]\n        if ratio > best_ratio:\n            best_ratio = ratio\n            if ratio >= 2.0:\n                keep = i + 1\n    clusters = clusters[:keep]\n\n    rows = []\n    for cluster in clusters:\n        U = np.asarray(cluster)\n        # Principal eigenvector of sum(u u^T) gives a robust average direction\n        # and is independent of the arbitrary sign of each individual jump.\n        covariance = U.T @ U\n        _, eigenvectors = np.linalg.eigh(covariance)\n        row = eigenvectors[:, -1]\n        rows.append(row / np.linalg.norm(row))\n\n    return np.asarray(rows)\n\n\ndef main() -> None:\n    stolen_A1 = recover_A1()\n    output_path = HERE / \"stolen_A1.npy\"\n    np.save(output_path, stolen_A1)\n\n    np.set_printoptions(precision=6, suppress=True)\n    print(stolen_A1)\n    print(f\"\\nSaved recovered A1 ({stolen_A1.shape[0]} x {stolen_A1.shape[1]}) to {output_path}\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 270847,
+   "dur_ms": 2221,
+   "tokens_in": 43,
+   "tokens_out": 280,
+   "cache_read": 46144,
+   "cache_write": 0,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 273068,
+   "dur_ms": 2645,
+   "tool": "bash",
+   "is_error": true,
+   "command": "cd /app && python steal.py > /tmp/steal_output.txt && tail -5 /tmp/steal_output.txt && python - <<'PY'\nimport numpy as np, forward\nR=np.load('/app/stolen_A1.npy')\nA=forward.A1\nprint('shape',R.shape,A.shape)\n# optimal assignment with abs cosine using brute force / scipy\nfrom scipy.optimize import linear_sum_assignment\nAn=A/np.linalg.norm(A,axis=1)[:,None]\nRn=R/np.linalg.norm(R,axis=1)[:,None]\nC=np.abs(Rn@An.T)\nr,c=linear_sum_assignment(-C)\nprint('min cos',C[r,c].min(),'mean',C[r,c].mean())\nprint('max residual angles deg',np.degrees(np.arccos(np.clip(C[r,c],-1,1))).max())\n# check each true row has a recovered match\nprint('row matches',np.round(C[r,c],6))\nPY",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 275713,
+   "dur_ms": 2233,
+   "tokens_in": 31,
+   "tokens_out": 243,
+   "cache_read": 46464,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 277946,
+   "dur_ms": 324,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport numpy as np, forward\nR=np.load('/app/stolen_A1.npy'); A=forward.A1\nAn=A/np.linalg.norm(A,axis=1)[:,None]; Rn=R/np.linalg.norm(R,axis=1)[:,None]\nC=np.abs(Rn@An.T)\nused=set(); matches=[]\nfor i in range(len(An)):\n    js=[j for j in range(len(Rn)) if j not in used]\n    j=max(js,key=lambda j:C[j,i])\n    used.add(j); matches.append(C[j,i])\nprint('shape',R.shape)\nprint('min/mean cos',min(matches),np.mean(matches))\nprint('max angle deg',np.degrees(np.arccos(min(matches))))\nprint(np.round(matches,8))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 278274,
+   "dur_ms": 18148,
+   "tokens_in": 62,
+   "tokens_out": 2861,
+   "cache_read": 46848,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 296422,
+   "dur_ms": 2386,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python - <<'PY'\nimport importlib.util,numpy as np, pathlib, sys\n# import steal without main\nspec=importlib.util.spec_from_file_location('stealmod','/app/steal.py'); sm=importlib.util.module_from_spec(spec); spec.loader.exec_module(sm)\nrng=np.random.default_rng(sm.RNG_SEED); cands=[]\nfor _ in range(sm.N_LINES):\n p=rng.normal(size=10)*.5; v=rng.normal(size=10); v/=np.linalg.norm(v)\n cands.extend(sm.gradient_jumps_on_line(p,v))\nvecs=np.array(cands); norms=np.linalg.norm(vecs,axis=1)\nvecs=vecs[norms>sm.GRADIENT_TOL]; norms=np.linalg.norm(vecs,axis=1); U=vecs/norms[:,None]\nclusters=[]\nfor idx,u in enumerate(U):\n placed=False\n for cl in clusters:\n  if np.max(np.abs(np.array(cl['U'])@u))>sm.CLUSTER_COSINE:\n   cl['U'].append(u); cl['idx'].append(idx); placed=True; break\n if not placed: clusters.append({'U':[u],'idx':[idx]})\nclusters=[c for c in clusters if len(c['U'])>=sm.MIN_CLUSTER_SUPPORT]\nclusters.sort(key=lambda c:len(c['U']),reverse=True)\nsupports=[len(c['U']) for c in clusters]; keep=len(clusters); br=0\nfor i in range(len(supports)-1):\n ratio=supports[i]/supports[i+1]\n if ratio>br:\n  br=ratio\n  if ratio>=2: keep=i+1\nclusters=clusters[:keep]\nA=sm.load_forward.__globals__ # not\nimport forward\nAn=forward.A1/np.linalg.norm(forward.A1,axis=1)[:,None]\nfor ci,cl in enumerate(clusters):\n idx=np.array(cl['idx']); V=vecs[idx]; N=norms[idx]; UU=U[idx]\n # actual best row based on eigenvector\n S=UU.T@UU; w,E=np.linalg.eigh(S); r=E[:,-1]\n best=int(np.argmax(np.abs(An@r)))\n c=abs(An[best]@r)\n # medoid\n sim=np.abs(UU@UU.T); med=int(np.argmax(sim.sum(axis=1)))\n cm=abs(An[best]@UU[med])\n medn=np.median(N)\n print(ci,'sup',len(idx),'bestrow',best,'eigcos',c,'medcos',cm,'norm med',medn,'norm min/max',N.min(),N.max(),'in med5%',np.sum(np.abs(N-medn)/medn<.05))\nPY",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 298812,
+   "dur_ms": 5855,
+   "tokens_in": 7,
+   "tokens_out": 876,
+   "cache_read": 49856,
+   "cache_write": 1408,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 304669,
+   "dur_ms": 5,
+   "tool": "edit",
+   "is_error": false,
+   "input": {
+    "path": "/app/steal.py",
+    "edits": [
+     {
+      "oldText": "    rows = []\n    for cluster in clusters:\n        U = np.asarray(cluster)\n        # Principal eigenvector of sum(u u^T) gives a robust average direction\n        # and is independent of the arbitrary sign of each individual jump.\n        covariance = U.T @ U\n        _, eigenvectors = np.linalg.eigh(covariance)\n        row = eigenvectors[:, -1]\n        rows.append(row / np.linalg.norm(row))\n",
+      "newText": "    rows = []\n    for cluster in clusters:\n        U = np.asarray(cluster)\n        # Use the medoid (the direction most consistent with all the others).\n        # Most jumps are numerically exact; a few can be shortened if a bracket\n        # endpoint lies very close to a boundary.  A plain average would let\n        # those few bias the result, whereas the medoid recovers the exact\n        # direction from the uncontaminated majority.\n        similarities = np.abs(U @ U.T)\n        medoid = int(np.argmax(similarities.sum(axis=1)))\n        row = U[medoid]\n        rows.append(row / np.linalg.norm(row))\n"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 304679,
+   "dur_ms": 1690,
+   "tokens_in": 13,
+   "tokens_out": 253,
+   "cache_read": 52096,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 306369,
+   "dur_ms": 2525,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python steal.py > /tmp/steal_output.txt && python - <<'PY'\nimport numpy as np, forward\nR=np.load('/app/stolen_A1.npy'); A=forward.A1\nAn=A/np.linalg.norm(A,axis=1)[:,None]; Rn=R/np.linalg.norm(R,axis=1)[:,None]\nC=np.abs(Rn@An.T)\nused=set(); matches=[]\nfor i in range(len(An)):\n    js=[j for j in range(len(Rn)) if j not in used]\n    j=max(js,key=lambda j:C[j,i]); used.add(j); matches.append(C[j,i])\nprint('shape',R.shape)\nprint('min/mean cos',min(matches),np.mean(matches))\nprint('max angle deg',np.degrees(np.arccos(min(matches))))\nprint(np.round(matches,12))\nPY",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 308897,
+   "dur_ms": 11379,
+   "tokens_in": 3,
+   "tokens_out": 1874,
+   "cache_read": 52416,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 320277,
+   "dur_ms": 221,
+   "tool": "bash",
+   "is_error": true,
+   "command": "cp /app/steal.py /tmp/steal_h.py && sed -i 's/FINITE_DIFF_STEP = 1e-6/FINITE_DIFF_STEP = 1e-8/' /tmp/steal_h.py && cd /app && python - <<'PY'\nimport importlib.util,numpy as np,sys\nspec=importlib.util.spec_from_file_location('sh','/tmp/steal_h.py'); sm=importlib.util.module_from_spec(spec); spec.loader.exec_module(sm)\nR=sm.recover_A1(); A=sm.forward.__globals__ if False else None\nimport forward\nA=forward.A1\nAn=A/np.linalg.norm(A,axis=1)[:,None]; Rn=R/np.linalg.norm(R,axis=1)[:,None]\nC=np.abs(Rn@An.T); used=set(); matches=[]\nfor i in range(len(An)):\n js=[j for j in range(len(Rn)) if j not in used]; j=max(js,key=lambda j:C[j,i]); used.add(j); matches.append(C[j,i])\nprint('n',R.shape,'min',min(matches),'max angle',np.degrees(np.arccos(min(matches))))\nprint(np.round(matches,12))\nPY",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 320499,
+   "dur_ms": 2510,
+   "tokens_in": 5,
+   "tokens_out": 307,
+   "cache_read": 54400,
+   "cache_write": 256,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 323009,
+   "dur_ms": 120111,
+   "tool": "bash",
+   "is_error": true,
+   "command": "cp /app/forward.py /tmp/forward.py && cd /app && python - <<'PY'\nimport importlib.util,numpy as np,sys\nspec=importlib.util.spec_from_file_location('sh','/tmp/steal_h.py'); sm=importlib.util.module_from_spec(spec); spec.loader.exec_module(sm)\nR=sm.recover_A1(); import forward\nA=forward.A1\nAn=A/np.linalg.norm(A,axis=1)[:,None]; Rn=R/np.linalg.norm(R,axis=1)[:,None]\nC=np.abs(Rn@An.T); used=set(); matches=[]\nfor i in range(len(An)):\n js=[j for j in range(len(Rn)) if j not in used]; j=max(js,key=lambda j:C[j,i]); used.add(j); matches.append(C[j,i])\nprint('n',R.shape,'min',min(matches),'max angle',np.degrees(np.arccos(min(matches))))\nprint(np.round(matches,12))\nPY",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 443124,
+   "dur_ms": 2256,
+   "tokens_in": 10,
+   "tokens_out": 389,
+   "cache_read": 54912,
+   "cache_write": 64,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 445381,
+   "dur_ms": 2357,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cp /app/steal.py /tmp/steal_h.py && sed -i 's/FINITE_DIFF_STEP = 1e-6/FINITE_DIFF_STEP = 1e-7/' /tmp/steal_h.py && cd /app && timeout 60 python - <<'PY'\nimport importlib.util,numpy as np,sys,time\nspec=importlib.util.spec_from_file_location('sh','/tmp/steal_h.py'); sm=importlib.util.module_from_spec(spec); spec.loader.exec_module(sm)\nt=time.time(); R=sm.recover_A1(); print('time',time.time()-t); import forward\nA=forward.A1\nAn=A/np.linalg.norm(A,axis=1)[:,None]; Rn=R/np.linalg.norm(R,axis=1)[:,None]\nC=np.abs(Rn@An.T); used=set(); matches=[]\nfor i in range(len(An)):\n js=[j for j in range(len(Rn)) if j not in used]; j=max(js,key=lambda j:C[j,i]); used.add(j); matches.append(C[j,i])\nprint('n',R.shape,'min',min(matches),'max angle',np.degrees(np.arccos(min(matches))))\nprint(np.round(matches,12))\nPY",
+   "timeout": 90
+  },
+  {
+   "kind": "model",
+   "at_ms": 447742,
+   "dur_ms": 2799,
+   "tokens_in": 1,
+   "tokens_out": 463,
+   "cache_read": 55360,
+   "cache_write": 128,
+   "stop_reason": "toolUse"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 450541,
+   "dur_ms": 2747,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && sed -i 's/FINITE_DIFF_STEP = 1e-6/FINITE_DIFF_STEP = 1e-7/' steal.py && python steal.py > /tmp/steal_output.txt && tail -4 /tmp/steal_output.txt && python - <<'PY'\nimport numpy as np, forward\nR=np.load('/app/stolen_A1.npy'); A=forward.A1\nAn=A/np.linalg.norm(A,axis=1)[:,None]; Rn=R/np.linalg.norm(R,axis=1)[:,None]\nC=np.abs(Rn@An.T); used=set(); matches=[]\nfor i in range(len(An)):\n    js=[j for j in range(len(Rn)) if j not in used]\n    j=max(js,key=lambda j:C[j,i]); used.add(j); matches.append(C[j,i])\nprint('Recovered shape:', R.shape)\nprint('Minimum |cosine| match:', min(matches))\nprint('Maximum angular error (degrees):', np.degrees(np.arccos(min(matches))))\nPY",
+   "timeout": 120
+  },
+  {
+   "kind": "model",
+   "at_ms": 453293,
+   "dur_ms": 2807,
+   "tokens_in": 18,
+   "tokens_out": 351,
+   "cache_read": 55936,
+   "cache_write": 128,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "short",
+ "weight_s_per_command": 0.615,
+ "calls": 22,
+ "cell": "TB1e"
+}

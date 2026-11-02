@@ -1,0 +1,118 @@
+{
+ "schema": "autobench-moca/trajectory/1",
+ "batch": "tb30-2-c",
+ "instance_id": "feal-differential-cryptanalysis",
+ "rep": 3,
+ "attempt": 1,
+ "agent": "OpenCode",
+ "hands": "local",
+ "model": "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+ "turn_ms": 94640,
+ "resolved": true,
+ "outcome": "the task's own tests/test.sh after the agent exited: reward.txt 1 = resolved",
+ "usage": {
+  "input": 1528,
+  "output": 13855,
+  "cacheRead": 77952,
+  "cacheWrite": 0,
+  "total": 93335
+ },
+ "totals": {
+  "model_calls": 5,
+  "tool_calls": 4,
+  "model_ms": 75011,
+  "tool_ms": 19236,
+  "sandbox_ms": 0
+ },
+ "steps": [
+  {
+   "kind": "model",
+   "at_ms": 104,
+   "dur_ms": 3423,
+   "tokens_in": 51,
+   "tokens_out": 50,
+   "cache_read": 7104,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 3527,
+   "dur_ms": 98,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cat /app/feal.py; ls -la /app"
+  },
+  {
+   "kind": "model",
+   "at_ms": 3661,
+   "dur_ms": 59219,
+   "tokens_in": 799,
+   "tokens_out": 526,
+   "cache_read": 7168,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 62880,
+   "dur_ms": 10610,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport random, time, feal\n\ndef f(x): return feal.f_function(x)\n\n# validate deterministic differential\nfor _ in range(1000):\n    r=random.getrandbits(32)\n    a=f(r)^f(r^0x00008080)\n    assert a==0x02,(hex(r),hex(a))\nprint(\"F diff ok\")\n\nDT=1234567\ncands=[(s*DT)&0xffffffff for s in range(65536)]\n\ndef attack_local(encrypt_fn):\n    dP=(0x00000002<<32)|0x00008082\n    target_sets=None\n    results=None\n    for trial in range(3):\n        P=random.getrandbits(64)\n        C1=encrypt_fn(P); C2=encrypt_fn(P^dP)\n        R4a=((C1>>32)^(C1&0xffffffff))&0xffffffff\n        R4b=((C2>>32)^(C2&0xffffffff))&0xffffffff\n        assert (R4a^R4b)==0x02,(hex(R4a),hex(R4b),hex(R4a^R4b))\n        dc=(C1>>32)^(C2>>32)\n        target=0x00008080^dc\n        matches=set(k for k in cands if f(R4a^k)^f(R4b^k)==target)\n        if results is None: results=matches\n        else: results&=matches\n        # print(trial,len(matches),len(results))\n        if len(results)==1:\n            break\n    return results\n\nfor test in range(20):\n    # random keys\n    for i in range(6):\n        feal.key[i]=(random.randint(0,0xffff)*DT)&0xffffffff\n    t=time.time()\n    res=attack_local(feal.encrypt)\n    dt=time.time()-t\n    ok=feal.key[5] in res\n    print(test, len(res), ok, hex(feal.key[5]), [hex(x) for x in list(res)[:3]], round(dt,3))\n    if not ok: break\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 73508,
+   "dur_ms": 10425,
+   "tokens_in": 576,
+   "tokens_out": 588,
+   "cache_read": 19456,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 83933,
+   "dur_ms": 19,
+   "tool": "write",
+   "is_error": false,
+   "input": {
+    "filePath": "/app/attack.py",
+    "content": "#!/usr/bin/env python3\n\nMASK32 = 0xFFFFFFFF\nMASK64 = (1 << 64) - 1\nKEY_MULT = 1234567\nPLAINTEXT_DELTA = (0x00000002 << 32) | 0x00008082\n\n\ndef _g(a, b, x):\n    temp = (a + b + x) & 0xFF\n    return ((temp << 2) | (temp >> 6)) & 0xFF\n\n\ndef _f(value):\n    x = [0] * 4\n    y = [0] * 4\n\n    for i in range(4):\n        x[i] = value & 0xFF\n        value >>= 8\n\n    y[2] = _g(x[3] ^ x[2], x[1] ^ x[0], 1)\n    y[3] = _g(x[3], y[2], 0)\n    y[1] = _g(x[1] ^ x[0], y[2], 0)\n    y[0] = _g(x[0], y[1], 1)\n\n    output = 0\n    for i in range(4):\n        output |= y[i] << (8 * i)\n\n    return output & MASK32\n\n\ndef attack(encrypt_fn):\n    candidates = [(seed * KEY_MULT) & MASK32 for seed in range(0x10000)]\n    possible = None\n\n    for i in range(32):\n        plaintext = ((i + 1) * 0x9E3779B97F4A7C15) & MASK64\n        c1 = encrypt_fn(plaintext)\n        c2 = encrypt_fn(plaintext ^ PLAINTEXT_DELTA)\n\n        r4a = ((c1 >> 32) ^ (c1 & MASK32)) & MASK32\n        r4b = ((c2 >> 32) ^ (c2 & MASK32)) & MASK32\n        target = 0x00008080 ^ ((c1 >> 32) ^ (c2 >> 32))\n\n        pool = candidates if possible is None else possible\n        possible = [\n            k for k in pool\n            if (_f(r4a ^ k) ^ _f(r4b ^ k)) == target\n        ]\n\n        if len(possible) <= 1:\n            break\n\n    return possible[0]\n"
+   }
+  },
+  {
+   "kind": "model",
+   "at_ms": 84046,
+   "dur_ms": 1293,
+   "tokens_in": 43,
+   "tokens_out": 166,
+   "cache_read": 22016,
+   "cache_write": 0,
+   "stop_reason": "tool-calls"
+  },
+  {
+   "kind": "tool",
+   "at_ms": 85339,
+   "dur_ms": 8509,
+   "tool": "bash",
+   "is_error": false,
+   "command": "cd /app && python3 - <<'PY'\nimport random,time,feal,attack\nfor t in range(30):\n    for i in range(6):\n        feal.key[i]=(random.randint(0,0xffff)*1234567)&0xffffffff\n    s=time.time(); r=attack.attack(feal.encrypt); dt=time.time()-s\n    assert r==feal.key[5],(hex(r),hex(feal.key[5]))\n    assert r<=0xffffffff\nprint(\"all ok, time\", round(dt,3))\nPY"
+  },
+  {
+   "kind": "model",
+   "at_ms": 93864,
+   "dur_ms": 651,
+   "tokens_in": 59,
+   "tokens_out": 50,
+   "cache_read": 22208,
+   "cache_write": 0,
+   "stop_reason": "stop"
+  }
+ ],
+ "class": "medium",
+ "weight_s_per_command": 3.323,
+ "calls": 4,
+ "cell": "TB1c"
+}
