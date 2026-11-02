@@ -162,3 +162,28 @@ Findings, in order of consequence:
 So the load50 stretch (+52 % median) decomposes into: cold-rootfs cache (recoverable by warm snapshots, worth ~1.3 s/step on django, ~6 s/step on xarray) **plus** a warm CPU penalty (~+58–82 % on test steps, config question) — and the arithmetic of §2.3 attributed too much to the former.
 
 Not verified: whether a warm snapshot actually transfers this warmth (the read pass was per-VM, the snapshot mechanism untested); the cause of the user-time penalty (1 vCPU vs CPU model not distinguished); container baselines are recorded timings, not re-measured today.
+
+---
+
+## Appendix — 2026-11-02 (later): the warm-snapshot fix candidate is dead
+
+§2.4's fix candidate — bake page-cache warmth into the golden snapshot with a read pass before pause — was built and measured. **It does not work: firecracker snapshot/restore on this stack does not preserve the guest's file page cache.** Evidence chain, all on sweb-django-10914:
+
+| measurement | result |
+| ----------- | ------ |
+| read-all pass in the build guest, then re-read `/opt/miniconda3/bin/python3.11` (24 MB) **before pause** | 0.005 s (cached) |
+| the same file's first read in a VM restored by the **build script's own verify step** (same jail style, fresh path) | **0.168 s (cold)** |
+| the same file's first read in a **production-restored** sandbox | 0.152 s (cold); second read 0.003 s |
+| tmpfs marker `touch`ed by the warm pass, checked in a restored VM | **present** — tmpfs survives |
+| memfile | dense 1 GiB — full guest RAM is dumped |
+| guest `Cached` post-restore | ~794 MB reported, yet the hot file's read misses |
+
+So the loss is firecracker-level (or guest-kernel-on-resume), not in the production launcher: the build's own restore loses it too. Tmpfs (shmem) pages survive; clean file-backed pages do not serve reads after restore. Two build attempts preceded this conclusion and are worth recording: an unordered `find /` pass left the *wrong* ~800 MB cached (LRU: `/usr` read after `/opt` evicts miniconda), and an ordered pass (hot trees last) demonstrably cached the right files pre-pause — all irrelevant, since restore discards file warmth either way.
+
+Consequences:
+
+- The cold-rootfs term of the load50 stretch (~1.3 s/step django, ~6 s/step xarray) is **not fixable by snapshot prep** on this stack. It is the standing cost of a fresh VM per exec.
+- The templates on moca-sbx-fc were reverted to their original cold snapshots (the warm builds bought nothing); the patched build script (`warm-build-snapshot.sh`, with the instrumented pass) is kept at `~/sbx-local/` on moca-sbx-fc for future experiments — it is a copy; the pinned moca checkout is untouched.
+- What remains fixable: the **warm CPU penalty** (+58–82 % user time) — cause still unattributed (1-vCPU config vs host deficit; note moca-sbx-fc runs the same single-threaded loop ~15 % slower natively than the supposedly identical ctr/vm hosts, unexplained). A fresh host, moca-sbx-fc2, is being provisioned to isolate that.
+
+Not verified: whether a newer firecracker or Cloud Hypervisor backend preserves file page cache across restore (the `launcher_chv.go` path exists in the tree and was not tested); whether the guest kernel version matters.
