@@ -103,12 +103,25 @@ class FcVM:
         self.snapshot_dir = snapshot_dir
         self.workspace_img = workspace_img
         self.id = "fc-" + uuid.uuid4().hex[:12]
-        self.jail = os.path.join(FC_BASE, "jail", self.id, self.id)
+        # jailer v1.17's layout: <chroot-base>/<vmm-name>/<id>/root
+        # (verified on hardware; the launcher source's composition was
+        # misread as <base>/<id>/<id> on the first run)
+        self.jail = os.path.join(FC_BASE, "jail", "firecracker", self.id, "root")
         self.jail_parent = os.path.dirname(self.jail)
         self.proc = None
         self.console_log = os.path.join(self.jail_parent, "console.log")
 
     def start(self, api_wait_s=10.0, vsock_wait_s=15.0):
+        try:
+            self._start(api_wait_s, vsock_wait_s)
+        except Exception:
+            # never leak a running firecracker: the first hardware run
+            # timed out waiting for the API socket (wrong jail path) and
+            # left five VMs running with no owner
+            self.stop()
+            raise
+
+    def _start(self, api_wait_s, vsock_wait_s):
         os.makedirs(self.jail, exist_ok=True)
         os.makedirs(os.path.join(self.jail, "run"), exist_ok=True)
         for name in _SNAPSHOT_FILES:
