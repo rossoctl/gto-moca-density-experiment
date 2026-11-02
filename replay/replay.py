@@ -621,6 +621,16 @@ class MocaSandbox:
 
 SANDBOXES = {"podman": PodmanSandbox, "vm": VmSandbox, "moca": MocaSandbox}
 
+# Pure firecracker on moca's golden snapshots, without the moca stack —
+# the backend that prices moca's stop-start machinery (see fc.py's docstring).
+# Optional: present only when its prep has run (images/prepare_fc_backend.sh).
+try:
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import fc as _fc_backend
+    SANDBOXES["fc"] = _fc_backend.FcSandbox
+except Exception:            # missing binary, no root, no snapshots: silent
+    pass
+
 # --- shared driver helpers ----------------------------------------------------
 
 def git_status_porcelain(target):

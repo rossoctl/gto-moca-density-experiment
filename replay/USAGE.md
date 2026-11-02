@@ -119,3 +119,37 @@ object with `.returncode`, `.stdout`, `.stderr` (see `PodmanTarget` and
 `VmTarget`; the whole transport — podman exec, serial console, a future
 remote microVM API — lives inside `run`). Add the class, add a prefix in
 `make_target`, and every mode above works against it.
+
+## The pure firecracker backend (`--backend fc`)
+
+Raw firecracker on moca's golden snapshots, with the moca stack (relay,
+control plane, workers, tokens) removed from the path. Same lifecycle model
+as the moca backend — fresh VM per exec, persistent `/workspace` per sandbox —
+so a manifest run on `--backend moca` vs `--backend fc` differs only by the
+management stack. That comparison is what prices moca's stop-start machinery.
+
+One-time prep per host (root not needed to build, needed to run):
+
+```sh
+cd images && MOCADIR=~/repo/rossoctl/moca ./prepare_fc_backend.sh
+```
+
+This builds `replay/fc-guest-client` (generated inside the pinned moca
+checkout, so the guest-agent wire format has one implementation — same
+mechanism moca's own build-snapshot.sh uses) and checks for
+`/usr/local/bin/{firecracker,jailer}`, the golden snapshots, and `/dev/kvm`.
+
+Run (root required — the jailer chroots):
+
+```sh
+sudo -E python3 replay_manifest.py manifests/smoke.json --backend fc
+```
+
+Configuration (env): `FC_BASE` (default `/srv/sbx-purefc` — jails and
+workspaces, must share the snapshots' filesystem, never under `/srv/sbx`),
+`FC_SNAPSHOTS` (default `/srv/sbx/snapshots`), `FC_MAX_VMS` (default 36 —
+this backend's own concurrency cap, since moca's worker budget cannot see
+these VMs). Coexistence with a live moca stack on the same host is safe
+structurally (no shared paths or ports; `/dev/kvm` shared), but the two
+stacks' memory budgets are additive — under load, run one at a time or
+split the caps deliberately.

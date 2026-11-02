@@ -224,7 +224,7 @@ def main():
     backend = "podman"
     if "--backend" in sys.argv:
         backend = sys.argv[sys.argv.index("--backend") + 1]
-    if backend not in ("podman", "vm", "moca"):
+    if backend not in ("podman", "vm", "moca", "fc"):
         sys.exit(f"unknown backend {backend!r} (want {' or '.join(replay.SANDBOXES)})")
     max_live = None
     if "--max-live" in sys.argv:
