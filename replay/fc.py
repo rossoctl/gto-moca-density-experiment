@@ -44,7 +44,6 @@ import os
 import re
 import shutil
 import subprocess
-import tempfile
 import time
 import uuid
 
@@ -109,7 +108,10 @@ class FcVM:
         self.jail = os.path.join(FC_BASE, "jail", "firecracker", self.id, "root")
         self.jail_parent = os.path.dirname(self.jail)
         self.proc = None
-        self.console_log = os.path.join(self.jail_parent, "console.log")
+        # console log OUTSIDE the jail tree: stop() removes the jail, and the
+        # log is the only artifact that explains a VM that never came up
+        os.makedirs(os.path.join(FC_BASE, "logs"), exist_ok=True)
+        self.console_log = os.path.join(FC_BASE, "logs", self.id + ".log")
 
     def start(self, api_wait_s=10.0, vsock_wait_s=15.0):
         try:
@@ -213,34 +215,45 @@ class FcVM:
         except OSError:
             return "<no console log>"
 
-    def _api_put(self, unix_sock, path, body):
+    def _api_put(self, unix_sock, path, body, timeout_s=30.0):
         """One HTTP PUT over the jail's API socket. Firecracker's API is
-        plain HTTP/1.1 on a unix socket; the body is small and fixed."""
-        sock_file = tempfile.NamedTemporaryFile(mode="w", delete=False)
+        plain HTTP/1.1 on a unix socket. The response is framed by
+        Content-Length (firecracker's micro-http does NOT honor
+        Connection: close -- reading to EOF times out, which is exactly
+        what the first hardware run hit), so read headers, then exactly
+        Content-Length bytes, then close."""
+        import socket
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.settimeout(timeout_s)
         try:
-            import socket
-            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            s.settimeout(10)
             s.connect(unix_sock)
             req = (f"PUT {path} HTTP/1.1\r\nHost: localhost\r\n"
                    f"Content-Type: application/json\r\n"
-                   f"Content-Length: {len(body)}\r\nConnection: close\r\n\r\n"
+                   f"Content-Length: {len(body)}\r\n\r\n"
                    f"{body}")
             s.sendall(req.encode())
             resp = b""
-            while True:
+            while b"\r\n\r\n" not in resp:
+                chunk = s.recv(65536)
+                if not chunk:
+                    raise FcError(f"firecracker API {path}: EOF before headers")
+                resp += chunk
+            head, _, rest = resp.partition(b"\r\n\r\n")
+            clen = 0
+            for line in head.split(b"\r\n"):
+                if line.lower().startswith(b"content-length:"):
+                    clen = int(line.split(b":", 1)[1].strip())
+            while len(rest) < clen:
                 chunk = s.recv(65536)
                 if not chunk:
                     break
-                resp += chunk
-            s.close()
-            status = resp.split(b"\r\n", 1)[0].decode("latin-1")
+                rest += chunk
+            status = head.split(b"\r\n", 1)[0].decode("latin-1")
             if " 200" not in status and " 204" not in status:
                 raise FcError(f"firecracker API {path}: {status}: "
-                              f"{resp[-500:].decode('latin-1')}")
+                              f"{(rest or resp)[-500:].decode('latin-1')}")
         finally:
-            sock_file.close()
-            os.unlink(sock_file.name)
+            s.close()
 
 
 # --- the replay Sandbox/Target pair --------------------------------------------
