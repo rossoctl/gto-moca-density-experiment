@@ -43,6 +43,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os/exec"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -231,78 +232,6 @@ type sbxToken struct {
 	ExecCa       string `json:"execCa"`
 }
 
-type authFile struct {
-	API              string `json:"apiToken"`
-	ControlPlaneUrl  string `json:"controlPlaneUrl"`
-	RefreshToken     string `json:"refreshToken"`
-	RefreshExpiresAt int64  `json:"refreshExpiresAt"`
-}
-
-func authPath() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ""
-	}
-	return filepath.Join(home, ".config", "mocactl", "sbx-auth.json")
-}
-
-func readAuth() (*authFile, error) {
-	p := authPath()
-	if p == "" {
-		return nil, errors.New("no home directory")
-	}
-	b, err := os.ReadFile(p)
-	if err != nil {
-		return nil, err
-	}
-	var a authFile
-	if err := json.Unmarshal(b, &a); err != nil {
-		return nil, err
-	}
-	return &a, nil
-}
-
-func writeAuth(a *authFile) {
-	p := authPath()
-	if p == "" {
-		return
-	}
-	b, err := json.Marshal(a)
-	if err != nil {
-		return
-	}
-	os.WriteFile(p, b, 0600)
-}
-
-// cpPost does a control-plane JSON POST. apiToken may be "" for unauthenticated.
-func cpPost(cp, path string, apiToken string, body any, out any) error {
-	bj, err := json.Marshal(body)
-	if err != nil {
-		return err
-	}
-	req, err := http.NewRequest("POST", cp+path, bytes.NewReader(bj))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("content-type", "application/json")
-	if apiToken != "" {
-		req.Header.Set("authorization", "Bearer "+apiToken)
-	}
-	resp, err := (&http.Client{Timeout: 30 * time.Second}).Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	rb, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("control plane %s: %s: %s", path, resp.Status, strings.TrimSpace(string(rb)))
-	}
-	if out == nil {
-		return nil
-	}
-	return json.Unmarshal(rb, out)
-}
-
 // tokenCachePath: one cached token per sandbox.
 func tokenCachePath(sandboxID string) string {
 	base, err := os.UserCacheDir()
@@ -317,7 +246,17 @@ func tokenCachePath(sandboxID string) string {
 }
 
 // getSandboxToken: cached mint; force re-mints (after UNAUTHENTICATED).
-func getSandboxToken(cp, sandboxID string, force bool) (*sbxToken, error) {
+//
+// The mint goes through mocactl (`mocactl sbx token --json`), NOT the
+// control plane directly. The login's refresh token ROTATES on every
+// refresh; sbx-auth.json is shared state, and a second client refreshing
+// it concurrently presents a superseded token, which the control plane
+// reads as theft and revokes the whole family (audit:
+// refresh_reuse_detected — this killed two logins before the cause was
+// found). mocactl is the single owner of the login; sbxrun never touches
+// sbx-auth.json. The cost is one Node process per sandbox per 15-minute
+// token life — amortized over the execs it serves, negligible.
+func getSandboxToken(sandboxID string, force bool) (*sbxToken, error) {
 	cache := tokenCachePath(sandboxID)
 	if !force && cache != "" {
 		if b, err := os.ReadFile(cache); err == nil {
@@ -327,46 +266,13 @@ func getSandboxToken(cp, sandboxID string, force bool) (*sbxToken, error) {
 			}
 		}
 	}
-	a, err := readAuth()
-	if err != nil {
-		return nil, fmt.Errorf("no sandbox login (mocactl sbx login first): %w", err)
-	}
-	// refresh the user token when it is about to expire. The refresh may
-	// rotate the refresh token; the response is merged onto the existing
-	// auth file field by field, so a response that omits the refresh token
-	// (or any other field) can never DROP it — losing it locks the login
-	// out until `mocactl sbx login` again.
-	if time.Now().Unix()+60 > jwtExp(a.API) {
-		var fresh map[string]any
-		if err := cpPost(cp, "/v1/auth/token", "", map[string]string{
-			"grant_type":    "refresh_token",
-			"refresh_token": a.RefreshToken,
-		}, &fresh); err == nil {
-			if newAPI, _ := fresh["apiToken"].(string); newAPI != "" {
-				merged := map[string]any{}
-				if raw, e := os.ReadFile(authPath()); e == nil {
-					json.Unmarshal(raw, &merged) // best effort: start from what is there
-				}
-				for k, v := range fresh {
-					merged[k] = v
-				}
-				if _, ok := merged["controlPlaneUrl"]; !ok {
-					merged["controlPlaneUrl"] = cp
-				}
-				if b, e := json.Marshal(merged); e == nil {
-					os.WriteFile(authPath(), b, 0600)
-				}
-				a.API = newAPI
-				if rt, ok := fresh["refreshToken"].(string); ok && rt != "" {
-					a.RefreshToken = rt
-				}
-			}
-		}
-		// a failed refresh is not fatal: the mint below reports the real error
-	}
 	var t sbxToken
-	if err := cpPost(cp, "/v1/sandboxes/"+sandboxID+"/token", a.API, nil, &t); err != nil {
+	out, err := runMocactl("token", "--json", sandboxID)
+	if err != nil {
 		return nil, err
+	}
+	if err := json.Unmarshal(out, &t); err != nil || t.Token == "" {
+		return nil, fmt.Errorf("mocactl sbx token --json: unparsable output: %.200s", out)
 	}
 	if cache != "" {
 		os.MkdirAll(filepath.Dir(cache), 0700)
@@ -375,78 +281,32 @@ func getSandboxToken(cp, sandboxID string, force bool) (*sbxToken, error) {
 	return &t, nil
 }
 
+// runMocactl runs the mocactl CLI and returns its stdout. Path:
+// $SBXRUN_MOCACTL, else "mocactl" from PATH, else ~/bin/mocactl. The
+// environment passes through, so MOCACTL_SBX_URL controls the control
+// plane and mocactl refreshes the login when it must.
+func runMocactl(args ...string) ([]byte, error) {
+	exe := os.Getenv("SBXRUN_MOCACTL")
+	if exe == "" {
+		if p, err := exec.LookPath("mocactl"); err == nil {
+			exe = p
+		} else if home, e := os.UserHomeDir(); e == nil {
+			exe = filepath.Join(home, "bin", "mocactl")
+		}
+	}
+	cmd := exec.Command(exe, append([]string{"sbx"}, args...)...)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("mocactl sbx %s: %v: %.300s", args[0], err, stderr.String())
+	}
+	return out, nil
+}
+
 func mustJSON(v any) []byte {
 	b, _ := json.Marshal(v)
 	return b
-}
-
-// jwtExp reads a JWT's exp without verifying (routing hint only).
-func jwtExp(token string) int64 {
-	parts := strings.Split(token, ".")
-	if len(parts) != 3 {
-		return 0
-	}
-	raw := parts[1]
-	if pad := len(raw) % 4; pad != 0 {
-		raw += strings.Repeat("=", 4-pad)
-	}
-	decoded := make([]byte, 64)
-	n, err := base64URLDecode([]byte(raw), decoded)
-	if err != nil {
-		return 0
-	}
-	var claims struct {
-		Exp int64 `json:"exp"`
-	}
-	if json.Unmarshal(decoded[:n], &claims) != nil {
-		return 0
-	}
-	return claims.Exp
-}
-
-func base64URLDecode(src, dst []byte) (int, error) {
-	// minimal base64url decoder (no padding in input)
-	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
-	rev := func(c byte) int {
-		for i := 0; i < len(alphabet); i++ {
-			if alphabet[i] == c {
-				return i
-			}
-		}
-		return -1
-	}
-	var vals []int
-	for _, c := range src {
-		v := rev(byte(c))
-		if v < 0 {
-			return 0, fmt.Errorf("bad base64 char %q", c)
-		}
-		vals = append(vals, v)
-	}
-	n := 0
-	for i := 0; i+3 < len(vals)+1; i += 4 {
-		chunk := vals[i:]
-		if len(chunk) > 3 {
-			chunk = chunk[:4]
-		}
-		b0 := byte(chunk[0] << 2)
-		if len(chunk) > 1 {
-			b0 |= byte(chunk[1] >> 4)
-		}
-		dst[n] = b0
-		n++
-		if len(chunk) > 2 {
-			dst[n] = byte((chunk[1] & 0xF) << 4)
-			dst[n] |= byte(chunk[2] >> 2)
-			n++
-		}
-		if len(chunk) > 3 {
-			dst[n] = byte((chunk[2] & 0x3) << 6)
-			dst[n] |= byte(chunk[3])
-			n++
-		}
-	}
-	return n, nil
 }
 
 // ---- the exec ----
@@ -607,22 +467,14 @@ func main() {
 
 	stdin, _ := io.ReadAll(os.Stdin)
 
-	cp := *cpURL
-	if cp == "" {
-		cp = os.Getenv("MOCACTL_SBX_URL")
-	}
-	if cp == "" {
-		if a, err := readAuth(); err == nil {
-			cp = a.ControlPlaneUrl
-		}
-	}
-	if cp == "" {
-		fmt.Fprintln(os.Stderr, "sbxrun: no control plane URL (pass --control-plane-url, set MOCACTL_SBX_URL, or mocactl sbx login)")
-		os.Exit(2)
+	// --control-plane-url now only forwards to mocactl (via MOCACTL_SBX_URL);
+	// sbxrun itself no longer talks to the control plane.
+	if *cpURL != "" {
+		os.Setenv("MOCACTL_SBX_URL", *cpURL)
 	}
 
 	t0 := time.Now()
-	tok, err := getSandboxToken(cp, *sandbox, false)
+	tok, err := getSandboxToken(*sandbox, false)
 	endpoint := os.Getenv("SBXRUN_ADDR")
 	if endpoint == "" && tok != nil {
 		endpoint = tok.ExecEndpoint
@@ -640,7 +492,7 @@ func main() {
 			tok.Wsk, command, stdin, uint32(*timeout), os.Stdout, os.Stderr)
 		// one retry with a forced fresh token on auth refusal (mocactl's rule)
 		if attemptErr != nil && client != nil && strings.Contains(strings.ToLower(attemptErr.Error()), "unauthenticated") {
-			if tok2, e := getSandboxToken(cp, *sandbox, true); e == nil {
+			if tok2, e := getSandboxToken(*sandbox, true); e == nil {
 				code, attemptErr = oneExec(client, endpoint, tok2.Token, tok2.Wrk,
 					tok2.Wsk, command, stdin, uint32(*timeout), os.Stdout, os.Stderr)
 			}
