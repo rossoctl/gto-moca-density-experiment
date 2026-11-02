@@ -184,6 +184,16 @@ class FcVM:
         return p.returncode, p.stdout, p.stderr
 
     def stop(self, term_grace_s=5.0):
+        # SYNC BEFORE THE KILL, or the VM's writes die in its page cache:
+        # the production launcher's wrapCommand exists for exactly this
+        # ("sync before the VM dies"), and the first hardware run lost the
+        # seed's cp this way -- the next VM mounted an empty workspace.
+        # Best-effort and bounded: a VM that cannot answer is killed anyway.
+        if self.proc and self.proc.poll() is None:
+            try:
+                self.exec("sync", 15)
+            except Exception:
+                pass
         if self.proc and self.proc.poll() is None:
             try:
                 os.killpg(self.proc.pid, 15)
