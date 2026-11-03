@@ -7,13 +7,15 @@ public Terminal-Bench environment image by digest, which both hands start from.
 
 The recipe moves the environment's `/app` to `/opt/testbed-src` and links `/app` to the per-session `/workspace` (MOCA
 seeds each workspace from `/opt/testbed-src`), adds the tools MOCA's rootfs builder needs where missing (git, file,
-python3, and ripgrep 15.2.0), and a CA bundle where the environment has none.
+python3), and a CA bundle where the environment has none.
 
-Build one with Docker or Podman, from the folder (the context is `hosts` and `rg`):
+The upstream image-factory recipe also installs a pinned ripgrep into the image for MOCA's remote-worker Glob/Grep
+tools; that was removed on import -- this repo's run environment ships its own moca runners, and no recorded
+trajectory invokes `rg` (verified across all 527).
+
+Build one with Docker or Podman, from the folder (the context is `hosts`):
 
 ```bash
-curl -sL https://github.com/BurntSushi/ripgrep/releases/download/15.2.0/ripgrep-15.2.0-x86_64-unknown-linux-musl.tar.gz | tar -xzO --wildcards '*/rg' > regex-log/rg
-echo 'e62198eb19b136b88c330af83647b5a962cb99b6b1f066758568f12de1974849  regex-log/rg' | sha256sum -c -
 docker build --load --platform linux/amd64 -t tb-microvm-regex-log -f regex-log/microvm.Dockerfile regex-log
 ```
 
