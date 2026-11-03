@@ -303,3 +303,14 @@ The discriminating experiment: a golden snapshot rebuilt with the VM backend's e
 The kernel swap moved nothing (1.36 → 1.39, within run-to-run noise). With rootfs, kernel and vCPU count all matched, the remaining difference is the VMM: firecracker's device model — the virtio-mmio block path (`pci=off`), where every small IO operation traps through MMIO, against QEMU's virtio-pci. The workload's long steps are exactly small-IO-heavy (pytest importing hundreds of modules, writing .pyc and sqlite), which is where an mmio-tax would land. Not further discriminated: whether it is the mmio transport itself or firecracker's vCPU exit handling; separating those would need QEMU on virtio-mmio, which x86 QEMU does not readily do.
 
 The original xarray snapshot was restored after the run (hash `bec86aeb…`, built 2026-10-31, as recorded above). The Ubuntu-kernel build script survives at `~/sbx-local/ubu-build-snapshot.sh` on moca-sbx-fc for replication. Operational note recorded from this run: the manifest log dir was not renamed before the rerun, so the previous fc-warm run's per-unit logs were overwritten — the 1.36× figure survives in this report's earlier appendix, but the raw logs do not; rename log dirs before every rerun.
+
+## Appendix — 2026-11-03: the optimization guide's io_uring advice is not reachable on firecracker v1.17
+
+Assessed a firecracker optimization guide's four items against our measured bottlenecks. One was a candidate experiment (io_uring drive engine, targeting the ~20 % small-IO tax); three were rejected as architecture-destroying or density-hostile (raw device paths break the hardlink/page-sharing model; pre-allocation defeats sparse workspaces at 10× disk cost; DirectIO would bypass the host page cache that currently dedups rootfs reads across every VM sharing the golden inode).
+
+The io_uring item turned out not to be configurable on this VMM:
+
+- `PUT /drives/rootfs` with `"io_engine": "IoUring"` is rejected by the API: *"unknown variant `IoUring`, expected `Async` or `Sync`"* — the v1.17 HTTP schema exposes no io_uring option.
+- A running VM (jailer-launched, production-style) holds **zero io_uring file descriptors** — the Async engine is epoll/aio in practice. The binary contains a compiled io_uring module, but it is not reachable through the drive configuration, and the jailer's seccomp posture would likely block the syscalls anyway (firecracker's io_ering probe has an explicit failure path).
+
+Consequence: the ~20 % mmio-path penalty measured in the previous appendix cannot be attacked from the host side on this VMM version — no engine flag, and the tax sits in the guest exit path regardless. Closing it would mean a firecracker upgrade or patch (or a VMM with virtio-pci), which changes the system rather than tuning it. The guide's remaining advice offers nothing for our workload's actual bottleneck.
