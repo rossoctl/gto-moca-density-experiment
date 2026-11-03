@@ -314,3 +314,34 @@ The io_uring item turned out not to be configurable on this VMM:
 - A running VM (jailer-launched, production-style) holds **zero io_uring file descriptors** — the Async engine is epoll/aio in practice. The binary contains a compiled io_uring module, but it is not reachable through the drive configuration, and the jailer's seccomp posture would likely block the syscalls anyway (firecracker's io_ering probe has an explicit failure path).
 
 Consequence: the ~20 % mmio-path penalty measured in the previous appendix cannot be attacked from the host side on this VMM version — no engine flag, and the tax sits in the guest exit path regardless. Closing it would mean a firecracker upgrade or patch (or a VMM with virtio-pci), which changes the system rather than tuning it. The guide's remaining advice offers nothing for our workload's actual bottleneck.
+
+---
+
+## Appendix — 2026-11-03: the load80 ladder, the completed grid, and the duty-cycle crossover
+
+`load80.json`: same generator and 9 recordings as load50, Poisson arrivals raised to mean steady-state concurrency 40 (128 units, seed 43, ~10 % duty cycle unchanged). All runs time-separated (the three hosts are VMs on one physical machine). QEMU smp=2 dropped from the grid — the smp=1 parity row carries the comparison.
+
+### The completed measurement grid
+
+| backend | load50 | load80 | CPU mean l50→l80 | mem delta l50→l80 | ok l50→l80 |
+| ------- | ------ | ------ | ---------------- | ----------------- | ---------- |
+| containers | −0.0 % | −0.4 % | 8.7 → 18.9 % | 0.9 → 1.7 GB | 100 → 100 % |
+| QEMU smp=1 | +6.1 % | +5.8 % | 6.9 → 16.2 % | 7.0 → 20.3 GB | 100 → 100 % |
+| fc warm | +18.8 % | +18.8 % | 10.5 → 26.4 % | 4.3 → 12.5 GB | 91 → 92 % |
+| fc perexec | +55.7 % | +500.8 % | 19.6 → 78.1 % | 2.6 → 13.3 GB | 91 → 86 % |
+| moca D=8 | +52–55 % | +492–513 % | 19.6 → 75–79 % | 2.7 → 14–15 GB | 91 → 77–91 % |
+| moca D=1 | +55.3 % | +537.5 % | 20.2 → 78.8 % | 7.4 → 15.6 GB | 91 → 92 % |
+
+### Findings
+
+1. **The fresh-VM family is one system.** At load50: +52–56 % across fc perexec, moca D=8, moca D=1. At load80: +492–538 % across all three (CPU 75–79 %, peak 100 %, queue balloons to 76–87 active, wall 2135–2200 s). Stack, pool, budget — none of moca's machinery moves any number measurably. The model is the cost.
+2. **The resident family scales flat.** containers and QEMU hold their medians exactly (−0.4 %, +5.8 %); fc warm holds +18.8 %. Their CPU at load80 (16–26 % mean) is far from the knee.
+3. **The load80 collapse is the cold-cache CPU crossing the saturation knee.** Per-step cost decomposition (measured at load50): ~4.3 core-seconds per tool step of stutter compute, of which only ~0.1–0.2 is start/stop machinery — ~96 % is the host processing the fresh guest's cold rootfs reads. Per-sandbox demand ≈ 4.65·D cores (D = duty cycle; check: predicted 0.465 at D=10 %, measured 0.43). Offered CPU at load80 ≈ 24 of 32 cores ≈ 75 % — measured 78 % mean / 99 % median. Past the knee, queueing feedback (slow steps → longer residency → more demand) produces the +500 %.
+4. **The duty-cycle crossover.** Stutter CPU breaks even with resident holding at 4.65·D = 0.22 ⇒ **D\* ≈ 4.7 %**: below ~5 % duty the fresh-VM model burns less total CPU than keeping VMs resident, and it holds ~284·(1−D) MB less memory per sandbox at every duty cycle. The planned 5 %-duty runs sit at the crossover: memory-bound density comparisons become honest there, with the stutter's remaining liability being stretch only (predicted ~+25–30 points at load50-scale pressure, half of today's +55.7).
+5. **Capacity policy is a failure mode, not a slowdown** (moca load80 at 39 vs 51 GiB budget: failures 23→1, stretch unchanged). The 1-GiB-per-VM commitment over-reserves ~3.5× against measured use.
+
+### Effects, one-stop (the "why" behind the grid)
+
+(a) virtualization +6 % / ~370 MB per VM; (b) firecracker virtio-mmio +13 points / CPU ×1.5 / memory *better* (shared pages); (c) stutter cold cache ~+34 points at load50, ~4 core-s per step — the dominant term; (d) stutter start/stop ~+2–3 points, ~4 % of stutter compute — almost free; (e) saturation knee: turns (c)+(d) CPU into +500 % past ~55–60 effective resident (linear crossing ~74); (f) capacity policy: failure-mode only, tunable; (g) template fragility: caps the fc family's completion at ~91 % — dismissed per experiment owner ("we don't run that benchmark"). Measured non-effects: moca stack, standby pool, kernel choice, vCPU count, host reprovision.
+
+Caveats: single run per cell (moca load50 is five runs, ±2 points); stretch at load80 is survivor-biased toward completed units; the load80 moca rows include queue-inflated effective residency.
