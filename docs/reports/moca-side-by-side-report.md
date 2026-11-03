@@ -345,3 +345,18 @@ Consequence: the ~20 % mmio-path penalty measured in the previous appendix canno
 (a) virtualization +6 % / ~370 MB per VM; (b) firecracker virtio-mmio +13 points / CPU ×1.5 / memory *better* (shared pages); (c) stutter cold cache ~+34 points at load50, ~4 core-s per step — the dominant term; (d) stutter start/stop ~+2–3 points, ~4 % of stutter compute — almost free; (e) saturation knee: turns (c)+(d) CPU into +500 % past ~55–60 effective resident (linear crossing ~74); (f) capacity policy: failure-mode only, tunable; (g) template fragility: caps the fc family's completion at ~91 % — dismissed per experiment owner ("we don't run that benchmark"). Measured non-effects: moca stack, standby pool, kernel choice, vCPU count, host reprovision.
 
 Caveats: single run per cell (moca load50 is five runs, ±2 points); stretch at load80 is survivor-biased toward completed units; the load80 moca rows include queue-inflated effective residency.
+
+## Appendix — 2026-11-03 (no-op): the cache-miss effect confirmed by payload subtraction
+
+`load80-noop.json`: load80's byte-identical schedule with every tool step's payload replaced by `true` (still through the normal wrapper, so the wrapper's own ~20 MB of cold reads remain — a deliberate residual). fc perexec, same host, samplers from t=0. All 128 units fail the patch check by design; the measurements are system behavior.
+
+| fc perexec, load80 | real payload | no-op payload |
+| ------------------ | ------------ | ------------- |
+| CPU mean / median / peak | 78.1 / — / 100 % | **11.0 / 7.7 / 42.8 %** |
+| stretch median | +500.8 % | **+16.8 %** |
+| wall time | 2154 s | **1128 s** (clean drain, no queue balloon) |
+| memory peak | 13.3 GB | 2.8 GB |
+
+Reading: the no-op run carries the entire fresh-VM machinery — restore, jailer, reap, vsock round-trip, plus the wrapper's cold reads — at ~1 core-second per step and 11 % CPU: it cannot reach the saturation knee. The difference to the real run (~21 cores at 3.65 steps/s) is the cold-rootfs processing, ~5–6 core-seconds per step (4.3 measured at load50, the excess being queueing churn). **The load80 collapse is the cache misses' CPU crossing the knee; the start/stop machinery is confirmed almost free** (its isolated latency cost is +16.8 % median, of which the wrapper's cold libraries are a visible part).
+
+Refinement of the load50 decomposition: fc perexec's +55.7 % ≈ ~+17 machinery-and-wrapper (this run's number) + ~+39 testbed cold reads.
