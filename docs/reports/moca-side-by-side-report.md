@@ -287,3 +287,19 @@ Same-session reruns to close two gaps in the table: the container row now has sa
 The finding: **vCPU count is not the firecracker penalty.** QEMU at one vCPU pays ~1 point over smp=2 (+6.1 % vs +5.0 % median) — while fc warm sits at +18.8 %. At equal vCPU count the ~13-point gap between QEMU and firecracker-warm remains, so it is firecracker-specific or image-specific: the leading suspects are the golden snapshot's guest kernel (6.8.0-31-generic) versus the VM backend's (6.8.0-147-generic), or firecracker's vCPU implementation itself. Distinguishing those needs a kernel-matched pair, not more load runs.
 
 Cross-host caveat stands: containers/VM run on their own (pre-reprovision) machines, fc/moca on the fresh moca-sbx-fc. The container rerun's −0.0 % on its own host argues the host difference is not load-bearing for the ordering, but a same-host VM-vs-fc pair would close it properly.
+
+## Appendix — 2026-11-03: the firecracker-vs-QEMU penalty is the VMM, not the kernel
+
+Question: at equal vCPU count, why do firecracker VMs run SWE-bench's long test steps ~20 % slower than QEMU VMs (1.36× vs 1.16× actual/recorded)? Ruled out first: vCPU count (QEMU smp=1 = smp=2 = 1.16×), raw compute (the fc guest's pure loop runs at host speed), and mitigations (EPYC reports "Not affected" nearly across the board). That left the kernel (the golden snapshots run a custom 6.18.56+ microvm kernel; the VM backend runs Ubuntu 6.8.0-147-generic) versus firecracker's device model (virtio-**mmio**, `pci=off`, vs QEMU's virtio-pci).
+
+The discriminating experiment: a golden snapshot rebuilt with the VM backend's exact Ubuntu kernel — same rootfs, same everything — which required shipping Ubuntu's virtio_vsockcts modules into the staging rootfs (Ubuntu builds vsock as a module; the microvm kernel builds it in) and a static busybox to insmod them, since the stripped rootfs has no module tools. Snapshot built and verify-restored cleanly.
+
+| xarray long test steps, same manifest, same load | actual/recorded |
+| ------------------------------------------------ | --------------- |
+| QEMU, Ubuntu 6.8.0-147 kernel | 1.16× |
+| fc warm, custom 6.18.56+ kernel | 1.36× |
+| **fc warm, Ubuntu 6.8.0-147 kernel** | **1.39×** |
+
+The kernel swap moved nothing (1.36 → 1.39, within run-to-run noise). With rootfs, kernel and vCPU count all matched, the remaining difference is the VMM: firecracker's device model — the virtio-mmio block path (`pci=off`), where every small IO operation traps through MMIO, against QEMU's virtio-pci. The workload's long steps are exactly small-IO-heavy (pytest importing hundreds of modules, writing .pyc and sqlite), which is where an mmio-tax would land. Not further discriminated: whether it is the mmio transport itself or firecracker's vCPU exit handling; separating those would need QEMU on virtio-mmio, which x86 QEMU does not readily do.
+
+The original xarray snapshot was restored after the run (hash `bec86aeb…`, built 2026-10-31, as recorded above). The Ubuntu-kernel build script survives at `~/sbx-local/ubu-build-snapshot.sh` on moca-sbx-fc for replication. Operational note recorded from this run: the manifest log dir was not renamed before the rerun, so the previous fc-warm run's per-unit logs were overwritten — the 1.36× figure survives in this report's earlier appendix, but the raw logs do not; rename log dirs before every rerun.
