@@ -81,6 +81,11 @@ def run_spec(spec):
             f.write(text.replace(old, new, 1))
         return 0
 
+    if spec["op"] == "write":
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(spec["content"])
+        return 0
+
     print(f"unknown op {spec['op']!r}", file=sys.stderr)
     return 1
 '''
@@ -99,9 +104,16 @@ class Result:
         self.returncode, self.stdout, self.stderr = rc, out, ""
 
 class PodmanTarget:
-    """A running podman container, driven with `podman exec`."""
-    def __init__(self, container):
-        self.container = container
+    """A running podman container, driven with `podman exec`.
+
+    The swebench shape (uid 1000:1000, workdir /testbed, the testbed conda
+    env first on PATH) is the default; a manifest's `sandbox` profile (see
+    replay_manifest.py) overrides it via REPLAY_PODMAN_* env vars so the
+    step-engine subprocess rebuilds the same target shape."""
+    def __init__(self, container, user="1000:1000", workdir="/testbed",
+                 path=PATH):
+        self.container, self.user, self.workdir, self.path = \
+            container, user, workdir, path
 
     def translate(self, text):
         """Recorded steps reference /testbed absolutely; on this backend
@@ -109,10 +121,16 @@ class PodmanTarget:
         return text
 
     def run(self, script, timeout=1800):
+        cmd = ["podman", "exec", "-i"]
+        if self.path:
+            cmd += ["-e", f"PATH={self.path}"]
+        if self.user:
+            cmd += ["-u", self.user]
+        if self.workdir:
+            cmd += ["-w", self.workdir]
+        cmd += [self.container, "bash", "-s"]
         return subprocess.run(
-            ["podman", "exec", "-i", "-e", f"PATH={PATH}",
-             "-u", "1000:1000", "-w", "/testbed", self.container, "bash", "-s"],
-            input=script, capture_output=True, text=True, timeout=timeout)
+            cmd, input=script, capture_output=True, text=True, timeout=timeout)
 
 class Console:
     """One client of a VM's serial-console unix socket."""
@@ -233,9 +251,21 @@ class EphemeralVm:
         vm_stop(self.sock)
         return False
 
+def _podman_profile():
+    """Podman target shape from the environment (unset = swebench defaults).
+    replay_manifest.py exports these per-manifest before spawning the
+    step-engine subprocesses, which re-create the target by container name."""
+    # an empty REPLAY_PODMAN_USER/WORKDIR means "the image's own default"
+    # (Terminal-Bench images carry the workdir the agent started in)
+    return dict(
+        user=os.environ.get("REPLAY_PODMAN_USER", "1000:1000") or None,
+        workdir=os.environ.get("REPLAY_PODMAN_WORKDIR", "/testbed") or None,
+        path=os.environ.get("REPLAY_PODMAN_PATH", PATH),
+    )
+
 def make_target(spec):
     if spec.startswith("podman:"):
-        return PodmanTarget(spec[7:])
+        return PodmanTarget(spec[7:], **_podman_profile())
     if spec.startswith("vm:"):
         return VmTarget(spec[3:])
     if spec.startswith("moca:"):
@@ -248,7 +278,7 @@ def make_target(spec):
         return _fc_backend.FcTarget(template, ws_dir)
     if spec.startswith("qemu:"):
         return EphemeralVm(spec[5:])   # context manager, not a target
-    return PodmanTarget(spec)
+    return PodmanTarget(spec, **_podman_profile())
 
 # --- VM lifecycle ------------------------------------------------------------
 
@@ -472,16 +502,24 @@ def _raise_if_running(sock, pidfile):
 # etc.) are thin wrappers over the same machinery.
 
 class PodmanSandbox:
-    """A podman container sandbox around a PodmanTarget."""
-    def __init__(self, name, image):
+    """A podman container sandbox around a PodmanTarget. The user/workdir
+    defaults are the swebench shape; replay_manifest.py passes a manifest's
+    `sandbox` profile through (and exports the matching REPLAY_PODMAN_*
+    env for the step-engine subprocesses)."""
+    def __init__(self, name, image, user="1000:1000", workdir="/testbed",
+                 path=PATH):
         self.name, self.image = name, image
+        self.user, self.workdir, self.path = user, workdir, path
 
     def start(self):
         subprocess.run(["podman", "rm", "-f", self.name], capture_output=True)
-        p = subprocess.run(["podman", "run", "-d", "--name", self.name,
-                            "--user", "1000:1000", "-w", "/testbed",
-                            self.image, "sleep", "infinity"],
-                           capture_output=True, text=True)
+        run = ["podman", "run", "-d", "--name", self.name]
+        if self.user:
+            run += ["--user", self.user]
+        if self.workdir:
+            run += ["-w", self.workdir]
+        run += [self.image, "sleep", "infinity"]
+        p = subprocess.run(run, capture_output=True, text=True)
         if p.returncode != 0:
             # stderr is the diagnosis (e.g. the ctr host's inotify-instance
             # exhaustion surfaced only as a bare "exit status 126")
@@ -489,7 +527,7 @@ class PodmanSandbox:
                                f"{p.stderr.strip()[-400:]}")
 
     def target(self):
-        return PodmanTarget(self.name)
+        return PodmanTarget(self.name, self.user, self.workdir, self.path)
 
     def stop(self):
         subprocess.run(["podman", "rm", "-f", self.name], capture_output=True)
@@ -696,6 +734,21 @@ def exec_edit_tool(target, spec, timeout=1800):
     b64 = base64.b64encode(program.encode()).decode()
     return target.run(f"echo {b64} | base64 -d | exec python -", timeout)
 
+def exec_file_tool(target, spec, timeout=1800):
+    """Read/Write for targets without python (Terminal-Bench environment
+    images ship none: the recording agents ran their file tools host-side,
+    so nothing ever needed python in the container). Write travels
+    base64-encoded like exec_edit_tool; Read checks existence (the offset
+    edge case is not reproduced)."""
+    import shlex
+    path = shlex.quote(spec["file_path"])
+    if spec["op"] == "write":
+        b64 = base64.b64encode(spec["content"].encode()).decode()
+        return target.run(f"printf %s {b64} | base64 -d > {path}", timeout)
+    if spec["op"] == "read":
+        return target.run(f"test -e {path}", timeout)
+    return exec_edit_tool(target, spec, timeout)
+
 def parse_timeline(path):
     """[(at_ms, dur_ms)] for the TOOL lines of a .timeline.txt, in order."""
     steps = []
@@ -725,15 +778,25 @@ def run_replay(traj, target, times=None):
             time.sleep(wait / 1000)
 
         start_off = (time.monotonic() - t0) * 1000
-        if tool == "Bash":
+        tl_tool = tool.lower() if isinstance(tool, str) else ""
+        if tl_tool == "bash":
             # the recorded command is the whole script, on stdin to keep quoting
             p = target.run(target.translate(step["command"]))
             outcome, replay_err = f"exit={p.returncode}", p.returncode != 0
             detail = (p.stderr or p.stdout)[-400:].strip()
-        elif tool in ("Read", "Edit"):
-            spec = dict(step["input"], op=tool.lower())
-            spec["file_path"] = target.translate(spec["file_path"])
-            p = exec_edit_tool(target, spec)
+        elif tl_tool in ("read", "edit", "write"):
+            spec = dict(step["input"], op=tl_tool)
+            # TB records file_path (Claude Code) or filePath (OpenCode);
+            # the older lowercase SWE format used path
+            fp = (spec.get("file_path") or spec.get("filePath")
+                  or spec.get("path"))
+            spec["file_path"] = target.translate(fp)
+            # Edit needs the python tool (exact-once occurrence semantics);
+            # Read/Write go bash-only so python-less images (Terminal-Bench
+            # environments) work -- for Read the outcomes coincide (exit 0
+            # iff the file exists; a missing file errors both ways)
+            p = (exec_edit_tool(target, spec) if tl_tool == "edit"
+                 else exec_file_tool(target, spec))
             outcome, replay_err = f"exit={p.returncode}", p.returncode != 0
             detail = (p.stderr or p.stdout).strip()[:400]
         else:
@@ -741,7 +804,12 @@ def run_replay(traj, target, times=None):
             p = None
 
         mismatch = recorded_err != replay_err
-        results.append((tool, replay_err))
+        # a step counts against the replay only when its outcome DIFFERS
+        # from the recording: an error that reproduces (agents do fail
+        # commands, e.g. TB probes for a missing python) is fidelity, not
+        # failure. For swebench traces (no recorded errors) this is the
+        # old any-error-counts criterion unchanged.
+        results.append((tool, mismatch))
         status = "MISMATCH" if mismatch else ("FAIL" if replay_err else "ok")
 
         end_off = (time.monotonic() - t0) * 1000
@@ -762,8 +830,9 @@ def run_replay(traj, target, times=None):
               f"replay {outcome} -> {status}{timing}"
               + (f" | {detail}" if detail and replay_err else ""))
 
-    n_fail = sum(1 for _, e in results if e)
-    print(f"\ntool steps replayed: {len(results)}, failed on replay: {n_fail}")
+    n_fail = sum(1 for _, m in results if m)
+    print(f"\ntool steps replayed: {len(results)}, "
+          f"outcome mismatches: {n_fail}")
     if times:
         makespan = (time.monotonic() - t0)
         print(f"timed replay: makespan {makespan:.1f}s "

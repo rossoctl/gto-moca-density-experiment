@@ -39,6 +39,28 @@ def _resolve(path):
 IMAGE = "icr.io/vopo/swebench-{instance}:latest"
 VM_DIR = os.path.join(HERE, "..", "images", "{instance}", "vm")
 
+# A manifest may override the podman sandbox shape with a top-level
+# "sandbox" block: {"image": "icr.io/vopo/tb-env-{instance}:latest",
+# "user": "0:0", "workdir": "/app", "path": null}. Anything unset keeps
+# the swebench default. The profile is also exported as REPLAY_PODMAN_*
+# so the step-engine subprocesses (spawned per unit) rebuild the same
+# target shape from the bare container name.
+def podman_profile(m):
+    p = m.get("sandbox", {})
+    prof = dict(
+        image=p.get("image", IMAGE),
+        user=p.get("user", "1000:1000"),
+        workdir=p.get("workdir", "/testbed"),
+        path=p.get("path", replay.PATH),
+    )
+    # null user/workdir = the image's own defaults; travels to the step
+    # engine as an empty env var (replay._podman_profile maps "" -> None)
+    os.environ.setdefault("REPLAY_PODMAN_USER", prof["user"] or "")
+    os.environ.setdefault("REPLAY_PODMAN_WORKDIR", prof["workdir"] or "")
+    if prof["path"]:
+        os.environ.setdefault("REPLAY_PODMAN_PATH", prof["path"])
+    return prof
+
 class Progress:
     """Thread-safe tally of launched/finished units, with a status printer.
 
@@ -92,12 +114,15 @@ class Progress:
 class StartError(Exception):
     pass
 
-def sandbox_for(u, backend):
+def sandbox_for(u, backend, profile=None):
     """The unit's sandbox, via replay.py's Sandbox classes (the drivers never
     see how a backend is started or stopped)."""
     name = f"load-{u['id']}"
     if backend == "podman":
-        return replay.PodmanSandbox(name, IMAGE.format(instance=u["instance"]))
+        prof = profile or dict(image=IMAGE, user="1000:1000",
+                               workdir="/testbed", path=replay.PATH)
+        return replay.PodmanSandbox(name, prof["image"].format(instance=u["instance"]),
+                                     prof["user"], prof["workdir"], prof["path"])
     if backend == "moca":
         return replay.MocaSandbox(name, u["instance"])
     if backend == "fc":
@@ -160,7 +185,8 @@ class LiveGate:
         for th in threads:
             th.join(60)
 
-def run_unit(u, backend, logdir, keep, results, progress, sched_t0, gate):
+def run_unit(u, backend, logdir, keep, results, progress, sched_t0, gate,
+             profile=None):
     log = open(os.path.join(logdir, f"{u['id']}.log"), "w")
     def say(msg):
         log.write(msg + "\n"); log.flush()
@@ -175,7 +201,7 @@ def run_unit(u, backend, logdir, keep, results, progress, sched_t0, gate):
         gate.acquire()
         holds_slot = True
         try:
-            sb = sandbox_for(u, backend)
+            sb = sandbox_for(u, backend, profile)
             sb.start()
             gate.register(sb)
         except (Exception, SystemExit) as e:     # SystemExit: kvm preflight
@@ -188,11 +214,16 @@ def run_unit(u, backend, logdir, keep, results, progress, sched_t0, gate):
                                         u["files"]["timeline"],
                                         stdout=log) == 0)
 
-        # end-state check: git diff vs the recorded patch
-        d = replay.git_diff_binary(sb.target())
-        open(os.path.join(logdir, f"{u['id']}.replay.patch"), "wb").write(d)
-        rec = open(u["files"]["patch"], "rb").read()
-        patch_ok = replay.patch_matches(d, rec)
+        # end-state check: git diff vs the recorded patch (units without a
+        # patch file -- e.g. Terminal-Bench, graded on environment state --
+        # pass on steps alone)
+        if u["files"].get("patch"):
+            d = replay.git_diff_binary(sb.target())
+            open(os.path.join(logdir, f"{u['id']}.replay.patch"), "wb").write(d)
+            rec = open(u["files"]["patch"], "rb").read()
+            patch_ok = replay.patch_matches(d, rec)
+        else:
+            patch_ok = True
         status = "ok" if (steps_ok and patch_ok) else \
                  f"fail(steps_ok={steps_ok},patch_ok={patch_ok})"
         say(f"done in {time.monotonic()-start:.1f}s "
@@ -247,6 +278,7 @@ def main():
     signal.signal(signal.SIGTERM, cleanup)
     signal.signal(signal.SIGINT, cleanup)
     m = json.load(open(manifest_path))
+    profile = podman_profile(m)
     units = sorted(m["units"], key=lambda u: u["start_s"])
     for u in units:
         u["files"] = {k: _resolve(v) for k, v in u["files"].items()}
@@ -284,7 +316,7 @@ def main():
               f"launching {u['id']} {u['instance']} {u['rep']}", flush=True)
         th = threading.Thread(target=run_unit,
                               args=(u, backend, logdir, keep, results, progress,
-                                    t0, gate))
+                                    t0, gate, profile))
         th.start(); threads.append(th)
     for th in threads:
         th.join()
