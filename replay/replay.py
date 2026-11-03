@@ -713,15 +713,18 @@ def patch_matches(got, recorded):
                       if not l.startswith("index ")]
     return norm(got) == norm(recorded)
 
-def replay_steps(traj_path, target_spec, timeline=None, stdout=None):
+def replay_steps(traj_path, target_spec, timeline=None, stdout=None, env=None):
     """Run the step engine as a subprocess (isolation, per-unit logs);
-    returns its exit code (0 iff every recorded step succeeded again)."""
+    returns its exit code (0 iff every recorded step succeeded again).
+    `env` (a full environment) lets a mixed manifest hand each unit its own
+    podman profile down to the child, which rebuilds the target by name."""
     cmd = [sys.executable, "-I", os.path.abspath(__file__),
            traj_path, target_spec]
     if timeline:
         cmd.append(timeline)
     return subprocess.run(cmd, stdout=stdout or sys.stdout,
-                          stderr=subprocess.STDOUT).returncode
+                          stderr=subprocess.STDOUT,
+                          env=env or os.environ).returncode
 
 # --- step execution ----------------------------------------------------------
 

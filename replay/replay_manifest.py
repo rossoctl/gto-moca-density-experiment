@@ -114,13 +114,21 @@ class Progress:
 class StartError(Exception):
     pass
 
+def unit_profile(u, profile=None):
+    """The manifest's `sandbox` profile with the unit's own `sandbox` block
+    layered on top (a mixed manifest -- e.g. swebench and Terminal-Bench
+    units -- overrides image/user/workdir per unit)."""
+    prof = dict(profile or dict(image=IMAGE, user="1000:1000",
+                                workdir="/testbed", path=replay.PATH))
+    prof.update({k: v for k, v in u.get("sandbox", {}).items()})
+    return prof
+
 def sandbox_for(u, backend, profile=None):
     """The unit's sandbox, via replay.py's Sandbox classes (the drivers never
     see how a backend is started or stopped)."""
     name = f"load-{u['id']}"
     if backend == "podman":
-        prof = profile or dict(image=IMAGE, user="1000:1000",
-                               workdir="/testbed", path=replay.PATH)
+        prof = unit_profile(u, profile)
         return replay.PodmanSandbox(name, prof["image"].format(instance=u["instance"]),
                                      prof["user"], prof["workdir"], prof["path"])
     if backend == "moca":
@@ -209,10 +217,16 @@ def run_unit(u, backend, logdir, keep, results, progress, sched_t0, gate,
             status = "start-fail"
             return
 
+        prof = unit_profile(u, profile)
+        env = {**os.environ,
+               "REPLAY_PODMAN_USER": prof["user"] or "",
+               "REPLAY_PODMAN_WORKDIR": prof["workdir"] or "",
+               **({"REPLAY_PODMAN_PATH": prof["path"]}
+                  if prof["path"] else {})}
         steps_ok = (replay.replay_steps(u["files"]["trajectory"],
                                         sb.target_spec,
                                         u["files"]["timeline"],
-                                        stdout=log) == 0)
+                                        stdout=log, env=env) == 0)
 
         # end-state check: git diff vs the recorded patch (units without a
         # patch file -- e.g. Terminal-Bench, graded on environment state --
