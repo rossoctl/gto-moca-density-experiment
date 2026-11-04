@@ -403,15 +403,21 @@ def vm_snapshot(vm_dir):
         mon = Console(sock + ".mon")
         mon.read_until(r"\(qemu\)", timeout=30)      # drain the prompt
         mon.send(f'migrate "exec:cat > {state}"\n')
-        # migrate is async: poll until the state file is fully written
+        # migrate is async: poll until the state file is fully written.
+        # The status line's wording varies by qemu version: <=9 printed
+        # "Migration status: completed"; 10.x prints "Status:\tcompleted"
+        # (leading tab(s) after the colon). Match on the word after the
+        # status label, not the whole phrase.
+        done_rx = re.compile(r"(?:Migration )?[Ss]tatus:?\s*(completed|failed|cancelled|error)")
         deadline = time.monotonic() + 600
         while time.monotonic() < deadline:
             mon.send("info migrate\n")
             got = mon.read_until(r"\(qemu\)", timeout=30)
-            if "Migration status: completed" in got:
+            m = done_rx.search(got)
+            if m and m.group(1) == "completed":
                 break
-            if "Migration status: failed" in got:
-                raise RuntimeError(f"state save failed: {got[-300:]}")
+            if m:
+                raise RuntimeError(f"state save failed ({m.group(1)}): {got[-300:]}")
             time.sleep(1)
         else:
             raise TimeoutError("state save did not complete within 600s")
