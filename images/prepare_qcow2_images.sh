@@ -44,10 +44,36 @@ if [[ -z "$KERNEL_VERSION" ]]; then
     KERNEL_VERSION=$(ls /boot/vmlinuz-* | sed 's|.*/vmlinuz-||' | sort -V | tail -1)
 fi
 Vmlinuz=/boot/vmlinuz-"$KERNEL_VERSION"
-Initrd=/boot/initrd.img-"$KERNEL_VERSION"
 [[ -f $Vmlinuz ]] || { echo "no kernel $Vmlinuz" >&2; exit 1; }
-[[ -f $Initrd ]] || { echo "no initrd $Initrd (install linux-image-$KERNEL_VERSION)" >&2; exit 1; }
 [[ -d /lib/modules/$KERNEL_VERSION ]] || { echo "no modules for $KERNEL_VERSION" >&2; exit 1; }
+
+# Initrd: the guest needs a GENERIC initrd -- root=/dev/vda, virtio+ext4 only.
+# Host distros diverge here and the wrong one hangs or panics the guest:
+#   - initramfs-tools (Ubuntu <= 24.04): /boot/initrd.img-* is generic enough,
+#     honors the root= kernel arg as-is.
+#   - dracut (Ubuntu >= 26.04): /boot/initrd.img-* is built HOSTONLY -- it
+#     embeds the build host's root-disk UUID and waits forever for it
+#     (dracut-initqueue timeout), and its size (~110MB) can deadlock a 1GiB
+#     guest at unpack. So with dracut we build a slim no-hostonly initrd
+#     (base rootfs-block fs-lib + virtio/ext4 drivers, ~36MB), which boots
+#     to the shell in ~2s at VM_MEM_MB=1024.
+# INITRD_IMG env var overrides (pre-built or to reuse a cached one).
+if [[ -n "${INITRD_IMG:-}" ]]; then
+    Initrd=$INITRD_IMG
+    [[ -f $Initrd ]] || { echo "no initrd $Initrd (INITRD_IMG)" >&2; exit 1; }
+elif command -v dracut >/dev/null 2>&1; then
+    Initrd=/tmp/qcow2-initrd-"$KERNEL_VERSION".img
+    if [[ ! -f $Initrd ]]; then
+        echo "=== building slim generic initrd for $KERNEL_VERSION (dracut host)"
+        dracut --no-hostonly --force --kver "$KERNEL_VERSION" \
+              -m "base rootfs-block fs-lib shutdown" \
+              --drivers "virtio virtio_blk virtio_pci virtio_ring ext4" \
+              "$Initrd"
+    fi
+else
+    Initrd=/boot/initrd.img-"$KERNEL_VERSION"
+    [[ -f $Initrd ]] || { echo "no initrd $Initrd (install linux-image-$KERNEL_VERSION)" >&2; exit 1; }
+fi
 
 # the unprivileged user to hand files back to (build host's galmasi)
 OWNER=${SUDO_USER:-root}
@@ -101,7 +127,7 @@ EOF
     echo "=== $name: stashing kernel triplet"
     sudo cp "$Vmlinuz" "$out/vmlinuz-$KERNEL_VERSION"
     sudo cp "$Initrd" "$out/initrd-$KERNEL_VERSION"
-    sudo chown -R $USER:$(id -gn "$USER") "$out"
+    sudo chown -R "$OWNER":$(id -gn "$OWNER" 2>/dev/null || echo "$OWNER") "$out"
 
     echo "=== $name: saving 'ready' memory snapshot (boots once under KVM)"
     python3 -I "$HERE/../replay/replay.py" vm-snapshot "$out" \
