@@ -3,6 +3,10 @@
 The home for writing that is **too durable to delete, too small or too specific for a spec**.
 A note is dated, narrow, and left alone once written.
 
+## Index
+
+- [2026-11-04 — Sandbox backend landscape](2026-11-04-sandbox-backend-landscape.md) — why Kata-style VM runtimes miss harness-separated AI sandboxes; how E2B/Vercel/Modal/Daytona/Fly/Anthropic deliver them; cross-referenced with our density measurements.
+
 ## What belongs here
 
 - **Investigation notes** — `YYYY-MM-DD-<topic>.md`. What you found while chasing something
