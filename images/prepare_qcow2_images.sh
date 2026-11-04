@@ -132,6 +132,10 @@ EOF
     echo "=== $name: saving 'ready' memory snapshot (boots once under KVM)"
     python3 -I "$HERE/../replay/replay.py" vm-snapshot "$out" \
         || { echo "snapshot failed for $name"; exit 1; }
+    # state.bin is written by qemu (root under sudo) AFTER the chown above;
+    # the runs resume as the unprivileged user via `cat state.bin`, so hand
+    # it back too or every vm-start fails with permission denied.
+    sudo chown "$OWNER":$(id -gn "$OWNER" 2>/dev/null || echo "$OWNER") "$out/state.bin" 2>/dev/null || true
 
     echo "=== $name: done -> $out"
 done
