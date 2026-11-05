@@ -67,11 +67,43 @@ def qemu_rss_mb():
             continue
     return round(total, 1)
 
-def sample(out_path, interval, disk_fs, count_cmd, with_qemu_rss):
+def podman_cgroup_mems():
+    """(sum memory.current, sum current-inactive_file) in MB over the live
+    rootless container cgroups (libpod-<id>.scope, conmon scopes excluded).
+    'current' counts page cache the containers faulted in; dropping
+    inactive_file approximates the RAM truly in use -- pages the kernel
+    could not reclaim without pressure (anon + active file + kernel)."""
+    cur = true_ = 0.0
+    base = "/sys/fs/cgroup/user.slice"
+    for root, dirs, _files in os.walk(base):
+        for d in list(dirs):
+            if d.startswith("libpod-") and not d.startswith("libpod-conmon-"):
+                g = os.path.join(root, d)
+                try:
+                    with open(os.path.join(g, "memory.current")) as f:
+                        c = int(f.read())
+                    inact = 0
+                    with open(os.path.join(g, "memory.stat")) as f:
+                        for line in f:
+                            if line.startswith("inactive_file "):
+                                inact = int(line.split()[1])
+                                break
+                    cur += c / 1e6
+                    true_ += max(c - inact, 0) / 1e6
+                except OSError:
+                    continue
+        dirs[:] = [d for d in dirs if d.startswith(("user.slice", "user-"))] \
+            if root == base else dirs
+    return round(cur, 1), round(true_, 1)
+
+
+def sample(out_path, interval, disk_fs, count_cmd, with_qemu_rss,
+           with_podman_mem):
     total_prev, idle_prev = cpu_totals()
     with open(out_path, "w", newline="") as fh:
         w = csv.writer(fh)
-        w.writerow(COLUMNS)
+        w.writerow(COLUMNS + (["podman_cg_mb", "podman_true_mb"]
+                              if with_podman_mem else []))
         while True:
             time.sleep(interval)
             try:
@@ -80,13 +112,17 @@ def sample(out_path, interval, disk_fs, count_cmd, with_qemu_rss):
                 total_prev, idle_prev = total, idle
                 m = meminfo()
                 load1 = open("/proc/loadavg").read().split()[0]
-                w.writerow([int(time.time()), round(busy, 1),
-                            round((m["MemTotal"] - m["MemAvailable"]) / 1024),
-                            round(m["MemAvailable"] / 1024),
-                            disk_used_mb(disk_fs),
-                            run_count(count_cmd) if count_cmd else "",
-                            load1,
-                            qemu_rss_mb() if with_qemu_rss else ""])
+                row = [int(time.time()), round(busy, 1),
+                       round((m["MemTotal"] - m["MemAvailable"]) / 1024),
+                       round(m["MemAvailable"] / 1024),
+                       disk_used_mb(disk_fs),
+                       run_count(count_cmd) if count_cmd else "",
+                       load1,
+                       qemu_rss_mb() if with_qemu_rss else ""]
+                if with_podman_mem:
+                    cg, true_ = podman_cgroup_mems()
+                    row += [cg, true_]
+                w.writerow(row)
                 fh.flush()
             except KeyboardInterrupt:
                 return
@@ -118,6 +154,11 @@ def summarize(path, since, until):
     if fmax("qemu_rss_mb") is not None:
         print(f"peak qemu_rss_mb:     {fmax('qemu_rss_mb')} (touched; "
               f"committed is -m x count)")
+    if fmax("podman_cg_mb") is not None:
+        print(f"peak podman_cg_mb:    {fmax('podman_cg_mb')} "
+              f"(cgroup current, page cache included)")
+        print(f"peak podman_true_mb:  {fmax('podman_true_mb')} "
+              f"(current - inactive_file: RAM truly in use)")
     if counts:
         print(f"peak sandbox_count:   {max(counts)}")
         pm, pc = fmax("mem_used_mb"), max(counts)
@@ -132,6 +173,9 @@ def main():
     ap.add_argument("--disk-fs", default="/")
     ap.add_argument("--count-cmd", default=None)
     ap.add_argument("--qemu-rss", action="store_true")
+    ap.add_argument("--podman-mem", action="store_true",
+                    help="sum container cgroup memory (current, and "
+                         "current-inactive_file as true-use estimate)")
     ap.add_argument("--since", type=int)
     ap.add_argument("--until", type=int)
     args = ap.parse_args()
@@ -141,7 +185,7 @@ def main():
         print(f"sampling to {args.path} every {args.interval}s "
               f"(Ctrl-C to stop)", file=sys.stderr)
         sample(args.path, args.interval, args.disk_fs, args.count_cmd,
-               args.qemu_rss)
+               args.qemu_rss, args.podman_mem)
 
 if __name__ == "__main__":
     main()
