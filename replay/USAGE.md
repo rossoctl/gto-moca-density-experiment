@@ -24,8 +24,8 @@ trajectory format and the report are identical for both.
 The drivers (what you normally want):
 
 ```sh
-python3 -I replay_trajectory.py ../runs/container                  # podman
-python3 -I replay_trajectory.py ../runs/container --backend vm     # VMs
+python3 -I replay_trajectory.py ../runs/SWE-bench/container                  # podman
+python3 -I replay_trajectory.py ../runs/SWE-bench/container --backend vm     # VMs
 python3 -I replay_manifest.py manifests/smoke.json --backend vm --dry-run
 ```
 
@@ -34,7 +34,7 @@ By hand (what the drivers do for you):
 ```sh
 podman run -d --name c --user 1000:1000 -w /testbed \
     icr.io/vopo/swebench-django__django-10914:latest sleep infinity
-python3 -I replay.py ../runs/container/am5-l30-a.django__django-10914.r1.trajectory.json c
+python3 -I replay.py ../runs/SWE-bench/container/am5-l30-a.django__django-10914.r1.trajectory.json c
 python3 -I replay.py git-diff c > replayed.patch   # diff after the replay
 podman rm -f c
 ```

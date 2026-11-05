@@ -3,9 +3,9 @@
 18 trajectories of a stock coding agent, Claude Code, solving real SWE-bench tasks: three tasks (a light, a medium
 and a heavy one) × 3 runs each (reps 1–3) × two kinds of "hands", meaning where the agent's commands ran:
 
-- **container hands** (`runs/container/`, batch `am5-l30-a`): the agent ran its own tools in its own container, on
+- **container hands** (`runs/SWE-bench/container/`, batch `am5-l30-a`): the agent ran its own tools in its own container, on
   the repository there;
-- **microVM hands** (`runs/microvm/`, batch `am5-l30-b`): every command the agent ran was sent to a fresh MOCA
+- **microVM hands** (`runs/SWE-bench/microvm/`, batch `am5-l30-b`): every command the agent ran was sent to a fresh MOCA
   microVM sandbox.
 
 Each trajectory is the sequence of the agent's model calls and tool calls, timed, so it can be read as a profile of
@@ -14,7 +14,7 @@ removed"), so every tool step left succeeded in the run.
 
 ## What is here
 
-- `runs/container/` and `runs/microvm/`, three files per run, named `<batch>.<instance>.r<rep>`:
+- `runs/SWE-bench/container/` and `runs/SWE-bench/microvm/`, three files per run, named `<batch>.<instance>.r<rep>`:
   - `.trajectory.json`: the machine-readable trajectory (the format below);
   - `.timeline.txt`: the same, one line per step, for reading;
   - `.patch`: the run's change to the repository, exactly as collected from the run and graded.
@@ -155,7 +155,7 @@ image's `/testbed` to the run's patch.
 - **`repos/<instance>/source/`** is the public upstream repository exported at the instance's base commit
   (`git archive`, so plain files, no git history). It is the tree every run started from: the image's `/testbed` is
   this commit's content, which was checked file by file for xarray-4094.
-- **Each run's `.patch`** (in `runs/`, beside its trajectory) is the change that run made, as a `git diff` against
+- **Each run's `.patch`** (in `runs/SWE-bench/`, beside its trajectory) is the change that run made, as a `git diff` against
   the base commit. It is exactly what was collected from the run and what the official grader applied and scored
   as resolved.
   - To see the code after a run, apply it to a copy of `source/`, or in the image's `/testbed` (`git apply`).
