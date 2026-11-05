@@ -17,6 +17,7 @@ was true when someone ran it. Both are committed, and they are kept separate on 
 | Report                                           | Covers                | Spec                                              | Status  |
 | ------------------------------------------------ | --------------------- | ------------------------------------------------- | ------- |
 | [moca-side-by-side-report.md](moca-side-by-side-report.md) | moca backend vs container/VM baselines: per-exec cost, smoke/load50/pressure80 manifests, stretch attribution | none yet | Partial |
+| [2026-11-04-srv-r18b14s27-bringup-report.md](2026-11-04-srv-r18b14s27-bringup-report.md) | srv-r18b14s27 provisioning; first-principles builds of podman/qemu/fc backends; smoke-manifest verification; host-portability findings | none (host bring-up) | Complete |
 
 ## The one rule: a report is never rewritten
 
