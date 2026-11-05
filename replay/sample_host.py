@@ -67,13 +67,31 @@ def qemu_rss_mb():
             continue
     return round(total, 1)
 
+def diskstats_totals():
+    """(sectors read, sectors written) over real block devices (loop*, ram*
+    excluded) -- deltas between ticks give host storage bandwidth."""
+    rd = wr = 0
+    for line in open("/proc/diskstats"):
+        f = line.split()
+        name = f[2]
+        if name.startswith(("loop", "ram", "sr", "dm-")):
+            continue
+        rd += int(f[5])    # sectors read
+        wr += int(f[9])    # sectors written
+    return rd, wr
+
+
 def podman_cgroup_mems():
-    """(sum memory.current, sum current-inactive_file) in MB over the live
-    rootless container cgroups (libpod-<id>.scope, conmon scopes excluded).
-    'current' counts page cache the containers faulted in; dropping
-    inactive_file approximates the RAM truly in use -- pages the kernel
-    could not reclaim without pressure (anon + active file + kernel)."""
+    """(sum memory.current, sum current-inactive_file, sum io.stat read
+    bytes, sum io.stat write bytes; memory in MB, io bytes raw counters)
+    over the live rootless container cgroups (libpod-<id>.scope, conmon
+    scopes excluded). 'current' counts page cache the containers faulted
+    in; dropping inactive_file approximates the RAM truly in use -- pages
+    the kernel could not reclaim without pressure (anon + active file +
+    kernel). io.stat is cumulative; deltas between ticks give per-container
+    storage bandwidth."""
     cur = true_ = 0.0
+    io_rd = io_wr = 0
     base = "/sys/fs/cgroup/user.slice"
     for root, dirs, _files in os.walk(base):
         for d in list(dirs):
@@ -90,20 +108,36 @@ def podman_cgroup_mems():
                                 break
                     cur += c / 1e6
                     true_ += max(c - inact, 0) / 1e6
+                    with open(os.path.join(g, "io.stat")) as f:
+                        for line in f:
+                            for tok in line.split()[1:]:
+                                k, _, v = tok.partition("=")
+                                if k == "read":
+                                    io_rd += int(v)
+                                elif k == "write":
+                                    io_wr += int(v)
                 except OSError:
                     continue
         dirs[:] = [d for d in dirs if d.startswith(("user.slice", "user-"))] \
             if root == base else dirs
-    return round(cur, 1), round(true_, 1)
+    return round(cur, 1), round(true_, 1), io_rd, io_wr
 
 
 def sample(out_path, interval, disk_fs, count_cmd, with_qemu_rss,
-           with_podman_mem):
+           with_podman_mem, with_disk_io):
     total_prev, idle_prev = cpu_totals()
+    rd_prev, wr_prev = diskstats_totals()
+    io_prev = (0, 0)
+    first_tick = True
     with open(out_path, "w", newline="") as fh:
         w = csv.writer(fh)
-        w.writerow(COLUMNS + (["podman_cg_mb", "podman_true_mb"]
-                              if with_podman_mem else []))
+        cols = COLUMNS[:]
+        if with_podman_mem:
+            cols += ["podman_cg_mb", "podman_true_mb",
+                     "podman_rd_mbps", "podman_wr_mbps"]
+        if with_disk_io:
+            cols += ["disk_rd_mbps", "disk_wr_mbps"]
+        w.writerow(cols)
         while True:
             time.sleep(interval)
             try:
@@ -120,8 +154,22 @@ def sample(out_path, interval, disk_fs, count_cmd, with_qemu_rss,
                        load1,
                        qemu_rss_mb() if with_qemu_rss else ""]
                 if with_podman_mem:
-                    cg, true_ = podman_cgroup_mems()
-                    row += [cg, true_]
+                    cg, true_, io_rd, io_wr = podman_cgroup_mems()
+                    if first_tick:
+                        io_prev = (io_rd, io_wr)
+                        pr = pw = 0.0
+                    else:
+                        pr = max(io_rd - io_prev[0], 0) / 1e6 / interval
+                        pw = max(io_wr - io_prev[1], 0) / 1e6 / interval
+                        io_prev = (io_rd, io_wr)
+                    row += [cg, true_, round(pr, 1), round(pw, 1)]
+                if with_disk_io:
+                    rd, wr = diskstats_totals()
+                    dr = (rd - rd_prev) * 512 / 1e6 / interval
+                    dw = (wr - wr_prev) * 512 / 1e6 / interval
+                    rd_prev, wr_prev = rd, wr
+                    row += [round(max(dr, 0), 1), round(max(dw, 0), 1)]
+                first_tick = False
                 w.writerow(row)
                 fh.flush()
             except KeyboardInterrupt:
@@ -159,6 +207,14 @@ def summarize(path, since, until):
               f"(cgroup current, page cache included)")
         print(f"peak podman_true_mb:  {fmax('podman_true_mb')} "
               f"(current - inactive_file: RAM truly in use)")
+        for col in ("podman_rd_mbps", "podman_wr_mbps",
+                    "disk_rd_mbps", "disk_wr_mbps"):
+            if fmax(col) is None:
+                continue
+            vals = [float(r[col]) for r in rows
+                    if r.get(col) not in ("", None)]
+            print(f"peak {col}:  {fmax(col):8.1f}   "
+                  f"mean {sum(vals)/len(vals):8.1f}")
     if counts:
         print(f"peak sandbox_count:   {max(counts)}")
         pm, pc = fmax("mem_used_mb"), max(counts)
@@ -175,7 +231,11 @@ def main():
     ap.add_argument("--qemu-rss", action="store_true")
     ap.add_argument("--podman-mem", action="store_true",
                     help="sum container cgroup memory (current, and "
-                         "current-inactive_file as true-use estimate)")
+                         "current-inactive_file as true-use estimate); "
+                         "also container io.stat read/write bandwidth")
+    ap.add_argument("--disk-io", action="store_true",
+                    help="host storage bandwidth from /proc/diskstats "
+                         "deltas (real devices, loop/ram/dm excluded)")
     ap.add_argument("--since", type=int)
     ap.add_argument("--until", type=int)
     args = ap.parse_args()
@@ -185,7 +245,7 @@ def main():
         print(f"sampling to {args.path} every {args.interval}s "
               f"(Ctrl-C to stop)", file=sys.stderr)
         sample(args.path, args.interval, args.disk_fs, args.count_cmd,
-               args.qemu_rss, args.podman_mem)
+               args.qemu_rss, args.podman_mem, args.disk_io)
 
 if __name__ == "__main__":
     main()
