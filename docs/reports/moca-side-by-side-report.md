@@ -106,7 +106,7 @@ All three were found by this work and are fixed in `tools/sbxrun` (see git histo
 
 # manifest legs (on each backend host):
 cd replay && MOCACTL_SBX_URL=http://<cp>:8080 python3 replay_manifest.py \
-    manifests/load50.json --backend moca   # or podman / vm
+    manifests/load50-10pct.json --backend moca   # or podman / vm
 ```
 
 Per-unit stretch: `grep -h 'done in' logs/manifest-<name>-<backend>/*.log`, stretch = done/expected − 1.
