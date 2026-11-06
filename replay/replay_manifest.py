@@ -22,7 +22,7 @@ Concurrent VMs each hold their full -m allocation.
 Per-unit logs and a per-unit result line go to logs/manifest-<name>-<backend>/.
 Exit 0 iff every unit replayed with an identical patch.
 """
-import json, os, signal, sys, threading, time
+import json, os, signal, subprocess, sys, threading, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)          # -I strips it; our own module is trusted
@@ -231,13 +231,26 @@ def run_unit(u, backend, logdir, keep, results, progress, sched_t0, gate,
                **({"REPLAY_PODMAN_PATH": prof["path"]}
                   if prof["path"] else {})}
         # the VM backend's per-unit shape: a TB sandbox block maps to the
-        # console transport (null user/workdir = the environment image's
-        # own defaults: root, /app, plain system PATH). SWE units carry no
-        # sandbox block and keep VmTarget's swebench defaults (uid 1000,
+        # console transport. Null user = root; null workdir = the
+        # environment image's OWN WorkingDir (per-task: fix-git is
+        # /app/personal-site, others /app) -- read from the image config,
+        # since a booted VM has no image metadata to honor. SWE units carry
+        # no sandbox block and keep VmTarget's swebench defaults (uid 1000,
         # /testbed, the conda PATH).
         if backend == "vm" and "sandbox" in u:
             env["REPLAY_VM_UID"] = (u["sandbox"].get("user") or "0:0").split(":")[0]
-            env["REPLAY_VM_WORKDIR"] = u["sandbox"].get("workdir") or "/app"
+            wd = u["sandbox"].get("workdir")
+            if not wd:
+                img = u["sandbox"]["image"].format(instance=u["instance"])
+                try:
+                    wd = subprocess.run(
+                        ["podman", "image", "inspect", img,
+                         "--format", "{{.Config.WorkingDir}}"],
+                        capture_output=True, text=True,
+                        timeout=30).stdout.strip() or "/app"
+                except Exception:
+                    wd = "/app"
+            env["REPLAY_VM_WORKDIR"] = wd
             if u["sandbox"].get("path"):
                 env["REPLAY_VM_PATH"] = u["sandbox"]["path"]
         steps_ok = (replay.replay_steps(u["files"]["trajectory"],
