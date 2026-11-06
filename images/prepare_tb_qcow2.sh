@@ -100,6 +100,11 @@ EOF
     echo "=== $name: stashing kernel triplet"
     sudo cp "$Vmlinuz" "$out/vmlinuz-$KERNEL_VERSION"
     sudo cp "$Initrd" "$out/initrd-$KERNEL_VERSION"
+    # the image's own WorkingDir, baked at build time: a booted VM has no
+    # image metadata, and a runtime `podman image inspect` can time out
+    # under load and silently hand steps the wrong workdir
+    podman image inspect "$image" --format "{{.Config.WorkingDir}}" \
+        | sudo tee "$out/workdir" > /dev/null
 
     echo "=== $name: saving 'ready' memory snapshot (boots once under KVM)"
     python3 -I "$HERE/../replay/replay.py" vm-snapshot "$out" \
