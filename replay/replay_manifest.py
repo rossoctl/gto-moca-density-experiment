@@ -230,23 +230,27 @@ def run_unit(u, backend, logdir, keep, results, progress, sched_t0, gate,
                "REPLAY_PODMAN_WORKDIR": prof["workdir"] or "",
                **({"REPLAY_PODMAN_PATH": prof["path"]}
                   if prof["path"] else {})}
-        # the VM backend's per-unit shape: a TB sandbox block maps to the
-        # console transport. Null user = root; null workdir = the
-        # environment image's OWN WorkingDir (per-task: fix-git is
-        # /app/personal-site, others /app). It is read from the workdir
-        # file baked next to the qcow2 at build time (a booted VM has no
-        # image metadata to honor); a runtime `podman image inspect` can
-        # time out under load and silently hand steps the wrong workdir.
-        # SWE units carry no sandbox block and keep VmTarget's swebench
-        # defaults (uid 1000, /testbed, the conda PATH).
-        if backend == "vm" and "sandbox" in u:
-            env["REPLAY_VM_UID"] = (u["sandbox"].get("user") or "0:0").split(":")[0]
+        # the VM and fc backends' per-unit shape: a TB sandbox block maps to
+        # their transports (REPLAY_VM_* / REPLAY_FC_*). Null user = root;
+        # null workdir = the environment image's OWN WorkingDir (per-task:
+        # fix-git is /app/personal-site, others /app), read from the workdir
+        # file baked at image-build time (a booted/restored guest has no
+        # image metadata to honor). SWE units carry no sandbox block and
+        # keep the backends' swebench defaults (uid 1000, /testbed-ish).
+        if backend in ("vm", "fc") and "sandbox" in u:
+            prefix = "REPLAY_VM" if backend == "vm" else "REPLAY_FC"
+            env[f"{prefix}_UID"] = (u["sandbox"].get("user") or "0:0").split(":")[0]
             wd = u["sandbox"].get("workdir")
             if not wd:
-                wd_file = os.path.join(getattr(sb, "vm_dir", ""), "workdir")
-                if os.path.isfile(wd_file):
-                    wd = open(wd_file).read().strip()
+                if backend == "vm":
+                    wd_file = os.path.join(getattr(sb, "vm_dir", ""), "workdir")
                 else:
+                    wd_file = os.path.join(
+                        REPO_ROOT, "images", "tb30", u["instance"], "vm",
+                        "workdir")
+                if os.path.isfile(wd_file):
+                    wd = open(wd_file).read().strip() or "/app"
+                elif backend == "vm":
                     img = u["sandbox"]["image"].format(instance=u["instance"])
                     try:
                         wd = subprocess.run(
@@ -256,9 +260,11 @@ def run_unit(u, backend, logdir, keep, results, progress, sched_t0, gate,
                             timeout=30).stdout.strip() or "/app"
                     except Exception:
                         wd = "/app"
-            env["REPLAY_VM_WORKDIR"] = wd
+                else:
+                    wd = "/app"
+            env[f"{prefix}_WORKDIR"] = wd
             if u["sandbox"].get("path"):
-                env["REPLAY_VM_PATH"] = u["sandbox"]["path"]
+                env[f"{prefix}_PATH"] = u["sandbox"]["path"]
         steps_ok = (replay.replay_steps(u["files"]["trajectory"],
                                         sb.target_spec,
                                         u["files"]["timeline"],

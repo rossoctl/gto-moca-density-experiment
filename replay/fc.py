@@ -80,8 +80,12 @@ _TESTBED_ENV_PATH = ("/opt/miniconda3/envs/testbed/bin:/opt/miniconda3/bin:"
 
 def fc_template(instance):
     """Instance id -> golden snapshot dir name (same mapping as the moca
-    backend's moca_template)."""
-    return "sweb-" + instance.split("__", 1)[1]
+    backend's moca_template). SWE-bench ids carry the repo as a '__'-joined
+    prefix (django__django-11133 -> sweb-django-11133); Terminal-Bench task
+    ids are bare (fix-git -> tb-fix-git)."""
+    if "__" in instance:
+        return "sweb-" + instance.split("__", 1)[1]
+    return "tb-" + instance
 
 
 class FcError(RuntimeError):
@@ -299,19 +303,42 @@ class FcTarget:
         self.workspace_dir = workspace_dir
         self.workspace_img = os.path.join(workspace_dir, "workspace.img")
         self.mode = mode or FC_VM_MODE
+        self.tb = template.startswith("tb-")
         self._vm = None
 
     def translate(self, text):
+        # TB recordings use /app paths, and the template's /app symlinks to
+        # the per-session /workspace -- no translation needed. SWE-bench
+        # recordings use /testbed, which the moca model relocates.
+        if self.tb:
+            return text
         return self._TESTBED.sub("/workspace/testbed", text)
 
     def run(self, script, timeout=1800):
         b64 = base64.b64encode(script.encode()).decode()
+        # per-unit shape (REPLAY_FC_UID/WORKDIR/PATH, set by the manifest
+        # driver from the unit's sandbox block); defaults are the swebench
+        # shape. TB defaults: root, /app (the workspace symlink), plain PATH.
+        uid = os.environ.get("REPLAY_FC_UID", "1000")
+        workdir = os.environ.get(
+            "REPLAY_FC_WORKDIR", "/app" if self.tb else "/workspace/testbed")
+        path = os.environ.get(
+            "REPLAY_FC_PATH",
+            "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            if self.tb else _TESTBED_ENV_PATH)
+        # the tty/stdio fidelity trio learned on the VM backend, applied
+        # here too: no pager (recordings ran non-tty), HOME for root's
+        # gitconfig, and no stdin (a bare `cat` must see EOF, not eat the
+        # wrapper's remaining lines)
+        home = f" HOME=/root" if uid == "0" else ""
         wrapper = (
             f"echo {b64} | base64 -d > /tmp/.replay-step.sh\n"
-            f"exec /usr/bin/setpriv --reuid=1000 --regid=1000 --clear-groups "
-            f"/usr/bin/env PATH='{_TESTBED_ENV_PATH}' "
-            f"/bin/bash -c 'cd /workspace/testbed && "
-            f"exec bash /tmp/.replay-step.sh'\n")
+            f"exec /usr/bin/setpriv --reuid={uid} --regid={uid} "
+            f"--clear-groups "
+            f"/usr/bin/env PATH='{path}' "
+            f"PAGER=cat GIT_PAGER=cat TERM=dumb{home} "
+            f"/bin/bash -c 'cd {workdir} && "
+            f"exec bash /tmp/.replay-step.sh < /dev/null'\n")
         t = min(int(timeout), 840)
         if self.mode == "warm":
             # resident VM: restored once, kept alive across steps (warm page
@@ -380,11 +407,19 @@ class FcSandbox:
         # seed: same as the moca backend -- copy the read-only testbed into
         # the writable workspace, verify the wrapper's prerequisites.  A
         # one-shot VM (synced on stop) is enough: the workspace carries the
-        # state, not the VM.
+        # state, not the VM.  SWE-bench templates carry the tree at /testbed
+        # (copied to /workspace/testbed); TB templates moved the environment
+        # to /opt/testbed-src and symlink /app -> /workspace, so the seed is
+        # the CONTENTS of /opt/testbed-src into /workspace (recorded /app
+        # paths then resolve through the symlink).
+        if self.template.startswith("tb-"):
+            seed = "cp -a /opt/testbed-src/. /workspace/ && test -L /app"
+        else:
+            seed = "cp -a /testbed /workspace/testbed"
         with leased_vm(self.snapshot_dir, self.workspace_img) as vm:
             rc, out, err = vm.exec(
-                "cp -a /testbed /workspace/testbed && "
-                "test -x /usr/bin/setpriv && test -x /usr/bin/env", 300)
+                seed + " && test -x /usr/bin/setpriv && test -x /usr/bin/env",
+                300)
         if rc != 0:
             self.stop()
             raise FcError(f"fc sandbox seed failed (rc={rc}): "
