@@ -223,11 +223,15 @@ class VmTarget:
         # commands ran non-tty (container exec) -- without this, git-centric
         # steps (git log --graph, git fsck) open `less` on the serial tty
         # and the replay hangs waiting for a pager that never exits.
+        # HOME: init=/bin/bash gives the console no login home (HOME=/), so
+        # git cannot see the image's ~/.gitconfig and commits fail with
+        # "Author identity unknown" -- hand root its home for uid 0.
+        home = f" HOME={os.environ.get('REPLAY_VM_HOME', '/root')}" if uid == "0" else ""
         wrapper = (
             f"echo __B{tok}__\n"
             f"echo {b64} | base64 -d > /tmp/.replay-step.sh\n"
             f"/usr/bin/setpriv --reuid={uid} --regid={uid} --clear-groups "
-            f"/usr/bin/env PATH='{path}' PAGER=cat GIT_PAGER=cat TERM=dumb "
+            f"/usr/bin/env PATH='{path}' PAGER=cat GIT_PAGER=cat TERM=dumb{home} "
             f"/bin/bash -c 'cd {workdir} && exec bash /tmp/.replay-step.sh' 2>&1\n"
             f"echo __R{tok}__=$?\n")
         outer = base64.b64encode(wrapper.encode()).decode()
