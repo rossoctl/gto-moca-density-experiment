@@ -58,8 +58,10 @@ DEFAULT_SEED = {2: 21, 5: 51, 10: 101}
 # reproducibly.
 EXCLUDE_REPS = {("multi-source-data-merger", "r2")}
 
-TOTAL_TURN_S = 8400.0   # ~14 mean concurrency over the 600 s window
-DURATION = 600.0
+# TOTAL_TURN_S/DURATION set from --concurrency/--duration in main() (the
+# load50 ladder: 14 over 600 s; the C100 pressure ladder: 100 over 1800 s)
+UNIT_SCHEMA = "autobench-moca/load-manifest/unit/1"
+MANIFEST_SCHEMA = "autobench-moca/load-manifest/1"
 UNIT_SCHEMA = "autobench-moca/load-manifest/unit/1"
 MANIFEST_SCHEMA = "autobench-moca/load-manifest/1"
 
@@ -158,11 +160,20 @@ def main():
     ap.add_argument("--duty", type=int, required=True, choices=[2, 5, 10])
     ap.add_argument("--out", required=True)
     ap.add_argument("--seed", type=int, default=None)
+    ap.add_argument("--concurrency", type=float, default=14.0,
+                    help="target mean steady-state concurrency (Little's "
+                         "law sets the arrival rate); the load50 ladder "
+                         "is 14, the C100 pressure ladder is 100")
+    ap.add_argument("--duration", type=float, default=600.0,
+                    help="admission window in s (drain follows)")
     args = ap.parse_args()
 
     rung = args.duty
     seed = args.seed if args.seed is not None else DEFAULT_SEED[rung]
     target = TARGET_DUTY[rung]
+    global DURATION, TOTAL_TURN_S
+    DURATION = args.duration
+    TOTAL_TURN_S = args.concurrency * args.duration
     rng = random.Random(seed)
 
     swe = swe_catalog()
