@@ -219,11 +219,15 @@ class VmTarget:
         path = os.environ.get("REPLAY_VM_PATH", PATH)
         tok = os.urandom(8).hex()
         b64 = base64.b64encode(script.encode()).decode()
+        # PAGER=cat: the console transport is a tty, and the recordings'
+        # commands ran non-tty (container exec) -- without this, git-centric
+        # steps (git log --graph, git fsck) open `less` on the serial tty
+        # and the replay hangs waiting for a pager that never exits.
         wrapper = (
             f"echo __B{tok}__\n"
             f"echo {b64} | base64 -d > /tmp/.replay-step.sh\n"
             f"/usr/bin/setpriv --reuid={uid} --regid={uid} --clear-groups "
-            f"/usr/bin/env PATH='{path}' "
+            f"/usr/bin/env PATH='{path}' PAGER=cat GIT_PAGER=cat TERM=dumb "
             f"/bin/bash -c 'cd {workdir} && exec bash /tmp/.replay-step.sh' 2>&1\n"
             f"echo __R{tok}__=$?\n")
         outer = base64.b64encode(wrapper.encode()).decode()
