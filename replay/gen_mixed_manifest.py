@@ -33,12 +33,19 @@ TB_DIR = os.path.join(REPO_ROOT, "runs", "TB30", "local")
 SWE = ["django__django-11133", "django__django-10914", "pydata__xarray-4094"]
 SWE_REPS = ["r1", "r2", "r3"]
 
+# TB pools by rung: batch-a (Claude Code hands) offline-reproducible,
+# resolved=True only, AND replay-validated (0 mismatches in isolation).
+# openssl-selfsigned-cert is EXCLUDED: its trajectories rely on Claude
+# Code's persistent shell cwd across Bash steps (step 3 does `cd /app/ssl`,
+# later steps use relative paths), which a fresh-shell-per-step replay
+# cannot reproduce -- every rep fails the same way in isolation.
 POOLS = {
     2: ["regex-log", "constraints-scheduling"],
     5: ["regex-log", "constraints-scheduling", "fix-git",
-        "openssl-selfsigned-cert", "multi-source-data-merger"],
-    10: ["log-summary-date-ranges", "distribution-search",
-         "openssl-selfsigned-cert", "multi-source-data-merger"],
+        "multi-source-data-merger"],
+    10: ["fix-git", "multi-source-data-merger",
+         "log-summary-date-ranges", "distribution-search",
+         "feal-differential-cryptanalysis"],
 }
 TARGET_DUTY = {2: 0.020, 5: 0.050, 10: 0.100}
 DEFAULT_SEED = {2: 21, 5: 51, 10: 101}
