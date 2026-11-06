@@ -137,8 +137,15 @@ def sandbox_for(u, backend, profile=None):
         return replay.SANDBOXES["fc"](name, u["instance"])
     vmdir = os.path.abspath(VM_DIR.format(instance=u["instance"]))
     if not os.path.exists(os.path.join(vmdir, f"{u['instance']}.qcow2")):
-        raise StartError(f"no {vmdir}/{u['instance']}.qcow2 "
-                         f"(run images/to_qcow2.sh {u['instance']})")
+        # TB tasks keep their image tree (and their vm/ builds) under
+        # images/tb30/<task>/, not images/<instance>/
+        alt = os.path.abspath(os.path.join(
+            HERE, "..", "images", "tb30", u["instance"], "vm"))
+        if os.path.exists(os.path.join(alt, f"{u['instance']}.qcow2")):
+            vmdir = alt
+        else:
+            raise StartError(f"no {vmdir}/{u['instance']}.qcow2 "
+                             f"(run images/to_qcow2.sh {u['instance']})")
     return replay.VmSandbox(name, vmdir)
 
 class LiveGate:
@@ -223,6 +230,16 @@ def run_unit(u, backend, logdir, keep, results, progress, sched_t0, gate,
                "REPLAY_PODMAN_WORKDIR": prof["workdir"] or "",
                **({"REPLAY_PODMAN_PATH": prof["path"]}
                   if prof["path"] else {})}
+        # the VM backend's per-unit shape: a TB sandbox block maps to the
+        # console transport (null user/workdir = the environment image's
+        # own defaults: root, /app, plain system PATH). SWE units carry no
+        # sandbox block and keep VmTarget's swebench defaults (uid 1000,
+        # /testbed, the conda PATH).
+        if backend == "vm" and "sandbox" in u:
+            env["REPLAY_VM_UID"] = (u["sandbox"].get("user") or "0:0").split(":")[0]
+            env["REPLAY_VM_WORKDIR"] = u["sandbox"].get("workdir") or "/app"
+            if u["sandbox"].get("path"):
+                env["REPLAY_VM_PATH"] = u["sandbox"]["path"]
         steps_ok = (replay.replay_steps(u["files"]["trajectory"],
                                         sb.target_spec,
                                         u["files"]["timeline"],

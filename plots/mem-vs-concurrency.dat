@@ -1,0 +1,37 @@
+# Memory (host-used delta, GB) vs mean concurrency
+# Source: docs/reports/moca-side-by-side-report.md, completed measurement grid
+# Metric: host-used delta (peak − baseline)
+#
+# All lines pass through the origin (zero sandboxes = zero memory).
+#
+# ── fc warm ──
+# Duty-invariant, linear from origin.
+#   Slope = 4.3/14 = 0.307 GB/sandbox.
+#   Check: predicts 12.3 at N=40; measured 12.5 — linear model holds.
+#
+# ── fc perexec D=10% ──
+# Two-component model, calibrated against the no-op run:
+#   (a) base: VM machinery (jailer, memfile maps, wrapper cold reads).
+#       No-op load80 peak: 2.8 GB at N=40.  Scales ~linearly with N.
+#       Slope_base ≈ 0.07 GB/sandbox.
+#   (b) cold-rootfs: host page-cache fill from in-flight cold reads.
+#       At load50 (pre-knee): 2.6 − 0.98 = 1.62 GB for N=14.
+#       At load80 (post-knee): 13.3 − 2.8 = 10.5 GB for N=40.
+#       The 6.5× jump for 2.9× the concurrency is queueing amplification
+#       past the CPU saturation knee (78% mean, queue → 76–87 effective).
+#
+# ── fc perexec D=2% (predicted) ──
+# Same base term (VM machinery is per-sandbox, duty-independent).
+# Cold-rootfs scales with in-flight count (N×D): at D=2%, 5× fewer.
+#   Pre-knee cold-rootfs slope = 1.62/14 = 0.116 GB/sandbox at D=10%.
+#   At D=2%: slope_cold = 0.116 × 0.2 = 0.023 GB/sandbox.
+#   Total = 0.07 + 0.023 = 0.093 GB/sandbox (linear, pre-knee).
+#   Knee at D=2%: CPU ≈ 4.65×0.02 = 0.093 cores/sandbox → N ≈ 200+.
+#
+# "?" = missing data (gnuplot skips the point)
+#
+# concurrency  fc_warm  fc_perexec_10pct  fc_perexec_2pct_predicted
+0               0.0      0.0               0.0
+14              4.3      2.6               1.3
+40              12.5     13.3              3.7
+80              ?        ?                 7.4

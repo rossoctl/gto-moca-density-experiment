@@ -210,14 +210,21 @@ class VmTarget:
         # the whole wrapper travels as ONE base64 line: if the tty echoes
         # input, the only echoed text is that marker-free line, and the
         # begin/end markers are line-anchored so echoed text can't match them
+        # The uid/workdir/PATH default to the swebench shape (1000,
+        # /testbed, the testbed conda env); REPLAY_VM_UID/WORKDIR/PATH
+        # override per unit the same way REPLAY_PODMAN_* does -- mixed
+        # manifests hand TB units (uid 0, /app, plain PATH) their own shape.
+        uid = os.environ.get("REPLAY_VM_UID", "1000")
+        workdir = os.environ.get("REPLAY_VM_WORKDIR", "/testbed")
+        path = os.environ.get("REPLAY_VM_PATH", PATH)
         tok = os.urandom(8).hex()
         b64 = base64.b64encode(script.encode()).decode()
         wrapper = (
             f"echo __B{tok}__\n"
             f"echo {b64} | base64 -d > /tmp/.replay-step.sh\n"
-            f"/usr/bin/setpriv --reuid=1000 --regid=1000 --clear-groups "
-            f"/usr/bin/env PATH='{PATH}' "
-            f"/bin/bash -c 'cd /testbed && exec bash /tmp/.replay-step.sh' 2>&1\n"
+            f"/usr/bin/setpriv --reuid={uid} --regid={uid} --clear-groups "
+            f"/usr/bin/env PATH='{path}' "
+            f"/bin/bash -c 'cd {workdir} && exec bash /tmp/.replay-step.sh' 2>&1\n"
             f"echo __R{tok}__=$?\n")
         outer = base64.b64encode(wrapper.encode()).decode()
         try:
