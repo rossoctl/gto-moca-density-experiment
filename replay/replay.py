@@ -226,13 +226,19 @@ class VmTarget:
         # HOME: init=/bin/bash gives the console no login home (HOME=/), so
         # git cannot see the image's ~/.gitconfig and commits fail with
         # "Author identity unknown" -- hand root its home for uid 0.
+        # stdin </dev/null: container exec had no stdin, so steps like
+        # `cat $2` with an empty $2 saw EOF instantly; on the console the
+        # step would inherit the wrapper's pipe and EAT the not-yet-read
+        # end-marker line -- the replay then times out at 1800s waiting for
+        # a marker the step consumed (log-summary r2, step 13).
         home = f" HOME={os.environ.get('REPLAY_VM_HOME', '/root')}" if uid == "0" else ""
         wrapper = (
             f"echo __B{tok}__\n"
             f"echo {b64} | base64 -d > /tmp/.replay-step.sh\n"
             f"/usr/bin/setpriv --reuid={uid} --regid={uid} --clear-groups "
             f"/usr/bin/env PATH='{path}' PAGER=cat GIT_PAGER=cat TERM=dumb{home} "
-            f"/bin/bash -c 'cd {workdir} && exec bash /tmp/.replay-step.sh' 2>&1\n"
+            f"/bin/bash -c 'cd {workdir} && exec bash /tmp/.replay-step.sh "
+            f"< /dev/null' 2>&1\n"
             f"echo __R{tok}__=$?\n")
         outer = base64.b64encode(wrapper.encode()).decode()
         try:
