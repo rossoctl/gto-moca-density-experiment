@@ -50,6 +50,14 @@ POOLS = {
 TARGET_DUTY = {2: 0.020, 5: 0.050, 10: 0.100}
 DEFAULT_SEED = {2: 21, 5: 51, 10: 101}
 
+# Reps excluded from the pools despite being resolved: flaky or
+# replay-incompatible recordings. multi-source r2's step 14 is
+# hash-seed-dependent (a set iteration feeding dict(); passes in one
+# process, TypeErrors in another) -- nondeterministic against fresh
+# interpreter hashes, so it fails sometimes under load and never
+# reproducibly.
+EXCLUDE_REPS = {("multi-source-data-merger", "r2")}
+
 TOTAL_TURN_S = 8400.0   # ~14 mean concurrency over the 600 s window
 DURATION = 600.0
 UNIT_SCHEMA = "autobench-moca/load-manifest/unit/1"
@@ -94,7 +102,7 @@ def tb_catalog(tasks):
             os.path.join(TB_DIR, c, f"tb30-2-a.{inst}.r1.trajectory.json")))
         for rep in ("r1", "r2", "r3"):
             p = os.path.join(TB_DIR, cls, f"tb30-2-a.{inst}.{rep}.trajectory.json")
-            if not os.path.exists(p):
+            if not os.path.exists(p) or (inst, rep) in EXCLUDE_REPS:
                 continue
             t = load_traj(p, dict(instance=inst, rep=rep, batch="tb30-2-a",
                                   side="tb", cls=cls, sandbox={
