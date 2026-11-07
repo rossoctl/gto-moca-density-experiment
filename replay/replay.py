@@ -540,10 +540,18 @@ class PodmanSandbox:
         if self.workdir:
             run += ["-w", self.workdir]
         run += [self.image, "sleep", "infinity"]
-        p = subprocess.run(run, capture_output=True, text=True)
-        if p.returncode != 0:
-            # stderr is the diagnosis (e.g. the ctr host's inotify-instance
-            # exhaustion surfaced only as a bare "exit status 126")
+        # podman's sqlite store serializes create transactions; at high
+        # launch rates (C200+: >2 containers/s) a create can hit
+        # "database is locked" and fail the unit's start outright. Those
+        # locks are transient -- retry with backoff. Everything else fails
+        # loudly as before (stderr is the diagnosis).
+        for attempt in range(5):
+            p = subprocess.run(run, capture_output=True, text=True)
+            if p.returncode == 0:
+                return
+            if "database is locked" in (p.stderr or "") and attempt < 4:
+                time.sleep(0.5 * (attempt + 1))
+                continue
             raise RuntimeError(f"podman run failed ({p.returncode}): "
                                f"{p.stderr.strip()[-400:]}")
 
