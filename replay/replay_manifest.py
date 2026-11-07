@@ -340,7 +340,12 @@ def main():
         u["files"] = {k: _resolve(v) for k, v in u["files"].items()}
     logdir = os.path.join(HERE, "logs",
                           "manifest-" + os.path.basename(manifest_path).rsplit(".", 1)[0]
-                          + "-" + backend)
+                          + "-" + backend
+                          # the two fc lifecycles are different experiments:
+                          # separate logdirs or perexec overwrites warm's
+                          # per-unit logs (lost the C100 warm stretch data)
+                          + (("-" + os.environ.get("FC_VM_MODE", "perexec"))
+                             if backend == "fc" else ""))
     os.makedirs(logdir, exist_ok=True)
 
     if dry:
