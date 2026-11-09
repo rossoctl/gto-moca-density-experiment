@@ -139,6 +139,12 @@ class Console:
         self.sock.settimeout(10)     # a server that stops accepting must not
         self.sock.connect(sock_path) # hang the replay forever
         self.sock.setblocking(False)
+        # poll(), not select(): a driver holding hundreds of live consoles
+        # gets fd numbers past FD_SETSIZE (1024), where select() raises
+        # "filedescriptor out of range" (found at C800 10pct-vm: 6174 units
+        # failed at sandbox start). poll() has no fd-number limit.
+        self._poll = select.poll()
+        self._poll.register(self.sock, select.POLLIN)
         self.buf = b""
 
     def close(self):
@@ -167,7 +173,7 @@ class Console:
                 raise TimeoutError(f"console: no match for {pattern!r} "
                                    f"within {timeout}s (buffer tail: "
                                    f"{self.buf[-200:]!r})")
-            r, _, _ = select.select([self.sock], [], [], min(remaining, 1.0))
+            r = self._poll.poll(max(1, int(min(remaining, 1.0) * 1000)))
             if r:
                 data = self.sock.recv(65536)
                 if not data:

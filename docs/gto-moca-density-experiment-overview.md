@@ -1,8 +1,9 @@
 # gto-moca-density-experiment — Executive Overview
 
-**Status:** experiment design in progress; no measurements yet
+**Status:** design below; measurements through the C800 ratchet complete (see
+[Current results](#current-results))
 **Repo:** `rossoctl/gto-moca-density-experiment`
-**Date:** 2026-10-29
+**Date:** 2026-10-29 (design), 2026-11-09 (results section)
 
 
 ## Argument
@@ -111,6 +112,33 @@ Backend:
   identical to what was used for the baseline. We find the number D of
   concurrent workloads that we can successfully run on this setup. We
   had better hope that D > B.
+
+## Current results
+
+The pressure ladder (replayed SWE-bench/Terminal-Bench trajectories, mixed
+manifests at 2/5/10% churn) has been run at concurrency levels C20 (rung),
+C50, C100, C200, C400 and C800 on srv-r18b14s27 (192 cores, 499 GiB), across
+three sandbox backends: qemu VMs, firecracker warm microVMs, firecracker
+per-exec microVMs, and (below C200) rootless podman. Full data and findings:
+[the reports index](reports/README.md); the headline numbers:
+
+- **qemu (vm) scales cleanly to ~900 concurrent** on this host — 100% unit
+  ok-rate at C100–C400, 100%/99.96% at C800 2/5% churn — at ~0.45 GiB host
+  RAM per live guest. At C800 10% churn it hits the host memory ceiling
+  (~1,100 concurrent 1-GiB guests, 4 OOM kills) plus a driver fd limit
+  (since fixed).
+- **rootless podman walls at ~200** concurrent containers (kernel keyring
+  quota; also NOFILE and store-lock limits) — dropped from the ladder above
+  C200. See
+  [the podman limits note](notes/2026-11-08-rootless-podman-density-limits.md).
+- **firecracker runs to C800 with no density wall found yet**: ~0.18–0.2 GiB
+  per live microVM (snapshot page sharing), CPU-saturated rather than
+  memory-saturated at the top of the ladder. Its unit ok-rate (53/68/86% at
+  2/5/10% churn) is stable across every level and both lifecycle modes — an
+  environment-divergence artifact (snapshot rootfs vs recorded container
+  env), not a density effect.
+- Host conditioning limits found and fixed along the way are codified in
+  [the preflight runbook](notes/2026-11-08-host-preflight-runbook.md).
 
 ## Observations and details
 

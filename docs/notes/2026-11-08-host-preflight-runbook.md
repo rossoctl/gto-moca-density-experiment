@@ -93,6 +93,13 @@ systemd drop-in):
   `[Errno 24] Too many open files`.
 - **ALSO:** every run command should still start with `ulimit -n 65536` —
   belt and suspenders; the limits.conf path depends on PAM.
+- **AND the driver must not use `select()`:** raising NOFILE past 1024
+  surfaces the next ceiling — `select()`'s fd_set is capped at FD_SETSIZE
+  (1024) no matter the ulimit. At C800 10pct churn the vm driver's console
+  sockets crossed fd 1024 and 6,174 units failed instantly with
+  `filedescriptor out of range in select()`. Fixed 2026-11-09: `Console`
+  in `replay.py` uses `select.poll()` (no fd-number limit). Keep `replay.py`
+  at or past that fix on every host.
 
 ### 4.3 Locked memory (qemu / io_uring) — the subtle one
 
@@ -205,6 +212,7 @@ environment-divergence mismatch; that is documented and expected.)
 | --- | --- | --- |
 | `crun: create keyring: Disk quota exceeded` | per-user keyring quota (200) | §4.1 |
 | `[Errno 24] Too many open files` in the driver | NOFILE 1024 | §4.2 |
+| `filedescriptor out of range in select()` at sandbox start, high density | driver console code used `select()`; fds crossed FD_SETSIZE (1024) once NOFILE was raised | §4.2 — fixed in `replay.py` (poll), 2026-11-09 |
 | `Failed to initialize io_uring: Cannot allocate memory` (qemu, RAM free) | per-UID MEMLOCK (8 MB) exhausted by io_uring rings | §4.3 |
 | `database is locked` (podman, persistent) | podman sqlite store saturated — architectural, not a sysctl | see the podman note; daemon-based runtime or lower op rate |
 | VM build hangs: `did not reach a shell within 180s` | dracut hostonly initrd (Ubuntu ≥ 26.04) | scripts auto-build slim initrd; check `INITRD_IMG` |
