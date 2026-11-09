@@ -19,6 +19,7 @@ was true when someone ran it. Both are committed, and they are kept separate on 
 | [moca-side-by-side-report.md](moca-side-by-side-report.md) | moca backend vs container/VM baselines: per-exec cost, smoke/load50/pressure80 manifests, stretch attribution | none yet | Partial |
 | [2026-11-04-srv-r18b14s27-bringup-report.md](2026-11-04-srv-r18b14s27-bringup-report.md) | srv-r18b14s27 provisioning; first-principles builds of podman/qemu/fc backends; smoke-manifest verification; host-portability findings | none (host bring-up) | Complete |
 | [2026-11-09-c800-density-ratchet-report.md](2026-11-09-c800-density-ratchet-report.md) | full C800 matrix (3 rates × vm/fc-warm/fc-perexec, 9 runs, 155,078 replays); fc failure-fraction invariance; vm select() and memory walls at 10pct | none (manifest ratchet) | Complete |
+| [2026-11-09-c1600-fc-knee-report.md](2026-11-09-c1600-fc-knee-report.md) | C1600 knee probe: fc-warm clears 1,762 live at 84% CPU / 0.074 GiB per VM; fc-perexec collapses on workspace-mount IO saturation | none (manifest ratchet) | Complete |
 
 ## The one rule: a report is never rewritten
 
