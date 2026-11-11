@@ -105,3 +105,87 @@ binding constraint: 84% at C1600 means C3200 would saturate.
 | Instrument the fc workspace-mount path under load | perexec ceiling is bracketed, not explained to root cause | — |
 | Fix sampler columns (sandbox_count, disk rates) | recurring data gap since C800 | — |
 
+---
+
+## Appendix — 2026-11-11: the perexec "IO saturation" was disk-full (ENOSPC), and the C1600 ceiling moves with capacity
+
+### A. Forensics on the original run: capacity exhaustion, not IO saturation
+
+§4.1 attributed the perexec collapse to the disk path saturating; §5 left the root cause of
+the `/dev/vdb` mount failures open. Both are resolved by re-examining the original run's
+collected artifacts (no rerun needed):
+
+- The root filesystem is 982 GB (decimal); the run's sampler shows disk use frozen at
+  **959 GB used = 97.7% full for 9 minutes** (t≈1205–1750 in the CSV) — a full disk, not
+  throttled writeback. Sustained fill rate was only ~12 MB/s: never a bandwidth or IOPS
+  problem.
+- **4,282 per-unit logs contain `No space left on device`** — from the driver
+  (`OSError(28)`, including 520 units that died *writing their own logs* to the same full
+  fs), the jailer (`Write("/firecracker.pid", StorageFull)`, `MkdirOldRoot`), and
+  firecracker. The rc=32 "can't read superblock" / "Structure needs cleaning" (EUCLEAN)
+  failures are what ext4 mount and journal operations look like on a full filesystem.
+- rc=32 failures cluster in exactly two windows: a burst at t≈1080–1200 (when the disk
+  tops out) and a sustained block at t≈1800–3120 (the deletion-drain, units fighting for
+  freed space). During the full-disk plateau itself, almost none — nothing can even try.
+- The load1-540-at-84%-CPU signature is D-state processes on ENOSPC/retry paths and the
+  deletion storm, not device queue saturation.
+
+Why perexec filled the disk where warm did not: every fc sandbox seeds a private 2-GiB
+`workspace.img` with a full testbed copy; perexec's slowdown stretches unit residency and
+multiplies concurrent workspaces (and `stop()`'s
+`shutil.rmtree(..., ignore_errors=True)` would silently leak any workspace whose cleanup
+failed mid-storm). Warm peaked at 221 GB on the same units.
+
+### B. The fix: FC_BASE on the spare NVMe
+
+The host's second NVMe (nvme1n1, 3.6T ext4, previously idle and unmounted, 2.9T free) now
+hosts a second fc base: golden snapshots copied to `/mnt/moca/snapshots` (22G,
+size-verified; same-host copies are fine — the "host-pinned" caveat is about crossing
+hosts), runs launched with `FC_BASE=/mnt/moca/purefc FC_SNAPSHOTS=/mnt/moca/snapshots`.
+Both are plain env vars in `replay/fc.py`; no code change. Smoke manifest on the new base:
+5/6 ok with the one documented regex-log divergence — byte-identical behavior to the
+original base.
+
+### C. The re-run: the ceiling was capacity, and it is gone
+
+Same manifest bytes (`load1600-mixed-2pct.json`), same launch conventions, perexec
+lifecycle, sampler on `/mnt`. Original run's artifacts renamed aside (`*.run1.*`). Host
+otherwise idle.
+
+| 2pct-fc-perexec @ C1600 | original (11-09, OS disk) | re-run (11-11, /mnt/moca) | warm baseline |
+| ---------------------- | ------------------------- | ------------------------ | ------------- |
+| units ok | 12,636/37,578 (33.6%) | **19,931/37,583 (53.0%)** | 19,935 (53.0%) |
+| wall time | 3,709 s | 4,597 s | 2,378 s |
+| rc=32 / ENOSPC failures | ~4,230 + ~1,340 jailer aborts | **0** (not one, in 37,583 units) | 0 |
+| peak disk used | 959 GB (97.7% of fs — the cap) | 2,084 GB of 3.6T (~1.5 TB true transient) | 221 GB |
+| peak CPU | 84% | 84.5% | 84% |
+| peak load1 | 540 | 545 | 153 |
+| peak mem | 42 GiB | 41 GiB | 131 GiB |
+
+Readings:
+
+1. **The ok-rate recovers to the warm baseline exactly** (19,931 vs 19,935 — four units).
+   Perexec's C1600 "ceiling" was never a lifecycle limit; it was a 982 GB disk. With
+   capacity, perexec and warm fail on the same environment-divergence class and nothing
+   else — §4.5's invariance claim now extends to C1600 perexec.
+2. **The workload's true transient is ~1.5 TB** — the original 959 GB was the disk cap,
+   not the demand. The C800→C1600 perexec bracket of §5 is explained: C800's ~1,100 live
+   × ~1 GB workspaces fit the OS disk; C1600's did not.
+3. **Wall time got longer, not shorter** (4,597 s vs 3,709 s): the original "finished"
+   faster because 24,942 units died early and cheaply. The honest comparison is against
+   warm's 2,378 s: perexec still pays ~1.9× wall at equal ok-rate, and load1 still peaks
+   ~545 against 84.5% CPU — a real D-state population in the per-step jail/mount/teardown
+   machinery that no longer *fails* units but still costs time. The perexec wall-time gap
+   is the remaining open question (IO latency of the jail churn is the candidate; the
+   IOPS question this appendix started from is still unmeasured, just no longer
+   failure-causing).
+4. Peak `sandbox_count` (pgrep) 295 and driver `active` peak 21,056 are both unreliable
+   for perexec, as before (§1's footnote): pgrep samples a fast-churning process table,
+   `active` counts very short-lived VMs.
+
+Not verified: whether the 1.5 TB transient is purely live workspaces or includes
+in-flight-VM-held (deleted-but-open) images — needs a workspace-bytes column in a future
+run; whether perexec wall time converges toward warm on faster storage (the load1
+signature suggests an IO-latency component worth one instrumented run with iostat/PSI);
+5/10pct churn at C1600 perexec on the new base.
+
