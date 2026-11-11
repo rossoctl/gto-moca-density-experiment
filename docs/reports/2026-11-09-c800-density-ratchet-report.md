@@ -141,3 +141,57 @@ The headline comparisons, stated falsifiably:
 | Port vm start path off `select()` and re-run 10pct-vm | mid-campaign code change, owner's call | — |
 | fc rootfs parity with recorded container env (node et al.) | separate workstream from density | — |
 | Update the (stale) overview doc with C20–C800 results | editorial; overview still says "no measurements yet" | — |
+
+---
+
+## Appendix — 2026-11-11: 2pct-fc-warm re-run with a working sampler
+
+§4.4's data gap closed for the one cell that had no CSV at all: 2pct-fc-warm was the only
+C800 run whose `sample_host.py` output was missing entirely (the other 8 had CSVs with a
+blank `sandbox_count`; this one had none). The run itself was never absent — §1's row and
+the run log were intact — only its host-resource series was. Re-run commissioned to fill
+the series and give a second sample of the 53.1% figure.
+
+Conditions identical to the campaign (same manifest bytes, same host, `sudo` +
+`FC_VM_MODE=warm`, `ulimit -n 65536`, poll()-fixed `replay.py`), plus the fix for §4.4:
+sampler launched with `--count-cmd 'pgrep -c firecracker'`, verified populating before the
+driver started. The original run's artifacts were renamed aside (`*.run1.log`,
+`manifest-load800-mixed-2pct-fc-warm-run1/`) per the rename-before-rerun rule; a 3-day-old
+stray probe qemu was stopped first. Host otherwise idle (load 0.00, swap off).
+
+| 2pct-fc-warm | original (2026-11-09) | re-run (2026-11-11) |
+| ------------ | --------------------- | ------------------- |
+| units ok | 9,970/18,792 (53.1%) | **9,970/18,792 (53.1%)** — identical count |
+| wall time | 2,373 s | 2,374 s |
+| peak live (driver `active`) | 854 | 853 |
+| peak CPU | (no sampler) | 42.5% of 192 cores |
+| peak host mem | (no sampler) | 71.2 GiB used (Δ≈62 GiB over ~9 GiB idle baseline) |
+| peak load1 | (no sampler) | 40.9 |
+| peak transient disk | (no sampler) | 155.8 GiB used |
+| peak `sandbox_count` (pgrep firecracker) | blank (§4.4) | 684 |
+
+Readings:
+
+1. **The 53.1% ok-rate reproduces exactly** — identical ok count (9,970) on the same
+   manifest bytes, confirming §5's "low variance" suspicion for the 2pct cell and that the
+   fc failure class (§4.5, environment divergence) is deterministic, not load-dependent.
+2. **Memory per live VM at C800 is ~73 MB (Δ62 GiB / 853 active), not the ~0.18 GiB the
+   C1600 knee report carried as its C800 point.** That 0.18 was an extrapolation from the
+   missing CSV; measured, the page-sharing amortization had already reached C1600's
+   0.074 GiB/VM level by C800. The C100→C800→C1600 trend in that report's §2 should be
+   read as 0.26 → **0.071** → 0.074 GiB: sharing saturates by C800, not gradually.
+3. **CPU headroom at 2pct churn is large**: peak 42.5% (load1 41/192) against the 84%
+   peak measured at C1600 — consistent with the knee sitting between the two.
+4. **`sandbox_count` undercounts driver `active`** (684 vs 853 peak): the 1 Hz pgrep
+   samples process-table state while `active` counts driver-side units; in warm mode
+   firecracker processes are long-lived, so the gap is sampling skew plus per-unit
+   bookkeeping, not missing VMs. Driver `active` remains the authoritative concurrency
+   figure (as §4.4 concluded).
+
+Caveats: the sampler window (3,489 s) includes ~15 min of idle before/after the 2,374 s
+run, so window maxima are run maxima but means are not comparable; n=2 for this cell,
+both runs by the same manifest and host state; the per-VM memory figure divides a host
+delta by a driver count, same method as the C1600 report's.
+
+Not verified: whether the other 8 cells' blank-`sandbox_count` CSVs could be backfilled
+(they cannot — the process table is gone); variance at 5/10pct (still n=1 each).
