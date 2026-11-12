@@ -117,9 +117,10 @@ class FcVM:
         os.makedirs(os.path.join(FC_BASE, "logs"), exist_ok=True)
         self.console_log = os.path.join(FC_BASE, "logs", self.id + ".log")
 
-    def start(self, api_wait_s=10.0, vsock_wait_s=15.0):
+    def start(self, api_wait_s=10.0, vsock_wait_s=15.0, resume=True,
+              mount_workspace=True):
         try:
-            self._start(api_wait_s, vsock_wait_s)
+            self._start(api_wait_s, vsock_wait_s, resume, mount_workspace)
         except Exception:
             # never leak a running firecracker: the first hardware run
             # timed out waiting for the API socket (wrong jail path) and
@@ -127,7 +128,8 @@ class FcVM:
             self.stop()
             raise
 
-    def _start(self, api_wait_s, vsock_wait_s):
+    def _start(self, api_wait_s, vsock_wait_s, resume=True,
+               mount_workspace=True):
         os.makedirs(self.jail, exist_ok=True)
         os.makedirs(os.path.join(self.jail, "run"), exist_ok=True)
         for name in _SNAPSHOT_FILES:
@@ -148,14 +150,24 @@ class FcVM:
         # the jailer execve's into firecracker, so the pid is the VM's
         api_sock = os.path.join(self.jail, "run", "firecracker.socket")
         self._wait_file(api_sock, api_wait_s, "firecracker API socket")
-        self._api_put(api_sock, "/snapshot/load", """{
+        # resume=False leaves the VM paused after snapshot load (idle-tax
+        # microbench: no vCPU thread runs, no guest agent answers); with it,
+        # mount_workspace=False skips the /workspace mount (the bench's VMs
+        # share one unmounted workspace image, so there is nothing to mount
+        # and concurrent rw mounts would corrupt it anyway).
+        body = """{
             "snapshot_path": "/vmstate",
             "mem_backend": {"backend_path": "/memfile", "backend_type": "File"},
             "vsock_override": {"uds_path": "/run/v.sock"},
-            "resume_vm": true
-        }""")
+            "resume_vm": %s
+        }""" % ("true" if resume else "false")
+        self._api_put(api_sock, "/snapshot/load", body)
+        if not resume:
+            return
         self._wait_file(os.path.join(self.jail, "run", "v.sock"),
                         vsock_wait_s, "vsock socket")
+        if not mount_workspace:
+            return
         # the guest does NOT mount /workspace itself: the production
         # launcher's Resume runs this exact command over vsock right after
         # restore (launcher_firecracker.go).  Without it /workspace is a

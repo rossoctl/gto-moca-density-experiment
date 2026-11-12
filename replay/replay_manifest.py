@@ -135,6 +135,10 @@ def sandbox_for(u, backend, profile=None):
         return replay.MocaSandbox(name, u["instance"])
     if backend == "fc":
         return replay.SANDBOXES["fc"](name, u["instance"])
+    if backend == "null":
+        # harness-cost microbench: no sandbox, instant steps (see
+        # NullTarget) -- measures driver + step-engine cost per live unit
+        return replay.NullSandbox(name)
     vmdir = os.path.abspath(VM_DIR.format(instance=u["instance"]))
     if not os.path.exists(os.path.join(vmdir, f"{u['instance']}.qcow2")):
         # TB tasks keep their image tree (and their vm/ builds) under
@@ -313,7 +317,7 @@ def main():
     backend = "podman"
     if "--backend" in sys.argv:
         backend = sys.argv[sys.argv.index("--backend") + 1]
-    if backend not in ("podman", "vm", "moca", "fc"):
+    if backend not in ("podman", "vm", "moca", "fc", "null"):
         sys.exit(f"unknown backend {backend!r} (want {' or '.join(replay.SANDBOXES)})")
     max_live = None
     if "--max-live" in sys.argv:

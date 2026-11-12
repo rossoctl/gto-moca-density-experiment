@@ -278,6 +278,42 @@ class EphemeralVm:
         vm_stop(self.sock)
         return False
 
+class NullTarget:
+    """`null:<name>` — a no-op target that prices the replay driver and step
+    engine themselves (microbench, not a real backend): run() returns exit 0
+    with empty output immediately.  The step engine still paces each unit to
+    its recorded timeline and still compares outputs (mismatches expected),
+    so a manifest run on --backend null measures the harness cost per live
+    unit with zero sandbox cost."""
+    def translate(self, text):
+        return text
+
+    def run(self, script, timeout=1800):
+        return subprocess.CompletedProcess([], 0, "", "")
+
+    def close(self):
+        pass
+
+
+class NullSandbox:
+    """Backend-less sandbox holding a NullTarget (driver-cost microbench)."""
+    def __init__(self, name):
+        self.name = name
+
+    def start(self):
+        pass
+
+    def target(self):
+        return NullTarget()
+
+    def stop(self):
+        pass
+
+    @property
+    def target_spec(self):
+        return f"null:{self.name}"
+
+
 def _podman_profile():
     """Podman target shape from the environment (unset = swebench defaults).
     replay_manifest.py exports these per-manifest before spawning the
@@ -305,6 +341,8 @@ def make_target(spec):
         return _fc_backend.FcTarget(template, ws_dir)
     if spec.startswith("qemu:"):
         return EphemeralVm(spec[5:])   # context manager, not a target
+    if spec.startswith("null:"):
+        return NullTarget()
     return PodmanTarget(spec, **_podman_profile())
 
 # --- VM lifecycle ------------------------------------------------------------
